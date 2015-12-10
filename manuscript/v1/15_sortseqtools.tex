@@ -1,0 +1,647 @@
+%% BioMed_Central_Tex_Template_v1.06
+%%                                      %
+%  bmc_article.tex            ver: 1.06 %
+%                                       %
+
+%%IMPORTANT: do not delete the first line of this template
+%%It must be present to enable the BMC Submission system to
+%%recognise this template!!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                     %%
+%%  LaTeX template for BioMed Central  %%
+%%     journal article submissions     %%
+%%                                     %%
+%%          <8 June 2012>              %%
+%%                                     %%
+%%                                     %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                                                 %%
+%% For instructions on how to fill out this Tex template           %%
+%% document please refer to Readme.html and the instructions for   %%
+%% authors page on the biomed central website                      %%
+%% http://www.biomedcentral.com/info/authors/                      %%
+%%                                                                 %%
+%% Please do not use \input{...} to include other tex files.       %%
+%% Submit your LaTeX manuscript as one .tex document.              %%
+%%                                                                 %%
+%% All additional figures and files should be attached             %%
+%% separately and not embedded in the \TeX\ document itself.       %%
+%%                                                                 %%
+%% BioMed Central currently use the MikTex distribution of         %%
+%% TeX for Windows) of TeX and LaTeX.  This is available from      %%
+%% http://www.miktex.org                                           %%
+%%                                                                 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% additional documentclass options:
+%  [doublespacing]
+%  [linenumbers]   - put the line numbers on margins
+
+%%% loading packages, author definitions
+
+%\documentclass[twocolumn]{bmcart}% uncomment this for twocolumn layout and comment line below
+\documentclass{bmcart}
+
+%%% Load packages
+%\usepackage{amsthm,amsmath}
+%\RequirePackage{natbib}
+%\RequirePackage{hyperref}
+\usepackage[utf8]{inputenc} %unicode support
+%\usepackage[applemac]{inputenc} %applemac support if unicode package fails
+%\usepackage[latin1]{inputenc} %UNIX support if unicode package fails
+\usepackage{multirow}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                             %%
+%%  If you wish to display your graphics for   %%
+%%  your own use using includegraphic or       %%
+%%  includegraphics, then comment out the      %%
+%%  following two lines of code.               %%
+%%  NB: These line *must* be included when     %%
+%%  submitting to BMC.                         %%
+%%  All figure files must be submitted as      %%
+%%  separate graphics through the BMC          %%
+%%  submission process, not included in the    %%
+%%  submitted article.                         %%
+%%                                             %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\def\includegraphic{}
+\def\includegraphics{}
+
+
+
+%%% Put your definitions there:
+\startlocaldefs
+\endlocaldefs
+
+
+%%% Begin ...
+\begin{document}
+
+%%% Start of article front matter
+\begin{frontmatter}
+
+\begin{fmbox}
+\dochead{Research}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Enter the title of your article here     %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Sort-Seq Tools: software for massively parallel experiments on partially mutagenized sequences}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Enter the authors here                   %%
+%%                                          %%
+%% Specify information, if available,       %%
+%% in the form:                             %%
+%%   <key>={<id1>,<id2>}                    %%
+%%   <key>=                                 %%
+%% Comment or delete the keys which are     %%
+%% not used. Repeat \author command as much %%
+%% as required.                             %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\author[
+   addressref={aff1},                   % id's of addresses, e.g. {aff1,aff2}
+   email={wireland@caltech.edu}   % email address
+]{\inits{WI}\fnm{William} \snm{Ireland}}
+\author[
+   addressref={aff2},
+   email={phillips@pboc.caltech.edu}
+]{\inits{RP}\fnm{Rob} \snm{Phillips}}
+\author[
+   addressref={aff3},                   % id's of addresses, e.g. {aff1,aff2}
+   corref={aff3},                       % id of corresponding address, if any
+   email={jkinney@cshl.edu}   % email address
+]{\inits{JBK}\fnm{Justin B} \snm{Kinney}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Enter the authors' addresses here        %%
+%%                                          %%
+%% Repeat \address commands as much as      %%
+%% required.                                %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\address[id=aff1]{%                           % unique id
+  \orgname{Department of Physics, California Institute of Technology}, % university, etc
+  %\street{Waterloo Road},                     %
+  \postcode{91125},                                % post or zip code
+  \city{Pasadena},                              % city
+  \cny{CA}                                    % country
+}
+\address[id=aff2]{%                          
+  \orgname{Department of Applied Physics, California Institute of Technology}, 
+  %\street{Waterloo Road},                    
+  \postcode{91125},                               
+  \city{Pasadena},                        
+  \cny{CA}                                  
+}
+\address[id=aff3]{%
+  \orgname{Simons Center for Quantitative Biology, Cold Spring Harbor Laboratory},
+  %\street{1 Bungtown Rd.},
+  \postcode{11375},
+  \city{Cold Spring Harbor},
+  \cny{NY}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Enter short notes here                   %%
+%%                                          %%
+%% Short notes will be after addresses      %%
+%% on first page.                           %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\begin{artnotes}
+%\note{Sample of title note}     % note to the article
+%\note[id=n1]{Equal contributor} % note, connected to author
+%\end{artnotes}
+
+\end{fmbox}% comment this for two column layout
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% The Abstract begins here                 %%
+%%                                          %%
+%% Please refer to the Instructions for     %%
+%% authors on http://www.biomedcentral.com  %%
+%% and include the section headings         %%
+%% accordingly for your article type.       %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstractbox}
+
+\begin{abstract} % abstract (100 words or less)
+Here we introduce a software package, Sort-Seq Tools, for analyzing a variety of high-throughput mutational experiments on DNA, RNA, and proteins. Such experiments include Sort-Seq studies of bacterial promoters, massively parallel reporter assays of mammalian enhancers, and deep mutational scanning experiments of proteins.  Easy-to-use methods for data simulation, data preprocessing, data analysis, quantitative modeling, and visualization are provided. These functionalities are available through a command-line interface, as well as through a Python module, \texttt{sortseq}, that is available on PyPI. Example applications of Sort-Seq Tools in the context of both real and simulated data sets are described. 
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% The keywords begin here                  %%
+%%                                          %%
+%% Put each keyword in separate \kwd{}.     %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{keyword}
+\kwd{sequence analysis}
+\kwd{transcriptional regulation}
+\kwd{deep mutational scanning}
+\kwd{mutual information}
+\end{keyword}
+
+% MSC classifications codes, if any
+%\begin{keyword}[class=AMS]
+%\kwd[Primary ]{}
+%\kwd{}
+%\kwd[; secondary ]{}
+%\end{keyword}
+
+\end{abstractbox}
+%
+%\end{fmbox}% uncomment this for twcolumn layout
+
+\end{frontmatter}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% The Main Body begins here                %%
+%%                                          %%
+%% Please refer to the instructions for     %%
+%% authors on:                              %%
+%% http://www.biomedcentral.com/info/authors%%
+%% and include the section headings         %%
+%% accordingly for your article type.       %%
+%%                                          %%
+%% See the Results and Discussion section   %%
+%% for details on how to create sub-sections%%
+%%                                          %%
+%% use \cite{...} to cite references        %%
+%%  \cite{koon} and                         %%
+%%  \cite{oreg,khar,zvai,xjon,schn,pond}    %%
+%%  \nocite{smith,marg,hunn,advi,koha,mouse}%%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%% start of article main body
+% <put your article body there>
+
+%%%%%%%%%%%%%%%%
+%% Background %%
+%%
+
+% Information on figures
+% http://www.biomedcentral.com/authors/figures
+% width of 85 mm for half page width figure
+% width of 170 mm for full page width figure
+% maximum height of 225 mm for figure and legend
+
+\section*{Introduction}
+
+Deep mutational scanning experiments are rapidly changing our experimental capabilities. 
+
+
+%
+% Figure 1
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Experiments that can be analyzed by Sort-Seq Tools}
+(A) Sort-Seq assays \cite{Kinney:2010tn,Sharon:2012io}. A promoter of interest (blue) is used to drive the expression of a gene (green) encoding a fluorescent protein. A library of mutagenized promoters is then swapped in for the wild-type promoter. Cells expressing this construct are then sorted one-by-one into bins by FACS according to measured fluorescence. The variant promoters in each bin are then sequenced. (B) MPRA assays \cite{Melnikov:2012dw,Patwardhan:2012hy,Kwasnieski:2012hu}. A library of variant enhancers (blue) are cloned upstream of a basal promoter and used to drive gene expression. The resulting mRNA transcripts contain enhancers-specific tags (brown). Reporter constructs are introduced into mammalian cell culture, after which RNA is extracted and expressed tags are sequences. Tags from the reporter library are also sequenced. (C) Protein deep mutational scanning assays \cite{Fowler:2010gt,Fowler:2014gq}. A library of protein coding sequences (green) are introduced into phage (illustrated) or some other expression system. Variant proteins are then selected according to some activity of interest, such as binding affinity (illustrated). Selected genes are then sequenced, as are genes from the starting library.
+}
+\end{figure}
+
+
+%
+% Figure 2
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Example analysis using Sort-Seq Tools.}
+Sort-Seq Tools provides a set of functions that operate by transforming tables (stored as text files) from one type to another. The possible column headers for each input table are listed in Table 1. A single function, \texttt{draw}, provides a default visualization of each type of table, but can also accept flags that alter the type visualization produced. (A) A simple example of data analysis using Sort-Seq tools. Here, a table $\texttt{data.txt}$ contains a list of aligned DNA binding sites for the E.\ coli transcription factor hunchback. The Sort-Seq Tools function \texttt{profile\_freqs} transforms this table into a second table, \texttt{freqs.txt}, that lists the occurrence frequencies of each nucleotide at each position within the alignment. The function \texttt{draw --logo} then transforms this table into a sequence logo, which is stored as a .PDF file. (B) Sort-Seq Tools is designed to be used at the command-line. Every method is implemented as a subcommand of the function \texttt{sortseq}. Commands implementing the analysis in A are shown. (C) Alternatively, to reduce the use of temporary files, Sort-Seq Tools commands can be piped in series. (D) Sort-Seq Tools can also be used from within Python via the \texttt{sortseq} package (available on PyPI). Python code equivalent to the command line analysis in A and B is shown.
+}
+\end{figure}
+
+%
+% Figure 3
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Library quality control}
+The results of an experiment must be summarized in a table of counts and sequences for analysis with Sort-Seq Tools. For paired end reads, the tranformation from fasta or fastq files can be accomplished by using the Sort-Seq Tools \texttt{preprocess} function. (B)  The output from the \texttt{profile\_counts} function can be transformed into a mutation rate at each position using the \texttt{profile\_mutrate} function. The mutation rate for the Sort-Seq experiment on the Lac promoter region performed by Kinney et al. (2010) is displayed. (C) The counts and sequences table can be visualized as a Zipf plot using the \texttt{draw} function. (D) The commands to perform the above analysis at the command line.
+}
+\end{figure}
+
+%
+% Figure 4
+%
+\begin{figure}[h!] 
+\caption{
+\csentence{Information profiling}
+Sort-Seq Tools also provides a set of analysis which operate on more than one bin at a time. The complete list of functions which profile data set characteristics for each base pair position are summarized in Table 3. Before executing these analyses on raw fasta files, the \texttt{gatherseqs} function must be provided a list of files and bins to combine into a single table. The inputs and outputs from \texttt{gatherseqs} and other data manipulation functions are summarized in Table 2. (B) The aggregated data file with the counts of each sequence occuring in each bin. (C) Using the \texttt{profile\_info} function, the mutual information between expression bin and base identity for the Kinney et al. experiment is calculated. The resulting table is displayed using the \texttt{draw} function. (D) The commands to perform the above analysis at the command line.
+}
+\end{figure}
+
+%
+% Figure 5
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Quantitative modeling}
+(A) A combined data set is fit to a linear energy model using the \texttt{learn\_model} function. The four methods, specified by flags to the \texttt{learn\_model} function, that the Sort-Seq Tools package can use to fit models are summarized in Table 4. The model predicts
+binding energy given any sequence. The model is visualized as both a
+sequence logo and a matrix. Kinney et al performed a Sort-Seq experiment on the 
+Lac promoter. The crp site fit to this data set is displayed. (B) The commands to perform the above analysis at the command line.
+}
+\end{figure}
+
+%
+% Figure 6
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Model Comparison}
+(A) The \texttt{predictiveinfo} function can be used to calculate the mutual information between the predictions of your model and the results of your experiment.
+The inputs and outputs for the \texttt{predictiveinfo} function are shown in Table 4. Table 4 also contains the \texttt{totalinfo} function, which calculates for 
+a sublibrary the maximum possible predictive information of a model.
+(B) A display of the commands to perform the analysis in (A) at the command line.
+A list of several data sets to test, shown in (C), and several models
+to use in the evaluation, shown in (D), can be used as inputs in a comparison
+of the predictive ability of each model on each data set. The commands to perform
+this analysis are shown in (E). The visualization in (F) is a compairison of crp models fit to data sets from
+experiments with several different concentrations of cAMP. The data is from Kinney et al.\ (2010).
+}
+\end{figure}
+
+%
+% Figure 7
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Tag expression analysis}
+(A) In MPRA experiments, files of counts and tags, can be translated into 
+a file of counts and corresponding mutated sequences. A table containing file locations,
+as displayed in (B), and a key that connects tags and mutated sequences, displayed in (C), are used
+as inputs to the \texttt{gatherseqs --tags} function to transform the raw data. 
+(D) From the transformed data file, the log-ratio of each sequence, using pseudo-counts,
+ or an energy model can be calculated.
+(E) The commands to carry out the analysis in (D) at the command line.
+}
+\end{figure}
+
+%
+% Figure 8
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Analysis of protein sequences}
+(A) The DNA sequences obtained from the \cite{Fowler:2010gt,Fowler:2014gq} protein deep sequencing experiment are translated
+into amino acid sequences using the \texttt{convertseqs} function. Enrichment ratios for each amino acid at each position are calculated
+using pseudo-counts. The result of this analysis for the \cite{Fowler:2010gt,Fowler:2014gq}. protein
+mutagenesis experiment is displayed.
+(B) A display of the commands to carry out the analysis in (A) at the command line.
+}
+\end{figure}
+
+%
+% Figure 9
+%
+\begin{figure}[h!]
+\caption{
+\csentence{Data simulation}
+(A) During simulation, a library is generated either 
+by randomly mutating away from a specified wild type sequence, or by specifying a matrix of base probabilities.
+Expression predictions are calculated by using an energy model, input either in the form of
+a logo or a matrix. The logo for hunchback is displayed. Noise according to a chosen model
+is added, and then the simulated sequences are sorted based on their simulated expression.
+Commands to perform all phases of simulation, as well as functions to simulate MPRA 
+experiments and protein selection experiments are summarized in Table 5.
+(C) A display of the commands to perform the above analysis at the command line.  
+}
+\end{figure}
+
+
+
+[Describe Sort-Seq] Sort-Seq provides a list of (non-unique) sequences, each with a categorical measurement of activity. \cite{Kinney:2010tn}
+
+[Describe MPRA] MPRA provides a list of (non-unique) sequences, each with a quantitative measure of transcriptional activity. \cite{Patwardhan:2009cw}. \cite{Melnikov:2012dw}. \cite{Patwardhan:2012hy}. 
+
+[Describe selection-based assays] For transcription \cite{Findlay:2014ho}, For yeast ARSs \cite{Liachko:2013jc}. For proteins \cite{Fowler:2010gt}. \cite{Fowler:2014gq} 
+
+[Bloom provides software to compare enrichment between two bins \cite{Bloom:2015jz}]
+
+[Describe data analysis] \cite{Atwal:2015wl} \cite{Kinney:2007dh} \cite{Kinney:2010tn} \cite{Kinney:2014ge}
+
+Fitting energy matrices are the first step in fitting thermodynamic models. \cite{Bintu:2005ur,Bintu:2005bn}
+
+Kinney et al. (2010) showed that such data could be used to look at far more than enrichment ratios. Given a long list of aligned variant sequences, one can create information footprints (which identify important regions within a regulatory sequence). One can also fit quantitative models to these data. Importantly, quantitative models of experimental noise are not needed for such model fitting. This allows, for example, matrix models of transcription factor-DNA binding energy to be learned. However, there is currently no readily available software for performing such analyses. 
+
+\section*{Methods} %Include description of software here
+
+\subsection*{Overview}
+
+
+\begin{table}[h!]
+\caption{Column descriptions}
+\begin{tabular}{l|l}
+Header &  Description \\ \hline \hline
+\texttt{bin}            & number of sequence bin (0, 1, 2, ...) \\
+\texttt{file}           & name of file containing sequence or tag data \\
+\texttt{ct}             & sequence or tag count  \\
+\texttt{seq}            & sequence of DNA  (default), RNA (\texttt{\_rna}), or protein (\texttt{\_pro}) \\
+\texttt{tag}            & expression tag \\
+\texttt{pos}            & nuclotide/residue position within a set of aligned sequences \\
+\texttt{wt}             & wild-type nucleotide or residue \\
+\texttt{obs}            & observed nucleotide or residue \\ 
+\texttt{mut}            & mutation rate \\
+\texttt{le}             & log enrichment \\
+\texttt{freq}           & occurrence frequency of nucleotide/residue \\
+\texttt{val}            & model parameter  \\
+\texttt{lr}             & log ratio \\
+\texttt{info}           & mutual information in bits \\ 
+\texttt{\_0, \_1 ...}  & associated bin number \\
+\texttt{\_A, \_C ...} & associated nucleotide or residue \\
+\texttt{\_err}          & estimated uncertainty 
+\end{tabular}
+\end{table}
+
+\newenvironment{myfont}{\fontfamily{\ttdefault}\selectfont}{\par}
+
+\begin{table}[h!]
+\caption{Data processing commands}
+\begin{myfont}
+\begin{tabular}{l|lll|lllll}
+\textsf{Command}                  & \multicolumn{3}{l|}{\textsf{Input columns}} & \multicolumn{5}{l}{\textsf{Output columns}} \\ \hline \hline
+gatherseqs                        & bin    & file  &                            & ct\_0  & ct\_1    & ct\_2 ...  & seq \\
+gatherseqs --tagkey key.txt & bin & file   &                                    & ct\_0  & ct\_1    & ct\_2 ...  & tag  & seq \\
+logratios                         & ct\_0  & ct\_1 & seq                        & lr    & lr\_err   & seq \\ 
+errfromtags --var x               & x      & tag   & seq                        & x     & x\_err    & seq \\ 
+convertseqs                       & \multicolumn{3}{l|}{seq(,\_rna,\_pro)}      & \multicolumn{5}{l}{seq(,\_rna,\_pro)} \\ 
+\end{tabular}
+\end{myfont}
+\end{table}
+
+\begin{table}[h!]
+\caption{Profile generation commands}
+\begin{myfont}
+\begin{tabular}{l|llll|llll}
+\textsf{Command}        & \multicolumn{4}{l|}{\textsf{Input columns} }  & \multicolumn{4}{l}{\textsf{Output columns}} \\ \hline \hline
+profile\_counts         & ct     & seq   &           &             & pos & ct\_A   & ct\_C ...  \\
+profile\_counts --bin k & ct\_k  & seq   &           &             & pos & ct\_A   & ct\_C ...  \\
+profile\_freqs          & ct     & seq   &           &             & pos & freq\_A & freq\_C ...\\
+profile\_freqs --bin k  & ct\_k  & seq   &           &             & pos & freq\_A & freq\_C ...\\
+profile\_enrichment     & ct\_0  & ct\_1 & seq       &             & pos & le\_A   & le\_C ...  \\
+profile\_mutrates       & ct     & seq   &           &             & pos & mut     & mut\_err  \\
+profile\_info           & ct\_0  & ct\_1 & ct\_2 ... & seq         & pos & info    & info\_err \\ 
+fromto\_mutrates        & pos    & ct\_A & ct\_C ... &             & wt  & obs     & mut       & mut\_err 
+\end{tabular}
+\end{myfont}
+\end{table}
+
+\begin{table}[h!]
+\caption{Modeling commands}
+\begin{myfont}
+\begin{tabular}{l|llll|llll}
+\textsf{Command}                & \multicolumn{4}{l|}{\textsf{Input columns}}  & \multicolumn{3}{l}{\textsf{Output columns}} \\ \hline \hline
+learn\_matrix --bvh             & ct\_0  & ct\_1 & seq        &                    & pos  & val\_A    & val\_C ...  \\
+learn\_matrix --leastsq         & ct\_0  & ct\_1 & ct\_2 ...  & seq                & pos  & val\_A    & val\_C ...  \\
+learn\_matrix --MImax         & ct\_0  & ct\_1 & ct\_2 ...  & seq                & pos  & val\_A    & val\_C ...  \\
+predictiveinfo --model m       & ct\_0  & ct\_1 & ct\_2 ...  & seq                & info & info\_err \\
+totalinfo                       & ct\_0  & ct\_1 & ct\_2 ...  & seq                & info & info\_err \\
+\end{tabular}
+\end{myfont}
+\end{table}
+
+\begin{table}[h!]
+\caption{Simulation commands}
+\begin{myfont}
+\begin{tabular}{l|lll|llll}
+\textsf{Command}         & \multicolumn{3}{l|}{\textsf{Input columns}} & \multicolumn{4}{l}\textsf{Output columns} \\ \hline \hline
+simulate\_library        &    &     &                                  & ct    & seq   \\
+simulate\_library --tags &    &     &                                  & ct    & tag   & seq      \\               
+simulate\_sublib         & ct & seq &                                  & ct    & seq   \\
+simulate\_sort           & ct & seq &                                  & ct\_0 & ct\_1 & ct\_2 ... & seq \\
+simulate\_selection      & ct & seq &                                  & ct\_0 & ct\_1 & seq       \\
+simulate\_expression     & ct & tag & seq                              & ct\_0 & ct\_1 & tag       & seq \\
+\end{tabular}
+\end{myfont}
+\end{table}
+
+\subsection*{Simulation}
+
+[Library creation. Entire sequence or window]
+
+[Sublibrary sampling]
+
+[Sorting]
+
+\subsection*{Data visualization}
+
+[Mutation rate]
+
+[Information footprint]
+
+[Sequence logos]
+
+[Mutation independence]
+
+\subsection*{Quantitative modeling}
+
+[Least-squares fitting]
+
+[Lasso fitting]
+
+[Information maximization Monte Carlo]
+
+\subsection*{Model evaluation}
+
+[Total sequence-dependent information]
+
+[Predictive information]
+
+\section*{Results} %Include a demonstration on simulated data, as well as analysis of real data
+
+\subsection*{Analysis of simulated data}
+
+    As discussed in Figure 9, mutated libraries and data sets can be simulated for
+Sort-Seq, MPRA, and protein selection experiments. In Figure 10, it is shown that we can
+consistently recover, using our fitting methods, the models used to generate the
+simulated data sets.
+
+
+
+
+
+
+\subsection*{Analysis of Sort-Seq data from Kinney et al.\ (2010)}
+    Each bin of sequences is first tested for quality using the \texttt{profile\_mutrate},
+\texttt{pairwise\_mutrate}, and the \texttt{draw} functions. Each of the Kinney et al. (2010) 
+data sets showed a consitent mutation rate near to the target, which indicates that the targeted
+diversity of sequences was achieved. There was also no mutual information between one base being
+mutated and another being mutated. This is an important quality control step. If there is
+corrolation between mutation positions, then if one of the two positions has a high value on the
+information footprint, the other will as well, regardless of its importance to transcription. This
+is because in this case, knowing the identity of one base gives you information about the identity
+of a second, truly important base. The data was then analyzed by using the \texttt{profile\_info} 
+function to produce information footprints, as seen in Figure 5. The footprints allowed
+identification of the binding sites of CRP and of RNAP. Matrix models for binding energy were individually
+fit to each of these sites using mutual information maximization.
+
+\subsection*{Analysis of MPRA data from Melnikov et al.\ (2012)}
+    The \texttt{gatherseqs} function is used to connect each mRNA sequence read to the corresponding
+mutated region and combine all data into one file. This file was then analyzed using the \texttt{profile\_info}
+ and \texttt{learn\_model} functions to produce information footprints and energy matrices respectively.
+ Highly informative regions in the information footprint correspond to regions that are mechanistically important
+to transcription such as transcription factors or the RNAP site. Energy matrices reveal the sequence depenedence
+of the binding energy of that transcription factor. 70\% of each data set is randomly assigned to a training data set
+and 30\% is used to test the fit. The split is created using the function \texttt{train\_test\_split}. The mutual 
+information between the energy model predictions and the test data set, as calculated by the \texttt{predictiveinfo} function
+ can be used as a metric for how well the model performed. 
+
+
+\subsection*{Analysis of protein mutational scanning data from Fowler et al.\ (2010)}
+
+    As discussed in Figure 9, the \cite{Fowler:2010gt,Fowler:2014gq}. data was processed and a enrichment
+profile was generated. The \texttt{learn\_model} was also used to produce an
+affinity matrix for the data set. The affinity matrix is displayed in Figure 11. 
+
+\section*{Discussion}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Backmatter begins here                   %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{backmatter}
+
+\section*{Competing interests}
+  The authors declare that they have no competing interests.
+
+\section*{Author's contributions}
+    WI, RP, and JBK designed the research. WI and JBK wrote the software. WI and JBK wrote the paper. \ldots
+
+\section*{Acknowledgements}
+  Text for this section \ldots
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                  The Bibliography                       %%
+%%                                                         %%
+%%  Bmc_mathpys.bst  will be used to                       %%
+%%  create a .BBL file for submission.                     %%
+%%  After submission of the .TEX file,                     %%
+%%  you will be prompted to submit your .BBL file.         %%
+%%                                                         %%
+%%                                                         %%
+%%  Note that the displayed Bibliography will not          %%
+%%  necessarily be rendered by Latex exactly as specified  %%
+%%  in the online Instructions for Authors.                %%
+%%                                                         %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% if your bibliography is in bibtex format, use those commands:
+\bibliographystyle{bmc-mathphys} % Style BST file (bmc-mathphys, vancouver, spbasic).
+\bibliography{15_sortseqtools}      % Bibliography file (usually '*.bib' )
+
+% or include bibliography directly:
+% \begin{thebibliography}
+% \bibitem{b1}
+% \end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                               %%
+%% Figures                       %%
+%%                               %%
+%% NB: this is for captions and  %%
+%% Titles. All graphics must be  %%
+%% submitted separately and NOT  %%
+%% included in the Tex document  %%
+%%                               %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%
+%% Do not use \listoffigures as most will included as separate files
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                               %%
+%% Tables                        %%
+%%                               %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                               %%
+%% Additional Files              %%
+%%                               %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Additional Files}
+  \subsection*{Additional file 1 --- Sample additional file title}
+    Additional file descriptions text (including details of how to
+    view the file, if it is in a non-standard format or the file extension).  This might
+    refer to a multi-page table or a figure.
+
+  \subsection*{Additional file 2 --- Sample additional file title}
+    Additional file descriptions text.
+
+
+\end{backmatter}
+
+\end{document}
