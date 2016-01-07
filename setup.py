@@ -13,9 +13,9 @@ if (sys.version_info[0], sys.version_info[1]) != (2, 7):
 
 # main setup command
 setup(
-    name = 'sortseq_tools', 
+    name = 'sst', 
     description = 'Tools for analysis of Sort-Seq experiments.',
-    version = '0.0.0',
+    version = '0.0.1',
     #long_description = readme,
     install_requires = [\
         'biopython>=1.6',\
@@ -29,12 +29,12 @@ setup(
         'weblogo>=3.4'\
         ],
     platforms = 'Linux (and maybe also Mac OS X).',
-    packages = ['sortseq_tools'],
-    package_dir = {'sortseq':'src'},
+    packages = ['sst'],
+    package_dir = {'sst':'src'},
     download_url = 'https://github.com/jbkinney/sortseq/tarball/0.1',
     scripts = [
-            'scripts/sortseq_tools'
+            'scripts/sst'
             ],
-    #package_data = {'sortseq':['*.txt']}, # template from weblogo version 3.4
+    #package_data = {'sst':['../data/sortseq/crp-wt/*.txt']}, # template from weblogo version 3.4
 )
 

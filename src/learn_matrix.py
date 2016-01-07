@@ -9,16 +9,13 @@ import scipy as sp
 import sys
 #Our miscellaneous functions
 import pandas as pd
-import sortseq.utils as utils
+import sst.utils as utils
 from sklearn import linear_model
-import sortseq.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
-import sortseq.simulate_evaluate as simulate_evaluate
+import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
-import sortseq.stepper as stepper
+import sst.stepper as stepper
 #The profile_counts module also allows us to determine wt sequence
-import sortseq.profile_counts as profile_counts
-import sortseq.profile_freqs as profile_freqs
-import sortseq.gauge_fix as gauge_fix
+import sst.gauge_fix as gauge_fix
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''
@@ -97,12 +94,11 @@ def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     '''Learn models using berg von hippel model. The foreground sequences are
          usually bin_1 and background in bin_0, this can be changed via flags.''' 
     binheaders = utils.get_column_headers(df)
+    #add pseudocounts to improve bayesean inference. 
     df[binheaders] = df[binheaders] + pseudocounts
-    #foreground_counts = profile_counts.main(df,'dna',bin_k=foreground)	
-    foreground_freqs = profile_freqs.main(df,dicttype,bin_k=foreground)
-    #background_counts = profile_counts.main(df,'dna',bin_k=background)
-    background_freqs = profile_freqs.main(df,dicttype,bin_k=background)
-    
+    #calculate frequencies
+    foreground_freqs = utils.profile_freqs(df,dicttype,bin_k=foreground)
+    background_freqs = utils.profile_freqs(df,dicttype,bin_k=background)
     output_df = -np.log(foreground_freqs/background_freqs)
     
     return output_df
@@ -119,14 +115,19 @@ def Compute_Least_Squares(raveledmat,batch,sw,alpha=0):
 
 def main(
         df,dicttype,lm,modeltype='LinearEmat',LS_means_std=None,LS_iterations=4,
-        db=None,iteration=30000,burnin=1000,thin=10,runnum=0,
-        exptype='sortseq',initialize='Rand',start=0,end=None,foreground=1,
+        db=None,iteration=30000,burnin=1000,thin=10,runnum=0
+        ,initialize='Rand',start=0,end=None,foreground=1,
         background=0,alpha=0,pseudocounts=1,test=False):
     
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype=modeltype)
     '''Create a sequence dictionary where the last possibility is removed.
         This means when we switch to matrix form for sequences, the last item
         will be designated by all zeros.'''
+    #Check to make sure the chosen dictionary type correctly describes the sequences
+    def check_sequences(s):
+        return set(s).issubset(seq_dict)
+    if False in set(df.seq.apply(check_sequences)):
+        raise TypeError('Wrong sequence type!')
     par_seq_dict = {v:k for v,k in seq_dict.items() if k != (len(seq_dict)-1)}
     #select target sequence region
     df.loc[:,'seq'] = df.loc[:,'seq'].str.slice(start,end)
@@ -144,6 +145,9 @@ def main(
     else:
         seqL = end-start
     df = df[df.seq.apply(len) == (seqL)]
+    #If there were sequences of different lengths, then print error
+    if len(set(df.seq.apply(len))) > 1:
+         sys.stderr.write('Lenghts of all sequences are not the same!')
     df.reset_index(inplace=True,drop=True)
     #Do something different for each type of learning method (lm)
     if lm == 'bvh':
@@ -206,8 +210,18 @@ def main(
                 scale_factor = np.sqrt(len(seq_dict)/(emat_typical*emat_typical).sum())
                 emat_typical = emat_typical*scale_factor
                 
-            
-            temp_df['val'] = simulate_evaluate.main(temp_df,[emat_typical],dicttype,modeltype=modeltype,is_df=False)
+            dot = np.zeros(len(temp_df.index))
+            if modeltype == 'LinearEmat':
+                for i,s in enumerate(temp_df['seq']):
+                    dot[i] = np.sum(value*utils.seq2mat(s,seq_dict))
+                                   
+            elif modeltype=='Neighbor':
+                for i,s in enumerate(temp_df['seq']):
+                    dot[i] = np.sum(value*utils.seq2matpair(s,seq_dict))
+         
+            else:
+                raise ValueError('Cannot handle other model types at the moment. Sorry!')
+            temp_df['val'] = dot
             means_temp = np.zeros(len(col_headers))
             std_temp = np.zeros(len(col_headers))
             for q,c in enumerate(col_headers):
@@ -230,9 +244,7 @@ def main(
            
             emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha) 
         
-    if lm == 'lasso':
-        raveledmat,batch = utils.genlassomat(df,'1Point',par_seq_dict)
-        emat = Lasso_CV(raveledmat,batch)
+    
     if lm == 'mi':
         if initialize == 'Rand':
             if modeltype == 'LinearEmat':
@@ -328,8 +340,8 @@ def wrapper(args):
         args.learningmethod,modeltype=args.modeltype,db=args.db_filename,LS_means_std=args.LS_means_std,
         LS_iterations=args.LS_iterations,iteration=args.numiterations,burnin=args.
         burnin,thin=args.thin,start=args.start,end=args.end,
-        runnum=args.runnum,exptype=args.exptype,initialize=args.initialize,
-        foreground=args.foreground,background=args.background,alpha=args.penalty,pseudocounts=args.pseudocounts,test=args.test)
+        runnum=args.runnum,initialize=args.initialize,
+        foreground=args.foreground,background=args.background,alpha=args.penalty,pseudocounts=args.pseudocounts)
     #Write outputs
     if args.out:
         outloc = open(args.out,'w')

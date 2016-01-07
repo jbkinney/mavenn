@@ -6,7 +6,7 @@ import argparse
 import statsmodels.api as sm
 import sys
 from subprocess import Popen, PIPE
-import sortseq.nsbestimator as nsb
+import sst.nsbestimator as nsb
 from sklearn.grid_search import GridSearchCV
 if __name__== '__main__':
     import sortseq.utils
@@ -15,7 +15,7 @@ from cStringIO import StringIO
 import pandas as pd
 import scipy as sp
 import scipy.ndimage
-import sortseq.utils as utils
+import sst.utils as utils
 
 
 ''' This script estimates MI by implementing a Density Estimation through 

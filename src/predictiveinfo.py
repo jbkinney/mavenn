@@ -13,9 +13,8 @@ import pandas as pd
 #Our miscellaneous functions
 #This module will allow us to easily tally the letter counts at a particular position
 
-import sortseq.utils as utils
-import sortseq.simulate_evaluate as simulate_evaluate
-import sortseq.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import sst.utils as utils
+import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 
 
 def main(
@@ -35,15 +34,23 @@ def main(
     data_df = data_df[data_df.seq.apply(len) == (seqL)] 
     #make a numpy array out of the model data frame
     model_df_headers = ['val_' + str(inv_dict[i]) for i in range(len(seq_dict))]
-    value = np.array(model_df[model_df_headers])    
+    value = np.transpose(np.array(model_df[model_df_headers]))  
     #now we evaluate the expression of each sequence according to the model.
-    if modeltype == 'LinearEmat' or modeltype=='Neighbor':
-        dot = value[:,:,sp.newaxis]*s
-        data_df['val'] = dot.sum(0).sum(0)                    
+    dot = np.zeros(len(data_df.index))
+    if modeltype == 'LinearEmat':
+        for i,s in enumerate(data_df['seq']):
+            dot[i] = np.sum(value*utils.seq2mat(s,seq_dict))
+        data_df['val'] = dot                   
+    elif modeltype=='Neighbor':
+        for i,s in enumerate(data_df['seq']):
+            dot[i] = np.sum(value*utils.seq2matpair(s,seq_dict))
+        data_df['val'] = dot
     else:
         raise ValueError('Cannot handle other model types at the moment. Sorry!')
     df_sorted = data_df.sort(columns='val')
-    df_sorted.reset_index(inplace=True)     
+    df_sorted.reset_index(inplace=True)
+    #we must divide by the total number of counts in each bin for the MI calculator
+    df_sorted[col_headers] = df_sorted[col_headers].div(df_sorted['ct'],axis=0)     
     MI = EstimateMutualInfoforMImax.alt2(df_sorted)
     if no_err:
         Std = np.NaN
