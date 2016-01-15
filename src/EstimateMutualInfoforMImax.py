@@ -108,8 +108,9 @@ def alternate_calc_MI(rankexpression,batches):
     return MI
 
 def alt2(df):
-    '''Takes in a data Frame that has fractional counts in each bin and calculates
-        MI'''
+    '''This is our standard mutual information calculator which is called when
+        lm=mi. It is the fastest currently, but requires building a large matrix
+        and so takes a lot of memory and can't run the mpra data set on my computer.'''
     n_bins=1000
     n_seqs = len(df.index)
     
@@ -118,14 +119,24 @@ def alt2(df):
     ct_vec = np.array(df['ct'],dtype=int)
     
     n_batches = len(binheaders)
+    '''Create a huge matrix with each column equal to an instance of the (normalized 
+        such that sum of column equals 1) sequence. The total number of columns
+        that each sequence gets is equal to its total number of counts.''' 
     f = np.repeat(np.array(df[binheaders]),ct_vec,axis=0)
     zlen = f.shape[0]
+    #do a cumulative sum
     f_binned = f.cumsum(axis=0)
+    #Now we are going to bin. First find bin edges.
     bins = np.linspace(zlen/1000-1,zlen-1,1000,dtype=int)
+    '''We want to basically sum our original f matrix within each bin. We currently
+        have a cumulative sum of this, so first we will select the entries at
+        each bin edge.'''
     f_binned = f_binned[bins,:]
     #subtract off previous entry to get only summation within each range
     f_binned[1:,:] = np.subtract(f_binned[1:,:],f_binned[:-1,:])
+    #convolve with gaussian
     f_reg = scipy.ndimage.gaussian_filter1d(f_binned,0.04*n_bins,axis=0)
+    #regularize
     f_reg = f_reg/f_reg.sum()
 
     # compute marginal probabilities
@@ -180,22 +191,38 @@ def integrator_solve(df):
     return MI
     
 def alt3(df):
+    '''MI calculator for use when lm=memsaver. This method isn't particularly well tested
+        and was not used for any of the analysis in the paper. However, This method doesn't require
+        building a matrix, and so can be used with large data sets like the mpra
+        set even on my computer, but it is painfully slow. The coding is not
+        very refined though, so I think you could really speed this up if you 
+        take the time.'''
     n_bins=1000
     n_seqs = len(df.index)
     binheaders = utils.get_column_headers(df)
     n_batches = len(binheaders)
+    
     cumvec = np.array(np.cumsum(df['ct']))
     #normalize so that all counts = 1000
     cumvec = 1000*(cumvec/cumvec[-1])
+    #get ready to bin. find indexes of bin edges by looking in cumulative vector of counts
     index = np.searchsorted(cumvec,range(n_bins))
     f_binned = sp.zeros((n_bins,n_batches))
+    #initialize list
     left_remainder = [0 for q in range(n_batches)]
     left_index = 0
+    
     for i in range(0,n_bins-1): 
+        #for each sequence which exists fully within a bin, sum it
         main_sum = np.array(df.loc[index[i]:index[i+1]-1,binheaders].sum(axis=0))
+        '''For the sequence on that is split by a bin edge on the right, find
+            what fraction of that bin is in the left bin'''
         remainder_fraction = (i+1-cumvec[index[i+1]-1])/(cumvec[index[i+1]] - cumvec[index[i+1]-1])
-        right_remainder =  np.array(remainder_fraction*df.loc[index[i+1]-1,binheaders])
+        '''find the total bin counts by adding previously left over values from the last bin,
+            (left remainder) to the main sum, and the fraction of the split sequence that
+            exists in this bin'''
         f_binned[i,:] = left_remainder + main_sum + remainder_fraction*df.loc[index[i+1]-1,binheaders]
+        #calculate the remainder for the next bin.
         left_remainder = np.array((1-remainder_fraction)*df.loc[index[i+1]-1,binheaders])
     #must do last bin separately
     f_binned[n_bins-1,:] = left_remainder + np.array(df.loc[index[-1]:,binheaders].sum(axis=0))

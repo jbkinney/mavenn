@@ -93,14 +93,31 @@ def MaximizeMI_memsaver(
 def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     '''Learn models using berg von hippel model. The foreground sequences are
          usually bin_1 and background in bin_0, this can be changed via flags.''' 
-    binheaders = utils.get_column_headers(df)
-    #add pseudocounts to improve bayesean inference. 
-    df[binheaders] = df[binheaders] + pseudocounts
-    #calculate frequencies
-    foreground_freqs = utils.profile_freqs(df,dicttype,bin_k=foreground)
-    background_freqs = utils.profile_freqs(df,dicttype,bin_k=background)
-    output_df = -np.log(foreground_freqs/background_freqs)
+
+    #check that the foreground and background chosen columns actually exist.
+    columns_to_check = {'ct_' + str(foreground),'ct_' + str(background)}
+    if not columns_to_check.issubset(set(df.columns)):
+        raise ValueError('Foreground or Background column does not exist!')
+
+    #get counts of each base at each position
+    foreground_counts = profile_counts.main(df,dicttype,bin_k=foreground)   
+    background_counts = profile_counts.main(df,dicttype,bin_k=background)
+    binheaders = utils.get_column_headers(foreground_counts)
+    #add pseudocounts to each position
+    foreground_counts[binheaders] = foreground_counts[binheaders] + pseudocounts
+    background_counts[binheaders] = background_counts[binheaders] + pseudocounts
+    #normalize to compute frequencies
+    foreground_freqs = foreground_counts.copy()
+    background_freqs = background_counts.copy()
+    foreground_freqs[binheaders] = foreground_freqs[binheaders].div(
+        foreground_freqs[binheaders].sum(axis=1),axis=0)
+    background_freqs[binheaders] = background_freqs[binheaders].div(
+        background_freqs[binheaders].sum(axis=1),axis=0)
     
+    output_df = -np.log(foreground_freqs/background_freqs)
+    #change column names accordingly (instead of ct_ we want val_)
+    rename_dict = {'ct_' + str(inv_dict[i]):'val_' + str(inv_dict[i]) for i in range(len(seq_dict))}
+    output_df = output_df.rename(columns=rename_dict)
     return output_df
 
 
@@ -120,12 +137,14 @@ def main(
         background=0,alpha=0,pseudocounts=1,test=False):
     
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype=modeltype)
-    '''Create a sequence dictionary where the last possibility is removed.
-        This means when we switch to matrix form for sequences, the last item
-        will be designated by all zeros.'''
-    #Check to make sure the chosen dictionary type correctly describes the sequences
+    
+    '''Check to make sure the chosen dictionary type correctly describes
+         the sequences. An issue with this test is that if you have DNA sequence
+         but choose a protein dictionary, you will still pass this test bc A,C,
+         G,T are also valid amino acids'''
+    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='LinearEmat')
     def check_sequences(s):
-        return set(s).issubset(seq_dict)
+        return set(s).issubset(lin_seq_dict)
     if False in set(df.seq.apply(check_sequences)):
         raise TypeError('Wrong sequence type!')
     par_seq_dict = {v:k for v,k in seq_dict.items() if k != (len(seq_dict)-1)}
@@ -160,13 +179,10 @@ def main(
             means_std_df = pd.io.parsers.read_csv(LS_means_std,delim_whitespace=True)
             #change bin number to 'ct_number' and then use as index
             labels = list(means_std_df['bin'].apply(add_label))
-            
             std = means_std_df['std']
             std.index = labels
-            
             #Change Weighting of each sequence by dividing counts by bin std
             df[labels] = df[labels].div(std)
-            
             means = means_std_df['mean']
             means.index = labels
         else:
@@ -185,64 +201,6 @@ def main(
         #Use ridge regression to find matrix.       
         emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha)
 
-    if lm == 'iterative_LS':
-        
-        df['ct'] = df[col_headers].sum(axis=1)
-        df = df[df.ct != 0]        
-        df.reset_index(inplace=True,drop=True)
-        #do initial LS step without library bin.
-        temp_df = df.copy()
-        try:
-            temp_df.drop('ct_0',inplace=True)
-        except:
-            pass
-        raveledmat,batch,sw = utils.genweightandmat(
-                temp_df,par_seq_dict,modeltype=modeltype)
-        emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha)
-        '''Now do Hard Expectation maximization by iteratively replacing the bin
-            number by mean expression in each bin, and weighting by the inverse
-            of the standard deviation in each bin'''
-        for i in range(LS_iterations):           
-            
-            temp_df = df.copy()
-            emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))
-            if alpha != 0:
-                scale_factor = np.sqrt(len(seq_dict)/(emat_typical*emat_typical).sum())
-                emat_typical = emat_typical*scale_factor
-                
-            dot = np.zeros(len(temp_df.index))
-            if modeltype == 'LinearEmat':
-                for i,s in enumerate(temp_df['seq']):
-                    dot[i] = np.sum(value*utils.seq2mat(s,seq_dict))
-                                   
-            elif modeltype=='Neighbor':
-                for i,s in enumerate(temp_df['seq']):
-                    dot[i] = np.sum(value*utils.seq2matpair(s,seq_dict))
-         
-            else:
-                raise ValueError('Cannot handle other model types at the moment. Sorry!')
-            temp_df['val'] = dot
-            means_temp = np.zeros(len(col_headers))
-            std_temp = np.zeros(len(col_headers))
-            for q,c in enumerate(col_headers):
-                means_temp[q] = np.average(temp_df['val'],weights=temp_df[c])
-                std_temp[q] = weighted_std(temp_df['val'],temp_df[c])
-            
-            means = pd.Series(means_temp)
-            
-            means.index = col_headers
-            
-            std = pd.Series(std_temp)
-            std.index = col_headers
-            
-            
-            temp_df[col_headers] = temp_df[col_headers].div(std)
-            temp_df['ct'] = temp_df[col_headers].sum(axis=1)
-            
-            raveledmat,batch,sw = utils.genweightandmat(
-                temp_df,par_seq_dict,means=means,modeltype=modeltype)
-           
-            emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha) 
         
     
     if lm == 'mi':
@@ -252,9 +210,10 @@ def main(
             elif modeltype == 'Neighbor':
                 emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
-            emat_0_df = main(df.copy(),dicttype,'iterative_LS',modeltype=modeltype,alpha=alpha)
+            emat_0_df = main(df.copy(),dicttype,'leastsq',modeltype=modeltype,alpha=alpha)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
+        #normalize such that the total counts in each bin sum to 1
         df[col_headers] = df[col_headers].div(df['ct'],axis=0)
         if modeltype == 'Neighbor':
             #choose starting point for MCMC
@@ -277,7 +236,7 @@ def main(
             elif modeltype == 'Neighbor':
                 emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
-            emat_0_df = main(df.copy(),dicttype,'iterative_LS',modeltype=modeltype,alpha=alpha)
+            emat_0_df = main(df.copy(),dicttype,'leastsq',modeltype=modeltype,alpha=alpha)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
         if modeltype == 'Neighbor':
@@ -305,8 +264,8 @@ def main(
     elif lm == 'bvh': 
         '''the emat for this format is currently transposed compared to other formats
         it is also already a data frame with columns [pos,freq_...]'''
-        freq_cols = ['freq_' + inv_dict[i] for i in range(len(seq_dict))]
-        emat_typical = emat[freq_cols]
+        emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
+        emat_typical = emat[emat_cols]
         emat_typical = (gauge_fix.fix_matrix((np.array(emat_typical))))
         #energy = ((utils.seq2mat(wtseq,seq_dict)).transpose()*(emat_typical)).sum().sum()
         
@@ -373,7 +332,7 @@ def add_subparser(subparsers):
         '--pseudocounts',default=1,type=int,help='''pseudocounts to add''')
     p.add_argument(
         '--LS_means_std',default=None,help='''File name containing mean and std
-        of each bin for least squares regression. Defaults to to bin number and 1
+        of each bin for least squares regression. Defaults to bin number and 1
         respectively.''')
     p.add_argument(
         '--LS_iterations',type=int,default=4,
