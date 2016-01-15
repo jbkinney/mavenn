@@ -205,6 +205,9 @@ def alt3(df):
     cumvec = np.array(np.cumsum(df['ct']))
     #normalize so that all counts = 1000
     cumvec = 1000*(cumvec/cumvec[-1])
+
+    #############################################################################
+    #MOST IMPORTANT PART OF THE CODE FOR JUSTIN TO FIX
     #get ready to bin. find indexes of bin edges by looking in cumulative vector of counts
     index = np.searchsorted(cumvec,range(n_bins))
     f_binned = sp.zeros((n_bins,n_batches))
@@ -226,6 +229,7 @@ def alt3(df):
         left_remainder = np.array((1-remainder_fraction)*df.loc[index[i+1]-1,binheaders])
     #must do last bin separately
     f_binned[n_bins-1,:] = left_remainder + np.array(df.loc[index[-1]:,binheaders].sum(axis=0))
+    ##############################################################################
     f_reg = scipy.ndimage.gaussian_filter1d(f_binned,0.04*n_bins,axis=0)
     f_reg = f_reg/f_reg.sum()
 
