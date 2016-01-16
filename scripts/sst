@@ -25,7 +25,6 @@ parser = argparse.ArgumentParser()
 # All functions can specify and output file. Default is stdout.
 parser.add_argument('-o','--out',default=False,help='Output location/type, by default it writes to standard output, if a file name is supplied it will write to a text file')
 
-
 # Add various subcommands individually viva subparsers
 subparsers = parser.add_subparsers()
 
@@ -44,7 +43,6 @@ predictiveinfo.add_subparser(subparsers)
 # Final incantiation needed for this to work
 args = parser.parse_args()
 args.func(args=args)
-
 
 
 

@@ -11,6 +11,7 @@ import sys
 import pandas as pd
 import sst.utils as utils
 from Bio import SeqIO
+import sst.io
 
 
 
@@ -81,12 +82,15 @@ def wrapper(args):
     
     # Run funciton
     if args.i:
-        filelist_df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
+        #filelist_df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
+        filelist_df = sst.io.load(args.i)
     else:
-        filelist_df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        #filelist_df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        filelist_df = sst.io.load(sys.stdin)
     
     if args.tagkeys:
-        tags_df = pd.io.parsers.read_csv(args.tagkeys,delim_whitespace=True)
+        #tags_df = pd.io.parsers.read_csv(args.tagkeys,delim_whitespace=True)
+        tags_df = sst.io.load(args.tagkeys)
     else:
         tags_df = None
 
