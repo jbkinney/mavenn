@@ -5,10 +5,49 @@ import scipy as sp
 import scipy.ndimage
 import pandas as pd
 
+
+def profile_counts(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,end=None):
+    
+    seq_dict,inv_dict = utils.choose_dict(dicttype)
+    strings = df['seq'].str.slice(start,end)
+    #if no counts column, then assume counts = 1
+    try:
+        ct = df['ct']
+    except:
+        df['ct'] = 1
+        ct = df['ct']
+    if bin_k:
+        ct = df['ct_'+str(bin_k)]
+    seqL = len(strings[0])
+    mutfreq = np.zeros([seqL,len(seq_dict)])
+    #Dictionary with number corresponding to each base
+    wttest = []
+    for i in range(seqL):
+        #at this position make list of each base
+        letlist = strings.str.slice(i,i+1)
+        #tally the number of each
+        counts = [np.sum(ct[letlist==inv_dict[q]]) for q in range(len(seq_dict))]
+        wtlet = np.argmax(counts)
+        wttest.append(inv_dict[wtlet])
+        mutfreq[i,:] = counts
+    if wtseq:
+        assert(wtseq==wttest)
+    if not utils.is_seq_valid(wttest,seq_dict):
+        sys.exit('Wild type seq is invalid')
+    cols = ['ct_' + str(inv_dict[q]) for q in range(len(seq_dict))]
+    mf = pd.DataFrame(mutfreq,columns=cols)
+    pos = pd.Series(range(seqL),name='pos')
+    output_df = pd.concat([pos,mf],axis=1)
+    #we can use this function for obtaining the wtseq of our library
+    if return_wtseq:
+        return wttest
+    else:
+        return output_df
+
 def profile_freqs(df,dicttype,wtseq=None,bin_k=0):
     '''calculate the frequency of each base at each position for a given bin
         in a dataframe.'''
-    seq_dict,inv_dict = utils.choose_dict(dicttype)
+    seq_dict,inv_dict = choose_dict(dicttype)
     strings = df['seq']
     ct = df['ct_'+str(bin_k)]
     
@@ -27,7 +66,7 @@ def profile_freqs(df,dicttype,wtseq=None,bin_k=0):
     
     if wtseq:
         assert(wtseq==wttest)
-    if not utils.is_seq_valid(wttest,seq_dict):
+    if not is_seq_valid(wttest,seq_dict):
         sys.exit('Wild type seq is invalid')
     cols = ['freq_' + str(inv_dict[q]) for q in range(len(seq_dict))]
     mf = pd.DataFrame(mutfreq,columns=cols)

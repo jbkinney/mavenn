@@ -14,7 +14,7 @@ from sklearn import linear_model
 import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
 import sst.stepper as stepper
-#The profile_counts module also allows us to determine wt sequence
+
 import sst.gauge_fix as gauge_fix
 
 def weighted_std(values,weights):
@@ -100,8 +100,8 @@ def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
         raise ValueError('Foreground or Background column does not exist!')
 
     #get counts of each base at each position
-    foreground_counts = profile_counts.main(df,dicttype,bin_k=foreground)   
-    background_counts = profile_counts.main(df,dicttype,bin_k=background)
+    foreground_counts = utils.profile_counts(df,dicttype,bin_k=foreground)   
+    background_counts = utils.profile_counts(df,dicttype,bin_k=background)
     binheaders = utils.get_column_headers(foreground_counts)
     #add pseudocounts to each position
     foreground_counts[binheaders] = foreground_counts[binheaders] + pseudocounts

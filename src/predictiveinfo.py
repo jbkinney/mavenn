@@ -62,7 +62,7 @@ def main(
             sub_df.reset_index(inplace=True)
             sub_MI[i],sub_std = main(
                 sub_df,model_df,dicttype=dicttype,modeltype=modeltype,no_err=True)
-        Std = np.std(sub_MI)
+        Std = np.std(sub_MI)/np.sqrt(2)
     return MI,Std
      
 def wrapper(args):
