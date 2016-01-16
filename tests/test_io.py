@@ -13,7 +13,7 @@ class Tests(unittest.TestCase):
     def test_bad_seq_file_io(self):
         """ Test the ability of sst.io.load to reject invalid files
         """
-        bad_seq_files = glob.glob('data/*_bad_*.txt')
+        bad_seq_files = glob.glob('data/seq*_bad_*.txt')
 
         for file_name in bad_seq_files:
 

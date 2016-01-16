@@ -3,6 +3,7 @@ from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 import re
 import pdb
+import numpy as np
 
 def validate_dataframe(df, fix=False):
     """ 
@@ -92,7 +93,7 @@ def validate_dataframe(df, fix=False):
     for col in val_cols:
 
         # Check if columns are floats
-        if not df[col].values.dtype == float
+        if not df[col].values.dtype == float:
             try:
                 float_vals = df[col].astype(float)
             except:
@@ -108,7 +109,7 @@ def validate_dataframe(df, fix=False):
                 raise TypeError('Non-float parameters encountered.')
 
         # Make sure that all parameters are finite
-        if not all(np.isfinite(df['ct']))
+        if not all(np.isfinite(df['ct'])):
             TypeError('Nonfinite parameters encountered.')
 
     #
@@ -117,7 +118,7 @@ def validate_dataframe(df, fix=False):
 
     if fix:
         return df
-    else
+    else:
         return True
 
 def load(file_name, file_type='text'):
