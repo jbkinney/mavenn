@@ -1,0 +1,36 @@
+#### 16.01.15
+
+jkinney@rpod:~/github/sortseq/examples/crp_models$ sst learn_matrix --start 3 --end 25 -i data.txt -o crp_model.txt -lm bvh
+Traceback (most recent call last):
+  File "/usr/local/bin/sst", line 4, in <module>
+    __import__('pkg_resources').run_script('sst==0.0.1', 'sst')
+  File "/usr/local/lib/python2.7/site-packages/pkg_resources/__init__.py", line 723, in run_script
+    self.require(requires)[0].run_script(script_name, ns)
+  File "/usr/local/lib/python2.7/site-packages/pkg_resources/__init__.py", line 1643, in run_script
+    exec(script_code, namespace, namespace)
+  File "/usr/local/lib/python2.7/site-packages/sst-0.0.1-py2.7.egg/EGG-INFO/scripts/sst", line 46, in <module>
+
+  File "build/bdist.macosx-10.10-x86_64/egg/sst/learn_matrix.py", line 303, in wrapper
+  File "build/bdist.macosx-10.10-x86_64/egg/sst/learn_matrix.py", line 175, in main
+  File "build/bdist.macosx-10.10-x86_64/egg/sst/learn_matrix.py", line 103, in Berg_von_Hippel
+NameError: global name 'profile_counts' is not defined
+
+
+
+jkinney@rpod:~/github/sortseq/examples/crp_models$ sst learn_matrix --start 3 --end 25 -i data.txt -o crp_model.txt -lm leastsq
+jkinney@rpod:~/github/sortseq/examples/crp_models$
+
+
+
+jkinney@rpod:~/github/sortseq/examples/crp_models$ sst learn_matrix --start 3 --end 25 -i data.txt -o crp_model.txt -lm mi
+[                  0%                  ] 5 of 30000 complete in 0.6 sec
+[                  0%                  ] 8 of 30000 complete in 1.2 sec
+[                  0%                  ] 11 of 30000 complete in 1.7 sec
+[                  0%                  ] 15 of 30000 complete in 2.3 sec
+
+
+
+jkinney@rpod:~/github/sortseq/examples/crp_models$ sst learn_matrix --start 3 --end 25 -i data.txt -o crp_model.txt -lm memsaver
+[                  0%                  ] 2 of 30000 complete in 2.3 sec
+[                  0%                  ] 3 of 30000 complete in 4.5 sec
+[                  0%                  ] 4 of 30000 complete in 6.8 sec

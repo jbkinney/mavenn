@@ -1,0 +1,1 @@
+../../data/sortseq/full-wt/bin_2.txt
