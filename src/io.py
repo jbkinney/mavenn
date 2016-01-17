@@ -233,7 +233,7 @@ def load(file_name, file_type='text'):
     return df_valid
 
 def write(df,file_handle):
-    """ Writes a data frame to specified file, given handl
+    """ Writes a data frame to specified file, given handle
     """
 
     # Validate dataframe
