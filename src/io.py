@@ -5,7 +5,23 @@ import re
 import pdb
 import numpy as np
 
-def validate_dataframe(df, fix=False):
+# Make list of all possible parameters
+alphabets = {
+    'seq':''.join(sorted(IUPAC.IUPACUnambiguousDNA.letters)),
+    'seq_rna':''.join(sorted(IUPAC.IUPACUnambiguousRNA.letters)),
+    'seq_pro':''.join(sorted(IUPAC.IUPACProtein.letters))
+}
+model_columns = []
+for alphabet in alphabets.values():
+    cols_mat = ['pos'] + ['val_'+a for a in alphabet] 
+    cols_nbr = ['pos']
+    for a in alphabet:
+        for b in alphabet:
+            cols_nbr.append('val_'+a+b)
+    model_columns.append(cols_mat)
+    model_columns.append(cols_nbr)
+
+def validate(df, fix=False):
     """ 
     Validates the content of a data fram for consistency with 
     sortseq standards. Should be run after reading files and before
@@ -20,9 +36,22 @@ def validate_dataframe(df, fix=False):
     """
 
     # Verify that the data frame has at least one row and one column
-    if not df.shape[1] >= 1 and df.shape[0] >= 1:
+    if not df.shape[0] >= 1:
         raise TypeError(\
-            'Data frame must contain at least one row and one column')
+            'Data frame must contain at least one row')
+    if not df.shape[1] >= 1:
+        raise TypeError(\
+            'Data frame must contain at least one column')
+
+    #
+    # Validate column names
+    #
+    exact_cols = ['seq', 'seq_pro', 'seq_rna', 'ct', 'pos']
+    col_patterns = [r'^ct_',r'^val_']
+    for col in df.columns:
+        if (not col in exact_cols) and \
+            (not any([re.match(pat,col) for pat in col_patterns])):
+            raise TypeError('Invalid column in dataframe: %s.'%col)
 
     #
     # Validate sequence columns
@@ -31,13 +60,9 @@ def validate_dataframe(df, fix=False):
     for col in seq_cols:
 
         # Set alphabet
-        if col=='seq':
-            alphabet = IUPAC.IUPACUnambiguousDNA.letters
-        elif col=='seq_rna':
-            alphabet = IUPAC.IUPACUnambiguousRNA.letters
-        elif col=='seq_pro':
-            alphabet = IUPAC.IUPACProtein.letters
-        else:
+        try:
+            alphabet = alphabets[col]
+        except:
             raise TypeError('Sequence column is of unkown type: %s.'%col)
 
         # Check that all sequences have the same length
@@ -82,6 +107,10 @@ def validate_dataframe(df, fix=False):
             else:
                 raise TypeError('Noninteger numbers found in counts.')
 
+            # Make sure that all parameters are finite
+            if not all(np.isfinite(df[col])):
+                TypeError('Nonfinite counts encountered.')
+
         # Verify that counts are nonnegative
         if not all(df[col] >= 0):
             raise TypeError('Counts must be nonnegative numbers.')
@@ -109,13 +138,62 @@ def validate_dataframe(df, fix=False):
                 raise TypeError('Non-float parameters encountered.')
 
         # Make sure that all parameters are finite
-        if not all(np.isfinite(df['ct'])):
-            TypeError('Nonfinite parameters encountered.')
+        if not all(np.isfinite(df[col])):
+            raise TypeError('Nonfinite parameters encountered.')
 
     #
-    # TO DO: order columns
+    # Validate position column
     #
+    col = 'pos'
+    if col in df.columns:
+        # Verify that positions are consecutive
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise TypeError('Positions are not consecutive integers.')
 
+        # Verify that positions are nonnegative
+        if first < 0:
+            raise TypeError('Positions are not all nonnegative.')
+
+        # Verify that positions are of type int 
+        if not df[col].values.dtype == int:
+            if fix:
+                    df[col] = df[col].astype(int)
+            else:
+                TypeError('Counts are not integers; set fix=True to fix.')
+
+
+        # Verify that positions are consecutive integer
+
+    #
+    # Validate column order
+    #
+    ct_cols = sorted([col for col in df.columns if re.match(r'^ct',col)])
+    val_cols = sorted([col for col in df.columns if re.match(r'^val',col)])
+    pos_cols = sorted([col for col in df.columns if re.match(r'pos',col)])
+    seq_cols = sorted([col for col in df.columns if re.match(r'^seq',col)])
+    tmp = ct_cols + val_cols + pos_cols + seq_cols
+    other_cols = sorted([col for col in df.columns if not col in tmp])
+    new_cols = pos_cols + ct_cols + val_cols + other_cols + seq_cols
+    if not all(df.columns == new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+
+    # If dataframe represents a model, validate columns exactly
+    if len(val_cols) > 0:
+        ok = False
+        for cols in model_columns:
+            # Check if cols and df.columns are identical
+            if len(cols)==len(df.columns):
+                if all([a==b for a,b in zip(cols,df.columns)]):
+                    ok = True
+        if not ok:
+            raise TypeError('Dataframe represents model with invalid columns.')
+
+    # Return fixed df if 
     if fix:
         return df
     else:
@@ -134,14 +212,33 @@ def load(file_name, file_type='text'):
 
     # For text file, just load as whitespace-delimited data frame
     if file_type=='text':
-        df = pd.io.parsers.read_csv(file_name,delim_whitespace=True)
+        df = pd.io.parsers.read_csv(file_name,delim_whitespace=True,\
+            comment='#')
 
     # For fastq or fasta file, use Bio.SeqIO
     elif file_type=='fastq' or file_type=='fasta':
         df = pd.DataFrame(columns=['seq'])
-        for i,record in enumerate(SeqIO.parse(fn,file_type)):
+        for i,record in enumerate(SeqIO.parse(file_name,file_type)):
             df.loc[i] = str(record.seq)
 
+    # If a sequences were loaded, or tags were loaded, and there are no counts,
+    # then add counts
+    if any([re.match(r'^seq',col) for col in df.columns]) or \
+        any([re.match(r'tag',col) for col in df.columns]):
+        if not any([re.match(r'^ct',col) for col in df.columns]):
+            df['ct'] = 1
+
     # Return validated/fixed dataframe
-    df_valid =  validate_dataframe(df, fix=True)
+    df_valid = validate(df, fix=True)
     return df_valid
+
+def write(df,file_handle):
+    """ Writes a data frame to specified file, given handl
+    """
+
+    # Validate dataframe
+    df_valid = validate(df, fix=True)
+
+    # Write dataframe to file
+    file_handle.write(df_valid.to_string())
+
