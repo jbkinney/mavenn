@@ -1,0 +1,11 @@
+file			bin	
+library.txt		0
+bin_1.txt		1
+bin_2.txt		2
+bin_3.txt		3
+bin_4.txt		4
+bin_5.txt		5
+bin_6.txt		6
+bin_7.txt		7
+bin_8.txt		8
+bin_9.txt		9
