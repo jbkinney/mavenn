@@ -11,22 +11,74 @@ import sys
 import pandas as pd
 import sst.utils as utils
 from Bio import SeqIO
+import sst.io
 
+import qc
+
+fasta_filename_patterns=r'(.fasta$|.fas$|.fsa$|.ffn$|.fna$|.fa|.frn|.faa$)'
+fastq_filename_patterns=r'(.fastq$|.fq$)'
+
+# def main(filelist_df,tags_df=None):
+
+#     # Validate filelist
+#     qc.validate(filelist_df)
+
+#     # Read datasets into dictionary indexed by bin number
+#     dataset_df_dict = {}
+#     for item in filelist_df.iterrows():
+#         # Autodetect fasta, fastq, or text file based on file extension
+#         fn = item[1]['file']
+#         b = item[1]['bin']
+#         if re.search(fasta_filename_patterns,fn:
+#             df = load_dataset(fn,file_type='fasta')
+#         elif re.search(fastq_filename_patterns,fn):
+#             df = load_dataset(fn,file_type='fastq')
+#         else:
+#             df = load_dataset(fn,file_type='text')
+#         dataset_df_dict[b] = df
+
+#     # Make sure datasets were loaded
+#     if not len(dataset_df_dict)>=1:
+#         raise TypeError('No datasets were loaded')
+
+#     # Determine index column. Must be same for all files
+#     df = dataset_df_dict.values()[0]
+#     if 'tag' in df.columns:
+#         index_col = 'tag'
+#     elif 'seq' in df.columns:
+#         index_col = 'seq'
+#     elif 'seq_rna' in df.columns:
+#         index_col = 'seq_rna'
+#     elif 'seq_pro' in df.columns:
+#         index_col = 'seq_pro'
+
+#     # Concatenate dataset dataframes
+#     for b in dataset_df_dict.keys()
+#         df = dataset_df_dict[b]
+
+#         # Verify that dataframe has correct column
+#         if not index_col in df.colums:
+#             raise TypeError('\
+#                 Dataframe does not contain index_col="%s"'%index_col)
+#         if not 'ct' in df.columns:
+#             raise TypeError('\
+#                 Dataframe does not contain a "ct" column')
+
+#         # Delete "ct_X" columns
+#         df.drop([c for c in df.columns if is_col_type(col_name,'ct_')])
+
+#         # Index dataset by index_col
+#         df.groupby(index_col)
+
+#     # Concatenate datasets
 
 
 def main(filelist_df,tags_df=None):
 
-    #make sure input columns are bin and file
-    columns = set(filelist_df.columns)
-    if not columns == {'bin','file'}:
-        raise TypeError('Incorrect column headers for fileslist dataframe!')
-
-    output_df = pd.DataFrame()
-    #if there are tags it is an mpra exp. We need to change a few things...
-    try:
-        tags_df = tags_df.set_index('tag')
-    except:
-        pass
+    # Validate input dataframes
+    qc.validate_filelist(filelist_df)
+    if not tags_df is None:
+        qc.validate_tagkey(tags_df)
     
     for item in filelist_df.iterrows():
         '''If files are fasta or fastq, convert them to dataframe, otherwise throw
@@ -81,12 +133,15 @@ def wrapper(args):
     
     # Run funciton
     if args.i:
-        filelist_df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
+        #filelist_df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
+        filelist_df = sst.io.load_filelist(args.i)
     else:
-        filelist_df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        #filelist_df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        filelist_df = sst.io.load_filelist(sys.stdin)
     
     if args.tagkeys:
-        tags_df = pd.io.parsers.read_csv(args.tagkeys,delim_whitespace=True)
+        #tags_df = pd.io.parsers.read_csv(args.tagkeys,delim_whitespace=True)
+        tags_df = sst.io.load_tagkeys(args.tagkeys)
     else:
         tags_df = None
 

@@ -1,0 +1,11 @@
+bin	file
+A	library.txt
+B	bin_1.txt
+C	bin_2.txt
+D	bin_3.txt
+E	bin_4.txt
+F	bin_5.txt
+G	bin_6.txt
+H	bin_7.txt
+I	bin_8.txt
+J	bin_9.txt
