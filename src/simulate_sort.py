@@ -11,9 +11,13 @@ import sst.Models as Models
 import sst.utils as utils
 import sst.simulate_evaluate as simulate_evaluate
 
-def main(df,dicttype,modeltype,mp,noisetype,npar,nbins,sequence_library=True):
+def main(
+    df,dicttype,modeltype,mp,noisetype,npar,nbins,sequence_library=True,
+    start=0,end=None):
+
     #generate predicted energy of each sequence.
-    df['val'] = simulate_evaluate.main(df,mp,dicttype,modeltype=modeltype,is_df=True)
+    df['val'] = simulate_evaluate.main(
+        df,[mp],dicttype,modeltype=modeltype,is_df=True,start=start,end=end)
     #Determine model type to use for noise
     if noisetype == 'LogNormal':
         NoiseModelSort = Models.LogNormalNoise(npar)
@@ -49,10 +53,6 @@ def wrapper(args):
         npar = args.noiseparam.strip('[').strip(']').split(',')
     except:
         npar = []
-    try:
-        mp = args.modelparam.strip('[').strip(']').split(',')
-    except:
-        mp = []
     nbins = args.nbins
     # Run funciton
     if args.i:
@@ -63,7 +63,9 @@ def wrapper(args):
         df = pd.io.parsers.read_csv(
             sys.stdin,delim_whitespace=True,
             dtype={'seqs':str,'batch':int})
-    output_df = main(df,args.type,args.modeltype,mp,args.noisemodel,npar,nbins)
+    output_df = main(
+        df,args.type,args.modeltype,args.modelparam,args.noisemodel,npar,
+        nbins,start=args.start,end=args.end)
     
     if args.out:
         outloc = open(args.out,'w')
@@ -84,11 +86,11 @@ def add_subparser(subparsers):
         Parameters for your noise model, as a list. The required parameters are
         LogNormal=[autoflouro,scale],Normal=[scale].''')
     p.add_argument(
-        '-m', '--modeltype', type=str,choices=['RandomLinear','LinearEmat'
-        ,'Neighbor'],default='LinearEmat',help ='Type of Model to use')
-    p.add_argument('-mp', '--modelparam', default=None,
-        help='''Parameters should be entered as a list, with 
-        RandomLinear=[LengthofSeq],LinearEmat=[FileName],Neighbor=[Filename].
+        '-mt', '--modeltype', type=str,choices=['RandomLinear','MAT'
+        ,'NBR'],default='MAT',help ='Type of Model to use')
+    p.add_argument('-m', '--modelparam', default=None,
+        help='''
+        RandomLinear=LengthofSeq,MAT=FileName,NBR=Filename.
         ''')
     p.add_argument(
         '-i','--i',default=False,help='''Read input from file instead 
@@ -102,5 +104,11 @@ def add_subparser(subparsers):
          this option''')
     p.add_argument(
         '-t', '--type', choices=['dna','rna','protein'], default='dna')
+    p.add_argument(
+        '-s','--start',type=int,default=0,
+        help ='Position to start your analyzed region')
+    p.add_argument(
+        '-e','--end',type=int,default = None,
+        help='Position to end your analyzed region')
     p.add_argument('-o', '--out', default=None)
     p.set_defaults(func=wrapper)

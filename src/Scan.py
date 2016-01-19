@@ -15,19 +15,19 @@ import pandas as pd
 import sst.utils as utils
 import sst.Models as Models
 
-def main(wtseq,model,dicttype,modeltype='LinearEmat',is_df=True):
+def main(wtseq,model,dicttype,modeltype='MAT',is_df=True):
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype=modeltype)
     #Check to make sure wtseq only contains allowed bases
-    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='LinearEmat')
+    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT')
     def check_sequences(s):
         return set(s).issubset(lin_seq_dict)
     if not check_sequences(wtseq):
         raise ValueError(
             'Please use only bases contained in ' + str(lin_seq_dict.keys()))
 
-    if modeltype == 'LinearEmat':
+    if modeltype == 'MAT':
         mymodel = Models.LinearModel(model,dicttype,is_df=is_df)
-    elif modeltype == 'Neighbor':
+    elif modeltype == 'NBR':
         mymodel = Models.NeighborModel(model,dicttype,is_df=is_df)
     
     #Create a list of sequences to evaluate
@@ -72,7 +72,7 @@ def add_subparser(subparsers):
     p.add_argument(
         '-t', '--type', choices=['dna','rna','protein'], default='dna')
     p.add_argument(
-        '-mt','--modeltype',choices=['LinearEmat','Neighbor'],
-        default='LinearEmat',help='Type of Model')
+        '-mt','--modeltype',choices=['MAT','NBR'],
+        default='MAT',help='Type of Model')
     p.add_argument('-o', '--out', default=None)
     p.set_defaults(func=wrapper)

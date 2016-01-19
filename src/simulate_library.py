@@ -38,7 +38,7 @@ def main(wtseq=None, mutrate=0.10, numseq=10000,dicttype='dna',probarr=None,
         L = len(wtseq)
         letarr = np.zeros([numseq,L])
         #Check to make sure the wtseq uses the correct bases.
-        lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='LinearEmat')
+        lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT')
         def check_sequences(s):
             return set(s).issubset(lin_seq_dict)
         if not check_sequences(wtseq):

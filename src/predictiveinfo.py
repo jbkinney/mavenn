@@ -18,7 +18,7 @@ import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 
 
 def main(
-        data_df,model_df,dicttype='dna',exptype=None,modeltype='LinearEmat',
+        data_df,model_df,dicttype='dna',exptype=None,modeltype='MAT',
         start=0,end=None,no_err=False):
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype)
     if (start != 0 or end):
@@ -37,11 +37,11 @@ def main(
     value = np.transpose(np.array(model_df[model_df_headers]))  
     #now we evaluate the expression of each sequence according to the model.
     dot = np.zeros(len(data_df.index))
-    if modeltype == 'LinearEmat':
+    if modeltype == 'MAT':
         for i,s in enumerate(data_df['seq']):
             dot[i] = np.sum(value*utils.seq2mat(s,seq_dict))
         data_df['val'] = dot                   
-    elif modeltype=='Neighbor':
+    elif modeltype=='NBR':
         for i,s in enumerate(data_df['seq']):
             dot[i] = np.sum(value*utils.seq2matpair(s,seq_dict))
         data_df['val'] = dot
@@ -92,8 +92,8 @@ def add_subparser(subparsers):
     p = subparsers.add_parser('predictiveinfo')
     p.add_argument('-ds','--dataset')
     p.add_argument(
-        '-mt','--modeltype',default='LinearEmat',
-        choices=['LinearEmat','Neighbor'],help='''Type of model to be evaluated''')
+        '-mt','--modeltype',default='MAT',
+        choices=['MAT','NBR'],help='''Type of model to be evaluated''')
     p.add_argument(
         '-expt','--exptype',default=None,choices=[None,'sortseq','selex',
         'dms','mpra'])

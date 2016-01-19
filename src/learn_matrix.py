@@ -30,7 +30,7 @@ def MaximizeMI_test(
         seq_mat,df,emat_0,db=None,burnin=1000,iteration=30000,thin=10,
         runnum=0): 
     '''Performs MI maximization using pymc, this function is used if the learning
-    method lm=mi is used'''
+    method lm=IM is used'''
     @pymc.stochastic(observed=True,dtype=int)
     def sequences(value=seq_mat):
         return 0
@@ -93,7 +93,7 @@ def MaximizeMI_memsaver(
 def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     '''Learn models using berg von hippel model. The foreground sequences are
          usually bin_1 and background in bin_0, this can be changed via flags.''' 
-
+    seq_dict,inv_dict = utils.choose_dict(dicttype)
     #check that the foreground and background chosen columns actually exist.
     columns_to_check = {'ct_' + str(foreground),'ct_' + str(background)}
     if not columns_to_check.issubset(set(df.columns)):
@@ -131,10 +131,10 @@ def Compute_Least_Squares(raveledmat,batch,sw,alpha=0):
     
 
 def main(
-        df,dicttype,lm,modeltype='LinearEmat',LS_means_std=None,LS_iterations=4,
+        df,dicttype,lm,modeltype='MAT',LS_means_std=None,LS_iterations=4,
         db=None,iteration=30000,burnin=1000,thin=10,runnum=0
         ,initialize='Rand',start=0,end=None,foreground=1,
-        background=0,alpha=0,pseudocounts=1,test=False):
+        background=0,alpha=0,pseudocounts=1,test=False,drop_library=False):
     
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype=modeltype)
     
@@ -142,7 +142,7 @@ def main(
          the sequences. An issue with this test is that if you have DNA sequence
          but choose a protein dictionary, you will still pass this test bc A,C,
          G,T are also valid amino acids'''
-    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='LinearEmat')
+    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT') 
     def check_sequences(s):
         return set(s).issubset(lin_seq_dict)
     if False in set(df.seq.apply(check_sequences)):
@@ -153,28 +153,29 @@ def main(
     df = utils.collapse_further(df)
     col_headers = utils.get_column_headers(df)
     df[col_headers] = df[col_headers].astype(int)
-    # The different learning methods produce different formats for the emat
+    #create vector of column names
     val_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
     if end:
         df = df[df['seq'].apply(len) == (end-start)]
     df.reset_index(inplace=True,drop=True)
+    #If there are sequences of different lengths, then print error
+    if len(set(df.seq.apply(len))) > 1:
+         sys.stderr.write('Lengths of all sequences are not the same!')
     #Drop any sequences with incorrect length
     if not end:
+        '''is no value for end of sequence was supplied, assume first seq is
+            correct length'''
         seqL = len(df['seq'][0]) - start
     else:
         seqL = end-start
     df = df[df.seq.apply(len) == (seqL)]
-    #If there were sequences of different lengths, then print error
-    if len(set(df.seq.apply(len))) > 1:
-         sys.stderr.write('Lenghts of all sequences are not the same!')
     df.reset_index(inplace=True,drop=True)
     #Do something different for each type of learning method (lm)
-    if lm == 'bvh':
+    if lm == 'ER':
         emat = Berg_von_Hippel(
             df,dicttype,foreground=foreground,background=background,
             pseudocounts=pseudocounts)
-    if lm == 'leastsq':
-        
+    if lm == 'LS': 
         if LS_means_std: #If user supplied preset means and std for each bin
             means_std_df = pd.io.parsers.read_csv(LS_means_std,delim_whitespace=True)
             #change bin number to 'ct_number' and then use as index
@@ -187,15 +188,16 @@ def main(
             means.index = labels
         else:
             means = None
-        
+        #drop all rows without counts
         df['ct'] = df[col_headers].sum(axis=1)
         df = df[df.ct != 0]        
-        df.reset_index(inplace=True,drop=True)     
-        try:
+        df.reset_index(inplace=True,drop=True)
+        ''' For sort-seq experiments, bin_0 is library only and isn't the lowest
+            expression even though it is will be calculated as such if we proceed.
+            Therefore is drop_library is passed, drop this column from analysis.'''
+        if drop_library:     
             df.drop('ct_0',inplace=True)
-        except:
-            pass
-                           
+        #parameterize sequences into 3xL vectors                       
         raveledmat,batch,sw = utils.genweightandmat(
                                   df,par_seq_dict,means=means,modeltype=modeltype)
         #Use ridge regression to find matrix.       
@@ -203,25 +205,27 @@ def main(
 
         
     
-    if lm == 'mi':
+    if lm == 'IM':
+        #First create initialization matrix
         if initialize == 'Rand':
-            if modeltype == 'LinearEmat':
+            if modeltype == 'MAT':
                 emat_0 = utils.RandEmat(len(df['seq'][0]),len(seq_dict))
-            elif modeltype == 'Neighbor':
+            elif modeltype == 'NBR':
                 emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
-            emat_0_df = main(df.copy(),dicttype,'leastsq',modeltype=modeltype,alpha=alpha)
+            #Run this function again using using -lm LS
+            emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
-        #normalize such that the total counts in each bin sum to 1
+        '''normalize such that the total counts in each bin sum to 1. This is
+            necessary for the mutual information calculator used during MCMC'''
         df[col_headers] = df[col_headers].div(df['ct'],axis=0)
-        if modeltype == 'Neighbor':
-            #choose starting point for MCMC
+        #parameterize each sequence
+        if modeltype == 'NBR':
             seq_mat = np.zeros([len(seq_dict),len(df['seq'][0])-1,len(df.index)],dtype=int)
             for i in range(len(df.index)):
                 seq_mat[:,:,i] = utils.seq2matpair(df['seq'][i],seq_dict)
-        elif modeltype == 'LinearEmat':
-            
+        elif modeltype == 'MAT':            
             seq_mat = np.zeros([len(seq_dict),len(df['seq'][0]),len(df.index)],dtype=int)
             for i in range(len(df.index)):
                 seq_mat[:,:,i] = utils.seq2mat(df['seq'][i],seq_dict)
@@ -230,22 +234,21 @@ def main(
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
                 thin=thin,runnum=runnum)
     if lm == 'memsaver':
+        #this is also an MCMC routine, do the same as above.
         if initialize == 'Rand':
-            if modeltype == 'LinearEmat':
+            if modeltype == 'MAT':
                 emat_0 = utils.RandEmat(len(df['seq'][0]),len(seq_dict))
-            elif modeltype == 'Neighbor':
+            elif modeltype == 'NBR':
                 emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
-            emat_0_df = main(df.copy(),dicttype,'leastsq',modeltype=modeltype,alpha=alpha)
+            emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
-        if modeltype == 'Neighbor':
-            #choose starting point for MCMC
+        if modeltype == 'NBR':
             seq_mat = np.zeros([len(seq_dict),len(df['seq'][0])-1,len(df.index)],dtype=int)
             for i in range(len(df.index)):
                 seq_mat[:,:,i] = utils.seq2matpair(df['seq'][i],seq_dict)
-        elif modeltype == 'LinearEmat':
-            
+        elif modeltype == 'MAT':
             seq_mat = np.zeros([len(seq_dict),len(df['seq'][0]),len(df.index)],dtype=int)
             for i in range(len(df.index)):
                 seq_mat[:,:,i] = utils.seq2mat(df['seq'][i],seq_dict)
@@ -253,34 +256,31 @@ def main(
         emat = MaximizeMI_memsaver(
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
                 thin=thin,runnum=runnum)
-    if (lm == 'mi' or lm == 'memsaver'):       
-        if modeltype == 'Neighbor':
+    #now format the energy matrices to get them ready to output
+    if (lm == 'IM' or lm == 'memsaver'):       
+        if modeltype == 'NBR':
              emat_typical = gauge_fix.fix_neighbor(np.transpose(emat))
-             #energy = np.sum(utils.seq2matpair(''.join(wtseq),seq_dict)*emat_typical)
-        elif modeltype == 'LinearEmat':
+        elif modeltype == 'MAT':
              emat_typical = gauge_fix.fix_matrix(np.transpose(emat))
-             #energy = np.sum(utils.seq2mat(wtseq,seq_dict)*emat_typical)
     
-    elif lm == 'bvh': 
+    elif lm == 'ER': 
         '''the emat for this format is currently transposed compared to other formats
-        it is also already a data frame with columns [pos,freq_...]'''
+        it is also already a data frame with columns [pos,val_...]'''
         emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
         emat_typical = emat[emat_cols]
         emat_typical = (gauge_fix.fix_matrix((np.array(emat_typical))))
-        #energy = ((utils.seq2mat(wtseq,seq_dict)).transpose()*(emat_typical)).sum().sum()
         
-    else:
-        emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))
-        
-        if modeltype == 'Neighbor':
+    else: #must be Least squares
+        emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))        
+        if modeltype == 'NBR':
              emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
-
-        elif modeltype == 'LinearEmat':
+        elif modeltype == 'MAT':
              emat_typical = gauge_fix.fix_matrix(np.transpose(emat_typical))
     
     em = pd.DataFrame(emat_typical)
     em.columns = val_cols
-    if modeltype == 'Neighbor':
+    #add position column
+    if modeltype == 'NBR':
         pos = pd.Series(range(start,start - 1 + len(df['seq'][0])),name='pos') 
     else:
         pos = pd.Series(range(start,start + len(df['seq'][0])),name='pos')    
@@ -323,11 +323,11 @@ def add_subparser(subparsers):
     p.add_argument(
         '-t', '--type', choices=['dna','rna','protein'], default='dna')
     p.add_argument(
-        '-lm','--learningmethod',choices=['bvh','leastsq','lasso','mi','memsaver',
-        'iterative_LS'],default='leastsq',
+        '-lm','--learningmethod',choices=['ER','LS','lasso','IM','memsaver',
+        'iterative_LS'],default='LS',
         help = '''Algorithm for determining matrix parameters.''')
     p.add_argument(
-        '-mt','--modeltype',choices=['LinearEmat','Neighbor'],default='LinearEmat')
+        '-mt','--modeltype',choices=['MAT','NBR'],default='MAT')
     p.add_argument(
         '--pseudocounts',default=1,type=int,help='''pseudocounts to add''')
     p.add_argument(
@@ -350,16 +350,20 @@ def add_subparser(subparsers):
         '-rn','--runnum',default=0,help='''For multiple runs this will change
         output data base file name''')            
     p.add_argument(
-        '-db','--db_filename',default=None,help='''For mi, If you wish to save
+        '-db','--db_filename',default=None,help='''For IM, If you wish to save
         the trace in a database, put the name of the sqlite data base''')
     p.add_argument(
+        '-dl','--drop_library',default=False,action='store_true',help='''If
+        you sorted your library into bin_0, and wish to do least squares analysis
+        you should use this option.''')
+    p.add_argument(
         '-iter','--numiterations',type = int,default=30000,
-        help='''For mi, Number of MCMC iterations''')
+        help='''For IM, Number of MCMC iterations''')
     p.add_argument(
         '-b','--burnin',type = int, default=1000,
-        help='For mi, Number of burn in iterations')
+        help='For IM, Number of burn in iterations')
     p.add_argument(
-        '-th','--thin',type=int,default=10,help='''For mi, this option will 
+        '-th','--thin',type=int,default=10,help='''For IM, this option will 
         set the number of iterations during which only 1 iteration 
         will be saved.''')
     p.add_argument(

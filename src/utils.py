@@ -8,16 +8,10 @@ import pandas as pd
 
 def profile_counts(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,end=None):
     
-    seq_dict,inv_dict = utils.choose_dict(dicttype)
+    seq_dict,inv_dict = choose_dict(dicttype)
     strings = df['seq'].str.slice(start,end)
     #if no counts column, then assume counts = 1
-    try:
-        ct = df['ct']
-    except:
-        df['ct'] = 1
-        ct = df['ct']
-    if bin_k:
-        ct = df['ct_'+str(bin_k)]
+    ct = df['ct_'+str(bin_k)]
     seqL = len(strings[0])
     mutfreq = np.zeros([seqL,len(seq_dict)])
     #Dictionary with number corresponding to each base
@@ -32,7 +26,7 @@ def profile_counts(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,
         mutfreq[i,:] = counts
     if wtseq:
         assert(wtseq==wttest)
-    if not utils.is_seq_valid(wttest,seq_dict):
+    if not is_seq_valid(wttest,seq_dict):
         sys.exit('Wild type seq is invalid')
     cols = ['ct_' + str(inv_dict[q]) for q in range(len(seq_dict))]
     mf = pd.DataFrame(mutfreq,columns=cols)
@@ -83,7 +77,7 @@ def sample(weights,T_counts):
     resampled_lib = np.random.poisson(lam=emean)
     return resampled_lib
     
-def choose_dict(dicttype,modeltype='LinearEmat'):
+def choose_dict(dicttype,modeltype='MAT'):
     '''Get numbering dictionary for either dna,rna, or proteins'''
     if dicttype == 'dna':
         seq_dict = {'A':0,'C':1,'G':2,'T':3}
@@ -96,7 +90,7 @@ def choose_dict(dicttype,modeltype='LinearEmat'):
             '*':0,'A':1,'C':2,'D':3,'E':4,'F':5,'G':6,'H':7,'I':8,'K':9,'L':10,
             'M':11,'N':12,'P':13,'Q':14,'R':15,'S':16,'T':17,'V':18,'W':19,'Y':20}
         inv_dict = {v:k for k,v in seq_dict.items()}
-    if modeltype == 'Neighbor':
+    if modeltype == 'NBR':
         seq_dict = {
             ''.join([inv_dict[i],inv_dict[z]]):i*len(seq_dict)+z 
             for i in range(len(seq_dict)) for z in range(len(seq_dict))}
@@ -309,7 +303,7 @@ def format_string(x):
     '''This is how we control the format of our output DFs. It will be float format'''
     return '%10.6f' %x
 
-def genweightandmat(weights_df,seq_dict,means=None,modeltype='LinearEmat'):
+def genweightandmat(weights_df,seq_dict,means=None,modeltype='MAT'):
     '''For use with learn_matrix, linear regressions. Generates a flattened
          matrix representation of the sequences, with corresponding batch and 
          number of counts (in sequence weighting vector)'''
@@ -319,18 +313,18 @@ def genweightandmat(weights_df,seq_dict,means=None,modeltype='LinearEmat'):
     binheaders = get_column_headers(weights_df)
     nbins=len(binheaders)
     
-    if modeltype == 'LinearEmat':
+    if modeltype == 'MAT':
          lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict)*mut_region_length))
-    elif modeltype == 'Neighbor':
+    elif modeltype == 'NBR':
          lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict)*(mut_region_length-1)))
     counter = 0
     sample_weights = np.zeros(n_seqs)
     batch = np.zeros(n_seqs)
     
     for i,s in enumerate(weights_df['seq']):
-             if modeltype == 'LinearEmat':
+             if modeltype == 'MAT':
                  lasso_mat[i,:] = seq2matsparse(s,seq_dict)
-             elif modeltype == 'Neighbor':
+             elif modeltype == 'NBR':
                  lasso_mat[i,:] = seq2mat_sparse_neighbor(s,seq_dict)
              else:
                   raise ValueError('Incorrect Model Type')

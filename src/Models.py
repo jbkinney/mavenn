@@ -78,7 +78,7 @@ class NeighborModel(ExpModel):
 
 
     def __init__(self,param,dicttype,is_df=False):
-        seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype='Neighbor')
+        seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype='NBR')
         #if input is a dataframe
         if is_df:
             if isinstance(param,str): #if param is a file name
@@ -97,7 +97,7 @@ class NeighborModel(ExpModel):
                 self.matrix = param
             else:
                 raise IOError(
-                    '''Neighbor Model Input is not of correct type. 
+                    '''NBR Model Input is not of correct type. 
                     Enter File name of matrix (with header) or a matrix.''')
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
