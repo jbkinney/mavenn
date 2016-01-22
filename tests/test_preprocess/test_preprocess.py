@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import unittest
-import sst.io
+import sst.io as io
+import sst.qc as qc
+import sst.preprocess as preprocess
 import glob
 
 class Tests(unittest.TestCase):
     def setUp(self):
         pass
-
 
     def tearDown(self):
         pass
@@ -15,133 +16,54 @@ class Tests(unittest.TestCase):
         """ Test the ability of sst.preprocess to collate data in multiple sequence files
         """
 
+        print '\nIn test_preprocess...'
+        filelist_files = glob.glob('files_*.txt')
+        for file_name in filelist_files:
+            print '\t%s ='%file_name,
+            description = file_name.split('_')[-1].split('.')[0]
 
-    # def test_io_load_filelist(self):
-    #     """ Test the ability of sst.io.load_filelist to load correct model files and reject incorrect model files
-    #     """
+            # All filelists should be valid
+            try:
+                filelist_df = io.load_filelist(file_name)
+            except:
+                print 'ERROR: io.load_filelist should have succeeded.'
+                raise
+            executable = lambda: preprocess.main(filelist_df)
 
-    #     # Verify loading of good files
-    #     seq_files = glob.glob('data/files_good*')
-    #     for file_name in seq_files:
-    #         try:
-    #             df = sst.io.load_filelist(file_name)
-    #             self.assertTrue(df.shape[1]==2)
-    #             self.assertTrue(df.shape[0]>=1)
-    #         except:
-    #             print 'This should have succeeded: sst.io.load_filelist("%s")'%file_name
-    #             raise
+            # If _good_, then preprocess.main should produce a valid df
+            if '_good' in file_name:
+                try:
+                    df = executable()
+                    qc.validate_dataset(df)
+                    out_file = 'dataset_%s.txt'%description
+                    io.write(df,out_file)       # Test write
+                    io.load_dataset(out_file)   # Test loading
+                    print 'good.'
+                except:
+                    print 'bad (ERROR).'
+                    raise
+            # If _badio_, then preprocess.main should raise IOError
+            elif '_badio' in file_name:
+                try:
+                    self.assertRaises(IOError,executable)
+                    print 'badio.'
+                except:
+                    print 'good (ERROR).'
+                    raise
 
-    #     # Verify TypeError for bad files
-    #     seq_files = glob.glob('data/filelist_bad*')
-    #     for file_name in seq_files:
-    #         try:
-    #             self.assertRaises(TypeError,\
-    #                 lambda: sst.io.load_filelist(file_name))
-    #         except:
-    #             print 'This should have failed: sst.io.load_filelist("%s")'%file_name
-    #             raise
+            # If _badtype_, then preprocess.main should raise TypeError
+            elif '_badtype' in file_name:
+                try:
+                    self.assertRaises(TypeError,executable)
+                    print 'badtype.'
+                except:
+                    print 'good (ERROR).'
+                    raise
 
-    # def test_io_load_model(self):
-    #     """ Test the ability of sst.io.load_model to load correct model files and reject incorrect model files
-    #     """
+            # There are no other options
+            else:
+                raise TypeError('Unrecognized class of file_name.')
 
-    #     # Verify loading of good files
-    #     seq_files = glob.glob('data/model_good*')
-    #     for file_name in seq_files:
-    #         try:
-    #             df = sst.io.load_model(file_name)
-    #             self.assertTrue(df.shape[1] in [5,17,21,401])
-    #             self.assertTrue(df.shape[0]>=1)
-    #         except:
-    #             print 'This should have succeeded: sst.io.load_model("%s")'%file_name
-    #             raise
-
-    #     # Verify TypeError for bad files
-    #     seq_files = glob.glob('data/model_bad*')
-    #     for file_name in seq_files:
-    #         try:
-    #             self.assertRaises(TypeError,\
-    #                 lambda: sst.io.load_model(file_name))
-    #         except:
-    #             print 'This should have failed: sst.io.load_model("%s")'%file_name
-    #             raise
-
-
-    # def test_io_load_dataset_txt(self):
-    #     """ Test the ability of sst.io.load_dataset to load correct seq text files and reject incorrect seq text files
-    #     """
-    #     # Verify loading of good files
-    #     seq_files = glob.glob('data/seq_good*.txt')
-    #     for file_name in seq_files:
-    #         try:
-    #             df = sst.io.load_dataset(file_name)
-    #             self.assertTrue(df.shape[1]>=2)
-    #             self.assertTrue(df.shape[0]>=1)
-    #         except:
-    #             print 'This should have succeeded: sst.io.load_dataset("%s")'%file_name
-    #             raise
-
-    #     # Verify TypeError for bad files
-    #     seq_files = glob.glob('data/seq_bad*.txt')
-    #     for file_name in seq_files:
-    #         try:
-    #             self.assertRaises(TypeError,\
-    #                 lambda: sst.io.load_dataset(file_name))
-    #         except:
-    #             print 'This should have failed: sst.io.load_dataset("%s")'%file_name
-    #             raise
-
-
-    # def test_io_load_dataaset_fasta(self):
-    #     """ Test the ability of sst.io.load_dataset to load correct fasta files and reject incorrect fasta files
-    #     """
-
-    #     # Verify loading of good files
-    #     seq_files = glob.glob('data/seq_good*.fasta')
-    #     for file_name in seq_files:
-    #         try:
-    #             df = sst.io.load_dataset(file_name,file_type="fasta")
-    #             self.assertTrue(df.shape[1]>=2)
-    #             self.assertTrue(df.shape[0]>=1)
-    #         except:
-    #             print 'This should have succeeded: sst.io.load_dataset("%s",file_type="fasta")'%file_name
-    #             raise
-
-    #     # Verify TypeError for bad files
-    #     seq_files = glob.glob('data/seq_bad*.fasta')
-    #     for file_name in seq_files:
-    #         try:
-    #             self.assertRaises(TypeError,\
-    #                 lambda: sst.io.load_dataset(file_name),file_type="fasta")
-    #         except:
-    #             print 'This should have failed: sst.io.load_dataset("%s",file_type="fasta")'%file_name
-    #             raise
-
-
-    # def test_io_load_dataset_fastq(self):
-    #     """ Test the ability of sst.io.load_dataset to load correct fastq files and reject incorrect fastq files
-    #     """
-
-    #     # Verify loading of good files
-    #     seq_files = glob.glob('data/seq_good*.fastq')
-    #     for file_name in seq_files:
-    #         try:
-    #             df = sst.io.load_dataset(file_name,file_type="fastq")
-    #             self.assertTrue(df.shape[1]>=2)
-    #             self.assertTrue(df.shape[0]>=1)
-    #         except:
-    #             print 'This should have succeeded: sst.io.load_dataset("%s",file_type="fasta")'%file_name
-    #             raise
-
-    #     # Verify TypeError for bad files
-    #     seq_files = glob.glob('data/seq_bad_*.fastq')
-    #     for file_name in seq_files:
-    #         try:
-    #             self.assertRaises(TypeError,\
-    #                 lambda: sst.io.load_dataset(file_name),file_type="fastq")
-    #         except:
-    #             print 'This should have failed: sst.io.load_dataset("%s",file_type="fastq")'%file_name
-    #             raise
 
 
 if __name__ == '__main__':

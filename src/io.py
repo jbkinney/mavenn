@@ -4,13 +4,75 @@ from Bio.Alphabet import IUPAC
 import re
 import pdb
 import numpy as np
-
+import os
 import qc
+import utils
 
-def load_dataset(file_name, file_type='text'):
+def validate_file_for_reading(file_arg):
+    """ Checks that a specified file exists and is readable. Returns a valid file handle given a file name or handle 
+    """
+    # If user passed file name
+    if type(file_arg)==str:
+
+        # Verify that file exists
+        if not os.path.isfile(file_arg):
+            raise IOError('Cannot find file: %s'%file_arg)
+
+        # Verify that file can be read
+        if not os.access(file_arg,os.R_OK):
+            raise IOError('Can find but cannot read from file: %s'%file_arg)
+
+        # Get handle to file
+        file_handle = open(file_arg,'r')
+
+    # If user passed file object
+    elif type(file_arg)==file:
+
+        # Verify that file isn't closed
+        if file_arg.closed:
+            raise IOError('File object is already closed.')
+        file_handle = file_arg
+
+    # Otherwise, throw error
+    else:
+        raise IOError('file_arg is neigher a name or handle.')
+
+    # Return validated file handle
+    return file_handle
+
+
+def validate_file_for_wrtiting(file_arg):
+    """ Checks that a specified file can be written
+    """
+    # If user passed file name
+    if type(file_arg)==str:
+
+        # Get handle to file
+        file_handle = open(file_arg,'w')
+
+        # Verify that file can be read
+        if not os.access(file_arg,os.W_OK):
+            raise IOError('Cannot write to file: %s'%file_arg)
+
+    # If user passed file object
+    elif type(file_arg)==file:
+
+        file_handle = file_arg
+
+    # Otherwise, throw error
+    else:
+        raise IOError('file_arg is neigher a name or handle.')
+
+    # Return validated file handle
+    return file_handle
+
+
+def load_dataset(file_arg, file_type='text'):
     """ Loads a dataset file, returns a data frame. 
         Can load text, fasta, or fastq files
     """
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
 
     # Check that file type is vaild
     valid_types = ['text','fasta','fastq']
@@ -20,13 +82,13 @@ def load_dataset(file_name, file_type='text'):
 
     # For text file, just load as whitespace-delimited data frame
     if file_type=='text':
-        df = pd.io.parsers.read_csv(file_name,delim_whitespace=True,\
+        df = pd.read_csv(file_arg,delim_whitespace=True,\
             comment='#')
 
     # For fastq or fasta file, use Bio.SeqIO
     elif file_type=='fastq' or file_type=='fasta':
         df = pd.DataFrame(columns=['seq'])
-        for i,record in enumerate(SeqIO.parse(file_name,file_type)):
+        for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
             df.loc[i] = str(record.seq)
 
     # If a sequences or tags were loaded, 
@@ -40,11 +102,14 @@ def load_dataset(file_name, file_type='text'):
     return df_valid
 
 
-def load_model(file_name):
+def load_model(file_arg):
     """ Loads a model from a text file into a dataframe
     """
 
-    df = pd.io.parsers.read_csv(file_name,delim_whitespace=True,\
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,\
             comment='#')
 
     # Return validated/fixed dataframe
@@ -52,23 +117,28 @@ def load_model(file_name):
     return df_valid
 
 
-def load_filelist(file_name):
+def load_filelist(file_arg):
     """ Loads a filelist from a text file into a dataframe
     """
 
-    df = pd.io.parsers.read_csv(file_name,delim_whitespace=True,\
-            comment='#')
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,comment='#')
 
     # Return validated/fixed dataframe
     df_valid = qc.validate_filelist(df, fix=True)
     return df_valid
 
 
-def load_tagkey(file_name):
+def load_tagkey(file_arg):
     """ Loads a tagkey from a text file into a dataframe
     """
 
-    df = pd.io.parsers.read_csv(file_name,delim_whitespace=True,\
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,\
             comment='#')
 
     # Return validated/fixed dataframe
@@ -76,13 +146,76 @@ def load_tagkey(file_name):
     return df_valid
 
 
-# def write(df,file_handle):
-#     """ Writes a data frame to specified file, given handle
-#     """
 
-#     # Validate dataframe
-#     df_valid = validate(df, fix=True)
+def load_profile_ct(file_arg):
+    """ Loads a profile_ct dataframe from a text file
+    """
 
-#     # Write dataframe to file
-#     file_handle.write(df_valid.to_string())
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,\
+            comment='#')
+
+    # Return validated/fixed dataframe
+    df_valid = qc.validate_profile_ct(df, fix=True)
+    return df_valid
+
+
+def load_profile_freq(file_arg):
+    """ Loads a profile_freq dataframe from a text file
+    """
+
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,\
+            comment='#')
+
+    # Return validated/fixed dataframe
+    df_valid = qc.validate_profile_freq(df, fix=True)
+    return df_valid
+
+
+def load_profile_mut(file_arg):
+    """ Loads a profile_mut dataframe from a text file
+    """
+
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,\
+            comment='#')
+
+    # Return validated/fixed dataframe
+    df_valid = qc.validate_profile_mut(df, fix=True)
+    return df_valid
+
+def load_profile_info(file_arg):
+    """ Loads a profile_info dataframe from a text file
+    """
+
+    # Check that the file can be read
+    file_handle = validate_file_for_reading(file_arg)
+
+    df = pd.read_csv(file_handle,delim_whitespace=True,\
+            comment='#')
+
+    # Return validated/fixed dataframe
+    df_valid = qc.validate_profile_info(df, fix=True)
+    return df_valid
+
+
+def write(df,file_arg):
+    """ Writes a data frame to specified file, given as name or handle
+    """
+
+    file_handle = validate_file_for_wrtiting(file_arg)
+
+    # Write dataframe to file
+    pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns
+    df.to_string(file_handle,\
+        index=False, col_space=5, float_format=utils.format_string)
+    file_handle.close()
+    #df.to_csv(file_arg,sep='\t')
 

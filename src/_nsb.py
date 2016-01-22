@@ -1,12 +1,11 @@
-#!/usr/bin/env python
-
 """
-nsb_entropy.py
+_nsb.py
 
-
-This script is a python version of Mathematica functions by Christian Mendl, 
+This module is a python version of Mathematica functions by Christian Mendl, 
 with a python implementation by Sungho Hong, and altered by Bill Ireland, 
 implementing the Nemenman-Shafee-Bialek (NSB) estimator of entropy.
+
+Interface to this functionality is supplied through sst.info.entropy()
 
 """
 import sys

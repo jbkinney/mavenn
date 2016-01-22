@@ -1,0 +1,17 @@
+   ct  ct_0  ct_1  ct_2  ct_3  ct_4  ct_5  ct_6         seq
+   16    10     1     1     1     1     1     1  GCATTAAAAA
+   12     6     1     1     1     1     1     1  TCGTAAAAAC
+   11     5     1     1     1     1     1     1  CCGTAAAGAG
+    8     2     1     1     1     1     1     1  GCACAAAAAT
+    7     1     1     1     1     1     1     1  AAATAAAAAA
+    7     1     1     1     1     1     1     1  CAATAAAAAG
+    7     1     1     1     1     1     1     1  CACTAAAAAT
+    7     1     1     1     1     1     1     1  CCGAAAAACT
+    7     1     1     1     1     1     1     1  CGCAAAAAAA
+    7     1     1     1     1     1     1     1  GAACAAAAAA
+    7     1     1     1     1     1     1     1  GAACAAAGAA
+    7     1     1     1     1     1     1     1  GAATTAAAAA
+    7     1     1     1     1     1     1     1  GCAGCAAAAA
+    7     1     1     1     1     1     1     1  GCCAAAAAAA
+    7     1     1     1     1     1     1     1  GGGAAAAAAA
+    7     1     1     1     1     1     1     1  TCATAAAAAC

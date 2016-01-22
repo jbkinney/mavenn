@@ -7,19 +7,48 @@ import numpy as np
 
 # Set of regular expression patterns used to identify columns
 col_patterns = {
-    'seqs':r'^seq',
-    'tag':r'^tag$',
-    'cts':r'^ct',
-    'ct_':r'^ct_',
-    'ct':r'^ct$',
-    'file':r'^file$',
-    'bin':r'^bin$',
-    'pos':r'^pos$',
-    'vals':r'^val_',
-    'info':r'^info$',
-    'err':r'^err$',
+    'seqs'  :   r'^seq$|^seq_rna$|^seq_pro$',
+    'tag'   :   r'^tag$',
+    'cts'   :   r'^ct',
+    'ct_'   :   r'^ct_',
+    'ct'    :   r'^ct$',
+    'file'  :   r'^file$',
+    'bin'   :   r'^bin$',
+    'pos'   :   r'^pos$',
+    'vals'  :   r'^val_',
+    'infos' :   r'^info',
+    'errs'  :   r'err$',
+    'freq_' :   r'^freq_',
+    'wts'   :   r'^wt$|^wt_rna$|^wt_pro$',
+    'mut'   :   r'^mut$',
+    'muts'  :   r'^mut$|^mut_err$'
 }
 
+# Dictionary containing the letters (as a single string) of all sequence types
+seq_alphabets_dict = {
+    'seq':''.join(sorted(IUPAC.IUPACUnambiguousDNA.letters)),
+    'seq_rna':''.join(sorted(IUPAC.IUPACUnambiguousRNA.letters)),
+    'seq_pro':''.join(sorted(IUPAC.IUPACProtein.letters+'*'))
+}
+seq_alphabets_dict['wt'] = seq_alphabets_dict['seq']
+seq_alphabets_dict['wt_rna'] = seq_alphabets_dict['seq_rna']
+seq_alphabets_dict['wt_pro'] = seq_alphabets_dict['seq_pro']
+
+
+# List of parameter names for different types of models 
+model_parameters_dict = {}
+for key in seq_alphabets_dict.keys():
+    alphabet = seq_alphabets_dict[key]
+    vals_mat = ['val_'+a for a in alphabet] 
+    vals_nbr = []
+    for a in alphabet:
+        for b in alphabet:
+            vals_nbr.append('val_'+a+b)
+    model_parameters_dict['mat_'+key] = vals_mat
+    model_parameters_dict['nbr_'+key] = vals_nbr
+
+
+# Returns column type
 def is_col_type(col_name,col_types='all'):
     """ 
     Checks whether col_name is a valid column name, as specified by col_types. col_types can be either a string (for a single column type) or a list of strings (for multimple column types). Default col_types='all' causes function to check all available column types
@@ -46,24 +75,6 @@ def is_col_type(col_name,col_types='all'):
     # Return true if any match found
     return col_match
 
-# Dictionary containing the letters (as a single string) of all sequence types
-seq_alphabets_dict = {
-    'seq':''.join(sorted(IUPAC.IUPACUnambiguousDNA.letters)),
-    'seq_rna':''.join(sorted(IUPAC.IUPACUnambiguousRNA.letters)),
-    'seq_pro':''.join(sorted(IUPAC.IUPACProtein.letters))
-}
-
-# List of parameter names for different types of models 
-model_parameters_dict = {}
-for key in seq_alphabets_dict.keys():
-    alphabet = seq_alphabets_dict[key]
-    vals_mat = ['val_'+a for a in alphabet] 
-    vals_nbr = []
-    for a in alphabet:
-        for b in alphabet:
-            vals_nbr.append('val_'+a+b)
-    model_parameters_dict['mat_'+key] = vals_mat
-    model_parameters_dict['nbr_'+key] = vals_nbr
 
 # Validates dataset dataframes
 def validate_dataset(df, fix=False):
@@ -183,22 +194,23 @@ def validate_dataset(df, fix=False):
     if fix:
         return df
 
-# Validates model dataframes
-def validate_model(df, fix=False):
-    """ 
-    Validates the form of a model dataframe. A model dataframe must look something like this:
 
-    pos     val_A   val_C   val_G   val_T   
-    3       1.1     4.3     -6.19   5.2
-    4       0.01    3.40    -10.5   5.3
-    5       0       1.4     10.9    231.0
+# Validates tagkeys dataframes
+def validate_tagkey(df, fix=False):
+    """ 
+    Validates the form of a tagkeys dataframe. A tagkeys dataframe must look something like this:
+
+    tag     seq
+    AACT    ATTAGTCTAGATC
+    AGCT    ATTAGTCTAGATC
+    TCGA    ATTAGTCTGGGTC
     
-    A 'pos' column reports the position within a sequence to which this modle applies. 'val_X' then describe the values of the model parameters.
+    A 'tag' column reports the short tag associated with the sequences in the 'seq' column. This file is used in the preprocess method
 
     Specifications:
-    0. The dataframe must have at least one row and one column.
-    1. A 'pos' column is mandatory and must occur first. Values must be nonnegative integers in sequential order.
-    2. 'val_X' columns must conform to one of the accepted model types. These columns must be arranged in alphabetical order. Parameter values must be finite float values.   
+    0. The dataframe must have at least one row.
+    1. A 'tag' column is mandatory and must occur first. Values must be valid DNA sequences, all the same length.
+    2. A single 'seq', 'seq_rna', or 'seq_pro' column is mandatory and must come second. Values must be valid DNA, RNA, or protein strings, all of the same length. 
 
     Arguments:
         df (pd.DataFrame): Dataset in dataframe format
@@ -214,76 +226,77 @@ def validate_model(df, fix=False):
         Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
     """
 
-    # Verify dataframe has at least one row and one column
-    if not df.shape[0] >= 1:
-        raise TypeError(\
-            'Dataframe must contain at least one row')
-    if not df.shape[1] >= 1:
-        raise TypeError(\
-            'Dataframe must contain at least one column')
+    #
+    # Validate tag columns
+    #
+    tag_cols = [c for c in df.columns if is_col_type(c,'tag')]
+    if len(tag_cols) != 1:
+        raise TypeError('Must be exactly one tag column.')
+    col = 'tag'
 
-    # Validate column names
-    for col in df.columns:
-        if not is_col_type(col,['pos','vals']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+    # Check that all tags have the same length
+    L = len(df[col][0])
+    if not all([len(tag) == L for tag in df[col]]):
+        raise TypeError('Not all tags are the same length.')
 
-    # Validate position column
-    col = 'pos'
-    if col in df.columns:
-        # Verify that positions are consecutive
-        first = df[col].iloc[0]
-        last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
-            raise TypeError('Positions are not consecutive integers.')
+    # Make sure tags are uppercase
+    if not all([tag==tag.upper() for tag in df[col]]):
+        if fix:
+            df[col] = [tag.upper() for tag in df[col]]
+        else:
+            TypeError('Tags are not all uppercase; set fix=True to fix.')
 
-        # Verify that positions are nonnegative
-        if first < 0:
-            raise TypeError('Positions are not all nonnegative.')
+    # Check that all characters are from the correct alphabet
+    alphabet = seq_alphabets_dict['seq']
+    search_string = r"[^%s]"%alphabet
+    if not all([re.search(search_string,tag)==None for tag in df[col]]):
+        raise TypeError('Invalid character found in tags.')
 
-        # Verify that positions are of type int 
-        if not df[col].values.dtype == int:
-            if fix:
-                    df[col] = df[col].astype(int)
-            else:
-                TypeError('Counts are not integers; set fix=True to fix.')
+    #
+    # Validate sequence columns
+    #
+    seq_cols = [c for c in df.columns if is_col_type(c,'seqs')]
+    if len(seq_cols) != 1:
+        raise TypeError('Must be exactly one sequence column.'%col)
+    col = seq_cols[0]
 
-    # Validate parameter column names
-    val_cols = sorted([c for c in df.columns if is_col_type(c,'vals')])
-    ok = False
-    for cols in model_parameters_dict.values():
-        # Check if cols and df.columns are identical
-        if len(cols)==len(val_cols):
-            if all([a==b for a,b in zip(cols,val_cols)]):
-                ok = True
-    if not ok:
-        raise TypeError('Dataframe represents model with invalid columns: %s'%str(val_cols))
+    # Set alphabet
+    try:
+        alphabet = seq_alphabets_dict[col]
+    except:
+        raise TypeError('Sequence column is of unkown type: %s.'%col)
 
-    # Validate parameter values
-    for col in val_cols:
+    # Check that all sequences have the same length
+    L = len(df[col][0])
+    if not all([len(seq) == L for seq in df[col]]):
+        raise TypeError('Not all sequences are the same length.')
 
-        # Check if columns are floats
-        if not df[col].values.dtype == float:
-            try:
-                float_vals = df[col].astype(float)
-            except:
-                raise TypeError('Cannot interptret counts as integers.')
+    # Make sure sequences are uppercase
+    if not all([seq==seq.upper() for seq in df[col]]):
+        if fix:
+            df[col] = [seq.upper() for seq in df[col]]
+        else:
+            TypeError('Seqs are not all uppercase; set fix=True to fix.')
 
-            # Convert to floats if this doesn't change values
-            if all(float_vals == df[col]):
-                if fix:
-                    df[col] = float_vals
-                else:
-                    TypeError('Parameter values are not floats; set fix=True to fix.')
-            else:
-                raise TypeError('Non-float parameters encountered.')
+    # Check that all characters are from the correct alphabet
+    search_string = r"[^%s]"%alphabet
+    if not all([re.search(search_string,seq)==None for seq in df[col]]):
+        raise TypeError('Invalid character found in sequences.')
 
-        # Make sure that all parameters are finite
-        if not all(np.isfinite(df[col])):
-            raise TypeError('Nonfinite parameters encountered.')
+    #
+    # Rearrange columns
+    #
+    new_cols = tag_cols + seq_cols
+    if not all(df.columns==new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
     # Return fixed df if fix=True
     if fix:
         return df
+
 
 # Validates filelist dataframes
 def validate_filelist(df, fix=False):
@@ -375,22 +388,22 @@ def validate_filelist(df, fix=False):
         return df
 
 
-# Validates tagkeys dataframes
-def validate_tagkey(df, fix=False):
+# Validates model dataframes
+def validate_model(df, fix=False):
     """ 
-    Validates the form of a tagkeys dataframe. A tagkeys dataframe must look something like this:
+    Validates the form of a model dataframe. A model dataframe must look something like this:
 
-    tag     seq
-    AACT    ATTAGTCTAGATC
-    AGCT    ATTAGTCTAGATC
-    TCGA    ATTAGTCTGGGTC
+    pos     val_A   val_C   val_G   val_T   
+    3       1.1     4.3     -6.19   5.2
+    4       0.01    3.40    -10.5   5.3
+    5       0       1.4     10.9    231.0
     
-    A 'tag' column reports the short tag associated with the sequences in the 'seq' column. This file is used in the preprocess method
+    A 'pos' column reports the position within a sequence to which this modle applies. 'val_X' then describe the values of the model parameters.
 
     Specifications:
-    0. The dataframe must have at least one row.
-    1. A 'tag' column is mandatory and must occur first. Values must be valid DNA sequences, all the same length.
-    2. A single 'seq', 'seq_rna', or 'seq_pro' column is mandatory and must come second. Values must be valid DNA, RNA, or protein strings, all of the same length. 
+    0. The dataframe must have at least one row and one column.
+    1. A 'pos' column is mandatory and must occur first. Values must be nonnegative integers in sequential order.
+    2. 'val_X' columns must conform to one of the accepted model types. These columns must be arranged in alphabetical order. Parameter values must be finite float values.   
 
     Arguments:
         df (pd.DataFrame): Dataset in dataframe format
@@ -406,68 +419,191 @@ def validate_tagkey(df, fix=False):
         Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
     """
 
-    #
-    # Validate tag columns
-    #
-    tag_cols = [c for c in df.columns if is_col_type(c,'tag')]
-    if len(tag_cols) != 1:
-        raise TypeError('Must be exactly one tag column.'%col)
-    col = 'tag'
+    # Verify dataframe has at least one row and one column
+    if not df.shape[0] >= 1:
+        raise TypeError(\
+            'Dataframe must contain at least one row')
+    if not df.shape[1] >= 1:
+        raise TypeError(\
+            'Dataframe must contain at least one column')
 
-    # Check that all tags have the same length
-    L = len(df[col][0])
-    if not all([len(tag) == L for tag in df[col]]):
-        raise TypeError('Not all tags are the same length.')
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['pos','vals']):
+            raise TypeError('Invalid column in dataframe: %s.'%col)
 
-    # Make sure tags are uppercase
-    if not all([tag==tag.upper() for tag in df[col]]):
+    # Validate position column
+    col = 'pos'
+    if col in df.columns:
+        # Verify that positions are consecutive
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise TypeError('Positions are not consecutive integers.')
+
+        # Verify that positions are nonnegative
+        if first < 0:
+            raise TypeError('Positions are not all nonnegative.')
+
+        # Verify that positions are of type int 
+        if not df[col].values.dtype == int:
+            if fix:
+                    df[col] = df[col].astype(int)
+            else:
+                TypeError('Positions are not integers; set fix=True to fix.')
+
+    # Validate parameter column names
+    val_cols = sorted([c for c in df.columns if is_col_type(c,'vals')])
+    ok = False
+    for cols in model_parameters_dict.values():
+        # Check if cols and df.columns are identical
+        if len(cols)==len(val_cols):
+            if all([a==b for a,b in zip(cols,val_cols)]):
+                ok = True
+    if not ok:
+        raise TypeError('Dataframe represents model with invalid columns: %s'%str(val_cols))
+
+    # Validate parameter values
+    for col in val_cols:
+
+        # Check if columns are floats
+        if not df[col].values.dtype == float:
+            try:
+                float_vals = df[col].astype(float)
+            except:
+                raise TypeError('Cannot interptret counts as integers.')
+
+            # Convert to floats if this doesn't change values
+            if all(float_vals == df[col]):
+                if fix:
+                    df[col] = float_vals
+                else:
+                    TypeError('Parameter values are not floats; set fix=True to fix.')
+            else:
+                raise TypeError('Non-float parameters encountered.')
+
+        # Make sure that all parameters are finite
+        if not all(np.isfinite(df[col])):
+            raise TypeError('Nonfinite parameters encountered.')
+
+    # Return fixed df if fix=True
+    if fix:
+        return df
+
+
+# Validates profile_ct dataframes
+def validate_profile_ct(df, fix=False):
+    """ 
+    Validates the form of a profile_ct dataframe. A profile_ct dataframe must look something like this:
+
+    pos     ct      ct_A    ct_C    ct_G    ct_T
+    0       5       1       2       0       2
+    1       5       2       0       0       3
+    2       5       0       0       1       4
+
+    Specifications:
+    0. The dataframe must have at least one row.
+    1. A 'pos' column is mandatory and should appear first. Values must be sequential nonnegative integers.
+    2. A set of 'ct_X' columns is mandatory; these must correpsond to a valid alphabet. Counts must be nonnegative integers. 
+    3. A 'ct' column, which lists the sum of counts for each character in each row. Values must be the same in all positions. 
+
+    Arguments:
+        df (pd.DataFrame): Dataset in dataframe format
+        fix (bool): A flag saying whether to fix the dataframe into shape if possible.
+
+    Returns:
+        if fix=True:
+            df_valid: a valid dataframe that has been fixed by the function
+        if fix=False:
+            Nothing
+
+    Function:
+        Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
+    """
+
+    # Verify dataframe has at least one row and one column
+    if not df.shape[0] >= 1:
+        raise TypeError(\
+            'Dataframe must contain at least one row')
+
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['pos','cts']):
+            raise TypeError('Invalid column in dataframe: %s.'%col)
+
+    # Validate position column
+    col = 'pos'
+    if col in df.columns:
+        # Verify that positions are consecutive
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise TypeError('Positions are not consecutive integers.')
+
+        # Verify that positions are nonnegative
+        if first < 0:
+            raise TypeError('Positions are not all nonnegative.')
+
+        # Verify that positions are of type int 
+        if not df[col].values.dtype == int:
+            if fix:
+                    df[col] = df[col].astype(int)
+            else:
+                TypeError('Positions are not integers; set fix=True to fix.')
+
+    # Validate count columns
+    count_cols = [c for c in df.columns if is_col_type(c,'cts')]
+    for col in count_cols:
+
+        # Verify that counts are integers
+        if not df[col].values.dtype == int:
+
+            # Try to convert column to numbers
+            try:
+                int_vals = df[col].astype(int)
+                float_vals = df[col].astype(float)
+            except:
+                raise TypeError('Cannot interptret counts as integers; column name = %s'%col)
+
+            # Convert to integers if this doesn't change count values
+            if all(int_vals == float_vals):
+                if fix:
+                    df[col] = int_vals
+                else:
+                    TypeError('Counts are not integers; set fix=True to fix.')
+            else:
+                raise TypeError('Noninteger numbers found in counts.')
+
+            # Make sure that all parameters are finite
+            if not all(np.isfinite(df[col])):
+                TypeError('Nonfinite counts encountered.')
+
+        # Verify that counts are nonnegative
+        if not all(df[col] >= 0):
+            raise TypeError('Counts must be nonnegative numbers.')
+
+    # Validate that column 'ct' contains sum; fix if this is missing
+    total_ct_col = 'ct'
+    char_ct_cols = [c for c in df.columns if is_col_type(c,'ct_')]
+    total_counts = df[char_ct_cols].sum(axis=1)
+    if not total_ct_col in df.columns:
         if fix:
-            df[col] = [tag.upper() for tag in df[col]]
+            df[total_ct_col] = total_counts
         else:
-            TypeError('Tags are not all uppercase; set fix=True to fix.')
+            raise TypeError('"ct" column not found; set fix=True to fix.')
+    else:
+        if not all(total_counts == df[total_ct_col]):
+            raise TypeError('"ct_X" columns do not sum to "ct" column.')
 
-    # Check that all characters are from the correct alphabet
-    alphabet = seq_alphabets_dict['seq']
-    search_string = r"[^%s]"%alphabet
-    if not all([re.search(search_string,tag)==None for tag in df[col]]):
-        raise TypeError('Invalid character found in tags.')
+    # Validate the 'ct' value is the same at all positions
+    if len(set(total_counts.values))>1:
+        raise TypeError('"ct" value must be same at all pos.')
 
-    #
-    # Validate sequence columns
-    #
-    seq_cols = [c for c in df.columns if is_col_type(c,'seqs')]
-    if len(seq_cols) != 1:
-        raise TypeError('Must be exactly one sequence column.'%col)
-    col = seq_cols[0]
-
-    # Set alphabet
-    try:
-        alphabet = seq_alphabets_dict[col]
-    except:
-        raise TypeError('Sequence column is of unkown type: %s.'%col)
-
-    # Check that all sequences have the same length
-    L = len(df[col][0])
-    if not all([len(seq) == L for seq in df[col]]):
-        raise TypeError('Not all sequences are the same length.')
-
-    # Make sure sequences are uppercase
-    if not all([seq==seq.upper() for seq in df[col]]):
-        if fix:
-            df[col] = [seq.upper() for seq in df[col]]
-        else:
-            TypeError('Seqs are not all uppercase; set fix=True to fix.')
-
-    # Check that all characters are from the correct alphabet
-    search_string = r"[^%s]"%alphabet
-    if not all([re.search(search_string,seq)==None for seq in df[col]]):
-        raise TypeError('Invalid character found in sequences.')
-
-    #
-    # Rearrange columns
-    #
-    new_cols = tag_cols + seq_cols
-    if not all(df.columns==new_cols):
+    # Validate column order
+    ct_cols = sorted([col for col in df.columns if is_col_type(col,'cts')])
+    pos_cols = sorted([col for col in df.columns if is_col_type(col,'pos')])
+    new_cols = pos_cols + ct_cols
+    if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]
         else:
@@ -478,8 +614,220 @@ def validate_tagkey(df, fix=False):
         return df
 
 
+# Validates profile_freq dataframes
+def validate_profile_freq(df, fix=False):
+    """ 
+    Validates the form of a profile_freq dataframe. A profile_freq dataframe must look something like this:
+
+    pos     freq_A  freq_C  freq_G  freq_T
+    0       0.3     0.2     0.1     0.4
+    1       0.4     0.3     0.2     0.1
+    2       0.2     0.1     0.4     0.3
+
+    Specifications:
+    0. The dataframe must have at least one row.
+    1. A 'pos' column is mandatory and should appear first. Values must be sequential nonnegative integers.
+    2. A set of 'freq_X' columns is mandatory; these must correpsond to a valid alphabet. Values must be floats between 0.0 and 1.0, inclusive.
+
+    Arguments:
+        df (pd.DataFrame): Dataset in dataframe format
+        fix (bool): A flag saying whether to fix the dataframe into shape if possible.
+
+    Returns:
+        if fix=True:
+            df_valid: a valid dataframe that has been fixed by the function
+        if fix=False:
+            Nothing
+
+    Function:
+        Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
+    """
+
+    # Verify dataframe has at least one row and one column
+    if not df.shape[0] >= 1:
+        raise TypeError(\
+            'Dataframe must contain at least one row')
+
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['pos','freq_']):
+            raise TypeError('Invalid column in dataframe: %s.'%col)
+
+    # Validate position column
+    col = 'pos'
+    if col in df.columns:
+        # Verify that positions are consecutive
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise TypeError('Positions are not consecutive integers.')
+
+        # Verify that positions are nonnegative
+        if first < 0:
+            raise TypeError('Positions are not all nonnegative.')
+
+        # Verify that positions are of type int 
+        if not df[col].values.dtype == int:
+            if fix:
+                    df[col] = df[col].astype(int)
+            else:
+                TypeError('Positions are not integers; set fix=True to fix.')
+
+    # Validate freq columns
+    freq_cols = [c for c in df.columns if is_col_type(c,'freq_')]
+    for col in freq_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise TypeError('Non-numbers found in freqs.')
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                TypeError('Freqs are not floats; set fix=True to fix.')
+
+        # Make sure that all freqs are between 0 and w
+        if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
+            TypeError('Freq values outside [0.0, 1.0] encountered.')
+
+    # Validate that freqs sum to 1
+    #freq_sum = df[freq_cols].sum(axis=1)
+    #if not all(1.0 == freq_sum):
+    #    raise TypeError('"freq_X" columns do not sum to 1.0.')
+
+    # Validate column order
+    new_cols = ['pos'] + freq_cols
+    if not all(df.columns == new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+
+    # Return fixed df if fix=True
+    if fix:
+        return df
+
+
+# Validates profile_mut dataframes
+def validate_profile_mut(df, fix=False):
+    """ 
+    Validates the form of a profile_mut dataframe. A profile_mut dataframe  looks something like this:
+
+    pos     wt    mut   mut_err
+    0       A     0.23      0.1
+    1       C     0.20      0.1
+    2       G     0.26      0.2
+
+    Specifications:
+    0. The dataframe must have at least one row.
+    1. A 'pos' column is mandatory and should appear first. Values must be sequential nonnegative integers.
+    2. A 'wt' column must appear next. 'wt' corresponds to DNA, 'wt_rna' corresponds to RNA, and 'wt_pro' corresponds to protein
+    3. A 'mut' column must appear next. Values are between 0.0 and 1.0 inclusive.
+    4. A 'mut_err' column comes next but is optional. Values must be nonnegative numbers.
+
+    Arguments:
+        df (pd.DataFrame): Dataset in dataframe format
+        fix (bool): A flag saying whether to fix the dataframe into shape if possible.
+
+    Returns:
+        if fix=True:
+            df_valid: a valid dataframe that has been fixed by the function
+        if fix=False:
+            Nothing
+
+    Function:
+        Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
+    """
+
+    # Verify dataframe has at least one row
+    if not df.shape[0] >= 1:
+        raise TypeError(\
+            'Dataframe must contain at least one row')
+
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['pos','wts','muts']):
+            raise TypeError('Invalid column in dataframe: %s.'%col)
+
+    # Validate position column
+    col = 'pos'
+    if col in df.columns:
+        # Verify that positions are consecutive
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise TypeError('Positions are not consecutive integers.')
+
+        # Verify that positions are nonnegative
+        if first < 0:
+            raise TypeError('Positions are not all nonnegative.')
+
+        # Verify that positions are of type int 
+        if not df[col].values.dtype == int:
+            if fix:
+                    df[col] = df[col].astype(int)
+            else:
+                TypeError('Positions are not integers; set fix=True to fix.')
+
+    # Validate wt column
+    wt_cols = [c for c in df.columns if is_col_type(c,'wts')]
+    if not len(wt_cols)==1:
+        TypeError('Multiple wt columns found.')
+    wt_col = wt_cols[0]
+    alphabet = seq_alphabets_dict[wt_col]
+    if not all([c in alphabet for c in df[wt_col]]):
+        raise TypeError(\
+            'Character from wrong alphabet found in col %s.'%wt_col)
+
+    # Validate mut columns
+    mut_cols = [c for c in df.columns if is_col_type(c,'muts')]
+    for col in mut_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise TypeError('Non-numbers found in freqs.')
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                TypeError('Freqs are not floats; set fix=True to fix.')
+
+    # Make sure that all mut values are between 0 and 1
+    if not 'mut' in mut_cols:
+        raise TypeError('mut column is missing.')
+    if (not all(df['mut']<=1.0)) or (not all(df['mut']>=0.0)):
+        TypeError('Freq values outside [0.0, 1.0] encountered.')
+
+    # Validate column order
+    new_cols = ['pos'] + wt_cols + mut_cols
+    if not all(df.columns == new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+
+    # Return fixed df if fix=True
+    if fix:
+        return df
+
+
+
 # Validates information profile dataframes
-def validate_infoprofile(df, fix=False):
+def validate_profile_info(df, fix=False):
     """ 
     Validates the form of an information profile dataframe. An information profile dataframe must look something like this:
 
@@ -510,4 +858,71 @@ def validate_infoprofile(df, fix=False):
         Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
     """
 
-    ### HAVE YET TO WRITE THIS
+    # Verify dataframe has at least one row
+    if not df.shape[0] >= 1:
+        raise TypeError(\
+            'Dataframe must contain at least one row')
+
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['pos','infos']):
+            raise TypeError('Invalid column in dataframe: %s.'%col)
+
+    # Validate position column
+    col = 'pos'
+    if col in df.columns:
+        # Verify that positions are consecutive
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise TypeError('Positions are not consecutive integers.')
+
+        # Verify that positions are nonnegative
+        if first < 0:
+            raise TypeError('Positions are not all nonnegative.')
+
+        # Verify that positions are of type int 
+        if not df[col].values.dtype == int:
+            if fix:
+                    df[col] = df[col].astype(int)
+            else:
+                TypeError('Positions are not integers; set fix=True to fix.')
+
+    # Validate mut columns
+    info_cols = [c for c in df.columns if is_col_type(c,'infos')]
+    for col in info_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise TypeError('Non-numbers found in freqs.')
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                TypeError('Freqs are not floats; set fix=True to fix.')
+
+    # Make sure that all info values are nonnegative
+    if not 'info' in info_cols:
+        raise TypeError('info column is missing.')
+    if (not all(df['info']>=0.0)):
+        TypeError('Freq values outside [0.0, 1.0] encountered.')
+
+    # Validate column order
+    new_cols = ['pos'] + info_cols
+    if not all(df.columns == new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+
+    # Return fixed df if fix=True
+    if fix:
+        return df
+
