@@ -22,3 +22,13 @@ echo 'Running test_profile_mut/test_profile_mut.py'
 cd test_profile_mut
 ./test_profile_mut.py
 cd ..
+
+echo 'Running test_profile_info/test_profile_info.py'
+cd test_profile_info
+./test_profile_info.py
+cd ..
+
+echo 'Running test_info/test_info.py'
+cd test_info
+./test_info.py
+cd ..
