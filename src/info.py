@@ -16,12 +16,14 @@ def mutualinfo(raw_pxy, tol=1E-10):
     Simply computes mutual information given a 2d probability distribution 
     """
 
+    # Fix to 2d prob distribution
+    pxy = fix_probs_2d(raw_pxy)
+
     # Check dimension
-    if not len(raw_pxy.shape)==2:
+    if not len(pxy.shape)==2:
         raise TypeError('raw_pxy must be a 2d array')
 
     # Fix up probability distributions for entorpy calculations
-    pxy = fix_probs(raw_pxy)
     px = fix_probs(raw_pxy.sum(axis=1))
     py = fix_probs(raw_pxy.sum(axis=0))
 

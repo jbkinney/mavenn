@@ -31,6 +31,7 @@ seq_alphabets_dict = {
     'seq_pro':''.join(sorted(IUPAC.IUPACProtein.letters+'*'))
 }
 seq_alphabets_dict['wt'] = seq_alphabets_dict['seq']
+seq_alphabets_dict['tag'] = seq_alphabets_dict['seq']
 seq_alphabets_dict['wt_rna'] = seq_alphabets_dict['seq_rna']
 seq_alphabets_dict['wt_pro'] = seq_alphabets_dict['seq_pro']
 
@@ -118,11 +119,12 @@ def validate_dataset(df, fix=False):
 
     # Validate column names
     for col in df.columns:
-        if not is_col_type(col,['seqs','cts']):
+        if not is_col_type(col,['seqs','cts','tag']):
             raise TypeError('Invalid column in dataframe: %s.'%col)
 
     # Validate sequence columns
-    seq_cols = [c for c in df.columns if is_col_type(c,'seqs')]
+    seq_cols = [c for c in df.columns if \
+        is_col_type(c,'seqs') or is_col_type(c,'tag')]
     for col in seq_cols:
 
         # Set alphabet
