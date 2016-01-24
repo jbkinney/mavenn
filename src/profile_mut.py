@@ -11,6 +11,7 @@ import sst.qc as qc
 import sst.io as io
 import sst.profile_ct as profile_ct
 import pdb
+from sst import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None, err=False):
     """
@@ -51,12 +52,8 @@ def main(dataset_df, bin=None, start=0, end=None, err=False):
 
     # Figure out which alphabet the cts dataframe specifies
     alphabet = ''.join([c.split('_')[1] for c in ct_cols])
-    wt_col = None
-    for k in qc.seq_alphabets_dict.keys():
-        if ('wt' in k) and (alphabet == qc.seq_alphabets_dict[k]):
-            wt_col = k
-    if wt_col is None:
-        raise TypeError('Could not determine wt column name.')
+    seqtype = qc.alphabet_to_seqtype_dict[alphabet]
+    wt_col = qc.seqtype_to_wtcolname_dict[seqtype]
 
     # Compute WT base at each position
     mut_df[wt_col] = 'X'

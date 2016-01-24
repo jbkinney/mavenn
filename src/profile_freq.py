@@ -11,6 +11,7 @@ import sst.qc as qc
 import sst.io as io
 import sst.profile_ct as profile_ct
 import pdb
+from sst import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None):
     """

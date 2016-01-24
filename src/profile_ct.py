@@ -9,6 +9,7 @@ import sys
 import pandas as pd
 import sst.qc as qc
 import sst.io as io
+from sst import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None):
     """
@@ -30,29 +31,30 @@ def main(dataset_df, bin=None, start=0, end=None):
     # Retrieve type of sequence
     seq_cols = [c for c in dataset_df.columns if qc.is_col_type(c,'seqs')]
     if not len(seq_cols)==1:
-        raise TypeError('Dataset dataframe must have only one seq colum.')
-    seq_type = seq_cols[0]
-    alphabet = qc.seq_alphabets_dict[seq_type]
+        raise SortSeqError('Dataset dataframe must have only one seq colum.')
+    colname = seq_cols[0]
+    seqtype = qc.colname_to_seqtype_dict[colname]
+    alphabet = qc.seqtype_to_alphabet_dict[seqtype]
     num_chars = len(alphabet)
 
     # Retrieve sequence length
     if not dataset_df.shape[0] > 1:
-        raise TypeError('Dataset dataframe must have at least one row.')
-    total_seq_length = len(dataset_df[seq_type].iloc[0])
+        raise SortSeqError('Dataset dataframe must have at least one row.')
+    total_seq_length = len(dataset_df[colname].iloc[0])
 
     # Validate start and end
     if start<0:
-        raise TypeError('start=%d is negative.'%start)
+        raise SortSeqError('start=%d is negative.'%start)
     elif start>=total_seq_length:
-        raise TypeError('start=%d >= total_seq_length=%d'%\
+        raise SortSeqError('start=%d >= total_seq_length=%d'%\
             (start,total_seq_length))
 
     if end is None:
         end=total_seq_length
     elif end<=start:
-        raise TypeError('end=%d <= start=%d.'%(end,start))
+        raise SortSeqError('end=%d <= start=%d.'%(end,start))
     elif end>total_seq_length:
-        raise TypeError('end=%d > total_seq_length=%d'%\
+        raise SortSeqError('end=%d > total_seq_length=%d'%\
             (start,total_seq_length))
 
     # Set positions
@@ -65,7 +67,7 @@ def main(dataset_df, bin=None, start=0, end=None):
     else:
         ct_col = 'ct_%d'%bin
     if not ct_col in dataset_df.columns:
-        raise TypeError('Column "%s" is not in columns=%s'%\
+        raise SortSeqError('Column "%s" is not in columns=%s'%\
             (ct_col,str(dataset_df.columns)))
     counts = dataset_df[ct_col]
 
@@ -73,7 +75,7 @@ def main(dataset_df, bin=None, start=0, end=None):
     counts_array = np.zeros([num_poss,num_chars])
     counts_cols = ['ct_'+a for a in alphabet]
     for i,pos in enumerate(range(start,end)):
-        char_list = dataset_df[seq_type].str.slice(pos,pos+1)
+        char_list = dataset_df[colname].str.slice(pos,pos+1)
         counts_array[i,:] = [np.sum(counts[char_list==a]) for a in alphabet]
     temp_df = pd.DataFrame(counts_array,columns=counts_cols)
     counts_df = pd.concat([poss,temp_df],axis=1)

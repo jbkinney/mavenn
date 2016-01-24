@@ -15,6 +15,7 @@ import sst.io as io
 import sst.qc as qc
 import re
 import pdb
+from sst import SortSeqError
 
 fasta_filename_patterns=r'(.fasta$|.fas$|.fsa$|.ffn$|.fna$|.fa$)'
 fastq_filename_patterns=r'(.fastq$|.fq$)'
@@ -31,7 +32,7 @@ def merge_datasets(dataset_df_dict):
     """
     # Make sure datasets were loaded
     if not len(dataset_df_dict)>=1:
-        raise TypeError('No datasets were loaded')
+        raise SortSeqError('No datasets were loaded')
 
     # Determine index column. Must be same for all files
     df = dataset_df_dict.values()[0]
@@ -51,10 +52,10 @@ def merge_datasets(dataset_df_dict):
 
         # Verify that dataframe has correct column
         if not index_col in df.columns:
-            raise TypeError('\
+            raise SortSeqError('\
                 Dataframe does not contain index_col="%s"'%index_col)
         if not 'ct' in df.columns:
-            raise TypeError('\
+            raise SortSeqError('\
                 Dataframe does not contain a "ct" column')
 
         # Delete "ct_X" columns
@@ -94,7 +95,7 @@ def merge_datasets(dataset_df_dict):
 
 
 # This is the main function, callable by the user
-def main(filelist_df,tags_df=None):
+def main(filelist_df,tags_df=None,indir='./'):
     """ Merges datasets listed in the filelist_df dataframe
     """
 
@@ -105,7 +106,7 @@ def main(filelist_df,tags_df=None):
     dataset_df_dict = {}
     for item in filelist_df.iterrows():
         # Autodetect fasta, fastq, or text file based on file extension
-        fn = item[1]['file']
+        fn = indir+item[1]['file']
         b = item[1]['bin']
         if re.search(fasta_filename_patterns,fn):
             df = io.load_dataset(fn,file_type='fasta')

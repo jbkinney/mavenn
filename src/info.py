@@ -6,6 +6,7 @@ import scipy as sp
 import pandas as pd
 import _nsb
 import pdb
+from sst import SortSeqError
 
 #
 # Public probability functionals
@@ -45,13 +46,13 @@ def entropy(raw_ps):
     ps = fix_probs(raw_ps)
 
     # Get nonzero elements
-    indices = ps>0
+    indices = ps>0.0
 
     # Compute entropy
     ent = -np.sum(ps[indices]*np.log2(ps[indices]))
 
     # Check for anomalies
-    assert ent >= 0
+    assert ent >= 0.0
 
     return ent
 
@@ -69,7 +70,7 @@ def estimate_mutualinfo(raw_counts, pseudocount=1, err=False, method='naive'):
 
     # Make sure pseudocount is sane
     if not pseudocount >= 0:
-        raise TypeError('pseudocount is not nonnegative.')
+        raise SortSeqError('pseudocount is not nonnegative.')
 
     # Fix up counts table
     counts = fix_counts_2d(raw_counts)
@@ -106,7 +107,7 @@ def estimate_mutualinfo(raw_counts, pseudocount=1, err=False, method='naive'):
             mi = _estimate_mutualinfo_nsb(counts, err=False)
 
     else:
-        raise TypeError('Unknown method: %s.'%method)
+        raise SortSeqError('Unknown method: %s.'%method)
 
     return (mi, mi_err) if err else mi
 
@@ -131,7 +132,7 @@ def estimate_entropy(counts, method='naive', err=False):
             ent = _estimate_entropy_nsb(counts, err=False)
 
     else:
-        raise TypeError('Method %s unrecognized in estimate_entropy().')
+        raise SortSeqError('Method %s unrecognized in estimate_entropy().')
 
     return (ent, ent_err) if err else ent
 
@@ -204,7 +205,7 @@ def _estimate_entropy_nsb(raw_counts, maxlen=1000, err=False):
 
     # Make sure ps array is not too long. This fucks with NSB
     if not len(counts)<=maxlen:
-        raise TypeError('len(counts)==%d is too big for NSB.'%len(counts))
+        raise SortSeqError('len(counts)==%d is too big for NSB.'%len(counts))
 
     # Perform NSB entropy estimate
     N = counts.sum()
@@ -236,6 +237,7 @@ def _estimate_mutualinfo_nsb(raw_counts, err=False):
 
     # Compute total MI and error theron
     mi = mi_x + mi_y - mi_xy
+    
     # Will overestimate error. How should this be done properly?
     mi_err = np.sqrt(mi_err_xy**2 + mi_err_x**2 + mi_err_y**2) 
 
@@ -254,16 +256,16 @@ def fix_counts_2d(raw_counts):
     try:
         counts = np.array(raw_counts).astype(float)
     except:
-        raise TypeError('could not covernt counts to array of flots')
+        raise SortSeqError('could not covernt counts to array of flots')
 
     if len(counts.shape)!=2:
-        raise TypeError('counts array is not 2d.')
+        raise SortSeqError('counts array is not 2d.')
     if not all(np.isfinite(counts.flatten())):
-        raise TypeError('counts are all finite.')
+        raise SortSeqError('counts are all finite.')
     if not all(counts.flatten() >= 0.0):
-        raise TypeError('counts are not nonnegative.')
+        raise SortSeqError('counts are not nonnegative.')
     if all(counts.flatten() == 0.0):
-        raise TypeError('counts are all equal to zero.')
+        raise SortSeqError('counts are all equal to zero.')
 
     return counts
 
@@ -275,16 +277,16 @@ def fix_counts(raw_counts):
     try:
         counts = np.array(raw_counts).astype(float).flatten()
     except:
-        raise TypeError('could not covernt counts to array of flots')
+        raise SortSeqError('could not covernt counts to array of flots')
 
     if len(counts.shape)==0.0:
-        raise TypeError('counts is empty or not array.')
+        raise SortSeqError('counts is empty or not array.')
     if not all(np.isfinite(counts)):
-        raise TypeError('counts are all finite.')
+        raise SortSeqError('counts are all finite.')
     if not all(counts >= 0.0):
-        raise TypeError('counts are not nonnegative.')
+        raise SortSeqError('counts are not nonnegative.')
     if all(counts == 0.0):
-        raise TypeError('counts are all equal to zero.')
+        raise SortSeqError('counts are all equal to zero.')
 
     return counts
 

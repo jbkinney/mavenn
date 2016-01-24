@@ -7,6 +7,7 @@ import numpy as np
 import os
 import qc
 import utils
+from sst import SortSeqError
 
 def validate_file_for_reading(file_arg):
     """ Checks that a specified file exists and is readable. Returns a valid file handle given a file name or handle 
@@ -16,11 +17,11 @@ def validate_file_for_reading(file_arg):
 
         # Verify that file exists
         if not os.path.isfile(file_arg):
-            raise IOError('Cannot find file: %s'%file_arg)
+            raise SortSeqError('Cannot find file: %s'%file_arg)
 
         # Verify that file can be read
         if not os.access(file_arg,os.R_OK):
-            raise IOError('Can find but cannot read from file: %s'%file_arg)
+            raise SortSeqError('Can find but cannot read from file: %s'%file_arg)
 
         # Get handle to file
         file_handle = open(file_arg,'r')
@@ -30,12 +31,12 @@ def validate_file_for_reading(file_arg):
 
         # Verify that file isn't closed
         if file_arg.closed:
-            raise IOError('File object is already closed.')
+            raise SortSeqError('File object is already closed.')
         file_handle = file_arg
 
     # Otherwise, throw error
     else:
-        raise IOError('file_arg is neigher a name or handle.')
+        raise SortSeqError('file_arg is neigher a name or handle.')
 
     # Return validated file handle
     return file_handle
@@ -52,7 +53,7 @@ def validate_file_for_wrtiting(file_arg):
 
         # Verify that file can be read
         if not os.access(file_arg,os.W_OK):
-            raise IOError('Cannot write to file: %s'%file_arg)
+            raise SortSeqError('Cannot write to file: %s'%file_arg)
 
     # If user passed file object
     elif type(file_arg)==file:
@@ -61,7 +62,7 @@ def validate_file_for_wrtiting(file_arg):
 
     # Otherwise, throw error
     else:
-        raise IOError('file_arg is neigher a name or handle.')
+        raise SortSeqError('file_arg is neigher a name or handle.')
 
     # Return validated file handle
     return file_handle
@@ -77,7 +78,7 @@ def load_dataset(file_arg, file_type='text'):
     # Check that file type is vaild
     valid_types = ['text','fasta','fastq']
     if not file_type in valid_types:
-        raise TypeError('Argument file_type, = %s, is not valid.'%\
+        raise SortSeqError('Argument file_type, = %s, is not valid.'%\
             str(file_type))
 
     # For text file, just load as whitespace-delimited data frame

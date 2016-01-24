@@ -17,6 +17,7 @@ import sst.qc as qc
 import sst.profile_ct as profile_ct
 import sst.info as info
 import pdb
+from sst import SortSeqError
 
 def main(dataset_df, err=False, method='naive',\
     pseudocount=1.0, start=0, end=None):
@@ -39,29 +40,30 @@ def main(dataset_df, err=False, method='naive',\
     # Get number of bins
     bin_cols = [c for c in dataset_df.columns if qc.is_col_type(c,'ct_')]
     if not len(bin_cols) >= 2:
-        raise TypeError('Information profile requires at least 2 bins.')
+        raise SortSeqError('Information profile requires at least 2 bins.')
     bins = [int(c.split('_')[1]) for c in bin_cols]
     num_bins = len(bins)
 
     # Get number of characters
     seq_cols = [c for c in dataset_df.columns if qc.is_col_type(c,'seqs')]
     if not len(seq_cols)==1:
-        raise TypeError('Must be only one seq column.') 
+        raise SortSeqError('Must be only one seq column.') 
     seq_col = seq_cols[0]
-    alphabet = qc.seq_alphabets_dict[seq_col]
+    seqtype = qc.colname_to_seqtype_dict[seq_col]
+    alphabet = qc.seqtype_to_alphabet_dict[seqtype]
     ct_cols = ['ct_'+a for a in alphabet]
     num_chars = len(alphabet)
 
     # Get sequence length and check start, end numbers
     num_pos = len(dataset_df[seq_col][0])
     if not 0 <= start:
-        raise TypeError('Invalid start==%d%(start)')
+        raise SortSeqError('Invalid start==%d%(start)')
     if end is None:
         end = num_pos
     elif (end > num_pos):
-        raise TypeError('Invalid start==%d%(start)')
+        raise SortSeqError('Invalid start==%d%(start)')
     elif end <= start:
-        raise TypeError('Invalid: start==%d >= end==%d'%(start,end))
+        raise SortSeqError('Invalid: start==%d >= end==%d'%(start,end))
 
     # Record positions in new dataframe
     counts_df = profile_ct.main(dataset_df)

@@ -4,6 +4,7 @@ from Bio.Alphabet import IUPAC
 import re
 import pdb
 import numpy as np
+from sst import SortSeqError
 
 # Set of regular expression patterns used to identify columns
 col_patterns = {
@@ -24,22 +25,37 @@ col_patterns = {
     'muts'  :   r'^mut$|^mut_err$'
 }
 
-# Dictionary containing the letters (as a single string) of all sequence types
-seq_alphabets_dict = {
-    'seq':''.join(sorted(IUPAC.IUPACUnambiguousDNA.letters)),
-    'seq_rna':''.join(sorted(IUPAC.IUPACUnambiguousRNA.letters)),
-    'seq_pro':''.join(sorted(IUPAC.IUPACProtein.letters+'*'))
+seqtype_to_alphabet_dict = {
+    'dna':''.join(sorted(IUPAC.IUPACUnambiguousDNA.letters)),
+    'rna':''.join(sorted(IUPAC.IUPACUnambiguousRNA.letters)),
+    'protein':''.join(sorted(IUPAC.IUPACProtein.letters+'*'))
 }
-seq_alphabets_dict['wt'] = seq_alphabets_dict['seq']
-seq_alphabets_dict['tag'] = seq_alphabets_dict['seq']
-seq_alphabets_dict['wt_rna'] = seq_alphabets_dict['seq_rna']
-seq_alphabets_dict['wt_pro'] = seq_alphabets_dict['seq_pro']
+alphabet_to_seqtype_dict = {v: k for k, v in seqtype_to_alphabet_dict.items()}
 
+colname_to_seqtype_dict = {
+    'seq':'dna',
+    'seq_rna':'rna',
+    'seq_pro':'protein',
+    'tag':'dna',
+    'wt':'dna',
+    'wt_rna':'rna',
+    'wt_pro':'protein'
+}
+seqtype_to_wtcolname_dict = {
+    'dna':'wt',
+    'rna':'wt_rna',
+    'protein':'wt_pro'
+}
+seqtype_to_seqcolname_dict = {
+    'dna':'seq',
+    'rna':'seq_rna',
+    'protein':'seq_pro'
+}
 
 # List of parameter names for different types of models 
 model_parameters_dict = {}
-for key in seq_alphabets_dict.keys():
-    alphabet = seq_alphabets_dict[key]
+for key in seqtype_to_alphabet_dict.keys():
+    alphabet = seqtype_to_alphabet_dict[key]
     vals_mat = ['val_'+a for a in alphabet] 
     vals_nbr = []
     for a in alphabet:
@@ -49,7 +65,6 @@ for key in seq_alphabets_dict.keys():
     model_parameters_dict['nbr_'+key] = vals_nbr
 
 
-# Returns column type
 def is_col_type(col_name,col_types='all'):
     """ 
     Checks whether col_name is a valid column name, as specified by col_types. col_types can be either a string (for a single column type) or a list of strings (for multimple column types). Default col_types='all' causes function to check all available column types
@@ -65,7 +80,7 @@ def is_col_type(col_name,col_types='all'):
         else:
             col_types_list = [col_types]
     else:
-        raise TypeError('col_types is not a string or a list.')
+        raise SortSeqError('col_types is not a string or a list.')
 
     # Check for matches wihtin col_type list
     for col_type in col_types_list:
@@ -76,6 +91,280 @@ def is_col_type(col_name,col_types='all'):
     # Return true if any match found
     return col_match
 
+
+def get_cols_from_df(df,col_types):
+    """
+    Returns all colnames of a given type from a df, sorted alphabetically
+    """
+    return sorted([c for c in df.columns if is_col_type(c,col_types)])
+
+
+def _validate_cols(df, fix=False):
+    """
+    Validates the contents of columns of all types in a dataframe
+    """
+    df = _validate_seqs_cols(df,fix=fix)
+    df = _validate_cts_cols(df,fix=fix)
+    df = _validate_pos_cols(df,fix=fix)
+    df = _validate_bin_cols(df,fix=fix)
+    df = _validate_mut_cols(df,fix=fix)
+    df = _validate_val_cols(df,fix=fix)
+    df = _validate_freq_cols(df,fix=fix)
+    df = _validate_info_cols(df,fix=fix)
+    return df
+
+
+def _validate_seqs_cols(df, fix=False):
+    """
+    Validates sequence columns in a given dataframe. Will check columns with names seq, seq_rna, seq_pro, tag, wt, wt_rna, wt_pro
+    """
+    seq_cols = get_cols_from_df(df,['seqs','tag','wts'])
+    for col in seq_cols:
+
+        # Set alphabet
+        try:
+            seqtype = colname_to_seqtype_dict[col]
+            alphabet = seqtype_to_alphabet_dict[seqtype]
+        except:
+            raise SortSeqError('Sequence column is of unkown type: %s.'%col)
+
+        # Check that all sequences have the same length
+        L = len(df[col][0])
+        if not all([len(seq) == L for seq in df[col]]):
+            raise SortSeqError('Not all sequences are the same length.')
+
+        # Make sure sequences are uppercase
+        if not all([seq==seq.upper() for seq in df[col]]):
+            if fix:
+                df[col] = [seq.upper() for seq in df[col]]
+            else:
+                SortSeqError('Seqs are not all uppercase; set fix=True to fix.')
+
+        # Check that all characters are from the correct alphabet
+        search_string = r"[^%s]"%alphabet
+        if not all([re.search(search_string,seq)==None for seq in df[col]]):
+            raise SortSeqError('Invalid character found in sequences.')
+
+    return df
+
+def _validate_cts_cols(df, fix=False):
+    """
+    Validates count columns in a given dataframe. Will check columns with names ct or ct_*.
+    """
+    count_cols = get_cols_from_df(df,'cts')
+    for col in count_cols:
+
+        # Verify that counts are integers
+        if not df[col].values.dtype == int:
+
+            # Try to convert column to numbers
+            try:
+                int_vals = df[col].astype(int)
+                float_vals = df[col].astype(float)
+            except:
+                raise SortSeqError('Cannot interptret counts as numbers; column name = %s'%col)
+
+            # Convert to integers if this doesn't change count values
+            if all(int_vals == float_vals):
+                if fix:
+                    df[col] = int_vals
+                else:
+                    SortSeqError('Counts are not integers; set fix=True to fix.')
+            else:
+                raise SortSeqError('Noninteger numbers found in counts.')
+
+            # Make sure that all parameters are finite
+            if not all(np.isfinite(df[col])):
+                SortSeqError('Nonfinite counts encountered.')
+
+        # Verify that counts are nonnegative
+        if not all(df[col] >= 0):
+            raise SortSeqError('Counts must be nonnegative numbers.')
+
+    return df
+
+
+ # Validate position column
+
+def _validate_pos_cols(df, fix=False):
+    """
+    Validates the pos column in a given dataframe (if it exists)
+    """
+    col = 'pos'
+    if col in df.columns:
+        try:
+            int_vals = df[col].values.astype(int)
+            float_vals = df[col].values.astype(float)
+        except:
+            raise SortSeqError(\
+                'Cannot convert values in column %s to numbers.'%col)
+
+        if not df[col].values.dtype == int:
+            if all(int_vals==float_vals):
+                if fix:
+                    df[col] = df[col].astype(int)
+                else:
+                    raise SortSeqError(\
+                        'Positions are not integers; set fix=True to fix.')
+            else:
+                raise SortSeqError(\
+                        'Positions cannot be interpreted as integers.')
+
+        first = df[col].iloc[0]
+        last = df[col].iloc[-1]
+        if not all(df[col] == range(first,last+1)):
+            raise SortSeqError('Positions are not consecutive integers.')
+
+        if first < 0:
+            raise SortSeqError('Positions are not all nonnegative.')
+        
+    return df
+
+def _validate_bin_cols(df, fix=False):
+    """
+    Validates the bin column in a given dataframe (if it exists)
+    """
+    col = 'bin'
+    if col in df.columns:
+        try:
+            int_vals = df[col].values.astype(int)
+            float_vals = df[col].values.astype(float)
+        except:
+            raise SortSeqError(\
+                'Cannot convert values in column %s to numbers.'%col)
+
+        if not df[col].values.dtype == int:
+            if all(int_vals==float_vals):
+                if fix:
+                    df[col] = df[col].astype(int)
+                else:
+                    raise SortSeqError(\
+                        'Positions are not integers; set fix=True to fix.')
+            else:
+                raise SortSeqError(\
+                        'Positions cannot be interpreted as integers.')
+
+        if not len(int_vals)==len(set(int_vals)):
+            raise SortSeqError('Bin numbers are not unique.')
+
+        if not all(int_vals >= 0):
+            raise SortSeqError('Bin numbers must be nonnegative numbers.')
+
+    return df
+
+def _validate_mut_cols(df, fix=False):
+    """
+    Validates contents of mut and mut_err columns in a given dataframe
+    """
+    mut_cols = get_cols_from_df(df,'muts')
+    for col in mut_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise SortSeqError('Non-numbers found in freqs.')
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                raise SortSeqError(\
+                    'Freqs are not floats; set fix=True to fix.')
+
+        # Make sure that all mut values are between 0 and 1
+        if col=='mut':
+            if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
+                raise SortSeqError(\
+                    'Freq values outside [0.0, 1.0] encountered.')
+    return df
+
+def _validate_val_cols(df, fix=False):
+    """
+    Validates contents of val_* columns in a given dataframe
+    """
+    val_cols = get_cols_from_df(df,'vals')
+    for col in val_cols:
+
+        # Check if columns are floats
+        if not df[col].values.dtype == float:
+            try:
+                float_vals = df[col].astype(float)
+            except:
+                raise SortSeqError('Cannot interptret counts as integers.')
+
+            # Convert to floats if this doesn't change values
+            if all(float_vals == df[col]):
+                if fix:
+                    df[col] = float_vals
+                else:
+                    SortSeqError('Parameter values are not floats; set fix=True to fix.')
+            else:
+                raise SortSeqError('Non-float parameters encountered.')
+
+        # Make sure that all parameters are finite
+        if not all(np.isfinite(df[col])):
+            raise SortSeqError('Nonfinite parameters encountered.')
+    return df
+
+def _validate_freq_cols(df, fix=False):
+    """
+    Validates contents of freq_* columns in a given dataframe
+    """
+    freq_cols = get_cols_from_df(df,'freq_')
+    for col in freq_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise SortSeqError('Non-numbers found in freqs.')
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                raise SortSeqError(\
+                    'Freqs are not floats; set fix=True to fix.')
+
+        # Make sure that all freqs are between 0 and 1
+        if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
+            raise SortSeqError('Freq values outside [0.0, 1.0] encountered.')
+
+    return df
+
+def _validate_info_cols(df, fix=False):
+    """
+    Validates contents of info and info_err columns in a given dataframe
+    """
+    info_cols = get_cols_from_df(df,'infos')
+    for col in info_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise SortSeqError('Non-numbers found in freqs.')
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                SortSeqError(\
+                    'Info values are not floats; set fix=True to fix.')
+    return df
 
 # Validates dataset dataframes
 def validate_dataset(df, fix=False):
@@ -111,90 +400,28 @@ def validate_dataset(df, fix=False):
 
     # Verify dataframe has at least one row and one column
     if not df.shape[0] >= 1:
-        raise TypeError(\
-            'Dataframe must contain at least one row')
-    if not df.shape[1] >= 1:
-        raise TypeError(\
-            'Dataframe must contain at least one column')
+        raise SortSeqError('Dataframe must contain at least one row')
 
     # Validate column names
     for col in df.columns:
         if not is_col_type(col,['seqs','cts','tag']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+            raise SortSeqError('Invalid column in dataframe: %s'%col)
 
-    # Validate sequence columns
-    seq_cols = [c for c in df.columns if \
-        is_col_type(c,'seqs') or is_col_type(c,'tag')]
-    for col in seq_cols:
-
-        # Set alphabet
-        try:
-            alphabet = seq_alphabets_dict[col]
-        except:
-            raise TypeError('Sequence column is of unkown type: %s.'%col)
-
-        # Check that all sequences have the same length
-        L = len(df[col][0])
-        if not all([len(seq) == L for seq in df[col]]):
-            raise TypeError('Not all sequences are the same length.')
-
-        # Make sure sequences are uppercase
-        if not all([seq==seq.upper() for seq in df[col]]):
-            if fix:
-                df[col] = [seq.upper() for seq in df[col]]
-            else:
-                TypeError('Seqs are not all uppercase; set fix=True to fix.')
-
-        # Check that all characters are from the correct alphabet
-        search_string = r"[^%s]"%alphabet
-        if not all([re.search(search_string,seq)==None for seq in df[col]]):
-            raise TypeError('Invalid character found in sequences.')
-
-    # Validate count columns
-    count_cols = [c for c in df.columns if is_col_type(c,'cts')]
-    for col in count_cols:
-
-        # Verify that counts are integers
-        if not df[col].values.dtype == int:
-
-            # Try to convert column to numbers
-            try:
-                int_vals = df[col].astype(int)
-                float_vals = df[col].astype(float)
-            except:
-                raise TypeError('Cannot interptret counts as integers; column name = %s'%col)
-
-            # Convert to integers if this doesn't change count values
-            if all(int_vals == float_vals):
-                if fix:
-                    df[col] = int_vals
-                else:
-                    TypeError('Counts are not integers; set fix=True to fix.')
-            else:
-                raise TypeError('Noninteger numbers found in counts.')
-
-            # Make sure that all parameters are finite
-            if not all(np.isfinite(df[col])):
-                TypeError('Nonfinite counts encountered.')
-
-        # Verify that counts are nonnegative
-        if not all(df[col] >= 0):
-            raise TypeError('Counts must be nonnegative numbers.')
+    # Validate contents of columns
+    df = _validate_cols(df,fix=fix)
 
     # Validate column order
-    ct_cols = sorted([col for col in df.columns if is_col_type(col,'cts')])
-    tag_cols = sorted([col for col in df.columns if is_col_type(col,'tag')])
-    seq_cols = sorted([col for col in df.columns if is_col_type(col,'seqs')])
+    ct_cols = get_cols_from_df(df,'cts')
+    tag_cols = get_cols_from_df(df,'tag')
+    seq_cols = get_cols_from_df(df,'seqs')
     new_cols = ct_cols + tag_cols + seq_cols
     if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 # Validates tagkeys dataframes
@@ -228,76 +455,33 @@ def validate_tagkey(df, fix=False):
         Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
     """
 
-    #
-    # Validate tag columns
-    #
-    tag_cols = [c for c in df.columns if is_col_type(c,'tag')]
+    # Verify dataframe has at least one row and one column
+    if not df.shape[0] >= 1:
+        raise SortSeqError(\
+            'Dataframe must contain at least one row')
+
+    # Check for exactly one tag column
+    tag_cols = get_cols_from_df(df,'tag')
     if len(tag_cols) != 1:
-        raise TypeError('Must be exactly one tag column.')
-    col = 'tag'
+        raise SortSeqError('Must be exactly one tag column.')
 
-    # Check that all tags have the same length
-    L = len(df[col][0])
-    if not all([len(tag) == L for tag in df[col]]):
-        raise TypeError('Not all tags are the same length.')
-
-    # Make sure tags are uppercase
-    if not all([tag==tag.upper() for tag in df[col]]):
-        if fix:
-            df[col] = [tag.upper() for tag in df[col]]
-        else:
-            TypeError('Tags are not all uppercase; set fix=True to fix.')
-
-    # Check that all characters are from the correct alphabet
-    alphabet = seq_alphabets_dict['seq']
-    search_string = r"[^%s]"%alphabet
-    if not all([re.search(search_string,tag)==None for tag in df[col]]):
-        raise TypeError('Invalid character found in tags.')
-
-    #
-    # Validate sequence columns
-    #
-    seq_cols = [c for c in df.columns if is_col_type(c,'seqs')]
+    # Check for exactly one seqs column
+    seq_cols = get_cols_from_df(df,'seqs')
     if len(seq_cols) != 1:
-        raise TypeError('Must be exactly one sequence column.'%col)
-    col = seq_cols[0]
+        raise SortSeqError('Must be exactly one sequence column.')
 
-    # Set alphabet
-    try:
-        alphabet = seq_alphabets_dict[col]
-    except:
-        raise TypeError('Sequence column is of unkown type: %s.'%col)
+    # Validate contents of columns
+    df = _validate_cols(df,fix=fix)
 
-    # Check that all sequences have the same length
-    L = len(df[col][0])
-    if not all([len(seq) == L for seq in df[col]]):
-        raise TypeError('Not all sequences are the same length.')
-
-    # Make sure sequences are uppercase
-    if not all([seq==seq.upper() for seq in df[col]]):
-        if fix:
-            df[col] = [seq.upper() for seq in df[col]]
-        else:
-            TypeError('Seqs are not all uppercase; set fix=True to fix.')
-
-    # Check that all characters are from the correct alphabet
-    search_string = r"[^%s]"%alphabet
-    if not all([re.search(search_string,seq)==None for seq in df[col]]):
-        raise TypeError('Invalid character found in sequences.')
-
-    #
     # Rearrange columns
-    #
     new_cols = tag_cols + seq_cols
     if not all(df.columns==new_cols):
         if fix:
             df = df[new_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 # Validates filelist dataframes
@@ -333,61 +517,34 @@ def validate_filelist(df, fix=False):
 
     # Verify dataframe has at least one row
     if not df.shape[0] >= 1:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain at least one row')
 
     # Verify dataframe has exactly two columns
     if not df.shape[1] == 2:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain exactly two columns')
 
     # Verify dataframe has exactly two columns with the proper names
     exact_cols = ['bin', 'file']
     for col in df.columns:
         if not is_col_type(col,exact_cols):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
     for col in exact_cols:
         if not col in df.columns:
-            raise TypeError('Could not find column in dataframe: %s'%col)
+            raise SortSeqError('Could not find column in dataframe: %s'%col)
 
     # Fix column order if necessary
     if not all(df.columns == exact_cols):
         if fix:
             df = df[exact_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Verify that all bins are unique positive integers
-    col = 'bin'
-    if not df[col].values.dtype == int:
+    # Validate contents of columns
+    df = _validate_cols(df,fix=fix)
 
-        # Try to convert column to numbers
-        try:
-            int_vals = df[col].astype(int)
-            float_vals = df[col].astype(float)
-        except:
-            raise TypeError('Cannot interptret bins as integers.')
-
-        # Convert to integers if this doesn't change count values
-        if all(int_vals == float_vals):
-            if fix:
-                df[col] = int_vals
-            else:
-                TypeError('Bins are not integers; set fix=True to fix.')
-        else:
-            raise TypeError('Noninteger bins found.')
-
-    # Verify that bin numbers are nonnegative
-    if not all(df[col] >= 0):
-        raise TypeError('Bin numbers must be nonnegative numbers.')
-
-    # Verify that bin numbers are unique
-    if not len(df[col])==len(set(df[col])):
-        raise TypeError('Bin numbers must be unique.')
-
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 # Validates model dataframes
@@ -423,36 +580,13 @@ def validate_model(df, fix=False):
 
     # Verify dataframe has at least one row and one column
     if not df.shape[0] >= 1:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain at least one row')
-    if not df.shape[1] >= 1:
-        raise TypeError(\
-            'Dataframe must contain at least one column')
 
     # Validate column names
     for col in df.columns:
         if not is_col_type(col,['pos','vals']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
-
-    # Validate position column
-    col = 'pos'
-    if col in df.columns:
-        # Verify that positions are consecutive
-        first = df[col].iloc[0]
-        last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
-            raise TypeError('Positions are not consecutive integers.')
-
-        # Verify that positions are nonnegative
-        if first < 0:
-            raise TypeError('Positions are not all nonnegative.')
-
-        # Verify that positions are of type int 
-        if not df[col].values.dtype == int:
-            if fix:
-                    df[col] = df[col].astype(int)
-            else:
-                TypeError('Positions are not integers; set fix=True to fix.')
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
 
     # Validate parameter column names
     val_cols = sorted([c for c in df.columns if is_col_type(c,'vals')])
@@ -463,34 +597,12 @@ def validate_model(df, fix=False):
             if all([a==b for a,b in zip(cols,val_cols)]):
                 ok = True
     if not ok:
-        raise TypeError('Dataframe represents model with invalid columns: %s'%str(val_cols))
+        raise SortSeqError('Dataframe represents model with invalid columns: %s'%str(val_cols))
 
-    # Validate parameter values
-    for col in val_cols:
+    # Validate contents of all columns
+    df = _validate_cols(df,fix=fix)
 
-        # Check if columns are floats
-        if not df[col].values.dtype == float:
-            try:
-                float_vals = df[col].astype(float)
-            except:
-                raise TypeError('Cannot interptret counts as integers.')
-
-            # Convert to floats if this doesn't change values
-            if all(float_vals == df[col]):
-                if fix:
-                    df[col] = float_vals
-                else:
-                    TypeError('Parameter values are not floats; set fix=True to fix.')
-            else:
-                raise TypeError('Non-float parameters encountered.')
-
-        # Make sure that all parameters are finite
-        if not all(np.isfinite(df[col])):
-            raise TypeError('Nonfinite parameters encountered.')
-
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 # Validates profile_ct dataframes
@@ -525,95 +637,45 @@ def validate_profile_ct(df, fix=False):
 
     # Verify dataframe has at least one row and one column
     if not df.shape[0] >= 1:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain at least one row')
 
     # Validate column names
     for col in df.columns:
         if not is_col_type(col,['pos','cts']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
 
-    # Validate position column
-    col = 'pos'
-    if col in df.columns:
-        # Verify that positions are consecutive
-        first = df[col].iloc[0]
-        last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
-            raise TypeError('Positions are not consecutive integers.')
-
-        # Verify that positions are nonnegative
-        if first < 0:
-            raise TypeError('Positions are not all nonnegative.')
-
-        # Verify that positions are of type int 
-        if not df[col].values.dtype == int:
-            if fix:
-                    df[col] = df[col].astype(int)
-            else:
-                TypeError('Positions are not integers; set fix=True to fix.')
-
-    # Validate count columns
-    count_cols = [c for c in df.columns if is_col_type(c,'cts')]
-    for col in count_cols:
-
-        # Verify that counts are integers
-        if not df[col].values.dtype == int:
-
-            # Try to convert column to numbers
-            try:
-                int_vals = df[col].astype(int)
-                float_vals = df[col].astype(float)
-            except:
-                raise TypeError('Cannot interptret counts as integers; column name = %s'%col)
-
-            # Convert to integers if this doesn't change count values
-            if all(int_vals == float_vals):
-                if fix:
-                    df[col] = int_vals
-                else:
-                    TypeError('Counts are not integers; set fix=True to fix.')
-            else:
-                raise TypeError('Noninteger numbers found in counts.')
-
-            # Make sure that all parameters are finite
-            if not all(np.isfinite(df[col])):
-                TypeError('Nonfinite counts encountered.')
-
-        # Verify that counts are nonnegative
-        if not all(df[col] >= 0):
-            raise TypeError('Counts must be nonnegative numbers.')
+    # Validate contents of all columns
+    df = _validate_cols(df,fix=fix)
 
     # Validate that column 'ct' contains sum; fix if this is missing
     total_ct_col = 'ct'
-    char_ct_cols = [c for c in df.columns if is_col_type(c,'ct_')]
+    char_ct_cols = get_cols_from_df(df,'ct_')
     total_counts = df[char_ct_cols].sum(axis=1)
     if not total_ct_col in df.columns:
         if fix:
             df[total_ct_col] = total_counts
         else:
-            raise TypeError('"ct" column not found; set fix=True to fix.')
+            raise SortSeqError('"ct" column not found; set fix=True to fix.')
     else:
         if not all(total_counts == df[total_ct_col]):
-            raise TypeError('"ct_X" columns do not sum to "ct" column.')
+            raise SortSeqError('"ct_X" columns do not sum to "ct" column.')
 
     # Validate the 'ct' value is the same at all positions
     if len(set(total_counts.values))>1:
-        raise TypeError('"ct" value must be same at all pos.')
+        raise SortSeqError('"ct" value must be same at all pos.')
 
     # Validate column order
-    ct_cols = sorted([col for col in df.columns if is_col_type(col,'cts')])
-    pos_cols = sorted([col for col in df.columns if is_col_type(col,'pos')])
+    ct_cols = get_cols_from_df(df,'cts')
+    pos_cols = get_cols_from_df(df,'pos')
     new_cols = pos_cols + ct_cols
     if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 # Validates profile_freq dataframes
@@ -647,74 +709,26 @@ def validate_profile_freq(df, fix=False):
 
     # Verify dataframe has at least one row and one column
     if not df.shape[0] >= 1:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain at least one row')
 
     # Validate column names
     for col in df.columns:
         if not is_col_type(col,['pos','freq_']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
 
-    # Validate position column
-    col = 'pos'
-    if col in df.columns:
-        # Verify that positions are consecutive
-        first = df[col].iloc[0]
-        last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
-            raise TypeError('Positions are not consecutive integers.')
-
-        # Verify that positions are nonnegative
-        if first < 0:
-            raise TypeError('Positions are not all nonnegative.')
-
-        # Verify that positions are of type int 
-        if not df[col].values.dtype == int:
-            if fix:
-                    df[col] = df[col].astype(int)
-            else:
-                TypeError('Positions are not integers; set fix=True to fix.')
-
-    # Validate freq columns
-    freq_cols = [c for c in df.columns if is_col_type(c,'freq_')]
-    for col in freq_cols:
-
-        # Verify that freqs are floats
-        if not df[col].values.dtype == float:
-
-            # Check whether freqs can be interpreted as floats
-            try:
-                float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
-            except:
-                raise TypeError('Non-numbers found in freqs.')
-
-            # Check whether we have permission to change these to floats
-            if fix:
-                df[col] = df[col].astype(float)
-            else:
-                TypeError('Freqs are not floats; set fix=True to fix.')
-
-        # Make sure that all freqs are between 0 and w
-        if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
-            TypeError('Freq values outside [0.0, 1.0] encountered.')
-
-    # Validate that freqs sum to 1
-    #freq_sum = df[freq_cols].sum(axis=1)
-    #if not all(1.0 == freq_sum):
-    #    raise TypeError('"freq_X" columns do not sum to 1.0.')
+    df = _validate_cols(df,fix=fix)
 
     # Validate column order
+    freq_cols = get_cols_from_df(df,'freq_')
     new_cols = ['pos'] + freq_cols
     if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 # Validates profile_mut dataframes
@@ -750,69 +764,24 @@ def validate_profile_mut(df, fix=False):
 
     # Verify dataframe has at least one row
     if not df.shape[0] >= 1:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain at least one row')
 
     # Validate column names
     for col in df.columns:
         if not is_col_type(col,['pos','wts','muts']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
 
-    # Validate position column
-    col = 'pos'
-    if col in df.columns:
-        # Verify that positions are consecutive
-        first = df[col].iloc[0]
-        last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
-            raise TypeError('Positions are not consecutive integers.')
-
-        # Verify that positions are nonnegative
-        if first < 0:
-            raise TypeError('Positions are not all nonnegative.')
-
-        # Verify that positions are of type int 
-        if not df[col].values.dtype == int:
-            if fix:
-                    df[col] = df[col].astype(int)
-            else:
-                TypeError('Positions are not integers; set fix=True to fix.')
-
-    # Validate wt column
-    wt_cols = [c for c in df.columns if is_col_type(c,'wts')]
+    # Get wt columns
+    wt_cols = get_cols_from_df(df,'wts')
     if not len(wt_cols)==1:
-        TypeError('Multiple wt columns found.')
-    wt_col = wt_cols[0]
-    alphabet = seq_alphabets_dict[wt_col]
-    if not all([c in alphabet for c in df[wt_col]]):
-        raise TypeError(\
-            'Character from wrong alphabet found in col %s.'%wt_col)
+        SortSeqError('Multiple wt columns found.')
 
-    # Validate mut columns
-    mut_cols = [c for c in df.columns if is_col_type(c,'muts')]
-    for col in mut_cols:
-
-        # Verify that freqs are floats
-        if not df[col].values.dtype == float:
-
-            # Check whether freqs can be interpreted as floats
-            try:
-                float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
-            except:
-                raise TypeError('Non-numbers found in freqs.')
-
-            # Check whether we have permission to change these to floats
-            if fix:
-                df[col] = df[col].astype(float)
-            else:
-                TypeError('Freqs are not floats; set fix=True to fix.')
-
-    # Make sure that all mut values are between 0 and 1
-    if not 'mut' in mut_cols:
-        raise TypeError('mut column is missing.')
-    if (not all(df['mut']<=1.0)) or (not all(df['mut']>=0.0)):
-        TypeError('Freq values outside [0.0, 1.0] encountered.')
+    # Get mut cols
+    mut_cols = get_cols_from_df(df,'muts')
+    
+    # Validate contents of all columns
+    df = _validate_cols(df,fix=fix)
 
     # Validate column order
     new_cols = ['pos'] + wt_cols + mut_cols
@@ -820,11 +789,9 @@ def validate_profile_mut(df, fix=False):
         if fix:
             df = df[new_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
 
 
@@ -862,59 +829,21 @@ def validate_profile_info(df, fix=False):
 
     # Verify dataframe has at least one row
     if not df.shape[0] >= 1:
-        raise TypeError(\
+        raise SortSeqError(\
             'Dataframe must contain at least one row')
 
     # Validate column names
     for col in df.columns:
         if not is_col_type(col,['pos','infos']):
-            raise TypeError('Invalid column in dataframe: %s.'%col)
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
 
-    # Validate position column
-    col = 'pos'
-    if col in df.columns:
-        # Verify that positions are consecutive
-        first = df[col].iloc[0]
-        last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
-            raise TypeError('Positions are not consecutive integers.')
-
-        # Verify that positions are nonnegative
-        if first < 0:
-            raise TypeError('Positions are not all nonnegative.')
-
-        # Verify that positions are of type int 
-        if not df[col].values.dtype == int:
-            if fix:
-                    df[col] = df[col].astype(int)
-            else:
-                TypeError('Positions are not integers; set fix=True to fix.')
-
-    # Validate mut columns
-    info_cols = [c for c in df.columns if is_col_type(c,'infos')]
-    for col in info_cols:
-
-        # Verify that freqs are floats
-        if not df[col].values.dtype == float:
-
-            # Check whether freqs can be interpreted as floats
-            try:
-                float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
-            except:
-                raise TypeError('Non-numbers found in freqs.')
-
-            # Check whether we have permission to change these to floats
-            if fix:
-                df[col] = df[col].astype(float)
-            else:
-                TypeError('Freqs are not floats; set fix=True to fix.')
+    # Validate contents of columns
+    df = _validate_cols(df,fix=fix)
 
     # Make sure that all info values are nonnegative
+    info_cols = get_cols_from_df(df,'infos')
     if not 'info' in info_cols:
-        raise TypeError('info column is missing.')
-    if (not all(df['info']>=0.0)):
-        TypeError('Freq values outside [0.0, 1.0] encountered.')
+        raise SortSeqError('info column is missing.')
 
     # Validate column order
     new_cols = ['pos'] + info_cols
@@ -922,9 +851,8 @@ def validate_profile_info(df, fix=False):
         if fix:
             df = df[new_cols]
         else:
-            raise TypeError('Dataframe columns are in the wrong order; set fix=True to fix.')
+            raise SortSeqError(\
+             'Dataframe columns are in the wrong order; set fix=True to fix.')
 
-    # Return fixed df if fix=True
-    if fix:
-        return df
+    return df
 
