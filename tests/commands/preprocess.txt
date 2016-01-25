@@ -1,0 +1,47 @@
+# sst validate works correctly on output
+good: sst preprocess -i files_good.txt | sst validate -f dataset
+bad:  sst preprocess -i files_good.txt | sst validate -f filelist
+
+# seqtype option is applied properly
+good: sst preprocess -i files_good.txt --seqtype=dna
+bad:  sst preprocess -i files_good.txt --seqtype=rna
+bad:  sst preprocess -i files_good.txt --seqtype=protein
+bad:  sst preprocess -i files_good_rna.txt --seqtype=dna
+good: sst preprocess -i files_good_rna.txt --seqtype=rna
+bad:  sst preprocess -i files_good_rna.txt --seqtype=protein
+bad:  sst preprocess -i files_good_pro.txt --seqtype=dna
+bad:  sst preprocess -i files_good_pro.txt --seqtype=rna
+good: sst preprocess -i files_good_pro.txt --seqtype=protein
+
+# raw text files are processed properly
+good: sst preprocess -i files_good_raw.txt --seqtype=dna
+bad:  sst preprocess -i files_good_raw.txt --seqtype=rna
+bad:  sst preprocess -i files_good_raw.txt --seqtype=protein
+
+# fasta files are processed properly
+good: sst preprocess -i files_good_fasta.txt --seqtype=dna
+bad:  sst preprocess -i files_good_fasta.txt --seqtype=rna
+bad:  sst preprocess -i files_good_fasta.txt
+
+# mix of formats
+good: sst preprocess -i files_good_mixofdnaformats.txt --seqtype=dna
+bad:  sst preprocess -i files_good_mixofdnaformats.txt --seqtype=rna
+bad:  sst preprocess -i files_good_mixofdnaformats.txt --seqtype=protein
+bad:  sst preprocess -i files_good_mixofdnaformats.txt
+
+# Variations within good files is tolerated
+good: sst preprocess -i files_good_comments.txt
+good: sst preprocess -i files_good_nonconsecutivebins.txt
+good: sst preprocess -i files_good_samefile.txt
+good: sst preprocess -i files_good_textandfasta.txt --seqtype=dna
+bad:  sst preprocess -i files_good_textandfasta.txt
+
+bad:  sst preprocess -i files_bad_badcols.txt
+bad:  sst preprocess -i files_bad_extracol.txt
+bad:  sst preprocess -i files_bad_nofiles.txt
+bad:  sst preprocess -i files_bad_nonintegerbins.txt
+bad:  sst preprocess -i files_bad_nonuniquebins.txt
+bad:  sst preprocess -i files_badio_nonexistentfile.txt
+bad:  sst preprocess -i files_badtype_dnaandprotein.txt
+bad:  sst preprocess -i files_badtype_dnaandrna.txt
+bad:  sst preprocess -i files_badtype_rnaandprotein.txt

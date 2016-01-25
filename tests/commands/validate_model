@@ -1,0 +1,10 @@
+good: sst validate -f model -i model_good_mat.txt
+good: sst validate -f model -i model_good_nbr.txt
+
+bad:  sst validate -f model -i model_bad_mat_badcol.txt
+bad:  sst validate -f model -i model_bad_mat_floatpos.txt
+bad:  sst validate -f model -i model_bad_mat_missingcol.txt
+bad:  sst validate -f model -i model_bad_mat_missingval.txt
+bad:  sst validate -f model -i model_bad_mat_nanpos.txt
+bad:  sst validate -f model -i model_bad_mat_nanval.txt
+bad:  sst validate -f model -i model_bad_mat_nonconsecutivepos.txt

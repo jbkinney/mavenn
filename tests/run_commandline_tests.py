@@ -3,10 +3,25 @@ import subprocess
 import re
 from sst import SortSeqError
 import glob
+import sys
 
+# Commands must be execulted in cwd to work
 cwd = 'input/'
 
-for filename in glob.glob('commands/*.txt'):
+# If files passed via commandline, use those.
+if len(sys.argv)>1:
+    filenames = sys.argv[1:]
+# Otherwise, run on all files in commands/
+else:
+    filenames = glob.glob('commands/*.txt')
+
+print 'Testing SortSeqTools on commands in the following files:'
+print '-----'
+print '\n'.join(filenames)
+print '-----'
+
+# Process each file
+for filename in filenames:
 
     print 'Processing commands in %s...'%filename
 
@@ -18,9 +33,8 @@ for filename in glob.glob('commands/*.txt'):
     for line in lines:
 
         # If emtpy or comment line, just print
-        print '\t',
         if not line or '#'==line[0]:
-            print line
+            print '\t'+line
             continue
 
         # Extract command
@@ -39,16 +53,16 @@ for filename in glob.glob('commands/*.txt'):
         # Run checks on stdout and stderr
         if test_type=='good':
             if (not stdout_str) or stderr_str:
-                print 'ERROR! ',
-            print '(good) ',
+                print 'ERROR!',
 
         elif test_type=='bad':
             if not ('SortSeqError' in stderr_str):
-                print 'ERROR! ',
-            print '(bad)  ',
+                print 'ERROR!',
         else:
-            print command
+            print '\t'+line
             raise SortSeqError('Unrecognized test type %s'%test_type)
-        print command
+
+        print '\t'+line
+
     print '\tDone.'
 
