@@ -1,0 +1,27 @@
+good: sst preprocess -i files_good.txt
+good: sst preprocess -i files_good.txt --seqtype=dna
+bad:  sst preprocess -i files_good.txt --seqtype=rna
+bad:  sst preprocess -i files_good.txt --seqtype=protein
+
+good: sst preprocess -i files_good_fastas.txt --seqtype=dna
+bad:  sst preprocess -i files_good_fastas.txt --seqtype=rna
+bad:  sst preprocess -i files_good_fastas.txt --seqtype=protein
+
+good: sst preprocess -i files_good_comments.txt
+good: sst preprocess -i files_good_nonconsecutivebins.txt
+good: sst preprocess -i files_good_pro.txt
+good: sst preprocess -i files_good_rna.txt
+good: sst preprocess -i files_good_samefile.txt
+good: sst preprocess -i files_good_textandfasta.txt
+
+bad:  sst preprocess -i files_bad_badcols.txt
+bad:  sst preprocess -i files_bad_extracol.txt
+bad:  sst preprocess -i files_bad_nofiles.txt
+bad:  sst preprocess -i files_bad_nonintegerbins.txt
+bad:  sst preprocess -i files_bad_nonuniquebins.txt
+bad:  sst preprocess -i files_badio_nonexistentfile.txt
+bad:  sst preprocess -i files_badtype_dnaandprotein.txt
+bad:  sst preprocess -i files_badtype_dnaandrna.txt
+bad:  sst preprocess -i files_badtype_rnaandprotein.txt
+
+good:  sst preprocess -i shouldhaveerror.txt
