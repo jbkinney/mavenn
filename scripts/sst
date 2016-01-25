@@ -36,9 +36,17 @@ preprocess.add_subparser(subparsers)
 import sst.learn_matrix as learn_matrix
 learn_matrix.add_subparser(subparsers)
 
+#learn_matrix
+import sst.sortseq_for_doc as sortseq_for_doc
+sortseq_for_doc.add_subparser(subparsers)
+
 #profile_counts
 import sst.profile_counts as profile_counts
 profile_counts.add_subparser(subparsers)
+
+#profile_info
+import sst.profile_info as profile_info
+profile_info.add_subparser(subparsers)
 
 #profile_mutrate
 import sst.profile_mutrate as profile_mutrate
@@ -50,7 +58,7 @@ predictiveinfo.add_subparser(subparsers)
 
 #Scan
 import sst.Scan as Scan
-predictiveinfo.add_subparser(subparsers)
+Scan.add_subparser(subparsers)
 
 #simualte_library
 import sst.simulate_library as simulate_library
