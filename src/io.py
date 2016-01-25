@@ -68,7 +68,7 @@ def validate_file_for_wrtiting(file_arg):
     return file_handle
 
 
-def load_dataset(file_arg, file_type='text'):
+def load_dataset(file_arg, file_type='text',seq_type=None):
     """ Loads a dataset file, returns a data frame. 
         Can load text, fasta, or fastq files
     """
@@ -76,19 +76,48 @@ def load_dataset(file_arg, file_type='text'):
     file_handle = validate_file_for_reading(file_arg)
 
     # Check that file type is vaild
-    valid_types = ['text','fasta','fastq']
+    valid_types = ['text','fasta','fastq','raw']
     if not file_type in valid_types:
         raise SortSeqError('Argument file_type, = %s, is not valid.'%\
             str(file_type))
+
+    # If seq_type is specified, get correposnding colname
+    if seq_type:
+        if not seq_type in qc.seqtype_to_seqcolname_dict.keys():
+            raise SortSeqError('seq_type %s is invalid'%str(seq_type))
+        colname = qc.seqtype_to_seqcolname_dict[seq_type]
 
     # For text file, just load as whitespace-delimited data frame
     if file_type=='text':
         df = pd.read_csv(file_arg,delim_whitespace=True,\
             comment='#')
 
+        # If seq_type is specified, make sure it matches colname in df
+        if seq_type and (not colname in df.columns):
+            raise SortSeqError('Column %s is not in dataframe'%str(colname))
+
+    # For raw text, load into dataframe with column defined by seq_type
+    elif file_type=='raw':
+        if not seq_type:
+            raise SortSeqError('file_type=="raw" but seq_type is not set.')
+
+        df = pd.read_csv(file_arg,delim_whitespace=True,\
+            comment='#', header=None)
+        if len(df.columns)!=1:
+            raise SortSeqError(\
+                'file_type=="raw" but file has multiple columns.')
+        df.columns=[colname]
+
     # For fastq or fasta file, use Bio.SeqIO
     elif file_type=='fastq' or file_type=='fasta':
-        df = pd.DataFrame(columns=['seq'])
+
+        # Raise error if seq_type was not specified
+        if not seq_type:
+            raise SortSeqError(\
+                'Seqtype unspecified while fasta or fastq file.')
+
+        # Fill in dataframe with fasta or fastq data
+        df = pd.DataFrame(columns=[colname])
         for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
             df.loc[i] = str(record.seq)
 
@@ -215,8 +244,9 @@ def write(df,file_arg):
 
     # Write dataframe to file
     pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns
-    df.to_string(file_handle,\
+    df_string = df.to_string(\
         index=False, col_space=5, float_format=utils.format_string)
+    file_handle.write(df_string+'\n') # Add trailing return
     file_handle.close()
     #df.to_csv(file_arg,sep='\t')
 

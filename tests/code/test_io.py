@@ -10,12 +10,13 @@ from sst import shutthefuckup
 class TestLoading(unittest.TestCase):
     def setUp(self):
         self.input_dir = 'input/'
+        self.output_dir = 'output/'
 
     def tearDown(self):
         pass
 
     @shutthefuckup
-    def generic_test(self,test_name,function_str,file_names):
+    def generic_test(self,test_name,function_str,file_names,allbad=False):
         """ 
         Standardizes tests for different dataframe loading functions.
         The argument function_str must have "%s" where file_name goes. 
@@ -31,17 +32,20 @@ class TestLoading(unittest.TestCase):
         for file_name in file_names:
             executable = lambda: eval(function_str%file_name)
             print '\t%s ='%file_name,
-            if any([c in file_name for c in \
+            if not allbad and any([c in file_name for c in \
                 ['_good','_fix','_badio','_badtype']]):
                 try:
                     df = executable()
                     self.assertTrue(df.shape[0]>=1)
+                    # Write df
+                    base_filename = file_name.split('/')[-1]
+                    io.write(df,self.output_dir+'loaded_'+base_filename)
                     print 'good.'
                 except:
                     print 'bad (ERROR).'
                     raise
 
-            elif '_bad' in file_name:
+            elif allbad or ('_bad' in file_name):
                 try:
                     self.assertRaises(SortSeqError,executable)
                     print 'bad.'
@@ -93,14 +97,72 @@ class TestLoading(unittest.TestCase):
         file_names = glob.glob(self.input_dir+'seq_*.txt') 
         self.generic_test(test_name,function_str,file_names)
 
+    def test_io_load_dataset_raw_dna(self):
+        """ Test io.load_dataset on raw sequence files
+        """
 
-    def test_io_load_dataset_fasta(self):
+        test_name = 'test_io_load_dataset_txt'
+        function_str = 'io.load_dataset("%s",file_type="raw",seq_type="dna")'
+        file_names = glob.glob(self.input_dir+'seqraw_*.txt') 
+        self.generic_test(test_name,function_str,file_names)
+
+
+    def test_io_load_dataset_fasta_dna(self):
         """ Test io.load_dataset( . ,"fasta")
         """
 
         test_name = 'test_io_load_dataset_fasta'
-        function_str = 'io.load_dataset("%s","fasta")'
+        function_str = 'io.load_dataset("%s",file_type="fasta",seq_type="dna")'
         file_names = glob.glob(self.input_dir+'seq_*.fasta') 
+        self.generic_test(test_name,function_str,file_names)
+
+    def test_io_load_dataset_fasta_dna_allbad(self):
+        """ Test io.load_dataset( . ,"fasta")
+        """
+
+        test_name = 'test_io_load_dataset_fasta'
+        function_str = 'io.load_dataset("%s",file_type="fasta",seq_type="dna")'
+        file_names = glob.glob(self.input_dir+'seqrna_*.fasta') 
+        self.generic_test(test_name,function_str,file_names,allbad=True)
+
+    def test_io_load_dataset_fasta_rna_allbad(self):
+        """ Test io.load_dataset( . ,"fasta")
+        """
+
+        test_name = 'test_io_load_dataset_fasta'
+        function_str = 'io.load_dataset("%s",file_type="fasta",seq_type="rna")'
+        file_names = glob.glob(self.input_dir+'seq_*.fasta') 
+        self.generic_test(test_name,function_str,file_names,allbad=True)
+
+
+    def test_io_load_dataset_fasta_protein_allbad(self):
+        """ Test io.load_dataset( . ,"fasta")
+        """
+
+        test_name = 'test_io_load_dataset_fasta'
+        function_str = \
+            'io.load_dataset("%s",file_type="fasta",seq_type="protein")'
+        file_names = glob.glob(self.input_dir+'seqrna_*.fasta') 
+        self.generic_test(test_name,function_str,file_names,allbad=True)
+
+
+    def test_io_load_dataset_fasta_rna(self):
+        """ Test io.load_dataset( . ,"fasta",seq_type="rna")
+        """
+
+        test_name = 'test_io_load_dataset_fasta'
+        function_str = 'io.load_dataset("%s",file_type="fasta",seq_type="rna")'
+        file_names = glob.glob(self.input_dir+'seqrna_*.fasta') 
+        self.generic_test(test_name,function_str,file_names)
+
+    def test_io_load_dataset_fasta_protein(self):
+        """ Test io.load_dataset( . ,"fasta",seq_type="pro")
+        """
+
+        test_name = 'test_io_load_dataset_fasta'
+        function_str = \
+            'io.load_dataset("%s",file_type="fasta",seq_type="protein")'
+        file_names = glob.glob(self.input_dir+'seqpro_*.fasta') 
         self.generic_test(test_name,function_str,file_names)
 
 
@@ -109,7 +171,7 @@ class TestLoading(unittest.TestCase):
         """
 
         test_name = 'test_io_load_dataset_fastq'
-        function_str = 'io.load_dataset("%s","fastq")'
+        function_str = 'io.load_dataset("%s",file_type="fastq",seq_type="dna")'
         file_names = glob.glob(self.input_dir+'seq_*.fastq') 
         self.generic_test(test_name,function_str,file_names)
 

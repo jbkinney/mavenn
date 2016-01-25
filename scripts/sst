@@ -36,13 +36,21 @@ preprocess.add_subparser(subparsers)
 import sst.learn_matrix as learn_matrix
 learn_matrix.add_subparser(subparsers)
 
-#profile_counts
-import sst.profile_counts as profile_counts
-profile_counts.add_subparser(subparsers)
+#profile_ct
+import sst.profile_ct as profile_ct
+profile_ct.add_subparser(subparsers)
 
-#profile_mutrate
-import sst.profile_mutrate as profile_mutrate
-profile_mutrate.add_subparser(subparsers)
+#profile_mut
+import sst.profile_mut as profile_mut
+profile_mut.add_subparser(subparsers)
+
+#profile_info
+import sst.profile_info as profile_info
+profile_info.add_subparser(subparsers)
+
+#profile_freq
+import sst.profile_freq as profile_freq
+profile_freq.add_subparser(subparsers)
 
 #predictiveinfo
 import sst.predictiveinfo as predictiveinfo

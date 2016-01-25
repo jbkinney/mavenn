@@ -95,7 +95,7 @@ def merge_datasets(dataset_df_dict):
 
 
 # This is the main function, callable by the user
-def main(filelist_df,tags_df=None,indir='./'):
+def main(filelist_df,tags_df=None,indir='./',seq_type=None):
     """ Merges datasets listed in the filelist_df dataframe
     """
 
@@ -109,11 +109,11 @@ def main(filelist_df,tags_df=None,indir='./'):
         fn = indir+item[1]['file']
         b = item[1]['bin']
         if re.search(fasta_filename_patterns,fn):
-            df = io.load_dataset(fn,file_type='fasta')
+            df = io.load_dataset(fn,file_type='fasta',seq_type=seq_type)
         elif re.search(fastq_filename_patterns,fn):
-            df = io.load_dataset(fn,file_type='fastq')
+            df = io.load_dataset(fn,file_type='fastq',seq_type=seq_type)
         else:
-            df = io.load_dataset(fn,file_type='text')
+            df = io.load_dataset(fn,file_type='text',seq_type=seq_type)
         dataset_df_dict[b] = df
 
     # Merge datasets into one, validate, and return
@@ -138,15 +138,14 @@ def wrapper(args):
     else:
         tags_df = None
 
-    output_df = main(filelist_df,tags_df=tags_df)
+    output_df = main(filelist_df,tags_df=tags_df,seq_type=args.seqtype)
 
     if args.out:
         outloc = open(args.out,'w')
     else:
         outloc = sys.stdout
-    pd.set_option('max_colwidth',int(1e8)) # make sure columns are not truncated
-    output_df.to_string(
-        outloc, index=False,col_space=10,float_format=utils.format_string)
+
+    io.write(output_df,outloc)
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
@@ -156,4 +155,7 @@ def add_subparser(subparsers):
         through the standard input.''')
     p.add_argument('--tagkeys',default=None)
     p.add_argument('-o', '--out', default=None)
+    p.add_argument(
+        '-s', '--seqtype', default=None, choices=['dna','rna','protein'], \
+        help='''Type of sequence to expect in input files.''')
     p.set_defaults(func=wrapper)

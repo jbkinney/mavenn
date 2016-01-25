@@ -29,7 +29,14 @@ class TestPreprocess(unittest.TestCase):
         for file_name in file_names:
             print '\t%s ='%file_name,
             description = file_name.split('_')[-1].split('.')[0]
-            executable = lambda: preprocess.main(io.load_filelist(file_name),indir=self.input_dir)
+
+            # If fasta or fastq, assume dna
+            if ('fasta' in file_name) or ('fastq' in file_name):
+                seq_type = 'dna'
+            else:
+                seq_type = None
+
+            executable = lambda: preprocess.main(io.load_filelist(file_name),indir=self.input_dir, seq_type=seq_type)
 
             # If _good_, then preprocess.main should produce a valid df
             if ('_good' in file_name) or ('_fix' in file_name):
