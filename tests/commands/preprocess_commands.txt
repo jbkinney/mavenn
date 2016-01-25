@@ -1,0 +1,37 @@
+# sst validate works correctly on output
+good: sst preprocess -i files_good.txt | sst validate -f dataset
+bad:  sst preprocess -i files_good.txt | sst validate -f filelist
+
+# seqtype option is applied properly
+good: sst preprocess -i files_good.txt --seqtype=dna         | sst validate -f dataset
+bad:  sst preprocess -i files_good.txt --seqtype=rna         | sst validate -f dataset
+bad:  sst preprocess -i files_good.txt --seqtype=protein     | sst validate -f dataset
+bad:  sst preprocess -i files_good_rna.txt --seqtype=dna     | sst validate -f dataset
+good: sst preprocess -i files_good_rna.txt --seqtype=rna     | sst validate -f dataset
+bad:  sst preprocess -i files_good_rna.txt --seqtype=protein | sst validate -f dataset
+bad:  sst preprocess -i files_good_pro.txt --seqtype=dna     | sst validate -f dataset
+bad:  sst preprocess -i files_good_pro.txt --seqtype=rna     | sst validate -f dataset
+good: sst preprocess -i files_good_pro.txt --seqtype=protein | sst validate -f dataset
+
+# fasta files are processed properly
+good: sst preprocess -i files_good_fastas.txt --seqtype=dna     | sst validate -f dataset
+bad:  sst preprocess -i files_good_fastas.txt --seqtype=rna     | sst validate -f dataset
+bad:  sst preprocess -i files_good_fastas.txt --seqtype=protein | sst validate -f dataset
+bad:  sst preprocess -i files_good_fastas.txt                   | sst validate -f dataset
+
+# Variations within good files is tolerated
+good: sst preprocess -i files_good_comments.txt                   | sst validate -f dataset
+good: sst preprocess -i files_good_nonconsecutivebins.txt         | sst validate -f dataset
+good: sst preprocess -i files_good_samefile.txt                   | sst validate -f dataset
+good: sst preprocess -i files_good_textandfasta.txt --seqtype=dna | sst validate -f dataset
+bad:  sst preprocess -i files_good_textandfasta.txt               | sst validate -f dataset
+
+bad:  sst preprocess -i files_bad_badcols.txt | sst validate -f dataset
+bad:  sst preprocess -i files_bad_extracol.txt | sst validate -f dataset
+bad:  sst preprocess -i files_bad_nofiles.txt | sst validate -f dataset
+bad:  sst preprocess -i files_bad_nonintegerbins.txt | sst validate -f dataset
+bad:  sst preprocess -i files_bad_nonuniquebins.txt | sst validate -f dataset
+bad:  sst preprocess -i files_badio_nonexistentfile.txt | sst validate -f dataset
+bad:  sst preprocess -i files_badtype_dnaandprotein.txt | sst validate -f dataset
+bad:  sst preprocess -i files_badtype_dnaandrna.txt | sst validate -f dataset
+bad:  sst preprocess -i files_badtype_rnaandprotein.txt | sst validate -f dataset
