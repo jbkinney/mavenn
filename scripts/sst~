@@ -28,6 +28,10 @@ parser.add_argument('-o','--out',default=False,help='Output location/type, by de
 # Add various subcommands individually viva subparsers
 subparsers = parser.add_subparsers()
 
+#learn_matrix
+import sst.sortseq_for_doc as sortseq_for_doc
+sortseq_for_doc.add_subparser(subparsers)
+
 # preprocess
 import sst.preprocess as preprocess
 preprocess.add_subparser(subparsers)
@@ -36,20 +40,21 @@ preprocess.add_subparser(subparsers)
 import sst.learn_matrix as learn_matrix
 learn_matrix.add_subparser(subparsers)
 
-#learn_matrix
-import sst.sortseq_for_doc as sortseq_for_doc
-sortseq_for_doc.add_subparser(subparsers)
+#profile_ct
+import sst.profile_ct as profile_ct
+profile_ct.add_subparser(subparsers)
 
-#profile_counts
-import sst.profile_counts as profile_counts
-profile_counts.add_subparser(subparsers)
+#profile_mut
+import sst.profile_mut as profile_mut
+profile_mut.add_subparser(subparsers)
 
+#profile_info
 import sst.profile_info as profile_info
 profile_info.add_subparser(subparsers)
 
-#profile_mutrate
-import sst.profile_mutrate as profile_mutrate
-profile_mutrate.add_subparser(subparsers)
+#profile_freq
+import sst.profile_freq as profile_freq
+profile_freq.add_subparser(subparsers)
 
 #predictiveinfo
 import sst.predictiveinfo as predictiveinfo
@@ -57,7 +62,7 @@ predictiveinfo.add_subparser(subparsers)
 
 #Scan
 import sst.Scan as Scan
-Scan.add_subparser(subparsers)
+predictiveinfo.add_subparser(subparsers)
 
 #simualte_library
 import sst.simulate_library as simulate_library
@@ -75,9 +80,14 @@ simulate_evaluate.add_subparser(subparsers)
 import sst.simulate_expression as simulate_expression
 simulate_expression.add_subparser(subparsers)
 
+#validate
+import sst.validate as validate
+validate.add_subparser(subparsers)
+
 # Final incantiation needed for this to work
 args = parser.parse_args()
 args.func(args=args)
+
 
 
 

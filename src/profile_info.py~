@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import sys
 import csv
+import sst.nsbestimator as nsb
 #Our miscellaneous functions
 #This module will allow us to easily tally the letter counts at a particular position
 import pandas as pd
