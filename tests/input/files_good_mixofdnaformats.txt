@@ -6,5 +6,4 @@ bin	file
 5	bin_hbsites.fna
 6	bin_hbsites.fsa
 7	bin_hbsites.txt
-8	bin_hbsites_raw.txt
-9	bin_hbsites_noct.txt
+8	bin_hbsites_noct.txt

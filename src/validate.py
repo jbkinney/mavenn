@@ -32,10 +32,10 @@ filetypes = filetype_to_loadfunc_dict.keys()
 def wrapper(args):
     """ Wrapper for functions io.load_* and io.write
     """  
-    
+
     # Determine input and output
-    inloc = open(args.i,'r') if args.i else sys.stdin
-    outloc = open(args.out,'w') if args.out else sys.stdout
+    inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
+    outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
 
     try:
         # Get load function corresponding to file type
