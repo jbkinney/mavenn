@@ -51,6 +51,7 @@ seqtype_to_seqcolname_dict = {
     'rna':'seq_rna',
     'protein':'seq_pro'
 }
+seqtypes = ['dna','rna','protein']
 
 # List of parameter names for different types of models 
 model_parameters_dict = {}

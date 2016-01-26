@@ -15,6 +15,14 @@ filetype_to_loadfunc_dict = {
     'profile_ct'    :   io.load_profile_ct,
     'profile_freq'  :   io.load_profile_freq,
     'dataset'       :   io.load_dataset,
+    'dataset_fasta_dna'     :   \
+        lambda f: io.load_dataset(f,file_type='fasta',seq_type='dna'),
+    'dataset_fasta_rna'     :   \
+        lambda f: io.load_dataset(f,file_type='fasta',seq_type='rna'),
+    'dataset_fasta_protein' :   \
+        lambda f: io.load_dataset(f,file_type='fasta',seq_type='protein'),
+    'dataset_fastq' :   \
+        lambda f: io.load_dataset(f,file_type='fastq'),
     'model'         :   io.load_model,
     'tagkey'        :   io.load_tagkey
 }
@@ -31,7 +39,7 @@ def wrapper(args):
 
     try:
         # Get load function corresponding to file type
-        func = filetype_to_loadfunc_dict[args.filetype]
+        func = filetype_to_loadfunc_dict[str(args.filetype)]
 
         # Run load function on input
         df = func(inloc)
@@ -40,7 +48,8 @@ def wrapper(args):
         io.write(df,outloc)
 
     except SortSeqError:
-        raise SortSeqError('Could not interpret input as %s'%args.filetype)
+        raise
+    #    raise SortSeqError('Could not interpret input as %s'%args.filetype)
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
