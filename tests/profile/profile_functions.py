@@ -12,6 +12,7 @@ import sys
 import pandas as pd
 import sst.qc as qc
 import sst.io as io
+import os
 import sst.profile_ct as profile_ct
 import pdb
 from sst import SortSeqError

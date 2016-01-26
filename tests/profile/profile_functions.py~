@@ -22,6 +22,8 @@ import sst.profile_info as profile_info
 
 df = io.load_dataset(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                            'data/sortseq/crp-wt.txt'))
+model_df = io.load_dataset(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                           'data/sortseq/crp-wt/test_old'))
 
 #Profile profile_info
 stats_fn = 'Profile_profile_info'
@@ -60,7 +62,7 @@ p.print_stats()
 #profile predictiveinfo
 stats_fn = 'Profile_predictiveinfo'
 stats_fn_hr = 'Profile_predictiveinfo_hr'
-cProfile.run('''predictiveinfo.main(df,'dna','LS')''',stats_fn)
+cProfile.run('''predictiveinfo.main(df,model_df)''',stats_fn)
 
 #Reformat and print to human readable profile
 p = pstats.Stats(stats_fn,stream=stats_fn_hr)
