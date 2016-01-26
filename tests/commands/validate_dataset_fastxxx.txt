@@ -1,0 +1,27 @@
+# Fasta files
+bad:  sst validate -f dataset               -i seq_good.fasta
+bad:  sst validate -f dataset_fastq         -i seq_good.fasta  
+good: sst validate -f dataset_fasta_dna     -i seq_good.fasta
+bad:  sst validate -f dataset_fasta_rna     -i seq_good.fasta
+good: sst validate -f dataset_fasta_protein -i seq_good.fasta
+bad:  sst validate -f dataset_fasta_dna     -i seq_good_rna.fasta
+good: sst validate -f dataset_fasta_rna     -i seq_good_rna.fasta
+bad:  sst validate -f dataset_fasta_protein -i seq_good_rna.fasta
+bad:  sst validate -f dataset_fasta_dna     -i seq_good_pro.fasta
+bad:  sst validate -f dataset_fasta_rna     -i seq_good_pro.fasta
+good: sst validate -f dataset_fasta_protein -i seq_good_pro.fasta
+
+# Fastq files
+bad:  sst validate -f dataset                -i seq_good.fastq 
+bad:  sst validate -f dataset_fasta_dna      -i seq_good.fastq
+bad:  sst validate -f dataset_fasta_rna      -i seq_good.fastq 
+bad:  sst validate -f dataset_fasta_protein  -i seq_good.fastq  
+good: sst validate -f dataset_fastq          -i seq_good.fastq 
+
+# Fasta bin files used to test preprocess
+good: sst validate -f dataset_fasta_dna -i bin_hbsites.fa
+good: sst validate -f dataset_fasta_dna -i bin_hbsites.fas
+good: sst validate -f dataset_fasta_dna -i bin_hbsites.fasta
+good: sst validate -f dataset_fasta_dna -i bin_hbsites.ffn
+good: sst validate -f dataset_fasta_dna -i bin_hbsites.fna
+good: sst validate -f dataset_fasta_dna -i bin_hbsites.fsa

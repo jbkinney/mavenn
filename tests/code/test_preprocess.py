@@ -15,7 +15,8 @@ class TestPreprocess(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @shutthefuckup
+    
+    #@shutthefuckup
     def test_preprocess(self):
         """ Test the ability of sst.preprocess to collate data in multiple sequence files
         """

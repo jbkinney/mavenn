@@ -127,24 +127,23 @@ def wrapper(args):
     """ Commandline wrapper for main()
     """  
     
-    # Run funciton
-    if args.i:
-        filelist_df = io.load_filelist(args.i)
-    else:
-        filelist_df = io.load_filelist(sys.stdin)
+    # Determine input and output
+    inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
+    outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
+
+    # Load filelist
+    filelist_df = io.load_filelist(inloc)
     
+    # Load tagkeys if specified
     if args.tagkeys:
         tags_df = io.load_tagkeys(args.tagkeys)
     else:
         tags_df = None
 
+    # Do computation
     output_df = main(filelist_df,tags_df=tags_df,seq_type=args.seqtype)
 
-    if args.out:
-        outloc = open(args.out,'w')
-    else:
-        outloc = sys.stdout
-
+    # Write output 
     io.write(output_df,outloc)
 
 # Connects argparse to wrapper

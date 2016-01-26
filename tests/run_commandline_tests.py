@@ -30,11 +30,12 @@ for filename in filenames:
         lines = [l.strip() for l in f.readlines()]
 
     # Evaluate each individual command
+    validation = ''
     for line in lines:
 
         # If emtpy or comment line, just print
         if not line or '#'==line[0]:
-            print '\t'+line
+            print '  '+line
             continue
 
         # Extract command
@@ -45,24 +46,34 @@ for filename in filenames:
         except:
             raise SortSeqError('Could not interpret line: %s'%line)
 
+        # If specifies validation, record and move to next line
+        if test_type=='validation':
+            print '> '+line
+            validation = command
+            continue
+
+        # Append validation routine to command only if good outcome expected
+        if test_type=='good':
+            command += ' ' + validation
+            line += ' ' + validation
+
         # Run command, get stdout and stderr
         p = subprocess.Popen(command,shell=True,cwd=cwd,\
             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         stdout_str, stderr_str = p.communicate()
 
         # Run checks on stdout and stderr
-        if test_type=='good':
-            if (not stdout_str) or stderr_str:
-                print 'ERROR!',
+        prepend = '. '
+        if test_type=='good' and stderr_str:
+                prepend = 'E '
 
-        elif test_type=='bad':
-            if not ('SortSeqError' in stderr_str):
-                print 'ERROR!',
-        else:
-            print '\t'+line
-            raise SortSeqError('Unrecognized test type %s'%test_type)
+        elif test_type=='bad' and not ('SortSeqError' in stderr_str):
+                prepend = 'E '
+        
+        if not test_type in ('good','bad'):
+            raise SortSeqError('Unrecognized test type %s'%repr(test_type))
 
-        print '\t'+line
+        print prepend + line
 
-    print '\tDone.'
+    print '  Done.\n'
 

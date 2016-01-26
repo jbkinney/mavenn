@@ -1,6 +1,5 @@
+# Text files containing single library information
 good: sst validate -f dataset -i seq_good.txt
-good: sst validate -f dataset -i seq_good.fasta
-good: sst validate -f dataset -i seq_good.fastq 
 good: sst validate -f dataset -i seq_good_comments.txt
 good: sst validate -f dataset -i seq_good_rna.txt
 good: sst validate -f dataset -i seq_good_pro.txt
@@ -25,6 +24,7 @@ bad:  sst validate -f dataset -i seq_bad_pro_fasta.txt
 bad:  sst validate -f dataset -i seq_bad_pro_hasX.txt
 bad:  sst validate -f dataset -i seq_bad_rna_hasT.txt
 
+# Dataset files containing counts from multiple libraries
 good: sst validate -f dataset -i dataset_good.txt
 good: sst validate -f dataset -i dataset_good_rna.txt
 good: sst validate -f dataset -i dataset_good_pro.txt
@@ -34,15 +34,7 @@ bad:  sst validate -f dataset -i dataset_bad_badseqtype.txt
 bad:  sst validate -f dataset -i dataset_bad_badseqs.txt
 bad:  sst validate -f dataset -i dataset_bad_badcounts.txt
 
-good: sst validate -f dataset -i bin_hbsites.fa
-good: sst validate -f dataset -i bin_hbsites.fas
-good: sst validate -f dataset -i bin_hbsites.fasta
-good: sst validate -f dataset -i bin_hbsites.ffn
-good: sst validate -f dataset -i bin_hbsites.fna
-good: sst validate -f dataset -i bin_hbsites.fsa
-good: sst validate -f dataset -i bin_hbsites.txt
-good: sst validate -f dataset -i bin_hbsites_noct.txt
-
+# Bin files used to test preprocess
 good: sst validate -f dataset -i bin_0.txt
 good: sst validate -f dataset -i bin_1.txt
 good: sst validate -f dataset -i bin_2.txt
@@ -56,3 +48,6 @@ good: sst validate -f dataset -i bin_1_pro.txt
 good: sst validate -f dataset -i bin_2_pro.txt
 
 bad: sst validate -f dataset -i bin_2_pro_wrongseqtype.txt
+
+good: sst validate -f dataset -i bin_hbsites.txt
+good: sst validate -f dataset -i bin_hbsites_noct.txt

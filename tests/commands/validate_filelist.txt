@@ -1,3 +1,5 @@
+bad:  sst validate -f filelist -i file_does_not_exist.txt
+
 good: sst validate -f filelist -i files_good.txt
 good: sst validate -f filelist -i files_good_comments.txt
 good: sst validate -f filelist -i files_good_fasta.txt
@@ -7,7 +9,6 @@ good: sst validate -f filelist -i files_good_pro.txt
 good: sst validate -f filelist -i files_good_raw.txt
 good: sst validate -f filelist -i files_good_rna.txt
 good: sst validate -f filelist -i files_good_samefile.txt
-good: sst validate -f filelist -i files_good_textandfasta.txt
 good: sst validate -f filelist -i files_badio_nonexistentfile.txt
 good: sst validate -f filelist -i files_badtype_dnaandprotein.txt
 good: sst validate -f filelist -i files_badtype_dnaandrna.txt

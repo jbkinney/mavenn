@@ -72,54 +72,68 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
     """ Loads a dataset file, returns a data frame. 
         Can load text, fasta, or fastq files
     """
+
     # Check that the file can be read
     file_handle = validate_file_for_reading(file_arg)
 
     # Check that file type is vaild
-    valid_types = ['text','fasta','fastq','raw']
-    if not file_type in valid_types:
+    if not file_type in ['text','fasta','fastq']:
         raise SortSeqError('Argument file_type, = %s, is not valid.'%\
             str(file_type))
 
-    # If seq_type is specified, get correposnding colname
-    if seq_type:
-        if not seq_type in qc.seqtype_to_seqcolname_dict.keys():
+    # Make sure seq_type, if any, is valid
+    if seq_type and not (seq_type in qc.seqtypes):
             raise SortSeqError('seq_type %s is invalid'%str(seq_type))
+
+    # If seq_type is specified, get correposnding colname
+    if file_type=='fasta':
+        if not seq_type:
+            raise SortSeqError('Seqtype unspecified while fasta file.')
+
+        # Set column name based on seq_type
         colname = qc.seqtype_to_seqcolname_dict[seq_type]
-
-    # For text file, just load as whitespace-delimited data frame
-    if file_type=='text':
-        df = pd.read_csv(file_arg,delim_whitespace=True,\
-            comment='#')
-
-        # If seq_type is specified, make sure it matches colname in df
-        if seq_type and (not colname in df.columns):
-            raise SortSeqError('Column %s is not in dataframe'%str(colname))
-
-    # For raw text, load into dataframe with column defined by seq_type
-    elif file_type=='raw':
-        if not seq_type:
-            raise SortSeqError('file_type=="raw" but seq_type is not set.')
-
-        df = pd.read_csv(file_arg,delim_whitespace=True,\
-            comment='#', header=None)
-        if len(df.columns)!=1:
-            raise SortSeqError(\
-                'file_type=="raw" but file has multiple columns.')
-        df.columns=[colname]
-
-    # For fastq or fasta file, use Bio.SeqIO
-    elif file_type=='fastq' or file_type=='fasta':
-
-        # Raise error if seq_type was not specified
-        if not seq_type:
-            raise SortSeqError(\
-                'Seqtype unspecified while fasta or fastq file.')
 
         # Fill in dataframe with fasta or fastq data
         df = pd.DataFrame(columns=[colname])
         for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
             df.loc[i] = str(record.seq)
+
+    # If type is fastq, set sequence type to dna
+    elif file_type=='fastq':
+        if not seq_type:
+            seq_type = 'dna'
+        if seq_type!='dna':
+            raise SortSeqError(\
+                'seq_type=%s is incompatible with file_type="fastq"'%seq_type)
+
+        # Set column name based on seq_type    
+        colname = qc.seqtype_to_seqcolname_dict[seq_type]
+
+        # Fill in dataframe with fasta or fastq data
+        df = pd.DataFrame(columns=[colname])
+        for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
+            df.loc[i] = str(record.seq)
+
+    # For text file, just load as whitespace-delimited data frame
+    elif file_type=='text':
+        df = pd.read_csv(file_arg,delim_whitespace=True,\
+            comment='#')
+
+        # If seq_type is specified, get corresponding column name
+        if seq_type:
+            colname = qc.seqtype_to_seqcolname_dict[seq_type]
+
+        # If seq_type is specified, make sure it matches colname in df
+        if seq_type and (not colname in df.columns):
+            raise SortSeqError('Column %s is not in dataframe'%str(colname))
+
+    # Otherwise, raise error
+    else:
+        raise SortSeqError('Unrecognized filetype %s'%file_type)
+
+    # Make sure data was actually loaded
+    if not df.shape[0]>=1:
+        SortSeqError('No data was loaded.')
 
     # If a sequences or tags were loaded, 
     # and there are no counts, then add counts
