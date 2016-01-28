@@ -4,6 +4,10 @@ import re
 from sst import SortSeqError
 import glob
 import sys
+import time
+
+# Start clock
+start_time = time.time()
 
 # Commands must be execulted in cwd to work
 cwd = 'input/'
@@ -19,6 +23,9 @@ print 'Testing SortSeqTools on commands in the following files:'
 print '-----'
 print '\n'.join(filenames)
 print '-----'
+
+total_tests = 0
+failed_tests = 0
 
 # Process each file
 for filename in filenames:
@@ -65,15 +72,27 @@ for filename in filenames:
         # Run checks on stdout and stderr
         prepend = '. '
         if test_type=='good' and stderr_str:
-                prepend = 'E '
+            prepend = 'E '
+            failed_tests += 1
 
         elif test_type=='bad' and not ('SortSeqError' in stderr_str):
-                prepend = 'E '
+            prepend = 'E '
+            failed_tests += 1
         
         if not test_type in ('good','bad'):
             raise SortSeqError('Unrecognized test type %s'%repr(test_type))
 
         print prepend + line
+        total_tests += 1
 
-    print '  Done.\n'
+    print '  Done with %s.\n'%filename
+
+# Stop clock
+testing_time = time.time() - start_time
+print '-------------------------------------'
+print 'Time to run tests: %.2f min.'%(testing_time/60.0)
+print 'Results: %d tests, %d failures.'%(total_tests,failed_tests)
+print '-------------------------------------'
+
+
 

@@ -1,10 +1,6 @@
 # Validation to use for good commands from now on
 validation: | sst validate -f dataset
 
-#
-# WARNING: STILL NEED TO TEST USE OF TAGKEYS
-#
-
 # Test use of tags
 good: sst preprocess -i files_good_tags.txt --tagkey tagkey_good_usethis.txt
 good: sst preprocess -i files_good_tags_someunknown.txt --tagkey tagkey_good_usethis.txt
