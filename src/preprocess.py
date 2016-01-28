@@ -126,34 +126,34 @@ def main(filelist_df,tags_df=None,indir='./',seq_type=None):
 def wrapper(args):
     """ Commandline wrapper for main()
     """  
-    
-    # Determine input and output
+
     inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
     outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
-
-    # Load filelist
-    filelist_df = io.load_filelist(inloc)
     
-    # Load tagkeys if specified
+    # Get filelist
+    filelist_df = io.load_filelist(inloc)
+    inloc.close()
+
+    # Get tagkeys dataframe if provided
     if args.tagkeys:
-        tags_df = io.load_tagkeys(args.tagkeys)
+        tagloc = io.validate_file_for_reading(args.tagkeys) 
+        tags_df = io.load_tagkey(tagloc)
+        tagloc.close()
     else:
         tags_df = None
-
-    # Do computation
+    
     output_df = main(filelist_df,tags_df=tags_df,seq_type=args.seqtype)
-
-    # Write output 
     io.write(output_df,outloc)
+
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
     p = subparsers.add_parser('preprocess')
     p.add_argument(
-        '-i', '--i', default=None,help='''Input file, otherwise input
-        through the standard input.''')
+        '-i', '--i', type=str, default=None, help='''Input file, otherwise input through the standard input.''')
     p.add_argument('--tagkeys',default=None)
-    p.add_argument('-o', '--out', default=None)
+    p.add_argument(\
+        '-o', '--out', type=str, default=None,help='''Output file, otherwise use standard output.''')
     p.add_argument(
         '-s', '--seqtype', default=None, choices=['dna','rna','protein'], \
         help='''Type of sequence to expect in input files.''')

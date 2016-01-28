@@ -9,6 +9,20 @@ import qc
 import utils
 from sst import SortSeqError
 
+def load_text(file_arg):
+    """
+    General function used to load data from a text file
+    """
+    file_handle = validate_file_for_reading(file_arg)
+    try:
+        df = pd.read_csv(file_handle,delim_whitespace=True,\
+            comment='#', skip_blank_lines=True, engine='c')
+    except:
+        raise SortSeqError(\
+            'Could not interpret text file %s as dataframe.'%repr(file_handle))
+    return df.dropna(axis=0, how='all')   # Drop rows with all NaNs
+
+
 def validate_file_for_reading(file_arg):
     """ Checks that a specified file exists and is readable. Returns a valid file handle given a file name or handle 
     """
@@ -67,7 +81,7 @@ def validate_file_for_wrtiting(file_arg):
     # Return validated file handle
     return file_handle
 
-
+# JBK: This function is currently too complex to be refactored into load()
 def load_dataset(file_arg, file_type='text',seq_type=None):
     """ Loads a dataset file, returns a data frame. 
         Can load text, fasta, or fastq files
@@ -116,8 +130,8 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
 
     # For text file, just load as whitespace-delimited data frame
     elif file_type=='text':
-        df = pd.read_csv(file_arg,delim_whitespace=True,\
-            comment='#')
+
+        df = load_text(file_arg)
 
         # If seq_type is specified, get corresponding column name
         if seq_type:
@@ -142,112 +156,55 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
             df['ct'] = 1
 
     # Return validated/fixed dataframe
-    df_valid = qc.validate_dataset(df, fix=True)
-    return df_valid
+    return qc.validate_dataset(df, fix=True)
 
-
+# JBK: I want to get rid of these
 def load_model(file_arg):
-    """ Loads a model from a text file into a dataframe
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_model(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='model')
 
 def load_filelist(file_arg):
-    """ Loads a filelist from a text file into a dataframe
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_filelist(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='filelist')
 
 def load_tagkey(file_arg):
-    """ Loads a tagkey from a text file into a dataframe
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_tagkey(df, fix=True)
-    return df_valid
-
-
+    return load(file_arg, file_type='tagkey')
 
 def load_profile_ct(file_arg):
-    """ Loads a profile_ct dataframe from a text file
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_ct(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='profile_ct')
 
 def load_profile_freq(file_arg):
-    """ Loads a profile_freq dataframe from a text file
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_freq(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='profile_freq')
 
 def load_profile_mut(file_arg):
-    """ Loads a profile_mut dataframe from a text file
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_mut(df, fix=True)
-    return df_valid
+    return load(file_arg, file_type='profile_mut')
 
 def load_profile_info(file_arg):
-    """ Loads a profile_info dataframe from a text file
+    return load(file_arg, file_type='profile_info')
+
+# JBK: I want to switch to using only this function
+def load(file_arg, file_type, **kwargs):
+    """ Loads file of any specified type
     """
+    validate_func_dict = {
+    #'dataset'       : qc.validate_dataset,  # This won't work right now
+    'model'         : qc.validate_model,
+    'filelist'      : qc.validate_filelist,
+    'tagkey'        : qc.validate_tagkey,
+    'profile_ct'    : qc.validate_profile_ct,
+    'profile_freq'  : qc.validate_profile_freq,
+    'profile_mut'   : qc.validate_profile_mut,
+    'profile_info'  : qc.validate_profile_info
+    }
 
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
+    df = load_text(file_arg)
 
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
+    if 'dataset' in file_type:
+        raise SortSeqError('file_type %s is not supported in load()'%file_type)
 
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_info(df, fix=True)
-    return df_valid
+    if file_type not in validate_func_dict.keys():
+        raise SortSeqError('Unrecognized file_type %s'%file_type)
+
+    func = validate_func_dict[file_type]
+    return func(df,fix=True,**kwargs)
 
 
 def write(df,file_arg):

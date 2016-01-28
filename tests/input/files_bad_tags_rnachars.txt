@@ -1,0 +1,4 @@
+bin	file
+0	bin_0_tags_rnachars.txt
+1	bin_1_tags.txt
+2	bin_2_tags.txt

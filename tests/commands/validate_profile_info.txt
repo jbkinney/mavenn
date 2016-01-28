@@ -1,0 +1,9 @@
+good: sst validate -f profile_info -i profile_info_good_err.txt
+good: sst validate -f profile_info -i profile_info_good_noerr.txt
+
+bad:  sst validate -f profile_info -i profile_mut_bad_invalidchar.txt
+bad:  sst validate -f profile_info -i profile_info_bad_nanval.txt
+bad:  sst validate -f profile_info -i profile_info_bad_negerr.txt
+bad:  sst validate -f profile_info -i profile_info_bad_nonconsecpos.txt
+bad:  sst validate -f profile_info -i profile_info_bad_noposheading.txt
+bad:  sst validate -f profile_info -i profile_info_bad_wongcol.txt

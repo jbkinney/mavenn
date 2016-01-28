@@ -49,37 +49,27 @@ def main(dataset_df, bin=None, start=0, end=None):
 
 # Define commandline wrapper
 def wrapper(args):
-    
-    # Load dataset dataframe
-    if args.i:
-        df = io.load_dataset(args.i)
-    else:
-        df = io.load_dataset(sys.stdin)
-    
-    # Compute freqs profile dataframe
-    output_df = main(df,bin=args.bin,start=args.start,end=args.end)
-
-    # Set output buffer
-    if args.out:
-        outloc = open(args.out,'w')
-    else:
-        outloc = sys.stdout
-
-    # Write results to file/stdout
-    io.write(out_df,outloc)
+    """ Commandline wrapper for main()
+    """ 
+    inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
+    outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
+    input_df = io.load_dataset(inloc)
+    output_df = main(input_df,bin=args.bin,start=args.start,end=args.end)
+    io.write(output_df,outloc)
 
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
     p = subparsers.add_parser('profile_freq')
     p.add_argument(
-        '-b','--bin',default=None, help='''Dataset bin to use for counts. If blank, total counts will be used''')
+        '-b','--bin', type=int, default=None, help='''Dataset bin to use for counts. If blank, total counts will be used''')
     p.add_argument(
-        '-i', '--i', default=None,help='''Input file, otherwise input through the standard input.''')
+        '-i', '--i', type=str, default=None, help='''Input file, otherwise input through the standard input.''')
     p.add_argument(
-        '-s','--start',type=int,default=0,help ='''Position to start your analyzed region''')
+        '-s','--start',type=int, default=0,help ='''Position to start your analyzed region''')
     p.add_argument(
-        '-e','--end',type=int,default = None, help='''Position to end your analyzed region''')
+        '-e','--end',type=int, default = None, help='''Position to end your analyzed region''')
     p.add_argument(\
-        '-o', '--out', default=None,help='''Output file, otherwise use standard output.''')
+        '-o', '--out', type=str, default=None,help='''Output file, otherwise use standard output.''')
     p.set_defaults(func=wrapper)
+    
