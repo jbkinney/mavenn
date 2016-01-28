@@ -333,19 +333,20 @@ def _validate_val_cols(df, fix=False):
 
         # Check if columns are floats
         if not df[col].values.dtype == float:
-            try:
-                float_vals = df[col].astype(float)
-            except:
-                raise SortSeqError('Cannot interptret counts as integers.')
 
-            # Convert to floats if this doesn't change values
-            if all(float_vals == df[col]):
-                if fix:
-                    df[col] = float_vals
-                else:
-                    SortSeqError('Parameter values are not floats; set fix=True to fix.')
+            # Check whether values can be interpreted as floats
+            try:
+                df.loc[col] = df[col].astype(float)
+            except:
+                raise SortSeqError(\
+                    'Cannot interpret values in %s as floats.'%col)
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
             else:
-                raise SortSeqError('Non-float parameters encountered.')
+                SortSeqError(\
+                    'Values in %s not floats; set fix=True to fix.'%col)
 
         # Make sure that all parameters are finite
         if not all(np.isfinite(df[col])):
@@ -359,22 +360,22 @@ def _validate_freq_cols(df, fix=False, tol=1E-2):
     freq_cols = get_cols_from_df(df,'freq_')
     for col in freq_cols:
 
-        # Verify that freqs are floats
+        # Check if columns are floats
         if not df[col].values.dtype == float:
 
-            # Check whether freqs can be interpreted as floats
+            # Check whether values can be interpreted as floats
             try:
-                float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
+                df.loc[col] = df[col].astype(float)
             except:
-                raise SortSeqError('Non-numbers found in freqs.')
+                raise SortSeqError(\
+                    'Cannot interpret values in %s as floats.'%col)
 
             # Check whether we have permission to change these to floats
             if fix:
                 df[col] = df[col].astype(float)
             else:
-                raise SortSeqError(\
-                    'Freqs are not floats; set fix=True to fix.')
+                SortSeqError(\
+                    'Values in %s not floats; set fix=True to fix.'%col)
 
         # Make sure that all freqs are between 0 and 1
         if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
@@ -395,22 +396,22 @@ def _validate_info_cols(df, fix=False):
     info_cols = get_cols_from_df(df,'info')
     for col in info_cols:
 
-        # Verify that freqs are floats
+        # Check if columns are floats
         if not df[col].values.dtype == float:
 
-            # Check whether freqs can be interpreted as floats
+            # Check whether values can be interpreted as floats
             try:
-                float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
+                df.loc[col] = df[col].astype(float)
             except:
-                raise SortSeqError('Non-numbers found in freqs.')
+                raise SortSeqError(\
+                    'Cannot interpret values in %s as floats.'%col)
 
             # Check whether we have permission to change these to floats
             if fix:
                 df[col] = df[col].astype(float)
             else:
                 SortSeqError(\
-                    'Info values are not floats; set fix=True to fix.')
+                    'Values in %s not floats; set fix=True to fix.'%col)
     return df
 
 # Validates dataset dataframes

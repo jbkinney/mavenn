@@ -1,0 +1,21 @@
+# Validation to use for good commands from now on
+validation: | sst validate -f profile_info
+
+good: sst profile_info -i dataset_good.txt
+good: sst profile_info -i dataset_good_rna.txt
+good: sst profile_info -i dataset_good_pro.txt
+good: sst profile_info -i dataset_good.txt
+good: sst profile_info -i dataset_good.txt -s 2 
+good: sst profile_info -i dataset_good.txt -e 10
+good: sst profile_info -i dataset_good.txt --err True
+good: sst profile_info -i dataset_good.txt -s 2 -e 10 -d True
+good: sst profile_info -i dataset_good.txt  -m naive -s 2 -e 10
+good: sst profile_info -i dataset_good.txt  -m nsb -s 2 -e 10
+good: sst profile_info -i dataset_good.txt  -p 10
+
+bad:  sst profile_info -i seq_good.txt
+bad:  sst profile_info -i bacterium.jpg
+bad:  sst profile_info -i dataset_bad_badcounts.txt
+bad:  sst profile_info -i dataset_good.txt -s 100
+bad:  sst profile_info -i dataset_good.txt -e 0
+bad:  sst profile_info -i dataset_good.txt -p -1

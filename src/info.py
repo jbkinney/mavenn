@@ -210,11 +210,11 @@ def _estimate_entropy_nsb(raw_counts, maxlen=1000, err=False):
     # Perform NSB entropy estimate
     N = counts.sum()
     K = len(counts)
-    ent = _nsb.S(counts,N,K)
+    ent = float(_nsb.S(counts,N,K))
 
     # Including this, but not sure it should be used much. 
     if err:
-        ent_err = _nsb.dS(counts,N,K)
+        ent_err = float(_nsb.dS(counts,N,K))
 
     return (ent, ent_err) if err else ent
 
