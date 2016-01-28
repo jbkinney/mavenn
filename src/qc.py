@@ -857,3 +857,55 @@ def validate_profile_info(df, fix=False):
 
     return df
 
+def validate_input_arguments_for_learn_matrix(modeltype=None,learningmethod=None,
+        start=None,end=None,iteration=None,burnin=None,thin=None,pseudocounts=None,
+        foreground=None,background=None):
+    '''We need to make sure that the input arguments to learn_matrix are
+       reasonable. This means we need to check that 
+        -none of the arguments are negative
+        -start > end
+        -iteration > burnin and thin
+        -iteration > 0
+        -learning method is not ER while model type is NBR
+        -foreground =! background
+        Otherwise we need to raise a SortSeqError'''
+
+    if foreground == background:
+        raise SortSeqError('Foreground and background bins cannot be the \
+            same')
+
+    if modeltype == 'NBR' and (learningmethod == 'ER'):
+        raise SortSeqError('''Enrichment Ratio learning method cannot compute\
+            nearest neighbor models''') 
+    if start is not None:
+        if start < 0:
+            raise SortSeqError('Start argument must be positive')
+    if end is not None:
+        if end < 0:
+            raise SortSeqError('End argument must be positive')
+        if start is not None:
+            if end <= start:
+                raise SortSeqError('End must be greater than start')
+    if iteration is not None:
+        if iteration < 0:
+            raise SortSeqError('Iteration argument must be positive')
+    if burnin is not None:
+        if burnin < 0:
+            raise SortSeqError('Burnin argument must be positive')
+        if iteration is not None:
+            if burnin > iteration:
+                raise SortSeqError(
+                    '''Burnin argument must be less than the number 
+                    of iterations''')
+    if thin is not None:
+        if thin < 0:
+            raise SortSeqError('Thin argument must be positive')
+        if iteration is not None:
+            if iteration < thin:
+                raise SortSeqError(
+                    '''Thin argument must be less than the number of iterations''')
+    if pseudocounts is not None:
+        if pseudocounts < 0:
+            raise SortSeqError('pseudocounts must be positive')
+
+

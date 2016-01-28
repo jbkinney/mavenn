@@ -14,8 +14,11 @@ from sklearn import linear_model
 import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
 import sst.stepper as stepper
+import os
+from sst import SortSeqError
 
 import sst.gauge_fix as gauge_fix
+import sst.qc as qc
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''
@@ -97,7 +100,7 @@ def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     #check that the foreground and background chosen columns actually exist.
     columns_to_check = {'ct_' + str(foreground),'ct_' + str(background)}
     if not columns_to_check.issubset(set(df.columns)):
-        raise ValueError('Foreground or Background column does not exist!')
+        raise SortSeqError('Foreground or Background column does not exist!')
 
     #get counts of each base at each position
     foreground_counts = utils.profile_counts(df,dicttype,bin_k=foreground)   
@@ -106,6 +109,16 @@ def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     #add pseudocounts to each position
     foreground_counts[binheaders] = foreground_counts[binheaders] + pseudocounts
     background_counts[binheaders] = background_counts[binheaders] + pseudocounts
+    #make sure there are no zeros in counts after addition of pseudocounts
+    ct_headers = utils.get_column_headers(foreground_counts)
+    if foreground_counts[ct_headers].isin([0]).values.any():
+        raise SortSeqError('''There are some bases without any representation in\
+            the foreground data, you should use pseudocounts to avoid failure \
+            of the learning method''')
+    if background_counts[ct_headers].isin([0]).values.any():
+        raise SortSeqError('''There are some bases without any representation in\
+            the background data, you should use pseudocounts to avoid failure \
+            of the learning method''')
     #normalize to compute frequencies
     foreground_freqs = foreground_counts.copy()
     background_freqs = background_counts.copy()
@@ -133,7 +146,7 @@ def Compute_Least_Squares(raveledmat,batch,sw,alpha=0):
 def main(
         df,dicttype,lm,modeltype='MAT',LS_means_std=None,LS_iterations=4,
         db=None,iteration=30000,burnin=1000,thin=10,runnum=0
-        ,initialize='Rand',start=0,end=None,foreground=1,
+        ,initialize='LeastSquares',start=0,end=None,foreground=1,
         background=0,alpha=0,pseudocounts=1,test=False,drop_library=False):
     
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype=modeltype)
@@ -142,40 +155,50 @@ def main(
          the sequences. An issue with this test is that if you have DNA sequence
          but choose a protein dictionary, you will still pass this test bc A,C,
          G,T are also valid amino acids'''
+    #set name of sequences column based on type of sequence
+    type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}
+    seq_col_name = type_name_dict[dicttype]
     lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT') 
-    def check_sequences(s):
-        return set(s).issubset(lin_seq_dict)
-    if False in set(df.seq.apply(check_sequences)):
-        raise TypeError('Wrong sequence type!')
     par_seq_dict = {v:k for v,k in seq_dict.items() if k != (len(seq_dict)-1)}
+    #If there are sequences of different lengths, then print error but continue
+    if len(set(df[seq_col_name].apply(len))) > 1:
+         sys.stderr.write('Lengths of all sequences are not the same!')
     #select target sequence region
-    df.loc[:,'seq'] = df.loc[:,'seq'].str.slice(start,end)
+    df.loc[:,seq_col_name] = df.loc[:,seq_col_name].str.slice(start,end)
     df = utils.collapse_further(df)
     col_headers = utils.get_column_headers(df)
+    #make sure all counts are ints
     df[col_headers] = df[col_headers].astype(int)
     #create vector of column names
     val_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
-    if end:
-        df = df[df['seq'].apply(len) == (end-start)]
     df.reset_index(inplace=True,drop=True)
-    #If there are sequences of different lengths, then print error
-    if len(set(df.seq.apply(len))) > 1:
-         sys.stderr.write('Lengths of all sequences are not the same!')
+    
     #Drop any sequences with incorrect length
     if not end:
         '''is no value for end of sequence was supplied, assume first seq is
             correct length'''
-        seqL = len(df['seq'][0]) - start
+        seqL = len(df[seq_col_name][0]) - start
     else:
         seqL = end-start
-    df = df[df.seq.apply(len) == (seqL)]
+    df = df[df[seq_col_name].apply(len) == (seqL)]
     df.reset_index(inplace=True,drop=True)
     #Do something different for each type of learning method (lm)
     if lm == 'ER':
         emat = Berg_von_Hippel(
             df,dicttype,foreground=foreground,background=background,
             pseudocounts=pseudocounts)
-    if lm == 'LS': 
+    if lm == 'LS':
+        '''First check that is we don't have a penalty for ridge regression,
+            that we at least have all possible base values so that the analysis
+            will not fail'''
+        if alpha == 0:
+            df_counts = utils.profile_counts(df.copy(),dicttype)
+            ct_headers = utils.get_column_headers(df_counts)
+            if df_counts[ct_headers].isin([0]).values.any():
+                raise SortSeqError('''There are some bases without any \
+                representation in the data, you should use a ridge regression\
+                penalty (specified by --penalty) \
+                to avoid failure of the learning method''')
         if LS_means_std: #If user supplied preset means and std for each bin
             means_std_df = pd.io.parsers.read_csv(LS_means_std,delim_whitespace=True)
             #change bin number to 'ct_number' and then use as index
@@ -195,11 +218,20 @@ def main(
         ''' For sort-seq experiments, bin_0 is library only and isn't the lowest
             expression even though it is will be calculated as such if we proceed.
             Therefore is drop_library is passed, drop this column from analysis.'''
-        if drop_library:     
-            df.drop('ct_0',inplace=True)
+        if drop_library:
+            try:     
+                df.drop('ct_0',inplace=True)
+                col_headers = utils.get_column_headers(df)
+                if len(col_headers) < 2:
+                    raise SortSeqError(
+                        '''After dropping library there are no longer enough 
+                        columns to run the analysis''')
+            except:
+                raise SortSeqError('''drop_library option was passed, but no ct_0
+                    column exists''')
         #parameterize sequences into 3xL vectors                       
         raveledmat,batch,sw = utils.genweightandmat(
-                                  df,par_seq_dict,means=means,modeltype=modeltype)
+                                  df,par_seq_dict,dicttype,means=means,modeltype=modeltype)
         #Use ridge regression to find matrix.       
         emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha)
 
@@ -209,12 +241,13 @@ def main(
         #First create initialization matrix
         if initialize == 'Rand':
             if modeltype == 'MAT':
-                emat_0 = utils.RandEmat(len(df['seq'][0]),len(seq_dict))
+                emat_0 = utils.RandEmat(seqL,len(seq_dict))
             elif modeltype == 'NBR':
-                emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
+                emat_0 = utils.RandEmat(seqL-1,len(seq_dict))
+                
         elif initialize == 'LeastSquares':
             #Run this function again using using -lm LS
-            emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha)
+            emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha,start=0,end=None)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
         '''normalize such that the total counts in each bin sum to 1. This is
@@ -222,13 +255,13 @@ def main(
         df[col_headers] = df[col_headers].div(df['ct'],axis=0)
         #parameterize each sequence
         if modeltype == 'NBR':
-            seq_mat = np.zeros([len(seq_dict),len(df['seq'][0])-1,len(df.index)],dtype=int)
+            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0])-1,len(df.index)],dtype=int)
             for i in range(len(df.index)):
-                seq_mat[:,:,i] = utils.seq2matpair(df['seq'][i],seq_dict)
+                seq_mat[:,:,i] = utils.seq2matpair(df[seq_col_name][i],seq_dict)
         elif modeltype == 'MAT':            
-            seq_mat = np.zeros([len(seq_dict),len(df['seq'][0]),len(df.index)],dtype=int)
+            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0]),len(df.index)],dtype=int)
             for i in range(len(df.index)):
-                seq_mat[:,:,i] = utils.seq2mat(df['seq'][i],seq_dict)
+                seq_mat[:,:,i] = utils.seq2mat(df[seq_col_name][i],seq_dict)
             #pymc doesn't take sparse mat        
         emat = MaximizeMI_test(
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
@@ -237,21 +270,21 @@ def main(
         #this is also an MCMC routine, do the same as above.
         if initialize == 'Rand':
             if modeltype == 'MAT':
-                emat_0 = utils.RandEmat(len(df['seq'][0]),len(seq_dict))
+                emat_0 = utils.RandEmat(len(df[seq_col_name][0]),len(seq_dict))
             elif modeltype == 'NBR':
-                emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
+                emat_0 = utils.RandEmat(len(df[seq_col_name][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
             emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
         if modeltype == 'NBR':
-            seq_mat = np.zeros([len(seq_dict),len(df['seq'][0])-1,len(df.index)],dtype=int)
+            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0])-1,len(df.index)],dtype=int)
             for i in range(len(df.index)):
-                seq_mat[:,:,i] = utils.seq2matpair(df['seq'][i],seq_dict)
+                seq_mat[:,:,i] = utils.seq2matpair(df[seq_col_name][i],seq_dict)
         elif modeltype == 'MAT':
-            seq_mat = np.zeros([len(seq_dict),len(df['seq'][0]),len(df.index)],dtype=int)
+            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0]),len(df.index)],dtype=int)
             for i in range(len(df.index)):
-                seq_mat[:,:,i] = utils.seq2mat(df['seq'][i],seq_dict)
+                seq_mat[:,:,i] = utils.seq2mat(df[seq_col_name][i],seq_dict)
             #pymc doesn't take sparse mat        
         emat = MaximizeMI_memsaver(
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
@@ -281,23 +314,31 @@ def main(
     em.columns = val_cols
     #add position column
     if modeltype == 'NBR':
-        pos = pd.Series(range(start,start - 1 + len(df['seq'][0])),name='pos') 
+        pos = pd.Series(range(start,start - 1 + len(df[seq_col_name][0])),name='pos') 
     else:
-        pos = pd.Series(range(start,start + len(df['seq'][0])),name='pos')    
+        pos = pd.Series(range(start,start + len(df[seq_col_name][0])),name='pos')    
     output_df = pd.concat([pos,em],axis=1)
     return output_df
 
 # Define commandline wrapper
-def wrapper(args):        
-    #Read in inputs
+def wrapper(args):
+    #validate some of the input arguments
+    qc.validate_input_arguments_for_learn_matrix(
+        foreground=args.foreground,background=args.background,
+        modeltype=args.modeltype,learningmethod=args.learningmethod,
+        start=args.start,end=args.end,iteration=args.iteration,
+        burnin=args.burnin,thin=args.thin,pseudocounts=args.pseudocounts,)        
+    #Read in input data
     if args.i:
         df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
     else:
+        if sys.stdin.isatty():
+            raise SortSeqError('No input to stdin')
         df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
     
     output_df = main(df,args.type,
         args.learningmethod,modeltype=args.modeltype,db=args.db_filename,LS_means_std=args.LS_means_std,
-        LS_iterations=args.LS_iterations,iteration=args.numiterations,burnin=args.
+        LS_iterations=args.LS_iterations,iteration=args.iteration,burnin=args.
         burnin,thin=args.thin,start=args.start,end=args.end,
         runnum=args.runnum,initialize=args.initialize,
         foreground=args.foreground,background=args.background,alpha=args.penalty,pseudocounts=args.pseudocounts)
@@ -357,7 +398,7 @@ def add_subparser(subparsers):
         you sorted your library into bin_0, and wish to do least squares analysis
         you should use this option.''')
     p.add_argument(
-        '-iter','--numiterations',type = int,default=30000,
+        '-iter','--iteration',type = int,default=30000,
         help='''For IM, Number of MCMC iterations''')
     p.add_argument(
         '-b','--burnin',type = int, default=1000,
