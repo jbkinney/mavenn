@@ -1,0 +1,72 @@
+#test ER learning method 
+
+good: sst learn_matrix -lm ER -i dataset.txt
+bad: sst learn_matrix -lm ER
+good: sst learn_matrix -lm ER -i dataset.txt --start 1 --end 2
+bad: sst learn_matrix -lm ER -i dataset.txt --start 2 --end 1
+#start or end outside of bounds
+bad: sst learn_matrix -lm ER -i dataset.txt --start -2 --end 3
+good: sst learn_matrix -lm ER -i dataset.txt --start 1 --end 2
+good: cat dataset.txt | sst learn_matrix -lm ER
+good: sst learn_matrix -lm ER -i dataset.txt -fg 1 -bg 0
+good: sst learn_matrix -lm ER -i dataset.txt -fg 0 -bg 1
+good: sst learn_matrix -lm ER -i dataset.txt --type dna
+good: sst learn_matrix -lm ER -i dataset_pro.txt --type protein
+bad: sst learn_matrix -lm ER -i dataset_pro.txt --type dna
+good: sst learn_matrix -lm ER -i dataset.txt --db_filename not_relavent --iteration 10 --burnin 0
+bad: sst learn_matrix -lm ER -i dataset.txt -fg 15 -bg 0
+bad: sst learn_matrix -lm ER -i dataset.txt -fg 0 -bg 15
+bad: sst learn_matrix -lm ER -i dataset.txt -fg 1 -bg 1
+good: sst learn_matrix -lm ER -i dataset.txt --pseudocounts 2
+#without pseudocounts for this dataset you should get NaN in the calculation
+bad: sst learn_matrix -lm ER -i dataset.txt --pseudocounts 0
+bad: sst learn_matrix -lm ER -i dataset.txt --pseudocounts -1
+
+#test LS learning method
+
+good: sst learn_matrix -lm LS -i dataset.txt --penalty .1
+#if no penalty, there will be some bases with no counts, and the algorithm will fail
+bad: sst learn_matrix -lm LS -i dataset.txt 
+good: cat dataset.txt | sst learn_matrix -lm LS --penalty .1
+good: sst learn_matrix -lm LS -i dataset.txt --LS_means_std test_means_std --penalty .1
+good: sst learn_matrix -lm LS -i dataset.txt --LS_means_std test_means_std_bad --penalty .1
+good: sst learn_matrix -lm LS -i dataset_pro.txt --type protein --penalty .1
+bad: sst learn_matrix -lm LS -i dataset_pro.txt --type dna --penalty .1 
+bad: sst learn_matrix -lm LS -i dataset.txt --type protein --penalty .1
+
+#test IM learning method
+ 
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1
+good: cat dataset.txt | sst learn_matrix -lm IM --iteration 10 --burnin 0 --thin 1 --penalty .1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --db_filename not_relavent --thin 1 --penalty .1
+bad: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 10 --thin 1 --penalty .1
+bad: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 10 --penalty .1
+#burning higher than iteration
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --runnum 1 --thin 1 --penalty .1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --drop_library --thin 1 --penalty .1
+bad: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 20
+good: sst learn_matrix -lm IM -i dataset_pro.txt --iteration 5 --burnin 0 --type protein --thin 1
+
+#test an irrelavant options to make sure they don't break anything
+
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1 --foreground 10 --background 50
+
+#test different initialization conditions
+
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize Rand --thin 1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --penalty .1 --thin 1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --LS_means_std test_means_std --penalty .1 --thin 1
+
+#Test Neighbor Models
+
+#can't run neigbhor with ER
+bad: sst learn_matrix -lm ER -i dataset.txt --modeltype NBR --pseudocounts 1
+good: sst learn_matrix -lm LS -i dataset.txt --modeltype NBR --penalty .1 --thin 1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --thin 1 --penalty .1 
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize Rand --thin 1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize LeastSquares --penalty .1 --thin 1
+
+
+
+
+
