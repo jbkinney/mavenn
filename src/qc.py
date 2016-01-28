@@ -17,8 +17,9 @@ col_patterns = {
     'bin'   :   r'^bin$',
     'pos'   :   r'^pos$',
     'vals'  :   r'^val_',
-    'infos' :   r'^info',
-    'errs'  :   r'err$',
+    'info'  :   r'^info$',
+    'infos' :   r'^info$|^info_err$',
+    'errs'  :   r'_err$',
     'freq_' :   r'^freq_',
     'wts'   :   r'^wt$|^wt_rna$|^wt_pro$',
     'mut'   :   r'^mut$',
@@ -31,7 +32,7 @@ seqtype_to_alphabet_dict = {
     'protein':''.join(sorted(IUPAC.IUPACProtein.letters+'*'))
 }
 alphabet_to_seqtype_dict = {v: k for k, v in seqtype_to_alphabet_dict.items()}
-
+alphabets = alphabet_to_seqtype_dict.keys()
 colname_to_seqtype_dict = {
     'seq':'dna',
     'seq_rna':'rna',
@@ -112,6 +113,7 @@ def _validate_cols(df, fix=False):
     df = _validate_val_cols(df,fix=fix)
     df = _validate_freq_cols(df,fix=fix)
     df = _validate_info_cols(df,fix=fix)
+    df = _validate_err_cols(df,fix=fix)
     return df
 
 
@@ -213,7 +215,7 @@ def _validate_pos_cols(df, fix=False):
 
         first = df[col].iloc[0]
         last = df[col].iloc[-1]
-        if not all(df[col] == range(first,last+1)):
+        if not np.array_equal(df[col].values,np.arange(first,last+1)):
             raise SortSeqError('Positions are not consecutive integers.')
 
         if first < 0:
@@ -253,11 +255,12 @@ def _validate_bin_cols(df, fix=False):
 
     return df
 
+
 def _validate_mut_cols(df, fix=False):
     """
     Validates contents of mut and mut_err columns in a given dataframe
     """
-    mut_cols = get_cols_from_df(df,'muts')
+    mut_cols = get_cols_from_df(df,'mut')
     for col in mut_cols:
 
         # Verify that freqs are floats
@@ -278,11 +281,48 @@ def _validate_mut_cols(df, fix=False):
                     'Freqs are not floats; set fix=True to fix.')
 
         # Make sure that all mut values are between 0 and 1
-        if col=='mut':
-            if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
-                raise SortSeqError(\
-                    'Freq values outside [0.0, 1.0] encountered.')
+        if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
+            raise SortSeqError(\
+                'Freq values outside [0.0, 1.0] encountered.')
+
     return df
+
+
+def _validate_err_cols(df, fix=False):
+    """
+    Validates contents of xxx_err columns in a given dataframe
+    """
+    err_cols = get_cols_from_df(df,'errs')
+    for col in err_cols:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+                assert all(df[col] == float_vals)
+            except:
+                raise SortSeqError('Non-numbers found in %s.'%col)
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = df[col].astype(float)
+            else:
+                raise SortSeqError(\
+                    'Errs are not floats; set fix=True to fix.')
+
+        # Make sure that all err values are finite
+        if not all(np.isfinite(df[col])):
+            raise SortSeqError('Nonfinite0 err values encountered.')
+
+        # Make sure that all err values are nonnegative
+        if any(df[col]<0.0):
+            raise SortSeqError('Negative err values encountered.')
+
+    return df
+
+
 
 def _validate_val_cols(df, fix=False):
     """
@@ -312,7 +352,7 @@ def _validate_val_cols(df, fix=False):
             raise SortSeqError('Nonfinite parameters encountered.')
     return df
 
-def _validate_freq_cols(df, fix=False):
+def _validate_freq_cols(df, fix=False, tol=1E-2):
     """
     Validates contents of freq_* columns in a given dataframe
     """
@@ -340,13 +380,19 @@ def _validate_freq_cols(df, fix=False):
         if (not all(df[col]<=1.0)) or (not all(df[col]>=0.0)):
             raise SortSeqError('Freq values outside [0.0, 1.0] encountered.')
 
+    # If there are freq cols, sum along each row has to be 1.0 +- tol
+    if freq_cols:
+        row_sums = df[freq_cols].sum(axis=1).values
+        if not all((row_sums <= 1.0+tol) & (row_sums >= 1.0-tol)):
+            raise SortSeqError('Not all rows sum to 1.0 +- %f'%tol)
+
     return df
 
 def _validate_info_cols(df, fix=False):
     """
-    Validates contents of info and info_err columns in a given dataframe
+    Validates contents of info columns in a given dataframe
     """
-    info_cols = get_cols_from_df(df,'infos')
+    info_cols = get_cols_from_df(df,'info')
     for col in info_cols:
 
         # Verify that freqs are floats
@@ -588,6 +634,9 @@ def validate_model(df, fix=False):
     for col in df.columns:
         if not is_col_type(col,['pos','vals']):
             raise SortSeqError('Invalid column in dataframe: %s.'%col)
+    for col in ['pos']:
+        if not col in df.columns:
+            raise SortSeqError('%s column missing'%col)
 
     # Validate parameter column names
     val_cols = sorted([c for c in df.columns if is_col_type(c,'vals')])
@@ -646,24 +695,30 @@ def validate_profile_ct(df, fix=False):
         if not is_col_type(col,['pos','cts']):
             raise SortSeqError('Invalid column in dataframe: %s.'%col)
 
+    # Validate ct_X column names correspond to one of the alphabets
+    char_ct_cols = get_cols_from_df(df,'ct_')
+    this_alphabet = ''.join(sorted([c.split('_')[1] for c in char_ct_cols]))
+    if not this_alphabet in alphabets:
+        raise SortSeqError('Counts correspond to invalid alphabet')
+
     # Validate contents of all columns
     df = _validate_cols(df,fix=fix)
 
     # Validate that column 'ct' contains sum; fix if this is missing
     total_ct_col = 'ct'
-    char_ct_cols = get_cols_from_df(df,'ct_')
-    total_counts = df[char_ct_cols].sum(axis=1)
+    
+    total_counts = df[char_ct_cols].sum(axis=1).values
     if not total_ct_col in df.columns:
         if fix:
             df[total_ct_col] = total_counts
         else:
             raise SortSeqError('"ct" column not found; set fix=True to fix.')
     else:
-        if not all(total_counts == df[total_ct_col]):
+        if not np.array_equal(total_counts,df[total_ct_col].values):
             raise SortSeqError('"ct_X" columns do not sum to "ct" column.')
 
     # Validate the 'ct' value is the same at all positions
-    if len(set(total_counts.values))>1:
+    if len(set(total_counts))>1:
         raise SortSeqError('"ct" value must be same at all pos.')
 
     # Validate column order
@@ -680,7 +735,7 @@ def validate_profile_ct(df, fix=False):
 
 
 # Validates profile_freq dataframes
-def validate_profile_freq(df, fix=False):
+def validate_profile_freq(df, fix=False, tol=0.01):
     """ 
     Validates the form of a profile_freq dataframe. A profile_freq dataframe must look something like this:
 
@@ -697,6 +752,7 @@ def validate_profile_freq(df, fix=False):
     Arguments:
         df (pd.DataFrame): Dataset in dataframe format
         fix (bool): A flag saying whether to fix the dataframe into shape if possible.
+        tol (float): The allowed deviation of row-wise sums from 1.0. 
 
     Returns:
         if fix=True:
@@ -707,6 +763,7 @@ def validate_profile_freq(df, fix=False):
     Function:
         Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
     """
+    assert tol >= 0.0
 
     # Verify dataframe has at least one row and one column
     if not df.shape[0] >= 1:
@@ -717,6 +774,15 @@ def validate_profile_freq(df, fix=False):
     for col in df.columns:
         if not is_col_type(col,['pos','freq_']):
             raise SortSeqError('Invalid column in dataframe: %s.'%col)
+    for col in ['pos']:
+        if not col in df.columns:
+            raise SortSeqError('%s column missing'%col)
+
+    # Validate freq_X column names correspond to one of the alphabets
+    char_cols = get_cols_from_df(df,'freq_')
+    this_alphabet = ''.join(sorted([c.split('_')[1] for c in char_cols]))
+    if not this_alphabet in alphabets:
+        raise SortSeqError('Freq columns correspond to invalid alphabet')
 
     df = _validate_cols(df,fix=fix)
 
@@ -772,6 +838,9 @@ def validate_profile_mut(df, fix=False):
     for col in df.columns:
         if not is_col_type(col,['pos','wts','muts']):
             raise SortSeqError('Invalid column in dataframe: %s.'%col)
+    for col in ['pos','mut']:
+        if not col in df.columns:
+            raise SortSeqError('%s column missing'%col)
 
     # Get wt columns
     wt_cols = get_cols_from_df(df,'wts')
@@ -837,6 +906,9 @@ def validate_profile_info(df, fix=False):
     for col in df.columns:
         if not is_col_type(col,['pos','infos']):
             raise SortSeqError('Invalid column in dataframe: %s.'%col)
+    for col in ['pos','info']:
+        if not col in df.columns:
+            raise SortSeqError('%s column missing'%col)
 
     # Validate contents of columns
     df = _validate_cols(df,fix=fix)
