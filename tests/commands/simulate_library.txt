@@ -5,7 +5,7 @@ good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna
 bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t rna
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t protein
-bad:  sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t dna
+bad:  sst simulate_librassry -w AAUUAAUGUGAGUUAGCUCACUCAUU -t dna
 good: sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t rna
 bad:  sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t protein
 bad:  sst simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t dna

@@ -1,9 +1,9 @@
 #test ER learning method 
 
 good: sst learn_matrix -lm ER -i dataset.txt
-bad: sst learn_matrix -lm ER
 good: sst learn_matrix -lm ER -i dataset.txt --start 1 --end 2
 bad: sst learn_matrix -lm ER -i dataset.txt --start 2 --end 1
+
 #start or end outside of bounds
 bad: sst learn_matrix -lm ER -i dataset.txt --start -2 --end 3
 good: sst learn_matrix -lm ER -i dataset.txt --start 1 --end 2

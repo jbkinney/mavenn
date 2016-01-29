@@ -16,6 +16,7 @@ import pymc
 import sst.stepper as stepper
 import os
 from sst import SortSeqError
+import sst.io as io
 
 import sst.gauge_fix as gauge_fix
 import sst.qc as qc
@@ -50,7 +51,7 @@ def MaximizeMI_test(
         p['val'] = dot.sum(0).sum(0)                    
         df_sorted = p.sort(columns='val')
         df_sorted.reset_index(inplace=True)
-        n_seqs = s.shape[2]     
+        n_seqs = s.shape[2]   
         MI = EstimateMutualInfoforMImax.alt2(df_sorted)
         return n_seqs*MI
     if db:
@@ -80,7 +81,7 @@ def MaximizeMI_memsaver(
         df_sorted = p.sort(columns='val')
         df_sorted.reset_index(inplace=True)
         n_seqs = s.shape[2]     
-        MI = EstimateMutualInfoforMImax.alt3(df_sorted)
+        MI = EstimateMutualInfoforMImax.alt4(df_sorted)  # New and improved
         return n_seqs*MI
     if db:
         dbname = db + '_' + str(runnum) + '.sql'
@@ -318,38 +319,34 @@ def main(
     else:
         pos = pd.Series(range(start,start + len(df[seq_col_name][0])),name='pos')    
     output_df = pd.concat([pos,em],axis=1)
+
+    # Validate model and return
+    output_df = qc.validate_model(output_df,fix=True)
     return output_df
 
 # Define commandline wrapper
 def wrapper(args):
+
     #validate some of the input arguments
     qc.validate_input_arguments_for_learn_matrix(
         foreground=args.foreground,background=args.background,
         modeltype=args.modeltype,learningmethod=args.learningmethod,
         start=args.start,end=args.end,iteration=args.iteration,
-        burnin=args.burnin,thin=args.thin,pseudocounts=args.pseudocounts,)        
-    #Read in input data
-    if args.i:
-        df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
-    else:
-        if sys.stdin.isatty():
-            raise SortSeqError('No input to stdin')
-        df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        burnin=args.burnin,thin=args.thin,pseudocounts=args.pseudocounts,)
+
+    inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
+    input_df = io.load_dataset(inloc)
     
-    output_df = main(df,args.type,
+    outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
+    output_df = main(input_df,args.type,
         args.learningmethod,modeltype=args.modeltype,db=args.db_filename,LS_means_std=args.LS_means_std,
         LS_iterations=args.LS_iterations,iteration=args.iteration,burnin=args.
         burnin,thin=args.thin,start=args.start,end=args.end,
         runnum=args.runnum,initialize=args.initialize,
         foreground=args.foreground,background=args.background,alpha=args.penalty,pseudocounts=args.pseudocounts)
-    #Write outputs
-    if args.out:
-        outloc = open(args.out,'w')
-    else:
-        outloc = sys.stdout
-    pd.set_option('max_colwidth',int(1e8)) #makes sure seq columns aren't shortened
-    output_df.to_string(
-        outloc, index=False,col_space=10,float_format=utils.format_string)
+
+    io.write(output_df,outloc)
+
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
