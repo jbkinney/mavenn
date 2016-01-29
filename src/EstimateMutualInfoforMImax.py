@@ -15,6 +15,8 @@ import pandas as pd
 import scipy as sp
 import scipy.ndimage
 import sst.utils as utils
+import pdb
+import sst.info as info
 
 
 ''' This script estimates MI by implementing a Density Estimation through 
@@ -189,60 +191,75 @@ def integrator_solve(df):
                 MI = MI + f_reg[i,j]*sp.log2(f_reg[i,j]/(p_b[i]*p_s[j]))
     return MI
     
-def alt3(df):
-    '''MI calculator for use when lm=memsaver. This method isn't particularly well tested
-        and was not used for any of the analysis in the paper. However, This method doesn't require
-        building a matrix, and so can be used with large data sets like the mpra
-        set even on my computer, but it is painfully slow. The coding is not
-        very refined though, so I think you could really speed this up if you 
-        take the time.'''
-    n_bins=1000
+
+def alt4(df, coarse_graining_level = 0.01):
+    '''
+    MI ESTIMATOR EDITED BY JBK 
+    Used when lm=memsaver 
+    REQUIRES TESTING AND PROFILING.
+    '''
+    n_groups=500
     n_seqs = len(df.index)
     binheaders = utils.get_column_headers(df)
     n_batches = len(binheaders)
+    cts_grouped = sp.zeros([n_groups,n_batches])
+    group_num = 0
+    frac_empty = 1.0
     
-    cumvec = np.array(np.cumsum(df['ct']))
-    #normalize so that all counts = 1000
-    cumvec = 1000*(cumvec/cumvec[-1])
+    # Sort rows based on 'val' column 
+    tmp_df = df.copy(binheaders+['val'])
+    tmp_df.sort(columns='val',inplace=True)
 
-    #############################################################################
-    #MOST IMPORTANT PART OF THE CODE FOR JUSTIN TO FIX
-    #get ready to bin. find indexes of bin edges by looking in cumulative vector of counts
-    index = np.searchsorted(cumvec,range(n_bins))
-    f_binned = sp.zeros((n_bins,n_batches))
-    #initialize list
-    left_remainder = [0 for q in range(n_batches)]
-    left_index = 0
-    
-    for i in range(0,n_bins-1): 
-        #for each sequence which exists fully within a bin, sum it
-        main_sum = np.array(df.loc[index[i]:index[i+1]-1,binheaders].sum(axis=0))
-        '''For the sequence on that is split by a bin edge on the right, find
-            what fraction of that bin is in the left bin'''
-        remainder_fraction = (i+1-cumvec[index[i+1]-1])/(cumvec[index[i+1]] - cumvec[index[i+1]-1])
-        '''find the total bin counts by adding previously left over values from the last bin,
-            (left remainder) to the main sum, and the fraction of the split sequence that
-            exists in this bin'''
-        f_binned[i,:] = left_remainder + main_sum + remainder_fraction*df.loc[index[i+1]-1,binheaders]
-        #calculate the remainder for the next bin.
-        left_remainder = np.array((1-remainder_fraction)*df.loc[index[i+1]-1,binheaders])
-    #must do last bin separately
-    f_binned[n_bins-1,:] = left_remainder + np.array(df.loc[index[-1]:,binheaders].sum(axis=0))
-    ##############################################################################
-    f_reg = scipy.ndimage.gaussian_filter1d(f_binned,0.04*n_bins,axis=0)
-    f_reg = f_reg/f_reg.sum()
+    # Speed computation by coarse-graining model predictions
+    if coarse_graining_level:
+        assert type(coarse_graining_level)==float
+        assert coarse_graining_level > 0
+        vals = tmp_df['val'].values
+        scale = np.std(vals)
+        coarse_vals = np.floor((vals/scale)/coarse_graining_level)
+        tmp_df['coarse_val'] = coarse_vals
+        grouped = tmp_df.groupby('coarse_val')
+        grouped_tmp_df = grouped.aggregate(np.sum)
 
-    # compute marginal probabilities
-    p_b = sp.sum(f_reg,axis=1)
-    p_s = sp.sum(f_reg,axis=0)
+    # Get ct_xxx columns
+    ct_df = grouped_tmp_df[binheaders].astype(float)
+    cts_per_group = ct_df.sum(axis=0).sum()/n_groups
 
-    # finally sum to compute the MI
-    MI = 0
-    for j in range(n_batches):
-        for i in range(n_bins):
-            if f_reg[i,j] != 0:
-                MI = MI + f_reg[i,j]*sp.log2(f_reg[i,j]/(p_b[i]*p_s[j]))
-    return MI
+    # Histogram counts in groups. This is a bit tricky
+    group_vec = np.zeros(n_batches)
+    for i,row in ct_df.iterrows():
+        row_ct_tot = row.sum()
+        row_ct_vec = row.values
+        row_frac_vec = row_ct_vec/row_ct_tot
+
+        while row_ct_tot >= cts_per_group*frac_empty:
+            group_vec += row_frac_vec*(cts_per_group*frac_empty)
+            row_ct_tot -= cts_per_group*frac_empty
+
+            # Only do once per group_num
+            cts_grouped[group_num,:] = group_vec.copy() 
+
+            # Reset for new group_num
+            group_num += 1
+            frac_empty = 1.0
+            group_vec[:] = 0.0
+
+        group_vec += row_frac_vec*row_ct_tot
+        frac_empty -= row_ct_tot/cts_per_group
+    if group_num == n_groups-1:
+        cts_grouped[group_num,:] = group_vec.copy()
+    elif group_num == n_groups:
+        pass
+    else:
+        raise TypeError(\
+            'group_num=%d does not match n_groups=%s'%(group_num,n_groups))
+
+    # Smooth empirical distribution with gaussian KDE
+    f_reg = scipy.ndimage.gaussian_filter1d(cts_grouped,0.04*n_groups,axis=0)
+
+    # Return mutual information
+    return info.mutualinfo(f_reg)
+
 
 def main():
     parser = argparse.ArgumentParser(

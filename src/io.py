@@ -56,7 +56,7 @@ def validate_file_for_reading(file_arg):
     return file_handle
 
 
-def validate_file_for_wrtiting(file_arg):
+def validate_file_for_writing(file_arg):
     """ Checks that a specified file can be written
     """
     # If user passed file name
@@ -180,6 +180,9 @@ def load_profile_mut(file_arg):
 def load_profile_info(file_arg):
     return load(file_arg, file_type='profile_info')
 
+def load_meanstd(file_arg):
+    return load(file_arg, file_type='meanstd')
+
 # JBK: I want to switch to using only this function
 def load(file_arg, file_type, **kwargs):
     """ Loads file of any specified type
@@ -192,7 +195,8 @@ def load(file_arg, file_type, **kwargs):
     'profile_ct'    : qc.validate_profile_ct,
     'profile_freq'  : qc.validate_profile_freq,
     'profile_mut'   : qc.validate_profile_mut,
-    'profile_info'  : qc.validate_profile_info
+    'profile_info'  : qc.validate_profile_info,
+    'meanstd'       : qc.validate_meanstd
     }
 
     df = load_text(file_arg)
@@ -211,7 +215,7 @@ def write(df,file_arg):
     """ Writes a data frame to specified file, given as name or handle
     """
 
-    file_handle = validate_file_for_wrtiting(file_arg)
+    file_handle = validate_file_for_writing(file_arg)
 
     # Write dataframe to file
     pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns

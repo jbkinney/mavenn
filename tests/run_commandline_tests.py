@@ -25,7 +25,7 @@ print '\n'.join(filenames)
 print '-----'
 
 total_tests = 0
-failed_tests = 0
+failed_tests = []
 
 # Process each file
 for filename in filenames:
@@ -73,11 +73,11 @@ for filename in filenames:
         prepend = '. '
         if test_type=='good' and stderr_str:
             prepend = 'E '
-            failed_tests += 1
+            failed_tests.append(line)
 
         elif test_type=='bad' and not ('SortSeqError' in stderr_str):
             prepend = 'E '
-            failed_tests += 1
+            failed_tests.append(line)
         
         if not test_type in ('good','bad'):
             raise SortSeqError('Unrecognized test type %s'%repr(test_type))
@@ -89,9 +89,11 @@ for filename in filenames:
 
 # Stop clock
 testing_time = time.time() - start_time
+print '------------FAILED TESTS-------------'
+print '\n'.join(failed_tests)
 print '-------------------------------------'
 print 'Time to run tests: %.2f min.'%(testing_time/60.0)
-print 'Results: %d tests, %d failures.'%(total_tests,failed_tests)
+print 'Results: %d tests, %d failures.'%(total_tests,len(failed_tests))
 print '-------------------------------------'
 
 

@@ -23,7 +23,9 @@ col_patterns = {
     'freq_' :   r'^freq_',
     'wts'   :   r'^wt$|^wt_rna$|^wt_pro$',
     'mut'   :   r'^mut$',
-    'muts'  :   r'^mut$|^mut_err$'
+    'muts'  :   r'^mut$|^mut_err$',
+    'mean'  :   r'^mean$',
+    'std'   :   r'^std$'
 }
 
 seqtype_to_alphabet_dict = {
@@ -114,6 +116,8 @@ def _validate_cols(df, fix=False):
     df = _validate_freq_cols(df,fix=fix)
     df = _validate_info_cols(df,fix=fix)
     df = _validate_err_cols(df,fix=fix)
+    df = _validate_mean_cols(df,fix=fix)
+    df = _validate_std_cols(df,fix=fix)
     return df
 
 
@@ -269,13 +273,12 @@ def _validate_mut_cols(df, fix=False):
             # Check whether freqs can be interpreted as floats
             try:
                 float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
             except:
                 raise SortSeqError('Non-numbers found in freqs.')
 
             # Check whether we have permission to change these to floats
             if fix:
-                df[col] = df[col].astype(float)
+                df[col] = float_vals
             else:
                 raise SortSeqError(\
                     'Freqs are not floats; set fix=True to fix.')
@@ -301,13 +304,12 @@ def _validate_err_cols(df, fix=False):
             # Check whether freqs can be interpreted as floats
             try:
                 float_vals = df[col].astype(float)
-                assert all(df[col] == float_vals)
             except:
                 raise SortSeqError('Non-numbers found in %s.'%col)
 
             # Check whether we have permission to change these to floats
             if fix:
-                df[col] = df[col].astype(float)
+                df[col] = float_vals
             else:
                 raise SortSeqError(\
                     'Errs are not floats; set fix=True to fix.')
@@ -323,6 +325,39 @@ def _validate_err_cols(df, fix=False):
     return df
 
 
+def _validate_std_cols(df, fix=False):
+    """
+    Validates contents of xxx_err columns in a given dataframe
+    """
+    col = 'std'
+    if col in df.columns:
+
+        # Verify that freqs are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether freqs can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+            except:
+                raise SortSeqError('Non-numbers found in %s.'%col)
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = float_vals
+            else:
+                raise SortSeqError(\
+                    'std values are not floats; set fix=True to fix.')
+
+        # Make sure that all err values are finite
+        if not all(np.isfinite(df[col])):
+            raise SortSeqError('Nonfinite std values encountered.')
+
+        # Make sure that all err values are nonnegative
+        if any(df[col]<0.0):
+            raise SortSeqError('Negative std values encountered.')
+
+    return df
+
 
 def _validate_val_cols(df, fix=False):
     """
@@ -336,14 +371,14 @@ def _validate_val_cols(df, fix=False):
 
             # Check whether values can be interpreted as floats
             try:
-                df.loc[col] = df[col].astype(float)
+                float_vals = df[col].astype(float)
             except:
                 raise SortSeqError(\
                     'Cannot interpret values in %s as floats.'%col)
 
             # Check whether we have permission to change these to floats
             if fix:
-                df[col] = df[col].astype(float)
+                df[col] = float_vals
             else:
                 SortSeqError(\
                     'Values in %s not floats; set fix=True to fix.'%col)
@@ -352,6 +387,38 @@ def _validate_val_cols(df, fix=False):
         if not all(np.isfinite(df[col])):
             raise SortSeqError('Nonfinite parameters encountered.')
     return df
+
+
+def _validate_mean_cols(df, fix=False):
+    """
+    Validates contents of mean column in a given dataframe
+    """
+    col = 'mean'
+    if col in df.columns:
+
+        # Check if columns are floats
+        if not df[col].values.dtype == float:
+
+            # Check whether values can be interpreted as floats
+            try:
+                float_vals = df[col].astype(float)
+            except:
+                raise SortSeqError(\
+                    'Cannot interpret values in %s as floats.'%col)
+
+            # Check whether we have permission to change these to floats
+            if fix:
+                df[col] = float_vals
+            else:
+                SortSeqError(\
+                    'Values in %s not floats; set fix=True to fix.'%col)
+
+        # Make sure that all parameters are finite
+        if not all(np.isfinite(df[col])):
+            pdb.set_trace()
+            raise SortSeqError('Nonfinite parameters encountered.')
+    return df
+
 
 def _validate_freq_cols(df, fix=False, tol=1E-2):
     """
@@ -921,6 +988,65 @@ def validate_profile_info(df, fix=False):
 
     # Validate column order
     new_cols = ['pos'] + info_cols
+    if not all(df.columns == new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise SortSeqError(\
+             'Dataframe columns are in the wrong order; set fix=True to fix.')
+
+    return df
+
+
+# Validates meanstd files
+def validate_meanstd(df, fix=False):
+    """ 
+    Validates the form of a meanstd dataframe. An meanstd dataframe must look something like this:
+
+    bin    mean    std
+      0     5.1     .9
+      1    -1.0    1.5
+      2    -4.2      1
+      3       8      3
+      4       3      1
+    
+    Used only for least squares model fitting. A 'bin' column reports the label of a bin in a. A 'mean' column reports the mean SFR value for sequences in that bin. A 'std' column reports the std of SFR values for sequences in that bin.   
+
+    Specifications:
+    0. The dataframe must have at least one row.
+    1. A 'bin' column is mandatory and must occur first. Values must be nonnegative integers in sequential order.
+    2. A 'mean' column is mandatry and must come second. Values must be finite floatingpoint values. 
+    3. An 'std' column is optional and must come last. Values must be nonnegative floating point values. 
+
+    Arguments:
+        df (pd.DataFrame): Dataset in dataframe format
+        fix (bool): A flag saying whether to fix the dataframe into shape if possible.
+
+    Returns:
+        df (pd.DataFrame): the fixed dataframe (if fix==True) or the original dataframe passed by the user
+
+    Function:
+        Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
+    """
+
+    # Verify dataframe has at least one row
+    if not df.shape[0] >= 1:
+        raise SortSeqError(\
+            'Dataframe must contain at least one row')
+
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['bin','mean','std']):
+            raise SortSeqError('Invalid column in dataframe: %s.'%col)
+    for col in ['bin','mean','std']:
+        if not col in df.columns:
+            raise SortSeqError('%s column missing'%col)
+
+    # Validate contents of columns
+    df = _validate_cols(df,fix=fix)
+
+    # Validate column order
+    new_cols = ['bin','mean','std']
     if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]

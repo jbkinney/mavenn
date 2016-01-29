@@ -16,9 +16,11 @@ import pymc
 import sst.stepper as stepper
 import os
 from sst import SortSeqError
-
+import sst.io as io
 import sst.gauge_fix as gauge_fix
 import sst.qc as qc
+import pdb
+from sst import shutthefuckup
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''
@@ -31,9 +33,10 @@ def add_label(s):
 
 def MaximizeMI_test(
         seq_mat,df,emat_0,db=None,burnin=1000,iteration=30000,thin=10,
-        runnum=0): 
+        runnum=0,verbose=False):
     '''Performs MI maximization using pymc, this function is used if the learning
     method lm=IM is used'''
+
     @pymc.stochastic(observed=True,dtype=int)
     def sequences(value=seq_mat):
         return 0
@@ -50,23 +53,28 @@ def MaximizeMI_test(
         p['val'] = dot.sum(0).sum(0)                    
         df_sorted = p.sort(columns='val')
         df_sorted.reset_index(inplace=True)
-        n_seqs = s.shape[2]     
+        n_seqs = s.shape[2]   
         MI = EstimateMutualInfoforMImax.alt2(df_sorted)
         return n_seqs*MI
     if db:
         dbname = db + '_' + str(runnum) + '.sql'
-	M = pymc.MCMC([sequences,pymcdf,emat],db='sqlite',dbname=dbname)
+        M = pymc.MCMC([sequences,pymcdf,emat],db='sqlite',dbname=dbname)
     else:
-	M = pymc.MCMC([sequences,pymcdf,emat])
+        M = pymc.MCMC([sequences,pymcdf,emat])
     M.use_step_method(stepper.GaugePreservingStepper,emat)
+
+    if not verbose:
+        M.sample = shutthefuckup(M.sample)
+
     M.sample(iteration,thin=thin)
     emat_mean = np.mean(M.trace('emat')[burnin:],axis=0)
     return emat_mean
 
 def MaximizeMI_memsaver(
         seq_mat,df,emat_0,db=None,burnin=1000,iteration=30000,thin=10,
-        runnum=0):
+        runnum=0,verbose=False):
     '''Performs MCMC MI maximzation in the case where lm = memsaver'''    
+
     @pymc.stochastic(observed=True,dtype=int)
     def sequences(value=seq_mat):
         return 0
@@ -80,15 +88,20 @@ def MaximizeMI_memsaver(
         df_sorted = p.sort(columns='val')
         df_sorted.reset_index(inplace=True)
         n_seqs = s.shape[2]     
-        MI = EstimateMutualInfoforMImax.alt3(df_sorted)
+        MI = EstimateMutualInfoforMImax.alt4(df_sorted)  # New and improved
         return n_seqs*MI
     if db:
         dbname = db + '_' + str(runnum) + '.sql'
-	M = pymc.MCMC([sequences,pymcdf,emat],db='sqlite',dbname=dbname)
+        M = pymc.MCMC([sequences,pymcdf,emat],db='sqlite',dbname=dbname)
     else:
-	M = pymc.MCMC([sequences,pymcdf,emat])
+        M = pymc.MCMC([sequences,pymcdf,emat])
     M.use_step_method(stepper.GaugePreservingStepper,emat)
+
+    if not verbose:
+        M.sample = shutthefuckup(M.sample)
+
     M.sample(iteration,thin=thin)
+
     emat_mean = np.mean(M.trace('emat')[burnin:],axis=0)
     return emat_mean
 
@@ -143,12 +156,18 @@ def Compute_Least_Squares(raveledmat,batch,sw,alpha=0):
     return emat
     
 
-def main(
-        df,dicttype,lm,modeltype='MAT',LS_means_std=None,LS_iterations=4,
-        db=None,iteration=30000,burnin=1000,thin=10,runnum=0
-        ,initialize='LeastSquares',start=0,end=None,foreground=1,
-        background=0,alpha=0,pseudocounts=1,test=False,drop_library=False):
+def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
+    LS_iterations=4,db=None,iteration=30000,burnin=1000,thin=10,\
+    runnum=0,initialize='LeastSquares',start=0,end=None,foreground=1,\
+    background=0,alpha=0,pseudocounts=1,test=False,drop_library=False,\
+    verbose=False):
     
+    # Determine dictionary
+    seq_cols = qc.get_cols_from_df(df,'seqs')
+    if not len(seq_cols)==1:
+        raise SortSeqError('Dataframe has multiple seq cols: %s'%str(seq_cols))
+    dicttype = qc.colname_to_seqtype_dict[seq_cols[0]]
+
     seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype=modeltype)
     
     '''Check to make sure the chosen dictionary type correctly describes
@@ -200,7 +219,8 @@ def main(
                 penalty (specified by --penalty) \
                 to avoid failure of the learning method''')
         if LS_means_std: #If user supplied preset means and std for each bin
-            means_std_df = pd.io.parsers.read_csv(LS_means_std,delim_whitespace=True)
+            means_std_df = io.load_meanstd(LS_means_std)
+
             #change bin number to 'ct_number' and then use as index
             labels = list(means_std_df['bin'].apply(add_label))
             std = means_std_df['std']
@@ -247,7 +267,7 @@ def main(
                 
         elif initialize == 'LeastSquares':
             #Run this function again using using -lm LS
-            emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha,start=0,end=None)
+            emat_0_df = main(df.copy(),lm='LS',modeltype=modeltype,alpha=alpha,start=0,end=None,verbose=verbose)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
         '''normalize such that the total counts in each bin sum to 1. This is
@@ -265,7 +285,7 @@ def main(
             #pymc doesn't take sparse mat        
         emat = MaximizeMI_test(
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
-                thin=thin,runnum=runnum)
+                thin=thin,runnum=runnum,verbose=verbose)
     if lm == 'memsaver':
         #this is also an MCMC routine, do the same as above.
         if initialize == 'Rand':
@@ -274,7 +294,8 @@ def main(
             elif modeltype == 'NBR':
                 emat_0 = utils.RandEmat(len(df[seq_col_name][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
-            emat_0_df = main(df.copy(),dicttype,'LS',modeltype=modeltype,alpha=alpha)
+            emat_0_df = main(df.copy(),lm='LS',modeltype=modeltype,\
+                alpha=alpha,verbose=verbose)
             emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
         df['ct'] = df[col_headers].sum(axis=1)
         if modeltype == 'NBR':
@@ -288,7 +309,7 @@ def main(
             #pymc doesn't take sparse mat        
         emat = MaximizeMI_memsaver(
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
-                thin=thin,runnum=runnum)
+                thin=thin,runnum=runnum,verbose=verbose)
     #now format the energy matrices to get them ready to output
     if (lm == 'IM' or lm == 'memsaver'):       
         if modeltype == 'NBR':
@@ -318,38 +339,39 @@ def main(
     else:
         pos = pd.Series(range(start,start + len(df[seq_col_name][0])),name='pos')    
     output_df = pd.concat([pos,em],axis=1)
+
+    # Validate model and return
+    output_df = qc.validate_model(output_df,fix=True)
     return output_df
 
 # Define commandline wrapper
 def wrapper(args):
+
     #validate some of the input arguments
     qc.validate_input_arguments_for_learn_matrix(
         foreground=args.foreground,background=args.background,
         modeltype=args.modeltype,learningmethod=args.learningmethod,
         start=args.start,end=args.end,iteration=args.iteration,
-        burnin=args.burnin,thin=args.thin,pseudocounts=args.pseudocounts,)        
-    #Read in input data
-    if args.i:
-        df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
-    else:
-        if sys.stdin.isatty():
-            raise SortSeqError('No input to stdin')
-        df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        burnin=args.burnin,thin=args.thin,pseudocounts=args.pseudocounts,)
+
+    inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
+    input_df = io.load_dataset(inloc)
     
-    output_df = main(df,args.type,
-        args.learningmethod,modeltype=args.modeltype,db=args.db_filename,LS_means_std=args.LS_means_std,
-        LS_iterations=args.LS_iterations,iteration=args.iteration,burnin=args.
-        burnin,thin=args.thin,start=args.start,end=args.end,
-        runnum=args.runnum,initialize=args.initialize,
-        foreground=args.foreground,background=args.background,alpha=args.penalty,pseudocounts=args.pseudocounts)
-    #Write outputs
-    if args.out:
-        outloc = open(args.out,'w')
-    else:
-        outloc = sys.stdout
-    pd.set_option('max_colwidth',int(1e8)) #makes sure seq columns aren't shortened
-    output_df.to_string(
-        outloc, index=False,col_space=10,float_format=utils.format_string)
+    outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
+    #pdb.set_trace()
+
+    output_df = main(input_df,lm=args.learningmethod,\
+        modeltype=args.modeltype,db=args.db_filename,\
+        LS_means_std=args.LS_means_std,\
+        LS_iterations=args.LS_iterations,iteration=args.iteration,\
+        burnin=args.burnin,thin=args.thin,start=args.start,end=args.end,\
+        runnum=args.runnum,initialize=args.initialize,\
+        foreground=args.foreground,background=args.background,\
+        alpha=args.penalty,pseudocounts=args.pseudocounts,
+        verbose=args.verbose)
+
+    io.write(output_df,outloc)
+
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
@@ -362,13 +384,11 @@ def add_subparser(subparsers):
         help='Position to end your analyzed region')
     p.add_argument('--penalty',type=float,default=0,help='Ridge Regression Penalty')
     p.add_argument(
-        '-t', '--type', choices=['dna','rna','protein'], default='dna')
-    p.add_argument(
         '-lm','--learningmethod',choices=['ER','LS','lasso','IM','memsaver',
         'iterative_LS'],default='LS',
         help = '''Algorithm for determining matrix parameters.''')
     p.add_argument(
-        '-mt','--modeltype',choices=['MAT','NBR'],default='MAT')
+        '-mt','--modeltype', choices=['MAT','NBR'], default='MAT')
     p.add_argument(
         '--pseudocounts',default=1,type=int,help='''pseudocounts to add''')
     p.add_argument(
@@ -410,5 +430,6 @@ def add_subparser(subparsers):
     p.add_argument(
         '-i','--i',default=False,help='''Read input from file instead 
         of stdin''')
+    p.add_argument('-v', '--verbose', action='store_true')
     p.add_argument('-o', '--out', default=None)
     p.set_defaults(func=wrapper)
