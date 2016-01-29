@@ -27,8 +27,8 @@ good: sst learn_matrix -lm LS -i dataset.txt --penalty .1
 #if no penalty, there will be some bases with no counts, and the algorithm will fail
 bad: sst learn_matrix -lm LS -i dataset.txt 
 good: cat dataset.txt | sst learn_matrix -lm LS --penalty .1
-good: sst learn_matrix -lm LS -i dataset.txt --LS_means_std test_means_std --penalty .1
-bad: sst learn_matrix -lm LS -i dataset.txt --LS_means_std test_means_std_bad --penalty .1
+good: sst learn_matrix -lm LS -i dataset.txt --LS_means_std test_means_std.txt --penalty .1
+bad: sst learn_matrix -lm LS -i dataset.txt --LS_means_std test_means_std_bad.txt --penalty .1
 
 #test IM learning method
 good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1
@@ -48,7 +48,7 @@ good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 -
 #test different initialization conditions
 good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize Rand --thin 1
 good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --penalty .1 --thin 1
-good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --LS_means_std test_means_std --penalty .1 --thin 1
+good: sst learn_matrix -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --LS_means_std test_means_std.txt --penalty .1 --thin 1
 
 #Test Neighbor Models
 bad: sst learn_matrix -lm ER -i dataset.txt --modeltype NBR --pseudocounts 1

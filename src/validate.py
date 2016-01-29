@@ -24,7 +24,8 @@ filetype_to_loadfunc_dict = {
     'dataset_fastq' :   \
         lambda f: io.load_dataset(f,file_type='fastq'),
     'model'         :   io.load_model,
-    'tagkey'        :   io.load_tagkey
+    'tagkey'        :   io.load_tagkey,
+    'meanstd'       :   io.load_meanstd
 }
 filetypes = filetype_to_loadfunc_dict.keys()
 

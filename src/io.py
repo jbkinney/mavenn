@@ -180,6 +180,9 @@ def load_profile_mut(file_arg):
 def load_profile_info(file_arg):
     return load(file_arg, file_type='profile_info')
 
+def load_meanstd(file_arg):
+    return load(file_arg, file_type='meanstd')
+
 # JBK: I want to switch to using only this function
 def load(file_arg, file_type, **kwargs):
     """ Loads file of any specified type
@@ -192,7 +195,8 @@ def load(file_arg, file_type, **kwargs):
     'profile_ct'    : qc.validate_profile_ct,
     'profile_freq'  : qc.validate_profile_freq,
     'profile_mut'   : qc.validate_profile_mut,
-    'profile_info'  : qc.validate_profile_info
+    'profile_info'  : qc.validate_profile_info,
+    'meanstd'       : qc.validate_meanstd
     }
 
     df = load_text(file_arg)

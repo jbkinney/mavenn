@@ -219,7 +219,8 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
                 penalty (specified by --penalty) \
                 to avoid failure of the learning method''')
         if LS_means_std: #If user supplied preset means and std for each bin
-            means_std_df = pd.io.parsers.read_csv(LS_means_std,delim_whitespace=True)
+            means_std_df = io.load_meanstd(LS_means_std)
+
             #change bin number to 'ct_number' and then use as index
             labels = list(means_std_df['bin'].apply(add_label))
             std = means_std_df['std']
