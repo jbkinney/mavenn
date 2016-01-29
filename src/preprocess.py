@@ -94,6 +94,7 @@ def merge_datasets(dataset_df_dict):
     return out_df
 
 
+
 # This is the main function, callable by the user
 def main(filelist_df,tags_df=None,indir='./',seq_type=None):
     """ Merges datasets listed in the filelist_df dataframe
@@ -116,8 +117,36 @@ def main(filelist_df,tags_df=None,indir='./',seq_type=None):
             df = io.load_dataset(fn,file_type='text',seq_type=seq_type)
         dataset_df_dict[b] = df
 
-    # Merge datasets into one, validate, and return
+    # Merge datasets into one
     out_df = merge_datasets(dataset_df_dict)
+
+    # Add seqs if given tags_df
+    if not tags_df is None:
+        qc.validate_tagkey(tags_df)
+        tag_col = 'tag'
+
+        # Test to make sure all tags in dataset are a subset of tags
+        data_tags = set(out_df[tag_col])
+        all_tags = set(tags_df[tag_col])
+        if not (data_tags <= all_tags):
+            raise SortSeqError('Error. Some tags probably could not be identified.')
+
+        # Get name of seq column       
+        seq_cols = qc.get_cols_from_df(tags_df, 'seqs')
+        if not len(seq_cols)==1:
+            raise SortSeqError('Multiple seq columns; exaclty 1 required.')
+        seq_col = seq_cols[0]
+
+        # Set tag to be index column of dataframe
+        tags_df = tags_df.set_index(tag_col)
+
+        # Add seqs corresponding to each tag
+        tags = out_df[tag_col]
+        seqs = tags_df[seq_col][tags].values
+        if not all([type(x)==str for x in seqs]):
+            raise SortSeqError('Some looked-up seqs are not strings.')
+        out_df[seq_col] = tags_df[seq_col][tags].values
+
     qc.validate_dataset(out_df)
     return out_df
 

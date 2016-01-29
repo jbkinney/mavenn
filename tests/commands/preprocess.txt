@@ -3,7 +3,7 @@ validation: | sst validate -f dataset
 
 # Test use of tags
 good: sst preprocess -i files_good_tags.txt --tagkey tagkey_good_usethis.txt
-good: sst preprocess -i files_good_tags_someunknown.txt --tagkey tagkey_good_usethis.txt
+bad:  sst preprocess -i files_good_tags_someunknown.txt --tagkey tagkey_good_usethis.txt
 bad:  sst preprocess -i files_good_tags.txt --tagkey tagkey_bad_badseqcol.txt
 bad:  sst preprocess -i files_bad_tags_variablelength.txt --tagkey tagkey_good_usethis.txt
 bad:  sst preprocess -i files_bad_tags_rnacol.txt --tagkey tagkey_good_usethis.txt

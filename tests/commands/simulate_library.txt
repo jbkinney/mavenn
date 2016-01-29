@@ -1,0 +1,24 @@
+# Validation to use for good commands from now on
+validation: | sst validate -f dataset
+
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT 
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna
+bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t rna
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t protein
+bad:  sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t dna
+good: sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t rna
+bad:  sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t protein
+bad:  sst simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t dna
+bad:  sst simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t rna
+good: sst simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t protein
+
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -n 100
+bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -n -100
+
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m 0.5
+bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m -0.5
+bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m 1.5
+
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tags
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tl 10 -tags -n 100
+bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tl 2 -tags -n 100
