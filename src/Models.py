@@ -8,6 +8,9 @@ import numpy as np
 import sst.utils as utils	
 import scipy as sp
 import pandas as pd
+import pdb
+import sst.qc as qc
+import sst.io as io
 
 
 class ExpModel:
@@ -19,40 +22,30 @@ class LinearModel(ExpModel):
     ''' This model generates energies of binding 
         through a linear energy matrix model'''
 
+    def __init__(self,model_df):
+        """
+        Constructor takes model parameters in the form of a model dataframe
+        """
+        model_df = qc.validate_model(model_df.copy(),fix=True)
+        seqtype, modeltype = qc.get_model_type(model_df)
+        if not modeltype=='MAT':
+            raise SortSeqError('Invalid modeltype: %s'%modeltype)
 
-    def __init__(self,param,dicttype, is_df=False):
-        seq_dict,inv_dict = utils.choose_dict(dicttype)
-        #if model is a dataframe
-        if is_df: 
-            if isinstance(param,str): #if param is a file name
-                df = pd.io.parsers.read_csv(param,delim_whitespace=True)
-            elif isinstance(param,pd.DataFrame): #if param is a data frame
-                df = param
-            else:
-                raise IOError(
-                    '''Linear Model Input is not of correct type. 
-                    Enter File name of DataFrame or a DataFrame.''')
-            headers = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
-            self.matrix = np.transpose(np.array(df[headers]))
-        #if model is a numpy array
-        else:
-            if isinstance(param,str):
-                 self.matrix = np.genfromtxt(param,skip_header=1)
-            #if input is a matrix
-            elif isinstance(param,np.ndarray):
-                self.matrix = param
-            else:
-                raise IOError(
-                    '''Linear Model Input is not of correct type. 
-                    Enter File name of matrix (with header) or a matrix.''')    
- 
+        seq_dict,inv_dict = utils.choose_dict(seqtype,modeltype=modeltype)
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
+        self.df = model_df
+        self.length = model_df.shape[0]
+
+        # Extract matrix part of model dataframe
+        headers = qc.get_cols_from_df(model_df,'vals')
+        self.matrix = np.transpose(np.array(model_df[headers]))
 
     def genexp(self,seqs):
         #make sure seqs are presented as a list
         if not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
             raise IOError('''sequences must be input as a list''')
+
         if len(seqs[0]) != self.matrix.shape[1]:
             raise IOError('Energy Matrix Length does not equal Sequence Length')
         '''If modeltype is an energy matrix for repression or activation, this
@@ -76,31 +69,24 @@ class NeighborModel(ExpModel):
     ''' This model generates energies of binding 
         through a nearest neighbor matrix model'''
 
+    def __init__(self,model_df):
+        """
+        Constructor takes model parameters in the form of a model dataframe
+        """
+        model_df = qc.validate_model(model_df.copy(),fix=True)
+        seqtype, modeltype = qc.get_model_type(model_df)
+        if not modeltype=='NBR':
+            raise SortSeqError('Invalid modeltype: %s'%modeltype)
 
-    def __init__(self,param,dicttype,is_df=False):
-        seq_dict,inv_dict = utils.choose_dict(dicttype,modeltype='NBR')
-        #if input is a dataframe
-        if is_df:
-            if isinstance(param,str): #if param is a file name
-                df = pd.io.parsers.read_csv(param,delim_whitespace=True)
-            else: #if param is a data frame
-                df = param
-            headers = ['val_' + str(inv_dict[i]) for i in range(len(seq_dict))]
-            self.matrix = np.transpose(np.array(df[headers]))
-        
-        #if model is a numpy array
-        else:
-            if isinstance(param,str):
-                 self.matrix = np.genfromtxt(param,skip_header=1)
-            #if input is a matrix
-            elif isinstance(param,np.ndarray):
-                self.matrix = param
-            else:
-                raise IOError(
-                    '''NBR Model Input is not of correct type. 
-                    Enter File name of matrix (with header) or a matrix.''')
+        seq_dict,inv_dict = utils.choose_dict(seqtype,modeltype=modeltype)
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
+        self.df = model_df
+        self.length = model_df.shape[0]+1
+
+        # Extract matrix part of model dataframe
+        headers = qc.get_cols_from_df(model_df,'vals')
+        self.matrix = np.transpose(np.array(model_df[headers]))
 
     def genexp(self,seqs):
         if len(seqs[0]) != self.matrix.shape[1]+1:
@@ -110,7 +96,8 @@ class NeighborModel(ExpModel):
              monotonically correlated with expression.'''
         energies = np.zeros(len(seqs))
         for i,s in enumerate(seqs):
-                energies[i] = np.sum(self.matrix*utils.seq2matpair(s,self.seq_dict))
+                energies[i] = \
+                    np.sum(self.matrix*utils.seq2matpair(s,self.seq_dict))
         return energies
 
 class RaveledModel(ExpModel):
