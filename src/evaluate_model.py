@@ -9,12 +9,15 @@ import scipy as sp
 import pandas as pd
 import sys
 import pdb
+import time
 
 import sst.Models as Models
 import sst.utils as utils
 import sst.qc as qc
 import sst.io as io
 from sst import SortSeqError
+from sst import shutthefuckup
+
 
 def main(dataset_df,model_df,left=None,right=None):
 
@@ -58,9 +61,9 @@ def main(dataset_df,model_df,left=None,right=None):
         mymodel = Models.NeighborModel(model_df)
     else:
         raise SortSeqError('Unrecognized model type %s'%modeltype)
-
-    #Evaluate Model on sequences    
-    out_df['val'] = mymodel.genexp(out_df['seq'])
+ 
+    # Compute values
+    out_df['val'] = mymodel.genexp(out_df['seq']) 
 
     # Validate dataframe and return
     return qc.validate_dataset(out_df,fix=True)
@@ -68,21 +71,13 @@ def main(dataset_df,model_df,left=None,right=None):
 
 # Define commandline wrapper
 def wrapper(args):
-
-    # Load dataset
     inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
     dataset_df = io.load_dataset(inloc)
-
-    # Load model
     model_df = io.load_model(args.model)
-
-    # Compute values an put into output_df
     output_df = main(dataset_df=dataset_df, model_df=model_df,\
         left=args.left, right=args.right)
-
-    # Write output
     outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
-    io.write(output_df,outloc)
+    io.write(output_df,outloc,fast=args.fast)
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
@@ -102,4 +97,8 @@ def add_subparser(subparsers):
     p.add_argument(
         '-r','--right',type=int, default=None,
         help ='''Seq position at which to align the right-side of the model. Defaults to position determined by model dataframe.''')
+    p.add_argument(
+        '-f','--fast', action='store_true', 
+        help="Output is a little harder to read, but is written much faster."
+        )
     p.set_defaults(func=wrapper)

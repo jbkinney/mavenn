@@ -1,12 +1,12 @@
-good: sst validate -f profile_mut -i profile_mut_good_err.txt
-good: sst validate -f profile_mut -i profile_mut_good_err_pro.txt
-good: sst validate -f profile_mut -i profile_mut_good_err_rna.txt
-good: sst validate -f profile_mut -i profile_mut_good_noerr.txt
-good: sst validate -f profile_mut -i profile_mut_good_noerr_pro.txt
-good: sst validate -f profile_mut -i profile_mut_good_noerr_rna.txt
+good: sst validate -t profile_mut -i profile_mut_good_err.txt
+good: sst validate -t profile_mut -i profile_mut_good_err_pro.txt
+good: sst validate -t profile_mut -i profile_mut_good_err_rna.txt
+good: sst validate -t profile_mut -i profile_mut_good_noerr.txt
+good: sst validate -t profile_mut -i profile_mut_good_noerr_pro.txt
+good: sst validate -t profile_mut -i profile_mut_good_noerr_rna.txt
 
-bad:  sst validate -f profile_mut -i profile_mut_bad_invalidchar.txt
-bad:  sst validate -f profile_mut -i profile_mut_bad_muttoohigh.txt
-bad:  sst validate -f profile_mut -i profile_mut_bad_negerr.txt
-bad:  sst validate -f profile_mut -i profile_mut_bad_negmut.txt
-bad:  sst validate -f profile_mut -i profile_mut_bad_nonconsecpos.txt
+bad:  sst validate -t profile_mut -i profile_mut_bad_invalidchar.txt
+bad:  sst validate -t profile_mut -i profile_mut_bad_muttoohigh.txt
+bad:  sst validate -t profile_mut -i profile_mut_bad_negerr.txt
+bad:  sst validate -t profile_mut -i profile_mut_bad_negmut.txt
+bad:  sst validate -t profile_mut -i profile_mut_bad_nonconsecpos.txt

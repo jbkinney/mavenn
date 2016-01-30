@@ -172,7 +172,7 @@ def wrapper(args):
         tags_df = None
     
     output_df = main(filelist_df,tags_df=tags_df,seq_type=args.seqtype)
-    io.write(output_df,outloc)
+    io.write(output_df,outloc,fast=args.fast)
 
 
 # Connects argparse to wrapper
@@ -186,4 +186,8 @@ def add_subparser(subparsers):
     p.add_argument(
         '-s', '--seqtype', default=None, choices=['dna','rna','protein'], \
         help='''Type of sequence to expect in input files.''')
+    p.add_argument(
+        '-f','--fast', action='store_true', 
+        help="Output is a little harder to read, but is written much faster."
+        )
     p.set_defaults(func=wrapper)

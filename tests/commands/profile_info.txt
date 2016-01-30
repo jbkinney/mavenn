@@ -1,5 +1,5 @@
 # Validation to use for good commands from now on
-validation: | sst validate -f profile_info
+validation: | sst validate -t profile_info
 
 good: sst profile_info -i dataset_good.txt
 good: sst profile_info -i dataset_good_rna.txt

@@ -1,5 +1,5 @@
 # Validation to use for good commands from now on
-validation: | sst validate -f profile_freq
+validation: | sst validate -t profile_freq
 
 good: sst profile_freq -i seq_good.txt
 good: sst profile_freq -i seq_good_rna.txt

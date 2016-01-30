@@ -40,13 +40,13 @@ def wrapper(args):
 
     try:
         # Get load function corresponding to file type
-        func = filetype_to_loadfunc_dict[str(args.filetype)]
+        func = filetype_to_loadfunc_dict[str(args.type)]
 
         # Run load function on input
         df = func(inloc)
 
         # Write df to stdout or to outfile 
-        io.write(df,outloc)
+        io.write(df,outloc,fast=args.fast)
 
     except SortSeqError:
         raise
@@ -60,6 +60,10 @@ def add_subparser(subparsers):
         through the standard input.''')
     p.add_argument('-o', '--out', default=None)
     p.add_argument(
-        '-f', '--filetype', required=True, choices=filetypes, \
-        help='''Type of sequence to expect in input files.''')
+        '-t', '--type', required=True, choices=filetypes, \
+        help="Type of file to validate input as.")
+    p.add_argument(
+        '-f','--fast', action='store_true', 
+        help="Output is a little harder to read, but is written much faster."
+        )
     p.set_defaults(func=wrapper)

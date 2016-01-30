@@ -1,5 +1,5 @@
 # Validate that all stdout does in fact represent good models
-validation: | sst validate -f model
+validation: | sst validate -t model
 
 #test ER learning method 
 good: sst learn_matrix -lm ER -i dataset.txt

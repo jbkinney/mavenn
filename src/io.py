@@ -8,6 +8,7 @@ import os
 import qc
 import utils
 from sst import SortSeqError
+import time
 
 def load_text(file_arg):
     """
@@ -211,17 +212,16 @@ def load(file_arg, file_type, **kwargs):
     return func(df,fix=True,**kwargs)
 
 
-def write(df,file_arg):
+def write(df,file_arg,fast=False):
     """ Writes a data frame to specified file, given as name or handle
     """
-
     file_handle = validate_file_for_writing(file_arg)
-
-    # Write dataframe to file
-    pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns
-    df_string = df.to_string(\
-        index=False, col_space=5, float_format=utils.format_string)
-    file_handle.write(df_string+'\n') # Add trailing return
-    file_handle.close()
-    #df.to_csv(file_arg,sep='\t')
+    if fast:
+        df.to_csv(file_handle,sep='\t',float_format='%10.6f')
+    else:
+        pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns
+        df_string = df.to_string(\
+            index=False, col_space=5, float_format=utils.format_string)
+        file_handle.write(df_string+'\n') # Add trailing return
+        file_handle.close()
 

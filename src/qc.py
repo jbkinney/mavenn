@@ -502,19 +502,20 @@ def validate_dataset(df, fix=False):
     """ 
     Validates the form of a dataset dataframe. A dataset dataframe must look something like this:
 
-    ct      ct_0    ct_1    ct_2    tag     seq     val
-    3       1       2       0       CTG     ACCAT   0.012
-    2       2       0       0       CTA     ACCAT   -4.52
-    1       0       0       1       CCA     TCAGG   0.000
+    ct      ct_0    ct_1    ct_2    val     tag     seq     
+    3       1       2       0       0.012   CTG     ACCAT
+    2       2       0       0      -4.52    CTA     ACCAT
+    1       0       0       1       0.000   CCA     TCAGG
     
     A 'ct' column reports the total counts of all sequence/tag pairs. Optional 'ct_0', 'ct_1', ... columns contain counts of sequence/tag. pairs for  individual bins. Optional 'tag' column lists DNA sequnce tags used to identify sequences. A 'seq' column lists the sequences of interests. 
 
     Specifications:
     0. The dataframe must have at least one row and one column.
     1. A 'ct' column is mandatory and should appear first. Counts must be nonnegative integers. If not present, this can be added
-    2. 'ct_X' columns are optional. If they appear, X must be a nonnegative integer. Columns must appear in the order of this number. Counts must be nonnegative integers and must sum to the value in the 'ct' column. 
+    2. 'ct_X' columns are optional. If they appear, X must be a nonnegative integer. Columns must appear in the order of this number. Counts must be nonnegative integers and must sum to the value in the 'ct' column.
+    4. A 'val' column is optional; this reports the value of a model run on the sequences in the dataframe 
     3. A 'tag', 'seq', 'seq_rna', or 'seq_pro' column is mandatory. More than one of these columns are allowed simultaneously. They must appear to the left of all other columns. In each column, sequences must conform to unambiguous DNA, RNA, or protein alphabets and must be all be of the same length.
-    4. A 'val' column is optional; this reports the value of a model run on the sequences in the dataframe
+
 
     Arguments:
         df (pd.DataFrame): Dataset in dataframe format
@@ -547,7 +548,7 @@ def validate_dataset(df, fix=False):
     tag_cols = get_cols_from_df(df,'tag')
     seq_cols = get_cols_from_df(df,'seqs')
     val_cols = get_cols_from_df(df,'val')
-    new_cols = ct_cols + tag_cols + seq_cols + val_cols
+    new_cols = ct_cols + val_cols + tag_cols + seq_cols
     if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]

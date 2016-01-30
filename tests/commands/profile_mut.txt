@@ -1,5 +1,5 @@
 # Validation to use for good commands from now on
-validation: | sst validate -f profile_mut
+validation: | sst validate -t profile_mut
 
 good: sst profile_mut -i seq_good.txt
 good: sst profile_mut -i seq_good_rna.txt

@@ -11,6 +11,7 @@ import pandas as pd
 import pdb
 import sst.qc as qc
 import sst.io as io
+import time
 
 
 class ExpModel:
@@ -42,28 +43,28 @@ class LinearModel(ExpModel):
         self.matrix = np.transpose(np.array(model_df[headers]))
 
     def genexp(self,seqs):
-        #make sure seqs are presented as a list
-        if not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
-            raise IOError('''sequences must be input as a list''')
+        return self.evaluate(seqs)
 
+    def evaluate(self,seqs):
+        # Check seqs container
+        if not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
+            raise SortSeqError('Sequences must be input as a list')
+        # Check length
         if len(seqs[0]) != self.matrix.shape[1]:
-            raise IOError('Energy Matrix Length does not equal Sequence Length')
-        '''If modeltype is an energy matrix for repression or activation, this
-             will calculate the binding energy of a sequence, which will be 
-             monotonically correlated with expression.'''
-        energies = np.zeros(len(seqs))
-        #if the matrix is parameterized such that last entry = 0
-        if self.matrix.shape[0] == len(self.seq_dict)-1:
-            for i,s in enumerate(seqs):
-                 energies[i] = np.sum(
-                     self.matrix*utils.parameterize_seq(s,self.seq_dict))
-        #if matrix has one entry for each possible base
-        elif self.matrix.shape[0] == len(self.seq_dict):
-            for i,s in enumerate(seqs):
-                energies[i] = np.sum(self.matrix*utils.seq2mat(s,self.seq_dict))
-        else:
-            raise IOError('Input model has an incorrect number of rows') 
-        return energies 
+            raise SortSeqError(\
+                'Energy Matrix Length does not equal Sequence Length')
+
+        # Compute seqmats
+        t0 = time.time()
+        seqmats = [utils.seq2mat(s,self.seq_dict) for s in seqs]
+        t1 = time.time()
+
+        # Compute and return values
+        vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        t2 = time.time()
+
+        #print 't1-t0 = %.4f, t1-t2 = %.4f'%(t1-t0,t2-t1)
+        return vals 
 
 class NeighborModel(ExpModel):
     ''' This model generates energies of binding 
@@ -89,16 +90,29 @@ class NeighborModel(ExpModel):
         self.matrix = np.transpose(np.array(model_df[headers]))
 
     def genexp(self,seqs):
+        return self.evaluate(seqs)
+
+    def evaluate(self,seqs):
+        # Check seqs container
+        if not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
+            raise SortSeqError('Sequences must be input as a list')
+        # Check length
         if len(seqs[0]) != self.matrix.shape[1]+1:
-            raise ValueError('improper energy matrix length')
-        '''If modeltype is an energy matrix for repression or activation, this
-             will calculate the binding energy of a sequence, which will be 
-             monotonically correlated with expression.'''
-        energies = np.zeros(len(seqs))
-        for i,s in enumerate(seqs):
-                energies[i] = \
-                    np.sum(self.matrix*utils.seq2matpair(s,self.seq_dict))
-        return energies
+            raise SortSeqError(\
+                'Energy Matrix Length does not equal Sequence Length')
+
+        # Compute seqmats
+        t0 = time.time()
+        seqmats = [utils.seq2matpair(s,self.seq_dict) for s in seqs]
+        t1 = time.time()
+
+        # Compute and return values
+        vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        t2 = time.time()
+
+        #print 't1-t0 = %.4f, t1-t2 = %.4f'%(t1-t0,t2-t1)
+
+        return vals 
 
 class RaveledModel(ExpModel):
     '''This model type generates an energy matrix model, 

@@ -1,5 +1,5 @@
 # Validation to use for good commands from now on
-validation: | sst validate -f dataset
+validation: | sst validate -t dataset
 
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT 
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna
