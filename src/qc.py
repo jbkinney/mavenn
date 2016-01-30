@@ -16,7 +16,8 @@ col_patterns = {
     'file'  :   r'^file$',
     'bin'   :   r'^bin$',
     'pos'   :   r'^pos$',
-    'vals'  :   r'^val_',
+    'val'   :   r'^val$',
+    'vals'  :   r'^val_|^val$',
     'info'  :   r'^info$',
     'infos' :   r'^info$|^info_err$',
     'errs'  :   r'_err$',
@@ -65,8 +66,23 @@ for key in seqtype_to_alphabet_dict.keys():
     for a in alphabet:
         for b in alphabet:
             vals_nbr.append('val_'+a+b)
-    model_parameters_dict['mat_'+key] = vals_mat
-    model_parameters_dict['nbr_'+key] = vals_nbr
+    model_parameters_dict[('MAT',key)] = vals_mat
+    model_parameters_dict[('NBR',key)] = vals_nbr
+
+def get_model_type(model_df):
+    """ Returns seqtype correpsonding to given model dataframe
+    """
+    headers = get_cols_from_df(model_df,'vals')
+    seqtype = None
+    modeltype = None
+    for key in model_parameters_dict.keys():
+        val_cols = model_parameters_dict[key]
+        if set(val_cols) == set(headers):
+            seqtype = key[1]
+            modeltype = key[0]
+    if (seqtype is None) or (modeltype is None):
+        raise SortSeqError('Could not identify seqtype or modeltype')
+    return (seqtype,modeltype)
 
 
 def is_col_type(col_name,col_types='all'):
@@ -486,10 +502,10 @@ def validate_dataset(df, fix=False):
     """ 
     Validates the form of a dataset dataframe. A dataset dataframe must look something like this:
 
-    ct      ct_0    ct_1    ct_2    tag     seq
-    3       1       2       0       CTG     ACCAT
-    2       2       0       0       CTA     ACCAT
-    1       0       0       1       CCA     TCAGG
+    ct      ct_0    ct_1    ct_2    tag     seq     val
+    3       1       2       0       CTG     ACCAT   0.012
+    2       2       0       0       CTA     ACCAT   -4.52
+    1       0       0       1       CCA     TCAGG   0.000
     
     A 'ct' column reports the total counts of all sequence/tag pairs. Optional 'ct_0', 'ct_1', ... columns contain counts of sequence/tag. pairs for  individual bins. Optional 'tag' column lists DNA sequnce tags used to identify sequences. A 'seq' column lists the sequences of interests. 
 
@@ -498,6 +514,7 @@ def validate_dataset(df, fix=False):
     1. A 'ct' column is mandatory and should appear first. Counts must be nonnegative integers. If not present, this can be added
     2. 'ct_X' columns are optional. If they appear, X must be a nonnegative integer. Columns must appear in the order of this number. Counts must be nonnegative integers and must sum to the value in the 'ct' column. 
     3. A 'tag', 'seq', 'seq_rna', or 'seq_pro' column is mandatory. More than one of these columns are allowed simultaneously. They must appear to the left of all other columns. In each column, sequences must conform to unambiguous DNA, RNA, or protein alphabets and must be all be of the same length.
+    4. A 'val' column is optional; this reports the value of a model run on the sequences in the dataframe
 
     Arguments:
         df (pd.DataFrame): Dataset in dataframe format
@@ -519,7 +536,7 @@ def validate_dataset(df, fix=False):
 
     # Validate column names
     for col in df.columns:
-        if not is_col_type(col,['seqs','cts','tag']):
+        if not is_col_type(col,['seqs','cts','tag','val']):
             raise SortSeqError('Invalid column in dataframe: %s'%col)
 
     # Validate contents of columns
@@ -529,7 +546,8 @@ def validate_dataset(df, fix=False):
     ct_cols = get_cols_from_df(df,'cts')
     tag_cols = get_cols_from_df(df,'tag')
     seq_cols = get_cols_from_df(df,'seqs')
-    new_cols = ct_cols + tag_cols + seq_cols
+    val_cols = get_cols_from_df(df,'val')
+    new_cols = ct_cols + tag_cols + seq_cols + val_cols
     if not all(df.columns == new_cols):
         if fix:
             df = df[new_cols]

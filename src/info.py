@@ -282,7 +282,7 @@ def fix_counts(raw_counts):
     if len(counts.shape)==0.0:
         raise SortSeqError('counts is empty or not array.')
     if not all(np.isfinite(counts)):
-        raise SortSeqError('counts are all finite.')
+        raise SortSeqError('counts are not all finite.')
     if not all(counts >= 0.0):
         raise SortSeqError('counts are not nonnegative.')
     if all(counts == 0.0):

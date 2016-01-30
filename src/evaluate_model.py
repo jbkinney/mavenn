@@ -8,77 +8,98 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
+import pdb
 
 import sst.Models as Models
 import sst.utils as utils
+import sst.qc as qc
+import sst.io as io
+from sst import SortSeqError
 
-def main(df,mp,dicttype,modeltype='MAT',is_df=False,start=0,end=None):
-    #Create sequence dictionary
-    seq_dict,inv_dict = utils.choose_dict('dna')
-    #Check to make sure the chosen dictionary type correctly describes the sequences
-    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT')
-    def check_sequences(s):
-        return set(s).issubset(lin_seq_dict)
-    if False in set(df.seq.apply(check_sequences)):
-        raise TypeError('Wrong sequence type!')
+def main(dataset_df,model_df,left=None,right=None):
+
+    # Validate dataframes
+    qc.validate_dataset(dataset_df)
+    qc.validate_model(model_df)
+
+    # Detect model type based on columns
+    seqtype, modeltype = qc.get_model_type(model_df)
+    seqcol = qc.seqtype_to_seqcolname_dict[seqtype]
+
+    # Set start and end  based on left or right
+    if not ((left is None) or (right is None)):
+        raise SortSeqError('Cannot set both left and right at same time.')
+    if not (left is None):
+        start = left
+        end = start + model_df.shape[0] + (1 if modeltype=='NBR' else 0)
+    elif not (right is None):
+        end = right 
+        start = end - model_df.shape[0] - (1 if modeltype=='NBR' else 0)
+    else:
+        start = model_df['pos'].values[0]
+        end = model_df['pos'].values[-1] + (2 if modeltype=='NBR' else 1)
+    assert start < end 
+
+    # Validate start and end positions
+    seq_length = len(dataset_df[seqcol][0])
+    if start < 0:
+        raise SortSeqError('Invalid start=%d'%start)
+    if end >= seq_length:
+        raise SortSeqError('Invalid end=%d for seq_length=%d'%(end,seq_length))
+
     #select target sequence region
-    df.loc[:,'seq'] = df.loc[:,'seq'].str.slice(start,end)
+    out_df = dataset_df.copy()
+    out_df.loc[:,'seq'] = out_df.loc[:,'seq'].str.slice(start,end)
+
     #Create model object of correct type
     if modeltype == 'MAT':
-        mymodel = Models.LinearModel(mp,dicttype,is_df=is_df)
+        mymodel = Models.LinearModel(model_df)
     elif modeltype == 'NBR':
-        mymodel = Models.NeighborModel(mp,dicttype,is_df=is_df)
-    elif modeltype == 'RandomLinear':
-        emat_0 = utils.RandEmat(len(df['seq'][0]),len(seq_dict))
-        mymodel = Models.LinearModel(emat_0,dicttype)
+        mymodel = Models.NeighborModel(model_df)
+    else:
+        raise SortSeqError('Unrecognized model type %s'%modeltype)
+
     #Evaluate Model on sequences    
-    df['val'] = mymodel.genexp(df['seq'])
-    return df['val']
+    out_df['val'] = mymodel.genexp(out_df['seq'])
+
+    # Validate dataframe and return
+    return qc.validate_dataset(out_df,fix=True)
 
 
 # Define commandline wrapper
 def wrapper(args):
-    modeltype = args.modeltype
-    dicttype = args.type
-    # Run funciton
-    if args.i:
-        df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
-    else:
-        df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
-    print len(df['seq'][0])
-    df['val'] = main(df,args.mp,dicttype,modeltype=modeltype,is_df=args.DataFrame)
-    
-    
-    
 
-    if args.out:
-        outloc = open(args.out,'w')
-    else:
-        outloc = sys.stdout
-    pd.set_option('max_colwidth',int(1e8))
-    df.to_string(
-        outloc, index=False,col_space=10,float_format=utils.format_string)
+    # Load dataset
+    inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
+    dataset_df = io.load_dataset(inloc)
+
+    # Load model
+    model_df = io.load_model(args.model)
+
+    # Compute values an put into output_df
+    output_df = main(dataset_df=dataset_df, model_df=model_df,\
+        left=args.left, right=args.right)
+
+    # Write output
+    outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
+    io.write(output_df,outloc)
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
-    p = subparsers.add_parser('simulate_evaluate')
+    p = subparsers.add_parser('evaluate_model')
+    p.add_argument(\
+        '-m', '--model', default=None,
+        help="Name of file containing model dataframe. Required.")
+    p.add_argument( \
+        '-i','--i',default=False, \
+        help="Name of file containing dataset dataframe. Defaults to stdin.")
+    p.add_argument(\
+        '-o', '--out', default=None, \
+        help="Name of file to write output dataframe. Defaults to stdout.")
     p.add_argument(
-        '-m', '--modeltype', type=str,choices=['RandomLinear','MAT',
-        'NBR'],help ='Type of Model to use')
-    p.add_argument('-mp', '--modelparam', default=None,
-        help=''' 
-        RandomLinear=LengthofSeq,MAT=FileName, NBR=FileName. ''')
+        '-l','--left',type=int, default=None,
+        help ='''Seq position at which to align the left-side of the model. Defaults to position determined by model dataframe.''')
     p.add_argument(
-        '-t', '--type', choices=['dna','rna','protein'], default='dna')
-    p.add_argument(
-        '-i','--i',default=False,help='''Read input from file instead 
-        of stdin''')
-    p.add_argument('-df','--DataFrame', action='store_true')
-    p.add_argument('-o', '--out', default=None)
-    p.add_argument(
-        '-s','--start',type=int,default=0,
-        help ='Position to start your analyzed region')
-    p.add_argument(
-        '-e','--end',type=int,default = None,
-        help='Position to end your analyzed region')
+        '-r','--right',type=int, default=None,
+        help ='''Seq position at which to align the right-side of the model. Defaults to position determined by model dataframe.''')
     p.set_defaults(func=wrapper)
