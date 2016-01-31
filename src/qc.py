@@ -6,6 +6,13 @@ import pdb
 import numpy as np
 from sst import SortSeqError
 
+# Reverse complements DNA
+def rc(dna_str):
+    if re.search(r"[^ACGT]",dna_str):
+        raise SortSeqError('Invalid character found in DNA sequence.')
+    c_str = ''.join([{'A':'T','C':'G','G':'C','T':'A'}[B] for B in dna_str])
+    return c_str[::-1]
+
 # Set of regular expression patterns used to identify columns
 col_patterns = {
     'seqs'  :   r'^seq$|^seq_rna$|^seq_pro$',
@@ -26,7 +33,10 @@ col_patterns = {
     'mut'   :   r'^mut$',
     'muts'  :   r'^mut$|^mut_err$',
     'mean'  :   r'^mean$',
-    'std'   :   r'^std$'
+    'std'   :   r'^std$',
+    'lr'    :   r'^left$|^right$',
+    'contig':   r'^contig$',
+    'ori'   :   r'^ori$'
 }
 
 seqtype_to_alphabet_dict = {
@@ -134,6 +144,9 @@ def _validate_cols(df, fix=False):
     df = _validate_err_cols(df,fix=fix)
     df = _validate_mean_cols(df,fix=fix)
     df = _validate_std_cols(df,fix=fix)
+    df = _validate_lr_cols(df,fix=fix)
+    df = _validate_contig_cols(df,fix=fix)
+    df = _validate_ori_cols(df,fix=fix)
     return df
 
 
@@ -152,7 +165,11 @@ def _validate_seqs_cols(df, fix=False):
             raise SortSeqError('Sequence column is of unkown type: %s.'%col)
 
         # Check that all sequences have the same length
-        L = len(df[col][0])
+        try:
+            L = len(df[col][0])
+        except:
+            raise SortSeqError('Could not determine length of sequence.')
+
         if not all([len(seq) == L for seq in df[col]]):
             raise SortSeqError('Not all sequences are the same length.')
 
@@ -169,6 +186,76 @@ def _validate_seqs_cols(df, fix=False):
             raise SortSeqError('Invalid character found in sequences.')
 
     return df
+
+def _validate_lr_cols(df, fix=False):
+    """
+    Validates left/right columns in a given dataframe. Will check columns with names 'left' or 'right'.
+    """
+    lr_cols = get_cols_from_df(df,'lr')
+    for col in lr_cols:
+
+        # Verify that counts are integers
+        if not df[col].values.dtype == int:
+
+            # Try to convert column to numbers
+            try:
+                int_vals = df[col].astype(int)
+                float_vals = df[col].astype(float)
+            except:
+                raise SortSeqError('Cannot interptret left/right positions as numbers; column name = %s'%col)
+
+            # Convert to integers if this doesn't change count values
+            if all(int_vals == float_vals):
+                if fix:
+                    df[col] = int_vals
+                else:
+                    SortSeqError('left/right positions are not integers; set fix=True to fix.')
+            else:
+                raise SortSeqError('Noninteger numbers found in left/right positions.')
+
+            # Make sure that all parameters are finite
+            if not all(np.isfinite(df[col])):
+                SortSeqError('Nonfinite left/right positions encountered.')
+
+        # Verify that counts are nonnegative
+        if not all(df[col] >= 0):
+            raise SortSeqError('left/right positions must be nonnegative numbers.')
+
+    return df
+
+
+
+def _validate_ori_cols(df, fix=False):
+    """
+    Validates 'ori' columns in a given dataframe. Column must contain only '+' and '-' characters.
+    """
+    col = 'ori'
+    if col in df.columns:
+        if not all([type(s)==str for s in df[col]]):
+            raise SortSeqError('ori column must contain strings')
+
+        if not all((df[col]=='+') | (df[col]=='-')):
+            raise SortSeqError(\
+                'ori column contains more than just "+" and "-" characters.')
+    return df
+
+
+
+def _validate_contig_cols(df, fix=False):
+    """
+    Validates 'contig' columns in a given dataframe. Column must contain strings having no whitespace.
+    """
+    col = 'contig'
+    if col in df.columns:
+        if not all([type(s)==str for s in df[col]]):
+            raise SortSeqError('contig col contains non-string.')
+        if any([re.search('\s',s) for s in df[col]]):
+            if fix:
+                df.loc[:,col] =  [re.sub('\s','_',s) for s in df[col]]
+            else:
+                raise SortSeqError('Whitespace found in contig names; set fix=True to fix.')
+    return df
+
 
 def _validate_cts_cols(df, fix=False):
     """
@@ -555,6 +642,95 @@ def validate_dataset(df, fix=False):
         else:
             raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
 
+    return df
+
+
+
+# Validates sitelist dataframes
+def validate_sitelist(df, fix=False):
+    """ 
+    Validates the form of a sitelist dataframe. A sitelist dataframe must look something like this:
+
+     val      seq     left   right  ori   contig    
+    6.34    ACCAT   234321  234325    +     chr1    
+    5.03    ACCAT   453451  453455    +     chr1    
+    3.25    TCAGG    45623   45627    -     chr3    
+    
+    A 'val' column reports the value the model takes on the corresponding sequence. The 'seq(,_rna,_pro)' column reports the sequence of the site. Sites are sorted based on the 'val' column, if provided. 'left' indicates the left-most-character in the sequence contributing to the site, 'right' indicates the right-most character contributing to the site, 'ori' indicates the orientation of the model (can be +/- only for DNA seqs, otherwise is only +). 'contig' indicates the name of the sequence the site is found in.
+
+    Specifications:
+    0. The dataframe must have at least one row.
+    1. A 'val' column is optional and should appear first. Values must be finite floats. 
+    2. A 'seq', 'seq_rna', or 'seq_pro' column is mandatory. In each column, sequences must conform to unambiguous DNA, RNA, or protein alphabets and must be all be of the same length. 
+    3. A 'left' column is mandatory and must contain nonnegative integers. 
+    3. A 'right' column is mandatory and must contain nonnegative integers.
+    4. An 'ori' column is mandatory and must contain '+' or '-' characters.
+    5. 'contig' column is mandatory. Contains a short string, which cannot have any spaces.
+ 
+
+    Arguments:
+        df (pd.DataFrame): Dataset in dataframe format
+        fix (bool): A flag saying whether to fix the dataframe into shape if possible.
+
+    Returns:
+        if fix=True:
+            df_valid: a valid dataframe that has been fixed by the function
+        if fix=False:
+            Nothing
+
+    Function:
+        Raises a TyepError if the data frame violates the specifications (if fix=False) or if these violations cannot be fixed (fix=True).
+    """
+
+    # Verify dataframe has at least one row and one column
+    if not df.shape[0] >= 1:
+        raise SortSeqError('Dataframe must contain at least one row')
+
+    # Validate column names
+    for col in df.columns:
+        if not is_col_type(col,['val','seqs','lr','ori','contig']):
+            raise SortSeqError('Invalid column in dataframe: %s'%col)
+
+    # Validate mandatory columns
+    for col in ['val','left','right','ori','contig']:
+        if not col in df.columns:
+            raise SortSeqError('%s column not found in sitelist'%col)
+
+    # Validate contents of columns
+    df = _validate_cols(df,fix=fix)
+
+    # Validate column order
+    val_cols = get_cols_from_df(df,'val')
+    seq_cols = get_cols_from_df(df,'seqs')
+    lr_cols = get_cols_from_df(df,'lr')
+    ori_cols = get_cols_from_df(df,'ori')
+    contig_cols = get_cols_from_df(df,'contig')
+
+    # Make sure ori column doesn't contain '-' if seqtype is seq_rna or seq_pro
+    if not len(seq_cols)==1:
+        raise SortSeqError(\
+            'Invalid number=%d of "seqs" columns in sitelist.'%len(seq_cols))
+    seq_col = seq_cols[0]
+    if seq_col=='seq_rna' or seq_col=='seq_pro':
+        if any(s=='-' for s in df['ori']):
+            raise SortSeqError('ori cannot be "-" for seqtype %s'%seq_col)
+
+    # Make sure left and right positions are compatible with sequence length
+    seq_lengths_obs = np.array([len(s) for s in df[seq_col]])
+    seq_lengths_calc = df['right'].values - df['left'].values + 1
+    if not np.array_equal(seq_lengths_obs,seq_lengths_calc):
+        raise SortSeqError(\
+            '%s lengths are not consistent with "left" and "right" cols.'\
+            %seq_col)
+
+
+    # Arrange columns in the correct order
+    new_cols = val_cols + seq_cols + lr_cols + ori_cols + contig_cols
+    if not all(df.columns == new_cols):
+        if fix:
+            df = df[new_cols]
+        else:
+            raise SortSeqError('Dataframe columns are in the wrong order; set fix=True to fix.')
     return df
 
 
