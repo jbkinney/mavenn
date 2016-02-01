@@ -205,7 +205,7 @@ def alt4(df, coarse_graining_level = 0.01):
     cts_grouped = sp.zeros([n_groups,n_batches])
     group_num = 0
     frac_empty = 1.0
-    
+    df.to_csv(open('test_6','w'))
     # Sort rows based on 'val' column 
     tmp_df = df.copy(binheaders+['val'])
     tmp_df.sort(columns='val',inplace=True)
@@ -220,20 +220,20 @@ def alt4(df, coarse_graining_level = 0.01):
         tmp_df['coarse_val'] = coarse_vals
         grouped = tmp_df.groupby('coarse_val')
         grouped_tmp_df = grouped.aggregate(np.sum)
-
+    with open('test_error_4','w') as f:
+         np.savetxt(f,grouped_tmp_df)
     # Get ct_xxx columns
     ct_df = grouped_tmp_df[binheaders].astype(float)
     cts_per_group = ct_df.sum(axis=0).sum()/n_groups
-
     # Histogram counts in groups. This is a bit tricky
     group_vec = np.zeros(n_batches)
     for i,row in ct_df.iterrows():
         row_ct_tot = row.sum()
         row_ct_vec = row.values
-        row_frac_vec = row_ct_vec/row_ct_tot
+        row_frac_vec = row_ct_vec/row_ct_tot 
 
         while row_ct_tot >= cts_per_group*frac_empty:
-            group_vec += row_frac_vec*(cts_per_group*frac_empty)
+            group_vec = group_vec + row_frac_vec*(cts_per_group*frac_empty)
             row_ct_tot -= cts_per_group*frac_empty
 
             # Only do once per group_num
@@ -244,7 +244,9 @@ def alt4(df, coarse_graining_level = 0.01):
             frac_empty = 1.0
             group_vec[:] = 0.0
 
+        
         group_vec += row_frac_vec*row_ct_tot
+        
         frac_empty -= row_ct_tot/cts_per_group
     if group_num == n_groups-1:
         cts_grouped[group_num,:] = group_vec.copy()
@@ -253,9 +255,13 @@ def alt4(df, coarse_graining_level = 0.01):
     else:
         raise TypeError(\
             'group_num=%d does not match n_groups=%s'%(group_num,n_groups))
-
+    with open('test_error_3','w') as f:
+         np.savetxt(f,cts_grouped)
     # Smooth empirical distribution with gaussian KDE
     f_reg = scipy.ndimage.gaussian_filter1d(cts_grouped,0.04*n_groups,axis=0)
+
+    with open('test_error_2','w') as f:
+         np.savetxt(f,f_reg)
 
     # Return mutual information
     return info.mutualinfo(f_reg)

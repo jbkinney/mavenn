@@ -42,7 +42,7 @@ df_copy = df.copy()
 #profile learn_matrix lm=LS
 stats_fn = 'profile/Profile_learn_matrix_LS_mpra'
 stats_fn_hr = 'profile/Profile_learn_matrix_LS_hr_mpra'
-cProfile.run('''learn_matrix.main(df_copy,'dna','LS')''',stats_fn)
+cProfile.run('''learn_matrix.main(df_copy,'LS')''',stats_fn)
 
 #Reformat and print to human readable profile
 p = pstats.Stats(stats_fn,stream=open(stats_fn_hr,'w'))
@@ -62,7 +62,7 @@ df_copy = df.copy()
 #profile learn_matrix lm=IM
 stats_fn = 'profile/Profile_learn_matrix_IM_mpra'
 stats_fn_hr = 'profile/Profile_learn_matrix_IM_hr_mpra'
-cProfile.run('''learn_matrix.main(df_copy,'dna','memsaver',iteration=5,initialize='Rand',burnin=0)''',stats_fn)
+cProfile.run('''learn_matrix.main(df_copy,lm='memsaver',iteration=50,initialize='Rand',burnin=0)''',stats_fn)
 
 #Reformat and print to human readable profile
 p = pstats.Stats(stats_fn,stream=open(stats_fn_hr,'w'))

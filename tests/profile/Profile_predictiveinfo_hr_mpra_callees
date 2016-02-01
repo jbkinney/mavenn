@@ -2,240 +2,214 @@
 
 Function                                                      called...
                                                                   ncalls  tottime  cumtime
-<string>:1(<module>)                                          ->       1    0.476  169.472  predictiveinfo.py:20(main)
-predictiveinfo.py:20(main)                                    ->      16    0.605  157.335  EstimateMutualInfoforMImax.py:111(alt2)
-                                                                     112    0.001    0.509  frame.py:1774(__getitem__)
-                                                                      32    0.000    0.084  frame.py:2114(__setitem__)
-                                                                      31    0.000    0.716  frame.py:2630(reset_index)
-                                                                      16    0.000    0.176  frame.py:2881(sort)
+<string>:1(<module>)                                          ->       1    0.542   63.122  predictiveinfo.py:20(main)
+predictiveinfo.py:20(main)                                    ->      16    2.081   47.774  EstimateMutualInfoforMImax.py:111(alt2)
+                                                                     112    0.001    0.907  frame.py:1774(__getitem__)
+                                                                      32    0.000    0.108  frame.py:2114(__setitem__)
+                                                                      31    0.005    0.865  frame.py:2630(reset_index)
+                                                                      16    0.015    0.365  frame.py:2881(sort)
                                                                       16    0.000    0.000  fromnumeric.py:495(transpose)
-                                                                  228837    0.274    1.480  fromnumeric.py:1631(sum)
-                                                                       1    0.000    0.006  fromnumeric.py:2737(std)
-                                                                      15    0.030    0.803  generic.py:1955(sample)
-                                                                      32    0.024    0.116  generic.py:2135(__getattr__)
-                                                                       1    0.017    0.476  generic.py:2414(copy)
+                                                                  228837    0.291    1.558  fromnumeric.py:1631(sum)
+                                                                       1    0.000    0.000  fromnumeric.py:2737(std)
+                                                                      15    0.026    0.919  generic.py:1955(sample)
+                                                                      32    0.016    0.096  generic.py:2135(__getattr__)
+                                                                       1    0.115    2.234  generic.py:2414(copy)
                                                                       16    0.000    0.000  index.py:1045(__contains__)
-                                                                      32    0.001    0.196  ops.py:574(wrapper)
-                                                                      16    0.000    0.188  ops.py:884(f)
-                                                                      15    1.376   28.481  predictiveinfo.py:20(main)
-                                                                      16    0.000    0.046  series.py:519(__getitem__)
-                                                                      16    0.013    0.013  series.py:1003(__iter__)
-                                                                      16    0.008    0.075  series.py:2020(apply)
-                                                                      16    0.013    0.013  utils.py:86(choose_dict)
-                                                                      16    0.003    0.004  utils.py:106(get_column_headers)
-                                                                  228837    4.942    5.360  utils.py:403(seq2mat)
+                                                                      32    0.024    0.166  ops.py:574(wrapper)
+                                                                      16    0.000    0.231  ops.py:884(f)
+                                                                      15    1.680   29.753  predictiveinfo.py:20(main)
+                                                                      16    0.000    0.074  series.py:519(__getitem__)
+                                                                      16    0.000    0.000  series.py:1003(__iter__)
+                                                                      16    0.012    0.146  series.py:2020(apply)
+                                                                      16    0.000    0.000  utils.py:87(choose_dict)
+                                                                      16    0.000    0.012  utils.py:110(get_column_headers)
+                                                                  228837    4.993    5.430  utils.py:407(seq2mat)
                                                                       63    0.000    0.000  {len}
-                                                                      16    0.000    0.025  {numpy.core.multiarray.array}
+                                                                      16    0.000    0.014  {numpy.core.multiarray.array}
                                                                       17    0.000    0.000  {numpy.core.multiarray.zeros}
                                                                       17    0.000    0.000  {range}
-EstimateMutualInfoforMImax.py:111(alt2)                       ->      16    0.072    0.336  filters.py:180(gaussian_filter1d)
-                                                                      32    0.000    0.033  frame.py:1774(__getitem__)
-                                                                      16    0.000    8.762  fromnumeric.py:350(repeat)
-                                                                      32    0.045    0.046  fromnumeric.py:1631(sum)
-                                                                      16    0.211    0.328  function_base.py:9(linspace)
-                                                                   32000    0.090    0.664  scimath.py:346(log2)
-                                                                      16    0.000    0.000  utils.py:106(get_column_headers)
+EstimateMutualInfoforMImax.py:111(alt2)                       ->      16    0.364    1.305  filters.py:180(gaussian_filter1d)
+                                                                      32    0.000    0.028  frame.py:1774(__getitem__)
+                                                                      16    0.000    8.718  fromnumeric.py:350(repeat)
+                                                                      32    0.072    0.100  fromnumeric.py:1631(sum)
+                                                                      16    0.697    1.128  function_base.py:9(linspace)
+                                                                   32000    0.102    0.897  scimath.py:346(log2)
+                                                                      16    0.000    0.000  utils.py:110(get_column_headers)
                                                                       32    0.000    0.000  {len}
-                                                                      16  146.536  146.536  {method 'cumsum' of 'numpy.ndarray' objects}
-                                                                      16    0.020    0.023  {method 'sum' of 'numpy.ndarray' objects}
+                                                                      16   33.388   33.388  {method 'cumsum' of 'numpy.ndarray' objects}
+                                                                      16    0.104    0.128  {method 'sum' of 'numpy.ndarray' objects}
                                                                       32    0.001    0.001  {numpy.core.multiarray.array}
                                                                       48    0.001    0.001  {range}
 {method 'cumsum' of 'numpy.ndarray' objects}                  ->
-fromnumeric.py:350(repeat)                                    ->      16    8.762    8.762  {method 'repeat' of 'numpy.ndarray' objects}
+fromnumeric.py:350(repeat)                                    ->      16    8.718    8.718  {method 'repeat' of 'numpy.ndarray' objects}
 {method 'repeat' of 'numpy.ndarray' objects}                  ->
-utils.py:403(seq2mat)                                         ->  457674    0.050    0.050  {len}
-                                                                  228837    0.367    0.367  {numpy.core.multiarray.zeros}
-fromnumeric.py:1631(sum)                                      ->  228869    0.087    1.052  _methods.py:31(_sum)
-                                                                  228869    0.155    0.155  {isinstance}
-{method 'reduce' of 'numpy.ufunc' objects}                    ->
-_methods.py:31(_sum)                                          ->  228885    0.966    0.966  {method 'reduce' of 'numpy.ufunc' objects}
+utils.py:407(seq2mat)                                         ->  457674    0.051    0.051  {len}
+                                                                  228837    0.386    0.386  {numpy.core.multiarray.zeros}
+generic.py:2414(copy)                                         ->       1    0.000    0.000  frame.py:189(_constructor)
+                                                                       1    0.008    0.008  frame.py:200(__init__)
+                                                                       1    0.000    0.000  generic.py:2118(__finalize__)
+                                                                       1    0.231    2.110  internals.py:2674(copy)
+internals.py:2674(copy)                                       ->       1    0.043    0.948  internals.py:2396(apply)
+                                                                       2    0.253    0.931  internals.py:2694(<lambda>)
+fromnumeric.py:1631(sum)                                      ->  228869    0.086    1.129  _methods.py:31(_sum)
+                                                                  228869    0.165    0.165  {isinstance}
+filters.py:180(gaussian_filter1d)                             ->      16    0.347    0.727  filters.py:110(correlate1d)
+                                                                    2560    0.033    0.033  {math.exp}
+                                                                      48    0.182    0.182  {range}
 generic.py:1339(take)                                         ->      95    0.000    0.000  frame.py:189(_constructor)
-                                                                      95    0.001    0.001  frame.py:200(__init__)
+                                                                      95    0.036    0.036  frame.py:200(__init__)
                                                                      190    0.000    0.001  generic.py:318(_get_axis)
                                                                       95    0.000    0.000  generic.py:322(_get_block_manager_axis)
-                                                                      64    0.017    0.017  generic.py:1199(_set_is_copy)
+                                                                      64    0.007    0.007  generic.py:1199(_set_is_copy)
                                                                       95    0.000    0.000  generic.py:2118(__finalize__)
-                                                                      95    0.000    0.347  generic.py:2197(_consolidate_inplace)
+                                                                      95    0.006    0.476  generic.py:2197(_consolidate_inplace)
                                                                       48    0.000    0.001  index.py:1233(equals)
-                                                                      47    0.001    0.023  index.py:3434(equals)
-                                                                      95    0.025    0.475  internals.py:3255(take)
-generic.py:1955(sample)                                       ->      15    0.212    0.212  common.py:3352(_random_state)
-                                                                      15    0.000    0.000  frame.py:418(shape)
-                                                                      15    0.026    0.026  generic.py:292(_get_axis_number)
-                                                                      15    0.011    0.403  generic.py:1339(take)
-                                                                      15    0.087    0.132  {method 'choice' of 'mtrand.RandomState' objects}
-frame.py:2630(reset_index)                                    ->      31    0.000    0.597  frame.py:2213(insert)
-                                                                      31    0.019    0.019  frame.py:2666(_maybe_casted_values)
-                                                                      31    0.000    0.089  generic.py:702(__contains__)
-                                                                      31    0.000    0.009  generic.py:2152(__setattr__)
-                                                                      62    0.000    0.000  {isinstance}
-                                                                      31    0.000    0.000  {len}
-                                                                      31    0.001    0.001  {numpy.core.multiarray.arange}
-scimath.py:346(log2)                                          ->   32000    0.108    0.574  scimath.py:97(_fix_real_lt_zero)
-frame.py:1774(__getitem__)                                    ->     144    0.000    0.100  frame.py:1799(_getitem_column)
-                                                                      80    0.001    0.535  frame.py:1816(_getitem_array)
-                                                                     224    0.001    0.001  index.py:1045(__contains__)
+                                                                      47    0.022    0.044  index.py:3434(equals)
+                                                                      95    0.029    0.679  internals.py:3255(take)
+{method 'reduce' of 'numpy.ufunc' objects}                    ->
+_methods.py:31(_sum)                                          ->  228885    1.057    1.057  {method 'reduce' of 'numpy.ufunc' objects}
+function_base.py:9(linspace)                                  ->      16    0.000    0.000  {method 'astype' of 'numpy.ndarray' objects}
+                                                                      16    0.430    0.430  {numpy.core.multiarray.arange}
+frame.py:1774(__getitem__)                                    ->     144    0.000    0.096  frame.py:1799(_getitem_column)
+                                                                      80    0.001    0.885  frame.py:1816(_getitem_array)
+                                                                     224    0.001    0.044  index.py:1045(__contains__)
                                                                       80    0.000    0.000  indexing.py:1612(convert_to_index_sliceable)
                                                                      304    0.000    0.000  {isinstance}
-internals.py:3255(take)                                       ->     111    0.038    0.094  index.py:1148(take)
-                                                                      95    0.007    0.009  indexing.py:1695(maybe_convert_indices)
-                                                                     111    0.000    0.001  internals.py:2204(shape)
+internals.py:3255(take)                                       ->     111    0.008    0.141  index.py:1148(take)
+                                                                      95    0.016    0.018  indexing.py:1695(maybe_convert_indices)
+                                                                     111    0.001    0.025  internals.py:2204(shape)
                                                                      111    0.000    0.000  internals.py:2837(_consolidate_inplace)
-                                                                     111    0.001    0.497  internals.py:3124(reindex_indexer)
+                                                                     111    0.009    0.758  internals.py:3124(reindex_indexer)
                                                                      111    0.000    0.000  numeric.py:464(asanyarray)
                                                                      111    0.000    0.000  {isinstance}
                                                                       95    0.000    0.001  {method 'any' of 'numpy.ndarray' objects}
-frame.py:2213(insert)                                         ->      31    0.000    0.000  frame.py:2164(_ensure_valid_index)
-                                                                      31    0.093    0.158  frame.py:2315(_sanitize_column)
-                                                                      31    0.018    0.439  internals.py:3060(insert)
-scimath.py:97(_fix_real_lt_zero)                              ->   32000    0.032    0.218  fromnumeric.py:1772(any)
-                                                                   32000    0.018    0.058  numeric.py:394(asarray)
-                                                                   32000    0.134    0.189  type_check.py:207(isreal)
-frame.py:1816(_getitem_array)                                 ->      80    0.015    0.016  common.py:2121(is_bool_indexer)
-                                                                      48    0.009    0.018  generic.py:1046(_indexer)
-                                                                      80    0.001    0.474  generic.py:1339(take)
-                                                                      32    0.000    0.000  index.py:3434(equals)
-                                                                      48    0.001    0.025  indexing.py:1007(_convert_to_indexer)
-                                                                      32    0.000    0.001  indexing.py:1648(check_bool_indexer)
-                                                                      32    0.000    0.000  {isinstance}
-                                                                      64    0.000    0.000  {len}
-                                                                      32    0.000    0.000  {method 'nonzero' of 'numpy.ndarray' objects}
-internals.py:3124(reindex_indexer)                            ->     187    0.000    0.000  internals.py:115(fill_value)
-                                                                     187    0.027    0.319  internals.py:845(take_nd)
-                                                                     111    0.011    0.111  internals.py:2163(__init__)
-                                                                     111    0.000    0.000  internals.py:2208(ndim)
-                                                                     111    0.000    0.000  internals.py:2837(_consolidate_inplace)
-                                                                      48    0.001    0.066  internals.py:3168(_slice_take_blocks_ax0)
-generic.py:2414(copy)                                         ->       1    0.000    0.000  frame.py:189(_constructor)
-                                                                       1    0.026    0.026  frame.py:200(__init__)
-                                                                       1    0.000    0.000  generic.py:2118(__finalize__)
-                                                                       1    0.030    0.433  internals.py:2674(copy)
-internals.py:3060(insert)                                     ->      62    0.024    0.025  function_base.py:3625(insert)
-                                                                       2    0.000    0.000  function_base.py:3832(append)
-                                                                      32    0.000    0.000  index.py:1045(__contains__)
-                                                                      32    0.010    0.275  index.py:2531(insert)
-                                                                     186    0.000    0.000  internals.py:119(mgr_locs)
-                                                                      93    0.000    0.000  internals.py:141(mgr_locs)
-                                                                      32    0.000    0.000  internals.py:2073(make_block)
-                                                                      32    0.000    0.000  internals.py:2208(ndim)
-                                                                      64    0.000    0.000  internals.py:2279(_get_items)
-                                                                      32    0.033    0.121  internals.py:4450(_fast_count_smallints)
-                                                                      32    0.000    0.000  {isinstance}
-                                                                     157    0.000    0.000  {len}
-                                                                      93    0.000    0.000  {method 'add' of 'pandas.lib.BlockPlacement' objects}
-internals.py:2674(copy)                                       ->       1    0.035    0.208  internals.py:2396(apply)
-                                                                       2    0.050    0.195  internals.py:2694(<lambda>)
-{numpy.core.multiarray.zeros}                                 ->
-common.py:756(take_nd)                                        ->     331    0.015    0.046  common.py:724(_get_take_nd_function)
-                                                                     283    0.031    0.047  common.py:1105(_maybe_promote)
-                                                                     331    0.000    0.000  {len}
-                                                                      63    0.000    0.001  {method 'any' of 'numpy.ndarray' objects}
-                                                                     331    0.044    0.044  {numpy.core.multiarray.empty}
-                                                                     662    0.013    0.013  {pandas.algos.ensure_int64}
-                                                                      96    0.038    0.038  {pandas.algos.take_1d_int64_int64}
-                                                                      32    0.020    0.020  {pandas.algos.take_2d_axis0_float64_float64}
-                                                                      16    0.001    0.001  {pandas.algos.take_2d_axis0_int64_int64}
-                                                                      61    0.002    0.002  {pandas.algos.take_2d_axis1_float64_float64}
-                                                                      63    0.106    0.106  {pandas.algos.take_2d_axis1_int64_int64}
-                                                                      63    0.014    0.014  {pandas.algos.take_2d_axis1_object_object}
-generic.py:2197(_consolidate_inplace)                         ->     143    0.000    0.347  generic.py:2189(_protect_consolidate)
-generic.py:2189(_protect_consolidate)                         ->      47    0.000    0.000  generic.py:1172(_clear_item_cache)
-                                                                     143    0.000    0.347  generic.py:2199(f)
-                                                                     286    0.000    0.000  {len}
-generic.py:2199(f)                                            ->     143    0.001    0.001  generic.py:2152(__setattr__)
-                                                                     143    0.000    0.346  internals.py:2821(consolidate)
-internals.py:2821(consolidate)                                ->      47    0.000    0.005  internals.py:2163(__init__)
-                                                                     143    0.000    0.001  internals.py:2560(is_consolidated)
-                                                                      47    0.000    0.340  internals.py:2837(_consolidate_inplace)
-internals.py:845(take_nd)                                     ->     235    0.019    0.312  common.py:756(take_nd)
-                                                                      48    0.000    0.000  internals.py:115(fill_value)
-                                                                     187    0.000    0.000  internals.py:119(mgr_locs)
-                                                                     235    0.000    0.002  internals.py:128(make_block_same_class)
-                                                                     235    0.000    0.000  internals.py:228(dtype)
-                                                                     235    0.000    0.000  internals.py:874(get_values)
-internals.py:2837(_consolidate_inplace)                       ->      47    0.001    0.003  internals.py:2258(_rebuild_blknos_and_blklocs)
-                                                                     286    0.000    0.000  internals.py:2560(is_consolidated)
-                                                                      47    0.031    0.337  internals.py:3809(_consolidate)
-internals.py:3809(_consolidate)                               ->     204    0.000    0.000  internals.py:3815(<lambda>)
-                                                                     141    0.058    0.284  internals.py:3830(_merge_blocks)
-                                                                     141    0.000    0.000  {isinstance}
-                                                                     141    0.000    0.000  {method 'append' of 'list' objects}
-                                                                      47    0.000    0.021  {sorted}
-filters.py:180(gaussian_filter1d)                             ->      16    0.117    0.242  filters.py:110(correlate1d)
-                                                                    2560    0.021    0.021  {math.exp}
-                                                                      48    0.000    0.000  {range}
-function_base.py:9(linspace)                                  ->      16    0.000    0.000  {method 'astype' of 'numpy.ndarray' objects}
-                                                                      16    0.117    0.117  {numpy.core.multiarray.arange}
-internals.py:3830(_merge_blocks)                              ->      47    0.000    0.000  fromnumeric.py:803(argsort)
-                                                                     110    0.000    0.000  internals.py:119(mgr_locs)
-                                                                      47    0.000    0.002  internals.py:2073(make_block)
-                                                                      47    0.000    0.224  internals.py:3866(_vstack)
-                                                                     141    0.000    0.000  {len}
-                                                                      47    0.000    0.000  {numpy.core.multiarray.concatenate}
-index.py:109(__new__)                                         ->     112    0.040    0.116  common.py:2347(_asarray_tuplesafe)
-                                                                      80    0.000    0.000  common.py:2557(is_bool_dtype)
-                                                                     224    0.001    0.001  common.py:2569(is_categorical_dtype)
-                                                                     112    0.000    0.001  index.py:204(_simple_new)
-                                                                      31    0.000    0.009  index.py:3385(__new__)
-                                                                      32    0.000    0.000  numeric.py:1910(isscalar)
-                                                                      32    0.000    0.000  {hasattr}
-                                                                     318    0.005    0.040  {isinstance}
-                                                                     493    0.000    0.000  {issubclass}
-                                                                      80    0.056    0.056  {pandas.lib.infer_dtype}
-                                                                      32    0.009    0.009  {sorted}
-index.py:2531(insert)                                         ->      64    0.043    0.264  index.py:109(__new__)
-                                                                      18    0.000    0.000  index.py:258(dtype)
-                                                                      32    0.000    0.000  index.py:263(values)
-                                                                      32    0.000    0.000  numeric.py:394(asarray)
-                                                                      32    0.000    0.000  {numpy.core.multiarray.concatenate}
-filters.py:110(correlate1d)                                   ->      16    0.009    0.009  _ni_support.py:38(_extend_mode_to_code)
-                                                                      16    0.014    0.015  _ni_support.py:70(_get_output)
-                                                                      16    0.015    0.015  _ni_support.py:90(_check_axis)
-                                                                      32    0.040    0.054  numeric.py:394(asarray)
-                                                                      16    0.026    0.026  type_check.py:237(iscomplexobj)
-                                                                      48    0.000    0.000  {len}
-                                                                      16    0.005    0.005  {scipy.ndimage._nd_image.correlate1d}
-{isinstance}                                                  ->     640    0.036    0.036  common.py:70(_check)
-internals.py:3866(_vstack)                                    ->      47    0.000    0.224  shape_base.py:179(vstack)
-shape_base.py:179(vstack)                                     ->     110    0.000    0.001  shape_base.py:60(atleast_2d)
-                                                                      47    0.223    0.223  {numpy.core.multiarray.concatenate}
-{numpy.core.multiarray.concatenate}                           ->
-fromnumeric.py:1772(any)                                      ->   32000    0.019    0.057  numeric.py:464(asanyarray)
-                                                                   32000    0.017    0.129  {method 'any' of 'numpy.ndarray' objects}
-common.py:3352(_random_state)                                 ->      15    0.000    0.000  {isinstance}
-                                                                      15    0.000    0.000  {pandas.lib.is_integer}
-internals.py:2396(apply)                                      ->       3    0.029    0.118  internals.py:504(copy)
-                                                                       1    0.020    0.055  internals.py:2163(__init__)
+internals.py:2396(apply)                                      ->       3    0.063    0.728  internals.py:504(copy)
+                                                                       1    0.025    0.177  internals.py:2163(__init__)
                                                                        1    0.000    0.000  internals.py:2442(<genexpr>)
                                                                        1    0.000    0.000  internals.py:2837(_consolidate_inplace)
                                                                        3    0.000    0.000  {getattr}
                                                                        3    0.000    0.000  {isinstance}
                                                                        1    0.000    0.000  {len}
                                                                        3    0.000    0.000  {method 'append' of 'list' objects}
-ops.py:574(wrapper)                                           ->      32    0.000    0.113  common.py:212(isnull)
-                                                                      32    0.000    0.000  common.py:2569(is_categorical_dtype)
-                                                                      32    0.000    0.030  generic.py:4294(logical_func)
-                                                                      32    0.000    0.000  numeric.py:1910(isscalar)
-                                                                      32    0.001    0.001  ops.py:543(na_op)
-                                                                      32    0.000    0.038  series.py:119(__init__)
-                                                                      32    0.013    0.013  series.py:319(get_values)
-                                                                     128    0.000    0.000  {isinstance}
-                                                                      32    0.000    0.000  {issubclass}
-                                                                      32    0.000    0.000  {pandas.index.convert_scalar}
-                                                                      64    0.000    0.000  {pandas.lib.values_from_object}
-internals.py:2694(<lambda>)                                   ->       2    0.024    0.145  index.py:331(view)
-type_check.py:207(isreal)                                     ->   32000    0.018    0.055  type_check.py:141(imag)
-ops.py:884(f)                                                 ->      16    0.000    0.188  frame.py:3175(_combine_series)
+internals.py:2694(<lambda>)                                   ->       2    0.126    0.678  index.py:331(view)
+generic.py:1955(sample)                                       ->      15    0.164    0.164  common.py:3352(_random_state)
+                                                                      15    0.000    0.000  frame.py:418(shape)
+                                                                      15    0.025    0.025  generic.py:292(_get_axis_number)
+                                                                      15    0.043    0.471  generic.py:1339(take)
+                                                                      15    0.142    0.232  {method 'choice' of 'mtrand.RandomState' objects}
+scimath.py:346(log2)                                          ->   32000    0.112    0.795  scimath.py:97(_fix_real_lt_zero)
+frame.py:1816(_getitem_array)                                 ->      80    0.007    0.008  common.py:2121(is_bool_indexer)
+                                                                      48    0.005    0.015  generic.py:1046(_indexer)
+                                                                      80    0.001    0.816  generic.py:1339(take)
+                                                                      32    0.000    0.000  index.py:3434(equals)
+                                                                      48    0.001    0.043  indexing.py:1007(_convert_to_indexer)
+                                                                      32    0.000    0.001  indexing.py:1648(check_bool_indexer)
                                                                       32    0.000    0.000  {isinstance}
-frame.py:3175(_combine_series)                                ->      16    0.000    0.188  frame.py:3205(_combine_match_index)
-                                                                      16    0.000    0.000  generic.py:305(_get_axis_name)
-frame.py:3205(_combine_match_index)                           ->      16    0.000    0.000  frame.py:189(_constructor)
-                                                                      16    0.000    0.004  frame.py:200(__init__)
-                                                                      16    0.000    0.000  generic.py:2309(values)
-                                                                      16    0.014    0.015  generic.py:3334(align)
-                                                                      16    0.017    0.169  ops.py:811(na_op)
-                                                                      16    0.000    0.000  series.py:308(values)
-frame.py:2881(sort)                                           ->      16    0.000    0.176  frame.py:2917(sort_index)
+                                                                      64    0.000    0.000  {len}
+                                                                      32    0.000    0.000  {method 'nonzero' of 'numpy.ndarray' objects}
+frame.py:2630(reset_index)                                    ->      31    0.000    0.650  frame.py:2213(insert)
+                                                                      31    0.014    0.015  frame.py:2666(_maybe_casted_values)
+                                                                      31    0.000    0.127  generic.py:702(__contains__)
+                                                                      31    0.000    0.059  generic.py:2152(__setattr__)
+                                                                      62    0.000    0.000  {isinstance}
+                                                                      31    0.010    0.010  {len}
+                                                                      31    0.001    0.001  {numpy.core.multiarray.arange}
+scimath.py:97(_fix_real_lt_zero)                              ->   32000    0.034    0.323  fromnumeric.py:1772(any)
+                                                                   32000    0.018    0.060  numeric.py:394(asarray)
+                                                                   32000    0.175    0.299  type_check.py:207(isreal)
+internals.py:3124(reindex_indexer)                            ->     187    0.000    0.000  internals.py:115(fill_value)
+                                                                     187    0.016    0.447  internals.py:845(take_nd)
+                                                                     111    0.020    0.210  internals.py:2163(__init__)
+                                                                     111    0.000    0.000  internals.py:2208(ndim)
+                                                                     111    0.000    0.000  internals.py:2837(_consolidate_inplace)
+                                                                      48    0.007    0.092  internals.py:3168(_slice_take_blocks_ax0)
+internals.py:504(copy)                                        ->       3    0.000    0.000  internals.py:119(mgr_locs)
+                                                                       3    0.039    0.114  internals.py:2073(make_block)
+                                                                       3    0.550    0.550  {method 'copy' of 'numpy.ndarray' objects}
+filters.py:110(correlate1d)                                   ->      16    0.000    0.000  _ni_support.py:38(_extend_mode_to_code)
+                                                                      16    0.012    0.024  _ni_support.py:70(_get_output)
+                                                                      16    0.000    0.000  _ni_support.py:90(_check_axis)
+                                                                      32    0.078    0.253  numeric.py:394(asarray)
+                                                                      16    0.054    0.082  type_check.py:237(iscomplexobj)
+                                                                      48    0.000    0.000  {len}
+                                                                      16    0.021    0.021  {scipy.ndimage._nd_image.correlate1d}
+index.py:331(view)                                            ->       2    0.196    0.553  index.py:343(_shallow_copy)
+                                                                       2    0.000    0.000  {isinstance}
+frame.py:2213(insert)                                         ->      31    0.000    0.000  frame.py:2164(_ensure_valid_index)
+                                                                      31    0.121    0.144  frame.py:2315(_sanitize_column)
+                                                                      31    0.034    0.505  internals.py:3060(insert)
+index.py:343(_shallow_copy)                                   ->     113    0.149    0.242  index.py:204(_simple_new)
+                                                                       2    0.043    0.043  index.py:263(values)
+                                                                     113    0.084    0.084  index.py:327(_get_attributes_dict)
+                                                                     113    0.000    0.000  {method 'update' of 'dict' objects}
+{method 'copy' of 'numpy.ndarray' objects}                    ->
+common.py:756(take_nd)                                        ->     331    0.018    0.023  common.py:724(_get_take_nd_function)
+                                                                     283    0.035    0.050  common.py:1105(_maybe_promote)
+                                                                     331    0.000    0.000  {len}
+                                                                      63    0.000    0.001  {method 'any' of 'numpy.ndarray' objects}
+                                                                     331    0.109    0.109  {numpy.core.multiarray.empty}
+                                                                     662    0.017    0.017  {pandas.algos.ensure_int64}
+                                                                      96    0.048    0.048  {pandas.algos.take_1d_int64_int64}
+                                                                      32    0.029    0.029  {pandas.algos.take_2d_axis0_float64_float64}
+                                                                      16    0.001    0.001  {pandas.algos.take_2d_axis0_int64_int64}
+                                                                      61    0.028    0.028  {pandas.algos.take_2d_axis1_float64_float64}
+                                                                      63    0.150    0.150  {pandas.algos.take_2d_axis1_int64_int64}
+                                                                      63    0.016    0.016  {pandas.algos.take_2d_axis1_object_object}
+internals.py:3060(insert)                                     ->      62    0.050    0.078  function_base.py:3625(insert)
+                                                                       2    0.000    0.000  function_base.py:3832(append)
+                                                                      32    0.000    0.000  index.py:1045(__contains__)
+                                                                      32    0.015    0.174  index.py:2531(insert)
+                                                                     186    0.000    0.000  internals.py:119(mgr_locs)
+                                                                      93    0.000    0.000  internals.py:141(mgr_locs)
+                                                                      32    0.000    0.000  internals.py:2073(make_block)
+                                                                      32    0.000    0.000  internals.py:2208(ndim)
+                                                                      64    0.000    0.000  internals.py:2279(_get_items)
+                                                                      32    0.029    0.218  internals.py:4450(_fast_count_smallints)
+                                                                      32    0.000    0.000  {isinstance}
+                                                                     157    0.000    0.000  {len}
+                                                                      93    0.000    0.000  {method 'add' of 'pandas.lib.BlockPlacement' objects}
+internals.py:845(take_nd)                                     ->     235    0.039    0.460  common.py:756(take_nd)
+                                                                      48    0.000    0.000  internals.py:115(fill_value)
+                                                                     187    0.000    0.000  internals.py:119(mgr_locs)
+                                                                     235    0.001    0.003  internals.py:128(make_block_same_class)
+                                                                     235    0.000    0.000  internals.py:228(dtype)
+                                                                     235    0.000    0.000  internals.py:874(get_values)
+generic.py:2197(_consolidate_inplace)                         ->     143    0.000    0.470  generic.py:2189(_protect_consolidate)
+generic.py:2189(_protect_consolidate)                         ->      47    0.000    0.009  generic.py:1172(_clear_item_cache)
+                                                                     143    0.000    0.460  generic.py:2199(f)
+                                                                     286    0.000    0.000  {len}
+generic.py:2199(f)                                            ->     143    0.001    0.001  generic.py:2152(__setattr__)
+                                                                     143    0.000    0.459  internals.py:2821(consolidate)
+internals.py:2821(consolidate)                                ->      47    0.000    0.014  internals.py:2163(__init__)
+                                                                     143    0.000    0.001  internals.py:2560(is_consolidated)
+                                                                      47    0.000    0.444  internals.py:2837(_consolidate_inplace)
+internals.py:2837(_consolidate_inplace)                       ->      47    0.011    0.013  internals.py:2258(_rebuild_blknos_and_blklocs)
+                                                                     286    0.000    0.000  internals.py:2560(is_consolidated)
+                                                                      47    0.031    0.430  internals.py:3809(_consolidate)
+{numpy.core.multiarray.arange}                                ->
+internals.py:3809(_consolidate)                               ->     204    0.000    0.000  internals.py:3815(<lambda>)
+                                                                     141    0.230    0.392  internals.py:3830(_merge_blocks)
+                                                                     141    0.000    0.000  {isinstance}
+                                                                     141    0.000    0.000  {method 'append' of 'list' objects}
+                                                                      47    0.000    0.007  {sorted}
+internals.py:2163(__init__)                                   ->     350    0.011    0.011  index.py:5677(_ensure_index)
+                                                                     458    0.000    0.000  internals.py:2208(ndim)
+                                                                     175    0.060    0.152  internals.py:2258(_rebuild_blknos_and_blklocs)
+                                                                     174    0.149    0.156  internals.py:2384(_verify_integrity)
+                                                                     175    0.014    0.038  internals.py:2568(_consolidate_check)
+{numpy.core.multiarray.zeros}                                 ->
+internals.py:3830(_merge_blocks)                              ->      47    0.000    0.000  fromnumeric.py:803(argsort)
+                                                                     110    0.000    0.000  internals.py:119(mgr_locs)
+                                                                      47    0.000    0.025  internals.py:2073(make_block)
+                                                                      47    0.000    0.137  internals.py:3866(_vstack)
+                                                                     141    0.000    0.000  {len}
+                                                                      47    0.000    0.000  {numpy.core.multiarray.concatenate}
+{numpy.core.multiarray.array}                                 ->      32    0.000    0.015  generic.py:739(__array__)
+                                                                     160    0.000    0.000  generic.py:2135(__getattr__)
+                                                                     143    0.000    0.000  index.py:248(__array__)
+                                                                      48    0.000    0.000  series.py:391(__array__)
+frame.py:2881(sort)                                           ->      16    0.030    0.349  frame.py:2917(sort_index)
+numeric.py:394(asarray)                                       ->   33098    0.230    0.231  {numpy.core.multiarray.array}
 frame.py:2917(sort_index)                                     ->      16    0.000    0.000  common.py:2644(is_sequence)
                                                                       16    0.000    0.000  frame.py:189(_constructor)
                                                                       16    0.000    0.000  frame.py:200(__init__)
@@ -244,116 +218,135 @@ frame.py:2917(sort_index)                                     ->      16    0.00
                                                                       16    0.000    0.000  generic.py:318(_get_axis)
                                                                       16    0.000    0.000  generic.py:322(_get_block_manager_axis)
                                                                       16    0.000    0.000  generic.py:2118(__finalize__)
-                                                                      16    0.006    0.022  groupby.py:3696(_nargsort)
-                                                                      16    0.000    0.152  internals.py:3255(take)
+                                                                      16    0.008    0.024  groupby.py:3696(_nargsort)
+                                                                      16    0.000    0.294  internals.py:3255(take)
                                                                       16    0.000    0.000  series.py:308(values)
                                                                       32    0.000    0.000  {isinstance}
                                                                       16    0.000    0.000  {len}
-internals.py:2163(__init__)                                   ->     350    0.010    0.010  index.py:5677(_ensure_index)
-                                                                     458    0.000    0.000  internals.py:2208(ndim)
-                                                                     175    0.005    0.029  internals.py:2258(_rebuild_blknos_and_blklocs)
-                                                                     174    0.092    0.094  internals.py:2384(_verify_integrity)
-                                                                     175    0.001    0.007  internals.py:2568(_consolidate_check)
-ops.py:811(na_op)                                             ->      16    0.009    0.009  common.py:1411(_fill_zeros)
-                                                                      16    0.000    0.142  expressions.py:199(evaluate)
-{numpy.core.multiarray.array}                                 ->      32    0.000    0.025  generic.py:739(__array__)
-                                                                     160    0.000    0.000  generic.py:2135(__getattr__)
-                                                                     143    0.000    0.000  index.py:248(__array__)
-                                                                      48    0.000    0.000  series.py:391(__array__)
-frame.py:2315(_sanitize_column)                               ->      47    0.000    0.008  common.py:2585(is_object_dtype)
-                                                                      47    0.034    0.034  common.py:2644(is_sequence)
+fromnumeric.py:1772(any)                                      ->   32000    0.019    0.058  numeric.py:464(asanyarray)
+                                                                   32000    0.053    0.231  {method 'any' of 'numpy.ndarray' objects}
+type_check.py:207(isreal)                                     ->   32000    0.032    0.125  type_check.py:141(imag)
+index.py:204(_simple_new)                                     ->     256    0.038    0.067  __init__.py:124(iteritems)
+                                                                     256    0.026    0.026  index.py:237(_reset_identity)
+                                                                     256    0.000    0.000  {built-in method __new__ of type object at 0x7f39ffe8abc0}
+                                                                     111    0.000    0.000  {setattr}
+{method 'any' of 'numpy.ndarray' objects}                     ->   32650    0.012    0.183  _methods.py:37(_any)
+{method 'choice' of 'mtrand.RandomState' objects}             ->      15    0.068    0.089  fromnumeric.py:2259(prod)
+ops.py:884(f)                                                 ->      16    0.000    0.231  frame.py:3175(_combine_series)
+                                                                      32    0.000    0.000  {isinstance}
+frame.py:3175(_combine_series)                                ->      16    0.013    0.231  frame.py:3205(_combine_match_index)
+                                                                      16    0.000    0.000  generic.py:305(_get_axis_name)
+frame.py:3205(_combine_match_index)                           ->      16    0.000    0.000  frame.py:189(_constructor)
+                                                                      16    0.000    0.004  frame.py:200(__init__)
+                                                                      16    0.000    0.000  generic.py:2309(values)
+                                                                      16    0.012    0.021  generic.py:3334(align)
+                                                                      16    0.033    0.193  ops.py:811(na_op)
+                                                                      16    0.000    0.000  series.py:308(values)
+index.py:109(__new__)                                         ->     112    0.030    0.093  common.py:2347(_asarray_tuplesafe)
+                                                                      80    0.000    0.000  common.py:2557(is_bool_dtype)
+                                                                     224    0.001    0.001  common.py:2569(is_categorical_dtype)
+                                                                     112    0.000    0.001  index.py:204(_simple_new)
+                                                                      31    0.021    0.021  index.py:3385(__new__)
+                                                                      32    0.000    0.000  numeric.py:1910(isscalar)
+                                                                      32    0.000    0.000  {hasattr}
+                                                                     318    0.012    0.012  {isinstance}
+                                                                     493    0.000    0.000  {issubclass}
+                                                                      80    0.035    0.035  {pandas.lib.infer_dtype}
+                                                                      32    0.003    0.003  {sorted}
+internals.py:4450(_fast_count_smallints)                      ->      31    0.062    0.130  index_tricks.py:251(__getitem__)
+                                                                      32    0.000    0.000  {len}
+                                                                      31    0.000    0.000  {method 'astype' of 'numpy.ndarray' objects}
+                                                                      31    0.036    0.036  {method 'nonzero' of 'numpy.ndarray' objects}
+                                                                       1    0.000    0.000  {numpy.core.multiarray.empty}
+                                                                      31    0.023    0.023  {numpy.lib._compiled_base.bincount}
+{isinstance}                                                  ->     640    0.001    0.010  common.py:70(_check)
+ops.py:811(na_op)                                             ->      16    0.000    0.000  common.py:1411(_fill_zeros)
+                                                                      16    0.021    0.159  expressions.py:199(evaluate)
+_methods.py:37(_any)                                          ->   32650    0.171    0.171  {method 'reduce' of 'numpy.ufunc' objects}
+{range}                                                       ->
+index.py:2531(insert)                                         ->      64    0.017    0.159  index.py:109(__new__)
+                                                                      18    0.000    0.000  index.py:258(dtype)
+                                                                      32    0.000    0.000  index.py:263(values)
+                                                                      32    0.000    0.000  numeric.py:394(asarray)
+                                                                      32    0.000    0.000  {numpy.core.multiarray.concatenate}
+index.py:1045(__contains__)                                   ->      34    0.054    0.064  index.py:958(_engine)
+                                                                      34    0.000    0.000  index.py:961(<lambda>)
+                                                                     462    0.013    0.043  {hash}
+{len}                                                         ->      79    0.000    0.000  frame.py:599(__len__)
+                                                                    2555    0.012    0.025  index.py:242(__len__)
+                                                                      32    0.000    0.000  internals.py:166(__len__)
+                                                                      96    0.000    0.000  internals.py:2369(__len__)
+                                                                      48    0.000    0.000  series.py:381(__len__)
+ops.py:574(wrapper)                                           ->      32    0.000    0.075  common.py:212(isnull)
+                                                                      32    0.000    0.000  common.py:2569(is_categorical_dtype)
+                                                                      32    0.004    0.027  generic.py:4294(logical_func)
+                                                                      32    0.000    0.000  numeric.py:1910(isscalar)
+                                                                      32    0.010    0.010  ops.py:543(na_op)
+                                                                      32    0.000    0.024  series.py:119(__init__)
+                                                                      32    0.005    0.005  series.py:319(get_values)
+                                                                     128    0.000    0.000  {isinstance}
+                                                                      32    0.000    0.000  {issubclass}
+                                                                      32    0.000    0.000  {pandas.index.convert_scalar}
+                                                                      64    0.000    0.000  {pandas.lib.values_from_object}
+internals.py:2258(_rebuild_blknos_and_blklocs)                ->     599    0.000    0.000  internals.py:119(mgr_locs)
+                                                                     444    0.042    0.055  internals.py:2204(shape)
+                                                                     599    0.000    0.000  {len}
+                                                                     222    0.000    0.002  {method 'any' of 'numpy.ndarray' objects}
+                                                                     444    0.003    0.003  {method 'fill' of 'numpy.ndarray' objects}
+                                                                     599    0.011    0.011  {numpy.core.multiarray.arange}
+                                                                     444    0.022    0.022  {numpy.core.multiarray.empty}
+common.py:3352(_random_state)                                 ->      15    0.000    0.000  {isinstance}
+                                                                      15    0.000    0.000  {pandas.lib.is_integer}
+expressions.py:199(evaluate)                                  ->      16    0.000    0.138  expressions.py:99(_evaluate_numexpr)
+                                                                      16    0.000    0.000  expressions.py:180(_bool_arith_check)
+internals.py:2073(make_block)                                 ->     477    0.012    0.092  internals.py:64(__init__)
+                                                                      96    0.023    0.023  internals.py:1442(__init__)
+                                                                     207    0.000    0.000  {isinstance}
+                                                                     647    0.000    0.000  {issubclass}
+internals.py:2384(_verify_integrity)                          ->     455    0.000    0.000  internals.py:220(shape)
+                                                                     174    0.005    0.006  internals.py:2204(shape)
+                                                                     174    0.000    0.000  internals.py:2279(_get_items)
+                                                                     174    0.000    0.000  {len}
+                                                                     174    0.000    0.001  {sum}
+numeric.py:464(asanyarray)                                    ->   64368    0.062    0.062  {numpy.core.multiarray.array}
+{pandas.algos.take_2d_axis1_int64_int64}                      ->
+frame.py:2315(_sanitize_column)                               ->      47    0.000    0.000  common.py:2585(is_object_dtype)
+                                                                      47    0.012    0.012  common.py:2644(is_sequence)
                                                                       32    0.000    0.001  frame.py:2319(reindexer)
                                                                       79    0.000    0.000  index.py:1045(__contains__)
                                                                       79    0.000    0.000  numeric.py:394(asarray)
-                                                                      47    0.018    0.018  series.py:2575(_sanitize_index)
+                                                                      47    0.010    0.010  series.py:2575(_sanitize_index)
                                                                       79    0.000    0.001  shape_base.py:60(atleast_2d)
                                                                      393    0.000    0.000  {isinstance}
-                                                                      47    0.005    0.005  {method 'copy' of 'numpy.ndarray' objects}
+                                                                      47    0.001    0.001  {method 'copy' of 'numpy.ndarray' objects}
+series.py:2020(apply)                                         ->      16    0.000    0.000  common.py:2507(is_datetime64_dtype)
+                                                                      16    0.000    0.000  generic.py:2118(__finalize__)
+                                                                      16    0.000    0.061  series.py:119(__init__)
+                                                                      16    0.000    0.000  series.py:237(_constructor)
+                                                                      32    0.000    0.000  {isinstance}
+                                                                      32    0.000    0.000  {len}
+                                                                      16    0.073    0.073  {pandas.lib.map_infer}
+                                                                      16    0.000    0.000  {pandas.lib.values_from_object}
 series.py:119(__init__)                                       ->     208    0.000    0.000  generic.py:90(__init__)
                                                                       32    0.000    0.000  generic.py:107(_validate_dtype)
                                                                       80    0.000    0.000  index.py:5677(_ensure_index)
                                                                       80    0.000    0.001  internals.py:3343(__init__)
-                                                                     208    0.011    0.031  series.py:257(_set_axis)
-                                                                      80    0.046    0.096  series.py:2596(_sanitize_array)
+                                                                     208    0.009    0.010  series.py:257(_set_axis)
+                                                                      80    0.038    0.122  series.py:2596(_sanitize_array)
                                                                      448    0.000    0.000  {isinstance}
-index.py:331(view)                                            ->       2    0.017    0.121  index.py:343(_shallow_copy)
-                                                                       2    0.000    0.000  {isinstance}
-expressions.py:199(evaluate)                                  ->      16    0.000    0.119  expressions.py:99(_evaluate_numexpr)
-                                                                      16    0.023    0.023  expressions.py:180(_bool_arith_check)
-{method 'any' of 'numpy.ndarray' objects}                     ->   32650    0.012    0.116  _methods.py:37(_any)
-{method 'choice' of 'mtrand.RandomState' objects}             ->      15    0.036    0.045  fromnumeric.py:2259(prod)
-common.py:212(isnull)                                         ->     224    0.010    0.128  common.py:233(_isnull_new)
-common.py:233(_isnull_new)                                    ->      80    0.027    0.118  common.py:303(_isnull_ndarraylike)
-                                                                     160    0.000    0.000  {isinstance}
-                                                                     144    0.000    0.000  {pandas.lib.checknull}
-                                                                     224    0.000    0.000  {pandas.lib.isscalar}
-index.py:343(_shallow_copy)                                   ->     113    0.057    0.065  index.py:204(_simple_new)
-                                                                       2    0.000    0.000  index.py:263(values)
-                                                                     113    0.041    0.041  index.py:327(_get_attributes_dict)
-                                                                     113    0.000    0.000  {method 'update' of 'dict' objects}
-internals.py:4450(_fast_count_smallints)                      ->      31    0.039    0.051  index_tricks.py:251(__getitem__)
-                                                                      32    0.000    0.000  {len}
-                                                                      31    0.000    0.000  {method 'astype' of 'numpy.ndarray' objects}
-                                                                      31    0.024    0.024  {method 'nonzero' of 'numpy.ndarray' objects}
-                                                                       1    0.000    0.000  {numpy.core.multiarray.empty}
-                                                                      31    0.013    0.013  {numpy.lib._compiled_base.bincount}
-expressions.py:99(_evaluate_numexpr)                          ->      16    0.030    0.031  expressions.py:74(_can_use_numexpr)
-                                                                      16    0.087    0.088  necompiler.py:688(evaluate)
+index.py:1148(take)                                           ->     111    0.008    0.020  index.py:343(_shallow_copy)
+                                                                     111    0.008    0.008  {method 'take' of 'numpy.ndarray' objects}
+                                                                     111    0.082    0.082  {numpy.core.multiarray.array}
+                                                                     111    0.023    0.023  {pandas.algos.ensure_platform_int}
+expressions.py:99(_evaluate_numexpr)                          ->      16    0.005    0.005  expressions.py:74(_can_use_numexpr)
+                                                                      16    0.123    0.132  necompiler.py:688(evaluate)
                                                                       32    0.000    0.000  {getattr}
-{numpy.core.multiarray.arange}                                ->
-common.py:303(_isnull_ndarraylike)                            ->      80    0.000    0.025  common.py:2440(is_datetimelike)
-                                                                      32    0.019    0.065  series.py:119(__init__)
-                                                                      80    0.000    0.001  {getattr}
-                                                                      80    0.000    0.000  {isinstance}
-internals.py:504(copy)                                        ->       3    0.000    0.000  internals.py:119(mgr_locs)
-                                                                       3    0.020    0.088  internals.py:2073(make_block)
-                                                                       3    0.001    0.001  {method 'copy' of 'numpy.ndarray' objects}
-common.py:2347(_asarray_tuplesafe)                            ->     176    0.000    0.001  numeric.py:394(asarray)
-                                                                      80    0.000    0.000  {hasattr}
-                                                                     480    0.000    0.000  {isinstance}
-                                                                     128    0.000    0.000  {issubclass}
-                                                                      32    0.075    0.075  {pandas.lib.list_to_object_array}
-_methods.py:37(_any)                                          ->   32650    0.105    0.105  {method 'reduce' of 'numpy.ufunc' objects}
-generic.py:2135(__getattr__)                                  ->      32    0.000    0.091  frame.py:1774(__getitem__)
-                                                                      32    0.000    0.000  generic.py:366(_info_axis)
-                                                                      32    0.000    0.000  index.py:1045(__contains__)
-numeric.py:394(asarray)                                       ->   33098    0.057    0.057  {numpy.core.multiarray.array}
-{pandas.algos.take_2d_axis1_int64_int64}                      ->
-{len}                                                         ->      79    0.000    0.000  frame.py:599(__len__)
-                                                                    2555    0.001    0.001  index.py:242(__len__)
-                                                                      32    0.000    0.000  internals.py:166(__len__)
-                                                                      96    0.000    0.000  internals.py:2369(__len__)
-                                                                      48    0.000    0.000  series.py:381(__len__)
-frame.py:1799(_getitem_column)                                ->     144    0.001    0.087  generic.py:1079(_get_item_cache)
-                                                                      33    0.012    0.012  index.py:740(is_unique)
-series.py:2596(_sanitize_array)                               ->      32    0.000    0.000  common.py:2443(_coerce_to_dtype)
-                                                                      32    0.000    0.000  common.py:2507(is_datetime64_dtype)
-                                                                      32    0.000    0.000  common.py:2547(is_float_dtype)
-                                                                      80    0.000    0.049  series.py:2611(_try_cast)
-                                                                     208    0.000    0.000  {isinstance}
-                                                                      80    0.000    0.000  {issubclass}
-                                                                     160    0.000    0.000  {len}
-                                                                      32    0.000    0.000  {numpy.core.multiarray.array}
-numeric.py:464(asanyarray)                                    ->   64368    0.060    0.060  {numpy.core.multiarray.array}
-internals.py:2073(make_block)                                 ->     477    0.006    0.060  internals.py:64(__init__)
-                                                                      96    0.013    0.013  internals.py:1442(__init__)
-                                                                     207    0.000    0.000  {isinstance}
-                                                                     647    0.000    0.000  {issubclass}
-internals.py:2384(_verify_integrity)                          ->     455    0.000    0.000  internals.py:220(shape)
-                                                                     174    0.001    0.001  internals.py:2204(shape)
-                                                                     174    0.000    0.000  internals.py:2279(_get_items)
-                                                                     174    0.000    0.000  {len}
-                                                                     174    0.000    0.001  {sum}
-index.py:1148(take)                                           ->     111    0.000    0.002  index.py:343(_shallow_copy)
-                                                                     111    0.002    0.002  {method 'take' of 'numpy.ndarray' objects}
-                                                                     111    0.021    0.021  {numpy.core.multiarray.array}
-                                                                     111    0.031    0.031  {pandas.algos.ensure_platform_int}
-index.py:1045(__contains__)                                   ->      34    0.035    0.035  index.py:958(_engine)
-                                                                      34    0.000    0.000  index.py:961(<lambda>)
-                                                                     462    0.000    0.000  {hash}
-generic.py:702(__contains__)                                  ->      31    0.000    0.000  generic.py:366(_info_axis)
-                                                                      31    0.054    0.089  index.py:1045(__contains__)
-necompiler.py:688(evaluate)                                   ->      16    0.000    0.000  necompiler.py:484(getContext)
+{numpy.core.multiarray.empty}                                 ->
+internals.py:3866(_vstack)                                    ->      47    0.000    0.137  shape_base.py:179(vstack)
+shape_base.py:179(vstack)                                     ->     110    0.000    0.001  shape_base.py:60(atleast_2d)
+                                                                      47    0.136    0.136  {numpy.core.multiarray.concatenate}
+{numpy.core.multiarray.concatenate}                           ->
+necompiler.py:688(evaluate)                                   ->      16    0.008    0.008  necompiler.py:484(getContext)
                                                                        1    0.000    0.000  necompiler.py:557(NumExpr)
                                                                       32    0.000    0.000  necompiler.py:636(getType)
                                                                        1    0.000    0.000  necompiler.py:657(getExprNames)
@@ -365,61 +358,61 @@ necompiler.py:688(evaluate)                                   ->      16    0.00
                                                                       16    0.000    0.000  {sorted}
                                                                       16    0.000    0.000  {sys._getframe}
                                                                       16    0.000    0.000  {zip}
-generic.py:1079(_get_item_cache)                              ->     128    0.000    0.063  frame.py:2102(_box_item_values)
-                                                                     128    0.000    0.001  generic.py:1093(_set_as_cached)
-                                                                     128    0.000    0.000  generic.py:2152(__setattr__)
-                                                                     128    0.009    0.022  internals.py:2844(get)
-                                                                     144    0.000    0.000  {method 'get' of 'dict' objects}
-frame.py:2114(__setitem__)                                    ->      16    0.000    0.039  frame.py:2133(_setitem_array)
-                                                                      48    0.000    0.080  frame.py:2192(_set_item)
+index_tricks.py:251(__getitem__)                              ->      31    0.000    0.000  index_tricks.py:231(_retval)
+                                                                      31    0.043    0.068  numerictypes.py:970(find_common_type)
+                                                                     248    0.000    0.000  {isinstance}
+                                                                      31    0.000    0.000  {len}
+                                                                     124    0.000    0.000  {method 'append' of 'list' objects}
+                                                                      62    0.000    0.000  {method 'transpose' of 'numpy.ndarray' objects}
+                                                                     124    0.000    0.000  {numpy.core.multiarray.array}
+                                                                      31    0.000    0.000  {numpy.core.multiarray.concatenate}
+                                                                      93    0.000    0.000  {range}
+{method 'sum' of 'numpy.ndarray' objects}                     ->      16    0.009    0.024  _methods.py:31(_sum)
+generic.py:702(__contains__)                                  ->      31    0.000    0.000  generic.py:366(_info_axis)
+                                                                      31    0.062    0.127  index.py:1045(__contains__)
+type_check.py:141(imag)                                       ->   32000    0.071    0.093  numeric.py:464(asanyarray)
+series.py:2596(_sanitize_array)                               ->      32    0.000    0.000  common.py:2443(_coerce_to_dtype)
+                                                                      32    0.000    0.000  common.py:2507(is_datetime64_dtype)
+                                                                      32    0.000    0.000  common.py:2547(is_float_dtype)
+                                                                      80    0.008    0.083  series.py:2611(_try_cast)
+                                                                     208    0.000    0.000  {isinstance}
+                                                                      80    0.000    0.000  {issubclass}
+                                                                     160    0.000    0.000  {len}
+                                                                      32    0.000    0.000  {numpy.core.multiarray.array}
+frame.py:2114(__setitem__)                                    ->      16    0.000    0.075  frame.py:2133(_setitem_array)
+                                                                      48    0.000    0.096  frame.py:2192(_set_item)
                                                                       64    0.000    0.000  indexing.py:1612(convert_to_index_sliceable)
                                                                      112    0.000    0.000  {isinstance}
+common.py:2347(_asarray_tuplesafe)                            ->     176    0.000    0.012  numeric.py:394(asarray)
+                                                                      80    0.000    0.000  {hasattr}
+                                                                     480    0.000    0.000  {isinstance}
+                                                                     128    0.000    0.000  {issubclass}
+                                                                      32    0.062    0.062  {pandas.lib.list_to_object_array}
+generic.py:2135(__getattr__)                                  ->      32    0.000    0.079  frame.py:1774(__getitem__)
+                                                                      32    0.000    0.000  generic.py:366(_info_axis)
+                                                                      32    0.000    0.000  index.py:1045(__contains__)
 frame.py:2192(_set_item)                                      ->      48    0.000    0.000  frame.py:2164(_ensure_valid_index)
                                                                       48    0.001    0.002  frame.py:2315(_sanitize_column)
-                                                                      48    0.025    0.077  generic.py:1195(_set_item)
+                                                                      48    0.000    0.093  generic.py:1195(_set_item)
                                                                       48    0.000    0.000  generic.py:1227(_check_setitem_copy)
                                                                       48    0.000    0.000  {len}
+frame.py:1799(_getitem_column)                                ->     144    0.001    0.096  generic.py:1079(_get_item_cache)
+                                                                      33    0.000    0.000  index.py:740(is_unique)
+generic.py:1079(_get_item_cache)                              ->     128    0.000    0.044  frame.py:2102(_box_item_values)
+                                                                     128    0.008    0.008  generic.py:1093(_set_as_cached)
+                                                                     128    0.000    0.000  generic.py:2152(__setattr__)
+                                                                     128    0.009    0.042  internals.py:2844(get)
+                                                                     144    0.000    0.000  {method 'get' of 'dict' objects}
 generic.py:1195(_set_item)                                    ->      48    0.000    0.000  generic.py:1172(_clear_item_cache)
-                                                                      48    0.006    0.052  internals.py:2943(set)
-{pandas.lib.list_to_object_array}                             ->
-series.py:2020(apply)                                         ->      16    0.000    0.000  common.py:2507(is_datetime64_dtype)
-                                                                      16    0.000    0.000  generic.py:2118(__finalize__)
-                                                                      16    0.000    0.013  series.py:119(__init__)
-                                                                      16    0.000    0.000  series.py:237(_constructor)
-                                                                      32    0.000    0.000  {isinstance}
-                                                                      32    0.000    0.000  {len}
-                                                                      16    0.052    0.052  {pandas.lib.map_infer}
-                                                                      16    0.000    0.000  {pandas.lib.values_from_object}
-index.py:204(_simple_new)                                     ->     256    0.000    0.000  __init__.py:124(iteritems)
-                                                                     256    0.008    0.008  index.py:237(_reset_identity)
-                                                                     256    0.000    0.000  {built-in method __new__ of type object at 0x7fed79fe5bc0}
-                                                                     111    0.000    0.000  {setattr}
-internals.py:3168(_slice_take_blocks_ax0)                     ->      96    0.001    0.041  common.py:756(take_nd)
-                                                                      48    0.000    0.022  internals.py:845(take_nd)
-                                                                      48    0.000    0.000  internals.py:2204(shape)
-                                                                      48    0.000    0.000  internals.py:2246(_is_single_block)
-                                                                      96    0.000    0.001  internals.py:3935(_get_blkno_placements)
-                                                                      48    0.000    0.000  internals.py:4461(_preprocess_slice_or_indexer)
-                                                                      48    0.000    0.000  {len}
-                                                                      48    0.000    0.000  {method 'append' of 'list' objects}
-frame.py:2102(_box_item_values)                               ->     128    0.000    0.062  frame.py:2109(_box_col_values)
-                                                                     128    0.000    0.000  index.py:1059(__getitem__)
-                                                                     128    0.000    0.000  index.py:1553(get_loc)
-frame.py:2109(_box_col_values)                                ->     128    0.030    0.062  series.py:227(from_array)
-series.py:227(from_array)                                     ->     128    0.001    0.032  series.py:119(__init__)
-                                                                     128    0.000    0.000  {isinstance}
+                                                                      48    0.019    0.092  internals.py:2943(set)
 internals.py:64(__init__)                                     ->     573    0.000    0.000  internals.py:119(mgr_locs)
-                                                                     573    0.001    0.002  internals.py:141(mgr_locs)
-                                                                    1146    0.051    0.051  {len}
-{pandas.lib.infer_dtype}                                      ->      17    0.000    0.000  index.py:258(dtype)
-                                                                      17    0.000    0.000  index.py:263(values)
-type_check.py:141(imag)                                       ->   32000    0.015    0.037  numeric.py:464(asanyarray)
-{pandas.lib.map_infer}                                        ->
-internals.py:2943(set)                                        ->      48    0.000    0.018  common.py:2565(is_categorical)
+                                                                     573    0.021    0.022  internals.py:141(mgr_locs)
+                                                                    1146    0.058    0.058  {len}
+internals.py:2943(set)                                        ->      48    0.000    0.022  common.py:2565(is_categorical)
                                                                       48    0.000    0.000  index.py:1553(get_loc)
                                                                      128    0.000    0.000  internals.py:119(mgr_locs)
                                                                       15    0.000    0.000  internals.py:262(set)
-                                                                      32    0.010    0.026  internals.py:272(delete)
+                                                                      32    0.015    0.048  internals.py:272(delete)
                                                                       15    0.000    0.000  internals.py:1258(should_store)
                                                                       32    0.000    0.000  internals.py:1304(should_store)
                                                                       32    0.000    0.001  internals.py:2073(make_block)
@@ -436,24 +429,70 @@ internals.py:2943(set)                                        ->      48    0.00
                                                                       47    0.000    0.000  {method 'copy' of 'numpy.ndarray' objects}
                                                                       64    0.000    0.000  {numpy.core.multiarray.arange}
                                                                       32    0.000    0.000  {numpy.core.multiarray.concatenate}
-index_tricks.py:251(__getitem__)                              ->      31    0.011    0.011  index_tricks.py:231(_retval)
-                                                                      31    0.000    0.000  numerictypes.py:970(find_common_type)
-                                                                     248    0.000    0.000  {isinstance}
-                                                                      31    0.000    0.000  {len}
-                                                                     124    0.000    0.000  {method 'append' of 'list' objects}
-                                                                      62    0.000    0.000  {method 'transpose' of 'numpy.ndarray' objects}
-                                                                     124    0.000    0.000  {numpy.core.multiarray.array}
-                                                                      31    0.000    0.000  {numpy.core.multiarray.concatenate}
-                                                                      93    0.000    0.000  {range}
+internals.py:3168(_slice_take_blocks_ax0)                     ->      96    0.001    0.052  common.py:756(take_nd)
+                                                                      48    0.000    0.031  internals.py:845(take_nd)
+                                                                      48    0.000    0.000  internals.py:2204(shape)
+                                                                      48    0.000    0.000  internals.py:2246(_is_single_block)
+                                                                      96    0.000    0.001  internals.py:3935(_get_blkno_placements)
+                                                                      48    0.000    0.000  internals.py:4461(_preprocess_slice_or_indexer)
+                                                                      48    0.000    0.000  {len}
+                                                                      48    0.000    0.000  {method 'append' of 'list' objects}
+common.py:212(isnull)                                         ->     224    0.009    0.091  common.py:233(_isnull_new)
+common.py:233(_isnull_new)                                    ->      80    0.019    0.081  common.py:303(_isnull_ndarraylike)
+                                                                     160    0.000    0.000  {isinstance}
+                                                                     144    0.000    0.000  {pandas.lib.checknull}
+                                                                     224    0.000    0.000  {pandas.lib.isscalar}
+fromnumeric.py:2259(prod)                                     ->      31    0.000    0.021  _methods.py:34(_prod)
+internals.py:2204(shape)                                      ->    2475    0.001    0.038  internals.py:2206(<genexpr>)
+index.py:327(_get_attributes_dict)                            ->     113    0.000    0.000  {getattr}
 series.py:2611(_try_cast)                                     ->      80    0.000    0.000  common.py:1949(_possibly_castable)
-                                                                      48    0.048    0.049  common.py:1974(_possibly_cast_to_datetime)
+                                                                      48    0.049    0.074  common.py:1974(_possibly_cast_to_datetime)
                                                                       48    0.000    0.000  {numpy.core.multiarray.array}
-common.py:1974(_possibly_cast_to_datetime)                    ->      16    0.000    0.001  common.py:2049(_possibly_infer_to_datetimelike)
+type_check.py:237(iscomplexobj)                               ->      16    0.027    0.027  numeric.py:394(asarray)
+                                                                      16    0.000    0.000  {issubclass}
+common.py:303(_isnull_ndarraylike)                            ->      80    0.005    0.005  common.py:2440(is_datetimelike)
+                                                                      32    0.008    0.047  series.py:119(__init__)
+                                                                      80    0.000    0.009  {getattr}
+                                                                      80    0.000    0.000  {isinstance}
+function_base.py:3625(insert)                                 ->      62    0.000    0.000  numeric.py:394(asarray)
+                                                                      62    0.028    0.028  numeric.py:1347(rollaxis)
+                                                                      62    0.000    0.000  {isinstance}
+                                                                      62    0.000    0.000  {method 'item' of 'numpy.ndarray' objects}
+                                                                     124    0.000    0.000  {numpy.core.multiarray.array}
+                                                                      62    0.000    0.000  {numpy.core.multiarray.empty}
+frame.py:2133(_setitem_array)                                 ->      16    0.000    0.000  common.py:2121(is_bool_indexer)
+                                                                      32    0.000    0.010  frame.py:1774(__getitem__)
+                                                                      32    0.000    0.064  frame.py:2114(__setitem__)
+                                                                      16    0.000    0.000  index.py:1001(__iter__)
+                                                                      16    0.000    0.000  {isinstance}
+                                                                      32    0.000    0.000  {len}
+series.py:519(__getitem__)                                    ->      16    0.000    0.074  index.py:1582(get_value)
+                                                                      16    0.000    0.000  numeric.py:1910(isscalar)
+common.py:1974(_possibly_cast_to_datetime)                    ->      16    0.024    0.025  common.py:2049(_possibly_infer_to_datetimelike)
                                                                       32    0.000    0.000  common.py:2507(is_datetime64_dtype)
                                                                       32    0.000    0.000  common.py:2516(is_timedelta64_dtype)
                                                                       48    0.000    0.000  {isinstance}
                                                                       16    0.000    0.000  {issubclass}
-common.py:1105(_maybe_promote)                                ->     283    0.014    0.015  common.py:2569(is_categorical_dtype)
+index.py:1582(get_value)                                      ->      16    0.000    0.000  index.py:958(_engine)
+                                                                      16    0.074    0.074  {method 'get_value' of 'pandas.index.IndexEngine' objects}
+                                                                      16    0.000    0.000  {pandas.lib.is_float}
+                                                                      32    0.000    0.000  {pandas.lib.values_from_object}
+{method 'get_value' of 'pandas.index.IndexEngine' objects}    ->      16    0.000    0.000  index.py:961(<lambda>)
+index.py:5677(_ensure_index)                                  ->      79    0.038    0.061  index.py:109(__new__)
+                                                                      79    0.000    0.000  {hasattr}
+                                                                     748    0.000    0.000  {isinstance}
+{pandas.lib.map_infer}                                        ->
+numerictypes.py:970(find_common_type)                         ->      62    0.025    0.025  numerictypes.py:949(_can_coerce_all)
+__init__.py:124(iteritems)                                    ->     256    0.000    0.000  {getattr}
+                                                                     256    0.029    0.029  {method 'iteritems' of 'dict' objects}
+index.py:958(_engine)                                         ->      66    0.010    0.010  {len}
+{pandas.lib.list_to_object_array}                             ->
+generic.py:2152(__setattr__)                                  ->      31    0.000    0.059  generic.py:412(_set_axis)
+generic.py:412(_set_axis)                                     ->      31    0.000    0.000  generic.py:1172(_clear_item_cache)
+                                                                      31    0.000    0.059  internals.py:2212(set_axis)
+internals.py:2212(set_axis)                                   ->      31    0.000    0.058  index.py:5677(_ensure_index)
+                                                                      62    0.000    0.000  {len}
+common.py:1105(_maybe_promote)                                ->     283    0.013    0.013  common.py:2569(is_categorical_dtype)
                                                                       96    0.000    0.000  numeric.py:394(asarray)
                                                                      283    0.000    0.000  {isinstance}
                                                                     1132    0.000    0.000  {issubclass}
@@ -461,83 +500,33 @@ common.py:1105(_maybe_promote)                                ->     283    0.01
                                                                       96    0.000    0.000  {pandas.lib.is_bool}
                                                                      283    0.000    0.000  {pandas.lib.is_float}
                                                                       96    0.000    0.000  {pandas.lib.is_integer}
-series.py:519(__getitem__)                                    ->      16    0.011    0.046  index.py:1582(get_value)
-                                                                      16    0.000    0.000  numeric.py:1910(isscalar)
-index.py:1582(get_value)                                      ->      16    0.000    0.000  index.py:958(_engine)
-                                                                      16    0.035    0.035  {method 'get_value' of 'pandas.index.IndexEngine' objects}
-                                                                      16    0.000    0.000  {pandas.lib.is_float}
-                                                                      32    0.000    0.000  {pandas.lib.values_from_object}
-common.py:724(_get_take_nd_function)                          ->     331    0.031    0.031  {method 'get' of 'dict' objects}
-fromnumeric.py:2259(prod)                                     ->      31    0.000    0.009  _methods.py:34(_prod)
-{numpy.core.multiarray.empty}                                 ->
-index.py:327(_get_attributes_dict)                            ->     113    0.000    0.000  {getattr}
-generic.py:292(_get_axis_number)                              ->     190    0.000    0.000  {method 'get' of 'dict' objects}
-                                                                     190    0.000    0.000  {pandas.lib.is_integer}
-frame.py:2133(_setitem_array)                                 ->      16    0.000    0.000  common.py:2121(is_bool_indexer)
-                                                                      32    0.000    0.003  frame.py:1774(__getitem__)
-                                                                      32    0.000    0.036  frame.py:2114(__setitem__)
-                                                                      16    0.000    0.000  index.py:1001(__iter__)
-                                                                      16    0.000    0.000  {isinstance}
-                                                                      32    0.000    0.000  {len}
-{pandas.algos.take_1d_int64_int64}                            ->
-common.py:70(_check)                                          ->     640    0.001    0.001  {getattr}
-index.py:958(_engine)                                         ->      66    0.000    0.000  {len}
-{method 'get_value' of 'pandas.index.IndexEngine' objects}    ->      16    0.000    0.000  index.py:961(<lambda>)
-common.py:2644(is_sequence)                                   ->      47    0.000    0.000  {isinstance}
-                                                                      63    0.000    0.000  {iter}
-                                                                      47    0.000    0.000  {len}
-internals.py:2258(_rebuild_blknos_and_blklocs)                ->     599    0.000    0.000  internals.py:119(mgr_locs)
-                                                                     444    0.020    0.022  internals.py:2204(shape)
-                                                                     599    0.000    0.000  {len}
-                                                                     222    0.000    0.002  {method 'any' of 'numpy.ndarray' objects}
-                                                                     444    0.000    0.000  {method 'fill' of 'numpy.ndarray' objects}
-                                                                     599    0.001    0.001  {numpy.core.multiarray.arange}
-                                                                     444    0.001    0.001  {numpy.core.multiarray.empty}
 frame.py:200(__init__)                                        ->      16    0.000    0.003  frame.py:343(_init_ndarray)
                                                                      144    0.000    0.000  generic.py:90(__init__)
                                                                      128    0.000    0.000  generic.py:120(_init_mgr)
                                                                       16    0.000    0.000  {getattr}
                                                                      336    0.000    0.000  {isinstance}
-{method 'get' of 'dict' objects}                              ->
-{pandas.algos.ensure_platform_int}                            ->
-expressions.py:74(_can_use_numexpr)                           ->      16    0.000    0.000  fromnumeric.py:2259(prod)
-                                                                      32    0.000    0.000  {hasattr}
-                                                                      32    0.000    0.000  {isinstance}
-                                                                      16    0.000    0.000  {len}
-series.py:257(_set_axis)                                      ->     208    0.000    0.000  index.py:3427(is_all_dates)
-                                                                     208    0.019    0.019  series.py:277(_set_subtyp)
-generic.py:4294(logical_func)                                 ->      32    0.000    0.030  series.py:2068(_reduce)
-{sorted}                                                      ->     204    0.000    0.020  internals.py:3815(<lambda>)
-series.py:2068(_reduce)                                       ->      32    0.014    0.014  generic.py:292(_get_axis_number)
-                                                                      32    0.009    0.016  nanops.py:233(nanany)
-                                                                      32    0.000    0.000  series.py:308(values)
-                                                                      32    0.000    0.000  {isinstance}
-{pandas.lib.values_from_object}                               ->      32    0.000    0.025  generic.py:2331(get_values)
-                                                                     190    0.000    0.000  index.py:268(get_values)
-                                                                      32    0.000    0.000  series.py:319(get_values)
-type_check.py:237(iscomplexobj)                               ->      16    0.000    0.000  numeric.py:394(asarray)
-                                                                      16    0.000    0.000  {issubclass}
-internals.py:272(delete)                                      ->      32    0.013    0.014  function_base.py:3427(delete)
+{pandas.algos.take_1d_int64_int64}                            ->
+internals.py:272(delete)                                      ->      32    0.023    0.024  function_base.py:3427(delete)
                                                                       32    0.000    0.000  internals.py:119(mgr_locs)
                                                                       32    0.000    0.000  internals.py:141(mgr_locs)
-                                                                      32    0.000    0.002  {method 'delete' of 'pandas.lib.BlockPlacement' objects}
-function_base.py:3625(insert)                                 ->      62    0.000    0.000  numeric.py:394(asarray)
-                                                                      62    0.000    0.000  numeric.py:1347(rollaxis)
-                                                                      62    0.000    0.000  {isinstance}
-                                                                      62    0.000    0.000  {method 'item' of 'numpy.ndarray' objects}
-                                                                     124    0.000    0.000  {numpy.core.multiarray.array}
-                                                                      62    0.000    0.000  {numpy.core.multiarray.empty}
-generic.py:2268(as_matrix)                                    ->      48    0.000    0.000  generic.py:2197(_consolidate_inplace)
-                                                                      48    0.000    0.025  internals.py:2701(as_matrix)
-{method 'nonzero' of 'numpy.ndarray' objects}                 ->
+                                                                      32    0.000    0.008  {method 'delete' of 'pandas.lib.BlockPlacement' objects}
+index.py:3434(equals)                                         ->      47    0.009    0.010  common.py:407(array_equivalent)
+                                                                     159    0.000    0.000  index.py:218(is_)
+                                                                      94    0.012    0.012  {pandas.lib.values_from_object}
+frame.py:2102(_box_item_values)                               ->     128    0.008    0.039  frame.py:2109(_box_col_values)
+                                                                     128    0.004    0.005  index.py:1059(__getitem__)
+                                                                     128    0.000    0.000  index.py:1553(get_loc)
+index.py:263(values)                                          ->     434    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
+{hash}                                                        ->      32    0.018    0.030  generic.py:661(__hash__)
+                                                                   34/20    0.000    0.000  necompiler.py:81(__hash__)
 indexing.py:1007(_convert_to_indexer)                         ->      48    0.000    0.000  common.py:2121(is_bool_indexer)
-                                                                      48    0.001    0.001  common.py:2347(_asarray_tuplesafe)
+                                                                      48    0.001    0.012  common.py:2347(_asarray_tuplesafe)
                                                                       48    0.000    0.000  generic.py:318(_get_axis)
                                                                       16    0.000    0.000  index.py:740(is_unique)
                                                                       48    0.000    0.000  index.py:752(is_integer)
                                                                       48    0.000    0.000  index.py:914(_convert_list_indexer)
-                                                                      48    0.000    0.001  index.py:1553(get_loc)
-                                                                      48    0.000    0.019  index.py:1643(get_indexer)
+                                                                      48    0.000    0.010  index.py:1553(get_loc)
+                                                                      48    0.001    0.017  index.py:1643(get_indexer)
                                                                       48    0.000    0.000  indexing.py:159(_convert_scalar_indexer)
                                                                       48    0.000    0.000  indexing.py:1731(is_nested_tuple)
                                                                       48    0.000    0.000  indexing.py:1744(is_list_like_indexer)
@@ -545,135 +534,158 @@ indexing.py:1007(_convert_to_indexer)                         ->      48    0.00
                                                                       48    0.000    0.000  {method 'any' of 'numpy.ndarray' objects}
                                                                       48    0.000    0.000  {pandas.lib.is_integer}
                                                                       48    0.000    0.000  {pandas.lib.values_from_object}
-generic.py:739(__array__)                                     ->      32    0.000    0.025  {pandas.lib.values_from_object}
-generic.py:2331(get_values)                                   ->      32    0.000    0.025  generic.py:2268(as_matrix)
-internals.py:2204(shape)                                      ->    2475    0.001    0.003  internals.py:2206(<genexpr>)
-internals.py:2701(as_matrix)                                  ->      48    0.000    0.000  internals.py:874(get_values)
-                                                                      48    0.024    0.024  internals.py:2246(_is_single_block)
-                                                                      48    0.000    0.000  {len}
-common.py:2440(is_datetimelike)                               ->      32    0.000    0.000  series.py:288(dtype)
-                                                                      80    0.024    0.024  {isinstance}
-internals.py:2246(_is_single_block)                           ->      96    0.000    0.000  internals.py:119(mgr_locs)
-                                                                      96    0.000    0.000  internals.py:2208(ndim)
-                                                                     144    0.000    0.000  {len}
-index.py:3434(equals)                                         ->      47    0.008    0.022  common.py:407(array_equivalent)
-                                                                     159    0.000    0.000  index.py:218(is_)
-                                                                      94    0.000    0.000  {pandas.lib.values_from_object}
-{method 'sum' of 'numpy.ndarray' objects}                     ->      16    0.003    0.003  _methods.py:31(_sum)
-expressions.py:180(_bool_arith_check)                         ->      16    0.000    0.000  expressions.py:170(_has_bool_dtype)
-common.py:407(array_equivalent)                               ->     190    0.000    0.000  numeric.py:394(asarray)
-                                                                      31    0.001    0.014  numeric.py:2328(array_equal)
-                                                                      93    0.000    0.000  {issubclass}
-internals.py:2844(get)                                        ->     128    0.000    0.010  common.py:212(isnull)
+internals.py:2844(get)                                        ->     128    0.000    0.009  common.py:212(isnull)
                                                                      128    0.000    0.001  index.py:1553(get_loc)
                                                                      256    0.000    0.000  internals.py:2279(_get_items)
-                                                                     128    0.001    0.003  internals.py:2872(iget)
-index.py:5677(_ensure_index)                                  ->      79    0.001    0.011  index.py:109(__new__)
-                                                                      79    0.000    0.000  {hasattr}
-                                                                     748    0.000    0.000  {isinstance}
+                                                                     128    0.009    0.023  internals.py:2872(iget)
+internals.py:2568(_consolidate_check)                         ->     665    0.024    0.024  internals.py:232(ftype)
+                                                                     446    0.000    0.000  {len}
+frame.py:2109(_box_col_values)                                ->     128    0.020    0.031  series.py:227(from_array)
+internals.py:2206(<genexpr>)                                  ->    1650    0.012    0.037  {len}
+{method 'nonzero' of 'numpy.ndarray' objects}                 ->
+{pandas.lib.infer_dtype}                                      ->      17    0.000    0.000  index.py:258(dtype)
+                                                                      17    0.000    0.000  index.py:263(values)
+{math.exp}                                                    ->
+function_base.py:3427(delete)                                 ->      64    0.000    0.006  numeric.py:141(ones)
+                                                                     128    0.000    0.000  numeric.py:394(asarray)
+                                                                     128    0.000    0.000  {isinstance}
+                                                                     128    0.000    0.001  {method 'all' of 'numpy.ndarray' objects}
+                                                                      64    0.000    0.000  {numpy.core.multiarray.can_cast}
+series.py:227(from_array)                                     ->     128    0.001    0.011  series.py:119(__init__)
+                                                                     128    0.000    0.000  {isinstance}
+generic.py:661(__hash__)                                      ->      32    0.012    0.012  {method 'format' of 'str' objects}
+{pandas.algos.take_2d_axis0_float64_float64}                  ->
+{method 'iteritems' of 'dict' objects}                        ->
+{pandas.algos.take_2d_axis1_float64_float64}                  ->
+{pandas.lib.values_from_object}                               ->      32    0.000    0.015  generic.py:2331(get_values)
+                                                                     190    0.000    0.000  index.py:268(get_values)
+                                                                      32    0.000    0.000  series.py:319(get_values)
+numeric.py:1347(rollaxis)                                     ->
+generic.py:4294(logical_func)                                 ->      32    0.003    0.023  series.py:2068(_reduce)
+index.py:237(_reset_identity)                                 ->
+generic.py:292(_get_axis_number)                              ->     190    0.000    0.000  {method 'get' of 'dict' objects}
+                                                                     190    0.000    0.000  {pandas.lib.is_integer}
+index.py:242(__len__)                                         ->    2555    0.013    0.013  {len}
+numerictypes.py:949(_can_coerce_all)                          ->     310    0.000    0.000  {len}
+common.py:2049(_possibly_infer_to_datetimelike)               ->      16    0.000    0.000  common.py:2603(is_list_like)
+                                                                      32    0.000    0.000  {len}
+                                                                      16    0.000    0.000  {min}
+                                                                      16    0.000    0.000  {numpy.core.multiarray.array}
+                                                                      16    0.000    0.000  {pandas.lib.infer_dtype}
+internals.py:232(ftype)                                       ->     665    0.000    0.000  internals.py:228(dtype)
+_ni_support.py:70(_get_output)                                ->      16    0.012    0.012  {numpy.core.multiarray.zeros}
 groupby.py:3696(_nargsort)                                    ->      16    0.000    0.001  common.py:212(isnull)
                                                                       16    0.000    0.000  common.py:2569(is_categorical_dtype)
                                                                       16    0.000    0.000  fromnumeric.py:1380(nonzero)
                                                                       16    0.000    0.000  numeric.py:464(asanyarray)
                                                                       16    0.000    0.000  {len}
-                                                                      16    0.015    0.015  {method 'argsort' of 'numpy.ndarray' objects}
+                                                                      16    0.014    0.014  {method 'argsort' of 'numpy.ndarray' objects}
                                                                       16    0.000    0.000  {numpy.core.multiarray.arange}
                                                                       16    0.000    0.000  {numpy.core.multiarray.concatenate}
-{math.exp}                                                    ->
-internals.py:3815(<lambda>)                                   ->     408    0.020    0.021  internals.py:79(_consolidate_key)
-internals.py:79(_consolidate_key)                             ->     408    0.000    0.000  internals.py:228(dtype)
-{pandas.algos.take_2d_axis0_float64_float64}                  ->
-series.py:277(_set_subtyp)                                    ->
-frame.py:2666(_maybe_casted_values)                           ->      31    0.000    0.000  index.py:263(values)
-                                                                      62    0.000    0.000  {isinstance}
+internals.py:1442(__init__)                                   ->      96    0.000    0.001  internals.py:64(__init__)
+                                                                      96    0.000    0.000  {issubclass}
+{numpy.lib._compiled_base.bincount}                           ->
+common.py:724(_get_take_nd_function)                          ->     331    0.005    0.005  {method 'get' of 'dict' objects}
+series.py:2068(_reduce)                                       ->      32    0.000    0.000  generic.py:292(_get_axis_number)
+                                                                      32    0.013    0.020  nanops.py:233(nanany)
+                                                                      32    0.000    0.000  series.py:308(values)
+                                                                      32    0.000    0.000  {isinstance}
+internals.py:2872(iget)                                       ->     128    0.000    0.013  internals.py:128(make_block_same_class)
+                                                                     128    0.000    0.000  internals.py:259(iget)
+                                                                     128    0.000    0.001  internals.py:3343(__init__)
+                                                                     128    0.000    0.000  {len}
+{pandas.algos.ensure_platform_int}                            ->
+internals.py:141(mgr_locs)                                    ->      79    0.001    0.001  numeric.py:588(require)
+                                                                     698    0.000    0.000  {isinstance}
+common.py:2565(is_categorical)                                ->      96    0.022    0.022  {isinstance}
+_methods.py:34(_prod)                                         ->      31    0.021    0.021  {method 'reduce' of 'numpy.ufunc' objects}
+generic.py:3334(align)                                        ->      16    0.000    0.000  common.py:2738(_clean_fill_method)
+                                                                      16    0.000    0.000  generic.py:292(_get_axis_number)
+                                                                      16    0.000    0.009  generic.py:3418(_align_series)
+                                                                      32    0.000    0.000  {isinstance}
+{scipy.ndimage._nd_image.correlate1d}                         ->
+index.py:3385(__new__)                                        ->      31    0.000    0.000  index.py:204(_simple_new)
+                                                                      31    0.000    0.000  index.py:312(_coerce_to_ndarray)
+                                                                      62    0.000    0.000  {issubclass}
+                                                                      31    0.000    0.000  {numpy.core.multiarray.array}
+nanops.py:233(nanany)                                         ->      32    0.000    0.007  nanops.py:153(_get_values)
+                                                                      32    0.000    0.000  {method 'any' of 'numpy.ndarray' objects}
+{getattr}                                                     ->      32    0.009    0.009  series.py:308(values)
+indexing.py:1695(maybe_convert_indices)                       ->      95    0.000    0.000  {isinstance}
+                                                                     190    0.000    0.002  {method 'any' of 'numpy.ndarray' objects}
+{pandas.algos.ensure_int64}                                   ->
 index.py:1643(get_indexer)                                    ->      48    0.000    0.000  common.py:2477(is_dtype_equal)
                                                                       48    0.000    0.000  common.py:2759(_clean_reindex_fill_method)
                                                                       48    0.000    0.000  index.py:258(dtype)
                                                                       48    0.000    0.000  index.py:263(values)
                                                                       48    0.000    0.000  index.py:1783(_possibly_promote)
                                                                       48    0.000    0.003  index.py:5677(_ensure_index)
-                                                                      48    0.015    0.015  {method 'get_indexer' of 'pandas.index.IndexEngine' objects}
+                                                                      48    0.013    0.013  {method 'get_indexer' of 'pandas.index.IndexEngine' objects}
                                                                       48    0.000    0.000  {pandas.algos.ensure_platform_int}
-generic.py:1046(_indexer)                                     ->      17    0.000    0.000  indexing.py:41(__init__)
-                                                                      48    0.000    0.000  {getattr}
-                                                                      17    0.009    0.009  {setattr}
-series.py:2575(_sanitize_index)                               ->     141    0.000    0.000  {isinstance}
-                                                                      94    0.000    0.000  {len}
-common.py:2565(is_categorical)                                ->      96    0.017    0.017  {isinstance}
-generic.py:1199(_set_is_copy)                                 ->      64    0.000    0.000  generic.py:2152(__setattr__)
+{pandas.algos.take_2d_axis1_object_object}                    ->
+internals.py:128(make_block_same_class)                       ->     363    0.001    0.015  internals.py:2073(make_block)
 common.py:2569(is_categorical_dtype)                          ->      32    0.000    0.000  series.py:288(dtype)
                                                                      731    0.001    0.001  {hasattr}
                                                                      731    0.000    0.000  {isinstance}
+generic.py:1046(_indexer)                                     ->      17    0.000    0.000  indexing.py:41(__init__)
+                                                                      48    0.000    0.000  {getattr}
+                                                                      17    0.009    0.009  {setattr}
+generic.py:2268(as_matrix)                                    ->      48    0.000    0.000  generic.py:2197(_consolidate_inplace)
+                                                                      48    0.000    0.014  internals.py:2701(as_matrix)
+{method 'argsort' of 'numpy.ndarray' objects}                 ->
+frame.py:2666(_maybe_casted_values)                           ->      31    0.000    0.000  index.py:263(values)
+                                                                      62    0.000    0.000  {isinstance}
+generic.py:739(__array__)                                     ->      32    0.000    0.015  {pandas.lib.values_from_object}
+generic.py:2331(get_values)                                   ->      32    0.000    0.014  generic.py:2268(as_matrix)
+internals.py:2701(as_matrix)                                  ->      48    0.000    0.000  internals.py:874(get_values)
+                                                                      48    0.014    0.014  internals.py:2246(_is_single_block)
+                                                                      48    0.000    0.000  {len}
+internals.py:2246(_is_single_block)                           ->      96    0.000    0.000  internals.py:119(mgr_locs)
+                                                                      96    0.000    0.000  internals.py:2208(ndim)
+                                                                     144    0.000    0.000  {len}
+{method 'get_indexer' of 'pandas.index.IndexEngine' objects}  ->
+{method 'format' of 'str' objects}                            ->
+utils.py:110(get_column_headers)                              ->      32    0.011    0.011  index.py:1001(__iter__)
+common.py:2644(is_sequence)                                   ->      47    0.000    0.000  {isinstance}
+                                                                      63    0.000    0.000  {iter}
+                                                                      47    0.000    0.000  {len}
+index.py:1553(get_loc)                                        ->      16    0.000    0.000  index.py:958(_engine)
+                                                                     352    0.010    0.010  {method 'get_loc' of 'pandas.index.IndexEngine' objects}
+                                                                     352    0.000    0.000  {pandas.lib.values_from_object}
+index.py:1001(__iter__)                                       ->      48    0.000    0.000  index.py:263(values)
+                                                                      48    0.000    0.000  {iter}
+{method 'get_loc' of 'pandas.index.IndexEngine' objects}      ->
+common.py:407(array_equivalent)                               ->     190    0.000    0.000  numeric.py:394(asarray)
+                                                                      31    0.001    0.001  numeric.py:2328(array_equal)
+                                                                      93    0.000    0.000  {issubclass}
+series.py:2575(_sanitize_index)                               ->     141    0.000    0.000  {isinstance}
+                                                                      94    0.000    0.000  {len}
+ops.py:543(na_op)                                             ->      64    0.000    0.000  common.py:2569(is_categorical_dtype)
+                                                                      32    0.000    0.000  {getattr}
+common.py:70(_check)                                          ->     640    0.009    0.009  {getattr}
+series.py:257(_set_axis)                                      ->     208    0.000    0.000  index.py:3427(is_all_dates)
+                                                                     208    0.000    0.000  series.py:277(_set_subtyp)
+series.py:308(values)                                         ->     144    0.000    0.001  internals.py:3477(values)
+{setattr}                                                     ->      17    0.000    0.000  generic.py:2152(__setattr__)
+generic.py:1172(_clear_item_cache)                            ->     126    0.009    0.009  {method 'clear' of 'dict' objects}
+{sorted}                                                      ->     204    0.000    0.006  internals.py:3815(<lambda>)
+{method 'clear' of 'dict' objects}                            ->
+generic.py:3418(_align_series)                                ->      16    0.000    0.000  common.py:368(notnull)
+                                                                      16    0.000    0.000  frame.py:200(__init__)
+                                                                      32    0.000    0.000  generic.py:2118(__finalize__)
+                                                                      16    0.000    0.000  index.py:3434(equals)
+                                                                      16    0.000    0.008  {isinstance}
 common.py:2121(is_bool_indexer)                               ->     112    0.000    0.001  numeric.py:394(asarray)
                                                                       64    0.000    0.000  series.py:288(dtype)
                                                                      256    0.000    0.000  {isinstance}
-nanops.py:233(nanany)                                         ->      32    0.000    0.006  nanops.py:153(_get_values)
-                                                                      32    0.000    0.000  {method 'any' of 'numpy.ndarray' objects}
-function_base.py:3427(delete)                                 ->      64    0.000    0.000  numeric.py:141(ones)
-                                                                     128    0.000    0.000  numeric.py:394(asarray)
-                                                                     128    0.000    0.000  {isinstance}
-                                                                     128    0.000    0.001  {method 'all' of 'numpy.ndarray' objects}
-                                                                      64    0.000    0.000  {numpy.core.multiarray.can_cast}
-{method 'get_indexer' of 'pandas.index.IndexEngine' objects}  ->
-_ni_support.py:70(_get_output)                                ->      16    0.000    0.000  {numpy.core.multiarray.zeros}
-{method 'argsort' of 'numpy.ndarray' objects}                 ->
-generic.py:3334(align)                                        ->      16    0.000    0.000  common.py:2738(_clean_fill_method)
-                                                                      16    0.000    0.000  generic.py:292(_get_axis_number)
-                                                                      16    0.000    0.001  generic.py:3418(_align_series)
-                                                                      32    0.000    0.000  {isinstance}
-_ni_support.py:90(_check_axis)                                ->
-{pandas.algos.take_2d_axis1_object_object}                    ->
-{method 'all' of 'numpy.ndarray' objects}                     ->     159    0.000    0.001  _methods.py:40(_all)
-numeric.py:2328(array_equal)                                  ->      93    0.000    0.000  numeric.py:394(asarray)
-                                                                      31    0.013    0.014  {method 'all' of 'numpy.ndarray' objects}
-series.py:319(get_values)                                     ->     112    0.000    0.001  internals.py:3481(get_values)
-series.py:1003(__iter__)                                      ->      16    0.000    0.000  common.py:2569(is_categorical_dtype)
-                                                                      32    0.000    0.000  numerictypes.py:736(issubdtype)
-                                                                      48    0.000    0.000  series.py:288(dtype)
-                                                                      16    0.000    0.000  series.py:308(values)
-                                                                      16    0.000    0.000  {iter}
-{numpy.lib._compiled_base.bincount}                           ->
-{pandas.algos.ensure_int64}                                   ->
-internals.py:1442(__init__)                                   ->      96    0.000    0.000  internals.py:64(__init__)
-                                                                      96    0.000    0.000  {issubclass}
-utils.py:86(choose_dict)                                      ->
-index.py:740(is_unique)                                       ->      16    0.000    0.000  index.py:961(<lambda>)
-generic.py:2152(__setattr__)                                  ->      31    0.000    0.009  generic.py:412(_set_axis)
-index_tricks.py:231(_retval)                                  ->
-_ni_support.py:38(_extend_mode_to_code)                       ->
-_methods.py:34(_prod)                                         ->      31    0.009    0.009  {method 'reduce' of 'numpy.ufunc' objects}
-generic.py:412(_set_axis)                                     ->      31    0.000    0.000  generic.py:1172(_clear_item_cache)
-                                                                      31    0.000    0.009  internals.py:2212(set_axis)
-common.py:1411(_fill_zeros)                                   ->      16    0.000    0.000  common.py:2547(is_float_dtype)
-{setattr}                                                     ->      17    0.000    0.000  generic.py:2152(__setattr__)
-internals.py:2212(set_axis)                                   ->      31    0.000    0.009  index.py:5677(_ensure_index)
-                                                                      62    0.000    0.000  {len}
-indexing.py:1695(maybe_convert_indices)                       ->      95    0.000    0.000  {isinstance}
-                                                                     190    0.000    0.001  {method 'any' of 'numpy.ndarray' objects}
-index.py:3385(__new__)                                        ->      31    0.000    0.000  index.py:204(_simple_new)
-                                                                      31    0.008    0.008  index.py:312(_coerce_to_ndarray)
-                                                                      62    0.000    0.000  {issubclass}
-                                                                      31    0.000    0.000  {numpy.core.multiarray.array}
-common.py:2461(_get_dtype_type)                               ->    1279    0.000    0.000  {isinstance}
-index.py:312(_coerce_to_ndarray)                              ->      31    0.000    0.000  {isinstance}
-index.py:237(_reset_identity)                                 ->
-internals.py:2568(_consolidate_check)                         ->     665    0.006    0.007  internals.py:232(ftype)
-                                                                     446    0.000    0.000  {len}
-common.py:2585(is_object_dtype)                               ->      63    0.007    0.007  common.py:2461(_get_dtype_type)
-                                                                      63    0.000    0.000  {issubclass}
-internals.py:232(ftype)                                       ->     665    0.000    0.000  internals.py:228(dtype)
-{method 'copy' of 'numpy.ndarray' objects}                    ->
-fromnumeric.py:2737(std)                                      ->       1    0.000    0.006  _methods.py:123(_std)
-_methods.py:123(_std)                                         ->       1    0.006    0.006  _methods.py:77(_var)
-                                                                       1    0.000    0.000  {hasattr}
-                                                                       1    0.000    0.000  {isinstance}
-_methods.py:77(_var)                                          ->       1    0.000    0.000  _methods.py:43(_count_reduce_items)
-                                                                       2    0.000    0.000  numeric.py:464(asanyarray)
-                                                                       1    0.000    0.000  {hasattr}
-                                                                       2    0.000    0.000  {isinstance}
-                                                                       2    0.000    0.000  {issubclass}
-                                                                       1    0.000    0.000  {max}
-                                                                       2    0.000    0.000  {method 'reduce' of 'numpy.ufunc' objects}
+{method 'delete' of 'pandas.lib.BlockPlacement' objects}      ->      32    0.001    0.008  function_base.py:3427(delete)
+                                                                      32    0.000    0.000  numeric.py:588(require)
+generic.py:1093(_set_as_cached)                               ->     128    0.001    0.001  generic.py:2152(__setattr__)
+{method 'take' of 'numpy.ndarray' objects}                    ->
+necompiler.py:484(getContext)                                 ->      17    0.000    0.000  {method 'copy' of 'dict' objects}
+                                                                      34    0.000    0.000  {method 'pop' of 'dict' objects}
+internals.py:3815(<lambda>)                                   ->     408    0.006    0.006  internals.py:79(_consolidate_key)
+generic.py:1199(_set_is_copy)                                 ->      64    0.000    0.000  generic.py:2152(__setattr__)
 nanops.py:153(_get_values)                                    ->      32    0.000    0.005  common.py:212(isnull)
                                                                       32    0.000    0.000  common.py:2495(is_integer_dtype)
                                                                       32    0.000    0.000  common.py:2557(is_bool_dtype)
@@ -683,9 +695,18 @@ nanops.py:153(_get_values)                                    ->      32    0.00
                                                                       32    0.000    0.000  {method 'copy' of 'numpy.ndarray' objects}
                                                                       32    0.000    0.000  {numpy.core.multiarray.putmask}
                                                                       32    0.000    0.000  {pandas.lib.values_from_object}
-{scipy.ndimage._nd_image.correlate1d}                         ->
-utils.py:106(get_column_headers)                              ->      32    0.000    0.000  index.py:1001(__iter__)
-internals.py:128(make_block_same_class)                       ->     363    0.001    0.003  internals.py:2073(make_block)
+numeric.py:141(ones)                                          ->      64    0.000    0.000  {numpy.core.multiarray.copyto}
+                                                                      64    0.006    0.006  {numpy.core.multiarray.empty}
+internals.py:79(_consolidate_key)                             ->     408    0.000    0.000  internals.py:228(dtype)
+series.py:319(get_values)                                     ->     112    0.000    0.001  internals.py:3481(get_values)
+expressions.py:74(_can_use_numexpr)                           ->      16    0.000    0.000  fromnumeric.py:2259(prod)
+                                                                      32    0.000    0.000  {hasattr}
+                                                                      32    0.000    0.000  {isinstance}
+                                                                      16    0.000    0.000  {len}
+common.py:2440(is_datetimelike)                               ->      32    0.000    0.000  series.py:288(dtype)
+                                                                      80    0.000    0.000  {isinstance}
+{method 'get' of 'dict' objects}                              ->
+index.py:1059(__getitem__)                                    ->     128    0.000    0.000  numeric.py:1910(isscalar)
 frame.py:343(_init_ndarray)                                   ->      32    0.000    0.000  common.py:2569(is_categorical_dtype)
                                                                       16    0.000    0.000  common.py:2585(is_object_dtype)
                                                                       16    0.000    0.000  frame.py:361(_get_axes)
@@ -693,58 +714,34 @@ frame.py:343(_init_ndarray)                                   ->      32    0.00
                                                                       16    0.000    0.002  internals.py:3530(create_block_manager_from_blocks)
                                                                       16    0.000    0.000  {getattr}
                                                                       16    0.000    0.000  {isinstance}
-internals.py:2872(iget)                                       ->     128    0.000    0.001  internals.py:128(make_block_same_class)
-                                                                     128    0.000    0.000  internals.py:259(iget)
-                                                                     128    0.000    0.001  internals.py:3343(__init__)
-                                                                     128    0.000    0.000  {len}
-internals.py:2206(<genexpr>)                                  ->    1650    0.001    0.002  {len}
+{method 'fill' of 'numpy.ndarray' objects}                    ->
 internals.py:3530(create_block_manager_from_blocks)           ->      16    0.000    0.000  internals.py:2073(make_block)
                                                                       16    0.000    0.002  internals.py:2163(__init__)
                                                                       16    0.000    0.000  internals.py:2837(_consolidate_inplace)
                                                                       16    0.000    0.000  {isinstance}
                                                                       48    0.000    0.000  {len}
-{pandas.algos.take_2d_axis1_float64_float64}                  ->
-internals.py:141(mgr_locs)                                    ->      79    0.001    0.001  numeric.py:588(require)
-                                                                     698    0.000    0.000  {isinstance}
-index.py:1553(get_loc)                                        ->      16    0.000    0.000  index.py:958(_engine)
-                                                                     352    0.001    0.001  {method 'get_loc' of 'pandas.index.IndexEngine' objects}
-                                                                     352    0.000    0.000  {pandas.lib.values_from_object}
-{method 'take' of 'numpy.ndarray' objects}                    ->
-{method 'delete' of 'pandas.lib.BlockPlacement' objects}      ->      32    0.001    0.001  function_base.py:3427(delete)
-                                                                      32    0.000    0.000  numeric.py:588(require)
-{getattr}                                                     ->      32    0.000    0.000  series.py:308(values)
 internals.py:3343(__init__)                                   ->     128    0.000    0.000  index.py:5677(_ensure_index)
                                                                       80    0.000    0.001  internals.py:2073(make_block)
                                                                      624    0.000    0.000  {isinstance}
                                                                      336    0.000    0.000  {len}
-index.py:242(__len__)                                         ->    2555    0.000    0.000  {len}
-{method 'get_loc' of 'pandas.index.IndexEngine' objects}      ->
+{method 'all' of 'numpy.ndarray' objects}                     ->     159    0.000    0.001  _methods.py:40(_all)
 shape_base.py:60(atleast_2d)                                  ->     189    0.000    0.000  numeric.py:464(asanyarray)
                                                                      567    0.000    0.000  {len}
                                                                      189    0.000    0.000  {method 'append' of 'list' objects}
 internals.py:3935(_get_blkno_placements)                      ->      95    0.000    0.000  {pandas.algos.ensure_int64}
                                                                       95    0.000    0.000  {pandas.lib.get_blkno_indexers}
-{hasattr}                                                     ->      32    0.000    0.000  series.py:288(dtype)
+numeric.py:2328(array_equal)                                  ->      93    0.000    0.000  numeric.py:394(asarray)
+                                                                      31    0.000    0.000  {method 'all' of 'numpy.ndarray' objects}
+common.py:2461(_get_dtype_type)                               ->    1279    0.000    0.000  {isinstance}
 {issubclass}                                                  ->
-generic.py:1093(_set_as_cached)                               ->     128    0.001    0.001  generic.py:2152(__setattr__)
+_methods.py:40(_all)                                          ->     159    0.001    0.001  {method 'reduce' of 'numpy.ufunc' objects}
 numeric.py:588(require)                                       ->     111    0.000    0.000  {method 'upper' of 'str' objects}
                                                                      111    0.000    0.000  {numpy.core.multiarray.array}
-series.py:308(values)                                         ->     144    0.000    0.001  internals.py:3477(values)
-_methods.py:40(_all)                                          ->     159    0.001    0.001  {method 'reduce' of 'numpy.ufunc' objects}
-internals.py:119(mgr_locs)                                    ->
+{hasattr}                                                     ->      32    0.000    0.000  series.py:288(dtype)
 generic.py:318(_get_axis)                                     ->     302    0.000    0.001  generic.py:305(_get_axis_name)
                                                                      302    0.000    0.000  {getattr}
 internals.py:2560(is_consolidated)                            ->      48    0.000    0.001  internals.py:2568(_consolidate_check)
-{range}                                                       ->
-ops.py:543(na_op)                                             ->      64    0.000    0.000  common.py:2569(is_categorical_dtype)
-                                                                      32    0.000    0.000  {getattr}
-internals.py:3477(values)                                     ->     144    0.000    0.000  internals.py:3394(_values)
-                                                                     144    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
 generic.py:90(__init__)                                       ->
-index.py:263(values)                                          ->     434    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
-frame.py:2319(reindexer)                                      ->      32    0.000    0.000  index.py:3434(equals)
-                                                                      32    0.000    0.000  series.py:308(values)
-                                                                      32    0.000    0.000  {method 'copy' of 'numpy.ndarray' objects}
 index.py:1233(equals)                                         ->      48    0.000    0.000  common.py:407(array_equivalent)
                                                                       48    0.000    0.000  index.py:218(is_)
                                                                       48    0.000    0.000  {isinstance}
@@ -752,57 +749,57 @@ index.py:1233(equals)                                         ->      48    0.00
 indexing.py:1648(check_bool_indexer)                          ->      32    0.000    0.000  index.py:3434(equals)
                                                                       32    0.000    0.001  numeric.py:394(asarray)
                                                                       32    0.000    0.000  {isinstance}
-{method 'view' of 'numpy.ndarray' objects}                    ->
+frame.py:2319(reindexer)                                      ->      32    0.000    0.000  index.py:3434(equals)
+                                                                      32    0.000    0.000  series.py:308(values)
+                                                                      32    0.000    0.000  {method 'copy' of 'numpy.ndarray' objects}
 {sum}                                                         ->     629    0.000    0.001  internals.py:2386(<genexpr>)
-internals.py:3394(_values)                                    ->     352    0.000    0.000  internals.py:3390(_block)
+{method 'view' of 'numpy.ndarray' objects}                    ->
+internals.py:119(mgr_locs)                                    ->
 internals.py:3481(get_values)                                 ->     112    0.000    0.000  internals.py:112(to_dense)
                                                                      112    0.000    0.000  internals.py:3390(_block)
                                                                      112    0.000    0.000  {numpy.core.multiarray.array}
 {pandas.algos.take_2d_axis0_int64_int64}                      ->
-common.py:2049(_possibly_infer_to_datetimelike)               ->      16    0.000    0.000  common.py:2603(is_list_like)
-                                                                      32    0.000    0.000  {len}
-                                                                      16    0.000    0.000  {min}
-                                                                      16    0.000    0.000  {numpy.core.multiarray.array}
-                                                                      16    0.000    0.000  {pandas.lib.infer_dtype}
-generic.py:3418(_align_series)                                ->      16    0.000    0.000  common.py:368(notnull)
-                                                                      16    0.000    0.000  frame.py:200(__init__)
-                                                                      32    0.000    0.000  generic.py:2118(__finalize__)
-                                                                      16    0.000    0.000  index.py:3434(equals)
-                                                                      16    0.000    0.000  {isinstance}
+generic.py:305(_get_axis_name)                                ->     318    0.000    0.000  {isinstance}
+                                                                     318    0.000    0.000  {method 'get' of 'dict' objects}
 indexing.py:1612(convert_to_index_sliceable)                  ->      48    0.000    0.000  index.py:1045(__contains__)
                                                                        1    0.000    0.000  index.py:3427(is_all_dates)
                                                                       48    0.000    0.000  internals.py:2279(_get_items)
                                                                      288    0.000    0.000  {isinstance}
-generic.py:305(_get_axis_name)                                ->     318    0.000    0.000  {isinstance}
-                                                                     318    0.000    0.000  {method 'get' of 'dict' objects}
 internals.py:2386(<genexpr>)                                  ->     455    0.000    0.000  internals.py:119(mgr_locs)
                                                                      455    0.000    0.000  {len}
-index.py:1059(__getitem__)                                    ->     128    0.000    0.000  numeric.py:1910(isscalar)
+internals.py:3477(values)                                     ->     144    0.000    0.000  internals.py:3394(_values)
+                                                                     144    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
+generic.py:322(_get_block_manager_axis)                       ->     111    0.000    0.000  generic.py:292(_get_axis_number)
 numeric.py:1910(isscalar)                                     ->     224    0.000    0.000  {isinstance}
-numerictypes.py:970(find_common_type)                         ->      62    0.000    0.000  numerictypes.py:949(_can_coerce_all)
+series.py:1003(__iter__)                                      ->      16    0.000    0.000  common.py:2569(is_categorical_dtype)
+                                                                      32    0.000    0.000  numerictypes.py:736(issubdtype)
+                                                                      48    0.000    0.000  series.py:288(dtype)
+                                                                      16    0.000    0.000  series.py:308(values)
+                                                                      16    0.000    0.000  {iter}
+series.py:288(dtype)                                          ->     208    0.000    0.000  internals.py:3453(dtype)
 internals.py:228(dtype)                                       ->
+internals.py:2208(ndim)                                       ->     794    0.000    0.000  {len}
+common.py:2495(is_integer_dtype)                              ->     112    0.000    0.000  common.py:2461(_get_dtype_type)
+                                                                     112    0.000    0.000  {issubclass}
+indexing.py:159(_convert_scalar_indexer)                      ->      48    0.000    0.000  generic.py:318(_get_axis)
+                                                                      48    0.000    0.000  index.py:773(_convert_scalar_indexer)
+                                                                      48    0.000    0.000  {min}
+index.py:268(get_values)                                      ->     190    0.000    0.000  index.py:263(values)
+common.py:1949(_possibly_castable)                            ->
 necompiler.py:557(NumExpr)                                    ->       1    0.000    0.000  necompiler.py:436(compileThreeAddrForm)
                                                                        1    0.000    0.000  necompiler.py:484(getContext)
                                                                        1    0.000    0.000  necompiler.py:504(precompile)
                                                                        2    0.000    0.000  {method 'encode' of 'str' objects}
-series.py:288(dtype)                                          ->     208    0.000    0.000  internals.py:3453(dtype)
-{method 'fill' of 'numpy.ndarray' objects}                    ->
-generic.py:322(_get_block_manager_axis)                       ->     111    0.000    0.000  generic.py:292(_get_axis_number)
-numeric.py:141(ones)                                          ->      64    0.000    0.000  {numpy.core.multiarray.copyto}
-                                                                      64    0.000    0.000  {numpy.core.multiarray.empty}
-internals.py:2208(ndim)                                       ->     794    0.000    0.000  {len}
-__init__.py:124(iteritems)                                    ->     256    0.000    0.000  {getattr}
-                                                                     256    0.000    0.000  {method 'iteritems' of 'dict' objects}
-indexing.py:159(_convert_scalar_indexer)                      ->      48    0.000    0.000  generic.py:318(_get_axis)
-                                                                      48    0.000    0.000  index.py:773(_convert_scalar_indexer)
-                                                                      48    0.000    0.000  {min}
-necompiler.py:484(getContext)                                 ->      17    0.000    0.000  {method 'copy' of 'dict' objects}
-                                                                      34    0.000    0.000  {method 'pop' of 'dict' objects}
-common.py:2495(is_integer_dtype)                              ->     112    0.000    0.000  common.py:2461(_get_dtype_type)
-                                                                     112    0.000    0.000  {issubclass}
-index.py:268(get_values)                                      ->     190    0.000    0.000  index.py:263(values)
+{pandas.lib.get_blkno_indexers}                               ->
+common.py:2547(is_float_dtype)                                ->      48    0.000    0.000  common.py:2461(_get_dtype_type)
+                                                                      48    0.000    0.000  {issubclass}
+common.py:1411(_fill_zeros)                                   ->      16    0.000    0.000  common.py:2547(is_float_dtype)
 generic.py:2309(values)                                       ->      16    0.000    0.000  generic.py:2268(as_matrix)
-numeric.py:1347(rollaxis)                                     ->
+common.py:2557(is_bool_dtype)                                 ->     112    0.000    0.000  common.py:2461(_get_dtype_type)
+                                                                     112    0.000    0.000  {issubclass}
+fromnumeric.py:803(argsort)                                   ->      47    0.000    0.000  {method 'argsort' of 'numpy.ndarray' objects}
+{numpy.core.multiarray.putmask}                               ->
+internals.py:3394(_values)                                    ->     352    0.000    0.000  internals.py:3390(_block)
 necompiler.py:504(precompile)                                 ->       1    0.000    0.000  necompiler.py:112(expressionToAST)
                                                                        1    0.000    0.000  necompiler.py:142(typeCompileAst)
                                                                        1    0.000    0.000  necompiler.py:227(stringToExpression)
@@ -818,57 +815,56 @@ necompiler.py:504(precompile)                                 ->       1    0.00
                                                                        1    0.000    0.000  necompiler.py:423(convertASTtoThreeAddrForm)
                                                                        1    0.000    0.000  {isinstance}
                                                                        1    0.000    0.000  {method 'join' of 'str' objects}
-{pandas.lib.get_blkno_indexers}                               ->
-{hash}                                                        ->      32    0.000    0.000  generic.py:661(__hash__)
-                                                                   34/20    0.000    0.000  necompiler.py:81(__hash__)
-common.py:2547(is_float_dtype)                                ->      48    0.000    0.000  common.py:2461(_get_dtype_type)
-                                                                      48    0.000    0.000  {issubclass}
-numerictypes.py:949(_can_coerce_all)                          ->     310    0.000    0.000  {len}
-{numpy.core.multiarray.putmask}                               ->
-generic.py:1172(_clear_item_cache)                            ->     126    0.000    0.000  {method 'clear' of 'dict' objects}
 index.py:752(is_integer)                                      ->      17    0.000    0.000  index.py:987(inferred_type)
-fromnumeric.py:803(argsort)                                   ->      47    0.000    0.000  {method 'argsort' of 'numpy.ndarray' objects}
 series.py:391(__array__)                                      ->      48    0.000    0.000  series.py:319(get_values)
-common.py:2557(is_bool_dtype)                                 ->     112    0.000    0.000  common.py:2461(_get_dtype_type)
-                                                                     112    0.000    0.000  {issubclass}
+generic.py:2118(__finalize__)                                 ->      32    0.000    0.000  {getattr}
+                                                                     160    0.000    0.000  {isinstance}
 common.py:2443(_coerce_to_dtype)                              ->      64    0.000    0.000  common.py:2569(is_categorical_dtype)
 internals.py:4461(_preprocess_slice_or_indexer)               ->      48    0.000    0.000  numeric.py:464(asanyarray)
                                                                       96    0.000    0.000  {isinstance}
                                                                       48    0.000    0.000  {len}
+generic.py:120(_init_mgr)                                     ->     128    0.000    0.000  {method 'items' of 'dict' objects}
 internals.py:262(set)                                         ->
 internals.py:3453(dtype)                                      ->     208    0.000    0.000  internals.py:3394(_values)
-generic.py:120(_init_mgr)                                     ->     128    0.000    0.000  {method 'items' of 'dict' objects}
-index.py:1783(_possibly_promote)                              ->
+common.py:2585(is_object_dtype)                               ->      63    0.000    0.000  common.py:2461(_get_dtype_type)
+                                                                      63    0.000    0.000  {issubclass}
 index.py:914(_convert_list_indexer)                           ->      48    0.000    0.000  common.py:2495(is_integer_dtype)
+index.py:1783(_possibly_promote)                              ->
+index.py:740(is_unique)                                       ->      16    0.000    0.000  index.py:961(<lambda>)
 index.py:248(__array__)                                       ->     143    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
-generic.py:2118(__finalize__)                                 ->      32    0.000    0.000  {getattr}
-                                                                     160    0.000    0.000  {isinstance}
 {method 'astype' of 'numpy.ndarray' objects}                  ->
+internals.py:1304(should_store)                               ->      32    0.000    0.000  common.py:2495(is_integer_dtype)
 index.py:987(inferred_type)                                   ->      17    0.000    0.000  {pandas.lib.infer_dtype}
+{numpy.core.multiarray.copyto}                                ->
 internals.py:2369(__len__)                                    ->      96    0.000    0.000  internals.py:2279(_get_items)
                                                                       96    0.000    0.000  {len}
+index.py:218(is_)                                             ->     207    0.000    0.000  {getattr}
 internals.py:2279(_get_items)                                 ->
-common.py:2603(is_list_like)                                  ->      64    0.000    0.000  {hasattr}
-                                                                      64    0.000    0.000  {isinstance}
-{method 'clear' of 'dict' objects}                            ->
+generic.py:107(_validate_dtype)                               ->      32    0.000    0.000  common.py:2443(_coerce_to_dtype)
+frame.py:599(__len__)                                         ->      79    0.000    0.000  {len}
+frame.py:2164(_ensure_valid_index)                            ->      79    0.000    0.000  {len}
+internals.py:220(shape)                                       ->
 indexing.py:1744(is_list_like_indexer)                        ->      48    0.000    0.000  common.py:2603(is_list_like)
                                                                       48    0.000    0.000  {isinstance}
-generic.py:107(_validate_dtype)                               ->      32    0.000    0.000  common.py:2443(_coerce_to_dtype)
-index.py:218(is_)                                             ->     207    0.000    0.000  {getattr}
-internals.py:1304(should_store)                               ->      32    0.000    0.000  common.py:2495(is_integer_dtype)
-generic.py:661(__hash__)                                      ->      32    0.000    0.000  {method 'format' of 'str' objects}
-{numpy.core.multiarray.copyto}                                ->
-index.py:1001(__iter__)                                       ->      48    0.000    0.000  index.py:263(values)
-                                                                      48    0.000    0.000  {iter}
-internals.py:112(to_dense)                                    ->     112    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
-index.py:961(<lambda>)                                        ->      66    0.000    0.000  index.py:263(values)
-frame.py:2164(_ensure_valid_index)                            ->      79    0.000    0.000  {len}
-series.py:381(__len__)                                        ->      48    0.000    0.000  {len}
-internals.py:3390(_block)                                     ->
-internals.py:220(shape)                                       ->
+fromnumeric.py:2737(std)                                      ->       1    0.000    0.000  _methods.py:123(_std)
 internals.py:259(iget)                                        ->
-frame.py:599(__len__)                                         ->      79    0.000    0.000  {len}
+internals.py:112(to_dense)                                    ->     112    0.000    0.000  {method 'view' of 'numpy.ndarray' objects}
+common.py:2603(is_list_like)                                  ->      64    0.000    0.000  {hasattr}
+                                                                      64    0.000    0.000  {isinstance}
+internals.py:3390(_block)                                     ->
+index.py:961(<lambda>)                                        ->      66    0.000    0.000  index.py:263(values)
+series.py:381(__len__)                                        ->      48    0.000    0.000  {len}
+_methods.py:123(_std)                                         ->       1    0.000    0.000  _methods.py:77(_var)
+                                                                       1    0.000    0.000  {hasattr}
+                                                                       1    0.000    0.000  {isinstance}
 nanops.py:210(_view_if_needed)                                ->      32    0.000    0.000  common.py:2526(is_datetime_or_timedelta_dtype)
+_methods.py:77(_var)                                          ->       1    0.000    0.000  _methods.py:43(_count_reduce_items)
+                                                                       2    0.000    0.000  numeric.py:464(asanyarray)
+                                                                       1    0.000    0.000  {hasattr}
+                                                                       2    0.000    0.000  {isinstance}
+                                                                       2    0.000    0.000  {issubclass}
+                                                                       1    0.000    0.000  {max}
+                                                                       2    0.000    0.000  {method 'reduce' of 'numpy.ufunc' objects}
 necompiler.py:227(stringToExpression)                         ->       2    0.000    0.000  expressions.py:67(get_current_context)
                                                                        4    0.000    0.000  expressions.py:70(set_new_context)
                                                                        2    0.000    0.000  expressions.py:106(isConstant)
@@ -878,24 +874,24 @@ necompiler.py:227(stringToExpression)                         ->       2    0.00
                                                                        2    0.000    0.000  {isinstance}
                                                                        6    0.000    0.000  {method 'get' of 'dict' objects}
                                                                        2    0.000    0.000  {method 'update' of 'dict' objects}
+{pandas.lib.isscalar}                                         ->
+nanops.py:206(_na_ok_dtype)                                   ->      32    0.000    0.000  common.py:2501(is_int_or_datetime_dtype)
 common.py:2507(is_datetime64_dtype)                           ->      80    0.000    0.000  common.py:2461(_get_dtype_type)
                                                                       80    0.000    0.000  {issubclass}
 frame.py:4863(_prep_ndarray)                                  ->      16    0.000    0.000  numeric.py:394(asarray)
                                                                       16    0.000    0.000  {isinstance}
-common.py:1949(_possibly_castable)                            ->
-{pandas.lib.isscalar}                                         ->
+{built-in method __new__ of type object at 0x7f39ffe8abc0}    ->
+common.py:2526(is_datetime_or_timedelta_dtype)                ->      32    0.000    0.000  common.py:2461(_get_dtype_type)
+                                                                      32    0.000    0.000  {issubclass}
+series.py:277(_set_subtyp)                                    ->
+{method 'append' of 'list' objects}                           ->
 necompiler.py:657(getExprNames)                               ->       1    0.000    0.000  necompiler.py:112(expressionToAST)
                                                                        1    0.000    0.000  necompiler.py:227(stringToExpression)
                                                                        1    0.000    0.000  necompiler.py:267(getInputOrder)
-{method 'append' of 'list' objects}                           ->
-common.py:2526(is_datetime_or_timedelta_dtype)                ->      32    0.000    0.000  common.py:2461(_get_dtype_type)
-                                                                      32    0.000    0.000  {issubclass}
-nanops.py:206(_na_ok_dtype)                                   ->      32    0.000    0.000  common.py:2501(is_int_or_datetime_dtype)
-{built-in method __new__ of type object at 0x7fed79fe5bc0}    ->
-{method 'add' of 'pandas.lib.BlockPlacement' objects}         ->
 common.py:2477(is_dtype_equal)                                ->      96    0.000    0.000  common.py:2461(_get_dtype_type)
-numerictypes.py:736(issubdtype)                               ->      32    0.000    0.000  numerictypes.py:668(issubclass_)
-                                                                      32    0.000    0.000  {issubclass}
+{method 'add' of 'pandas.lib.BlockPlacement' objects}         ->
+{method 'update' of 'dict' objects}                           ->
+frame.py:361(_get_axes)                                       ->      32    0.000    0.000  index.py:5677(_ensure_index)
 necompiler.py:142(typeCompileAst)                             ->       7    0.000    0.000  necompiler.py:60(__init__)
                                                                        3    0.000    0.000  necompiler.py:96(typecode)
                                                                       16    0.000    0.000  necompiler.py:123(sigPerms)
@@ -904,30 +900,34 @@ necompiler.py:142(typeCompileAst)                             ->       7    0.00
                                                                        3    0.000    0.000  {method 'join' of 'str' objects}
                                                                        3    0.000    0.000  {zip}
 internals.py:115(fill_value)                                  ->
-internals.py:874(get_values)                                  ->
-{method 'update' of 'dict' objects}                           ->
-{pandas.lib.checknull}                                        ->
-{pandas.lib.is_float}                                         ->
-common.py:368(notnull)                                        ->      16    0.000    0.000  common.py:212(isnull)
-                                                                      16    0.000    0.000  numeric.py:1910(isscalar)
-{method 'format' of 'str' objects}                            ->
-{method 'iteritems' of 'dict' objects}                        ->
 index.py:773(_convert_scalar_indexer)                         ->      48    0.000    0.000  {pandas.lib.is_float}
+generic.py:366(_info_axis)                                    ->      63    0.000    0.000  {getattr}
+numerictypes.py:736(issubdtype)                               ->      32    0.000    0.000  numerictypes.py:668(issubclass_)
+                                                                      32    0.000    0.000  {issubclass}
+frame.py:418(shape)                                           ->      30    0.000    0.000  {len}
 common.py:2501(is_int_or_datetime_dtype)                      ->      32    0.000    0.000  common.py:2461(_get_dtype_type)
                                                                       64    0.000    0.000  {issubclass}
-generic.py:366(_info_axis)                                    ->      63    0.000    0.000  {getattr}
-frame.py:418(shape)                                           ->      30    0.000    0.000  {len}
-fromnumeric.py:1380(nonzero)                                  ->      16    0.000    0.000  {method 'nonzero' of 'numpy.ndarray' objects}
+internals.py:874(get_values)                                  ->
+{pandas.lib.checknull}                                        ->
+common.py:368(notnull)                                        ->      16    0.000    0.000  common.py:212(isnull)
+                                                                      16    0.000    0.000  numeric.py:1910(isscalar)
 {pandas.lib.is_integer}                                       ->
-{method 'transpose' of 'numpy.ndarray' objects}               ->
 internals.py:2973(value_getitem)                              ->
-{method 'items' of 'dict' objects}                            ->
-frame.py:361(_get_axes)                                       ->      32    0.000    0.000  index.py:5677(_ensure_index)
-common.py:2759(_clean_reindex_fill_method)                    ->      48    0.000    0.000  common.py:2738(_clean_fill_method)
 internals.py:1258(should_store)                               ->      15    0.000    0.000  internals.py:228(dtype)
                                                                       15    0.000    0.000  {issubclass}
-{eval}                                                        ->       1    0.000    0.000  <expr>:1(<module>)
+{method 'transpose' of 'numpy.ndarray' objects}               ->
+common.py:2759(_clean_reindex_fill_method)                    ->      48    0.000    0.000  common.py:2738(_clean_fill_method)
+{pandas.lib.is_float}                                         ->
+expressions.py:180(_bool_arith_check)                         ->      16    0.000    0.000  expressions.py:170(_has_bool_dtype)
+{method 'items' of 'dict' objects}                            ->
+fromnumeric.py:1380(nonzero)                                  ->      16    0.000    0.000  {method 'nonzero' of 'numpy.ndarray' objects}
+frame.py:189(_constructor)                                    ->
+{numpy.core.multiarray.can_cast}                              ->
+{method 'upper' of 'str' objects}                             ->
 index.py:3427(is_all_dates)                                   ->
+{min}                                                         ->
+{iter}                                                        ->
+{pandas.index.convert_scalar}                                 ->
 necompiler.py:358(optimizeTemporariesAllocation)              ->       3    0.000    0.000  necompiler.py:81(__hash__)
                                                                        6    0.000    0.000  necompiler.py:99(postorderWalk)
                                                                        4    0.000    0.000  necompiler.py:363(<genexpr>)
@@ -935,120 +935,120 @@ necompiler.py:358(optimizeTemporariesAllocation)              ->       3    0.00
                                                                        4    0.000    0.000  {method 'add' of 'set' objects}
                                                                        2    0.000    0.000  {method 'discard' of 'set' objects}
                                                                        1    0.000    0.000  {method 'pop' of 'set' objects}
-{min}                                                         ->
-{numpy.core.multiarray.can_cast}                              ->
-{pandas.index.convert_scalar}                                 ->
-{iter}                                                        ->
+{eval}                                                        ->       1    0.000    0.000  <expr>:1(<module>)
+indexing.py:41(__init__)                                      ->      17    0.000    0.000  generic.py:386(ndim)
+index.py:312(_coerce_to_ndarray)                              ->      31    0.000    0.000  {isinstance}
+index_tricks.py:231(_retval)                                  ->
 necompiler.py:636(getType)                                    ->
-_methods.py:43(_count_reduce_items)                           ->       1    0.000    0.000  {isinstance}
-                                                                       1    0.000    0.000  {range}
+common.py:2516(is_timedelta64_dtype)                          ->      32    0.000    0.000  common.py:2461(_get_dtype_type)
+                                                                      32    0.000    0.000  {issubclass}
 expressions.py:83(func)                                       ->       4    0.000    0.000  expressions.py:106(isConstant)
                                                                        2    0.000    0.000  expressions.py:267(truediv_op)
                                                                        4    0.000    0.000  {isinstance}
-indexing.py:41(__init__)                                      ->      17    0.000    0.000  generic.py:386(ndim)
 {compile}                                                     ->
 necompiler.py:105(allOf)                                      ->      46    0.000    0.000  necompiler.py:99(postorderWalk)
-{method 'upper' of 'str' objects}                             ->
-necompiler.py:81(__hash__)                                    ->   47/13    0.000    0.000  {hash}
-numerictypes.py:668(issubclass_)                              ->      32    0.000    0.000  {issubclass}
-necompiler.py:99(postorderWalk)                               ->   94/58    0.000    0.000  necompiler.py:99(postorderWalk)
-common.py:2516(is_timedelta64_dtype)                          ->      32    0.000    0.000  common.py:2461(_get_dtype_type)
-                                                                      32    0.000    0.000  {issubclass}
 indexing.py:1731(is_nested_tuple)                             ->      48    0.000    0.000  {isinstance}
 index.py:258(dtype)                                           ->
-frame.py:189(_constructor)                                    ->
+necompiler.py:81(__hash__)                                    ->   47/13    0.000    0.000  {hash}
+utils.py:87(choose_dict)                                      ->
 expressions.py:267(truediv_op)                                ->       2    0.000    0.000  expressions.py:77(get_optimization)
                                                                        2    0.000    0.000  expressions.py:111(commonKind)
                                                                        2    0.000    0.000  expressions.py:521(__init__)
                                                                        2    0.000    0.000  {isinstance}
+numerictypes.py:668(issubclass_)                              ->      32    0.000    0.000  {issubclass}
+fromnumeric.py:495(transpose)                                 ->      16    0.000    0.000  {method 'transpose' of 'numpy.ndarray' objects}
+necompiler.py:99(postorderWalk)                               ->   94/58    0.000    0.000  necompiler.py:99(postorderWalk)
 necompiler.py:123(sigPerms)                                   ->   40/18    0.000    0.000  necompiler.py:123(sigPerms)
                                                                        6    0.000    0.000  {method 'index' of 'str' objects}
 necompiler.py:436(compileThreeAddrForm)                       ->       3    0.000    0.000  necompiler.py:461(toString)
                                                                        1    0.000    0.000  {method 'join' of 'str' objects}
+internals.py:166(__len__)                                     ->      32    0.000    0.000  {len}
 generic.py:1227(_check_setitem_copy)                          ->
+_ni_support.py:38(_extend_mode_to_code)                       ->
+generic.py:386(ndim)                                          ->      17    0.000    0.000  internals.py:2208(ndim)
 necompiler.py:336(collapseDuplicateSubtrees)                  ->       6    0.000    0.000  necompiler.py:81(__hash__)
                                                                        4    0.000    0.000  necompiler.py:105(allOf)
-internals.py:166(__len__)                                     ->      32    0.000    0.000  {len}
 necompiler.py:461(toString)                                   ->       3    0.000    0.000  necompiler.py:454(quadrupleToString)
                                                                        5    0.000    0.000  {len}
                                                                        3    0.000    0.000  {method 'join' of 'str' objects}
 common.py:2738(_clean_fill_method)                            ->
-fromnumeric.py:495(transpose)                                 ->      16    0.000    0.000  {method 'transpose' of 'numpy.ndarray' objects}
 necompiler.py:267(getInputOrder)                              ->       6    0.000    0.000  necompiler.py:105(allOf)
                                                                        2    0.000    0.000  {method 'keys' of 'dict' objects}
                                                                        1    0.000    0.000  {method 'sort' of 'list' objects}
-{method 'item' of 'numpy.ndarray' objects}                    ->
-expressions.py:170(_has_bool_dtype)                           ->
 function_base.py:3832(append)                                 ->       2    0.000    0.000  fromnumeric.py:1291(ravel)
                                                                        2    0.000    0.000  numeric.py:464(asanyarray)
                                                                        2    0.000    0.000  {numpy.core.multiarray.concatenate}
-generic.py:386(ndim)                                          ->      17    0.000    0.000  internals.py:2208(ndim)
+_ni_support.py:90(_check_axis)                                ->
+{method 'item' of 'numpy.ndarray' objects}                    ->
 {pandas.lib.is_bool}                                          ->
 necompiler.py:454(quadrupleToString)                          ->       9    0.000    0.000  necompiler.py:441(nToChr)
                                                                        3    0.000    0.000  {chr}
                                                                        3    0.000    0.000  {method 'encode' of 'str' objects}
-{method 'encode' of 'str' objects}                            ->
-{zip}                                                         ->
+expressions.py:170(_has_bool_dtype)                           ->
+{method 'copy' of 'dict' objects}                             ->
 <expr>:1(<module>)                                            ->       2    0.000    0.000  expressions.py:83(func)
 necompiler.py:317(assignLeafRegisters)                        ->       2    0.000    0.000  necompiler.py:93(key)
                                                                        4    0.000    0.000  necompiler.py:105(allOf)
                                                                        2    0.000    0.000  necompiler.py:196(__init__)
+_methods.py:43(_count_reduce_items)                           ->       1    0.000    0.000  {isinstance}
+                                                                       1    0.000    0.000  {range}
+{zip}                                                         ->
 necompiler.py:112(expressionToAST)                            ->       6    0.000    0.000  necompiler.py:60(__init__)
                                                                        4    0.000    0.000  necompiler.py:112(expressionToAST)
-necompiler.py:60(__init__)                                    ->
 {sys._getframe}                                               ->
+necompiler.py:60(__init__)                                    ->
+{method 'encode' of 'str' objects}                            ->
 {method 'join' of 'str' objects}                              ->       7    0.000    0.000  necompiler.py:151(<genexpr>)
                                                                        3    0.000    0.000  necompiler.py:552(<genexpr>)
+nanops.py:130(_get_fill_value)                                ->
+expressions.py:478(__init__)                                  ->       4    0.000    0.000  expressions.py:390(__init__)
+{method 'pop' of 'dict' objects}                              ->
 expressions.py:111(commonKind)                                ->       4    0.000    0.000  {max}
                                                                        4    0.000    0.000  {method 'count' of 'list' objects}
                                                                        4    0.000    0.000  {method 'index' of 'list' objects}
-expressions.py:478(__init__)                                  ->       4    0.000    0.000  expressions.py:390(__init__)
-expressions.py:106(isConstant)                                ->       6    0.000    0.000  {isinstance}
 necompiler.py:423(convertASTtoThreeAddrForm)                  ->       4    0.000    0.000  necompiler.py:105(allOf)
 necompiler.py:329(assignBranchRegisters)                      ->       4    0.000    0.000  necompiler.py:105(allOf)
                                                                        3    0.000    0.000  necompiler.py:196(__init__)
+fromnumeric.py:1291(ravel)                                    ->       2    0.000    0.000  numeric.py:394(asarray)
+                                                                       2    0.000    0.000  {method 'ravel' of 'numpy.ndarray' objects}
+necompiler.py:399(setRegisterNumbersForTemporaries)           ->       1    0.000    0.000  necompiler.py:96(typecode)
+                                                                       6    0.000    0.000  necompiler.py:99(postorderWalk)
+{method 'add' of 'set' objects}                               ->       2    0.000    0.000  necompiler.py:81(__hash__)
+expressions.py:106(isConstant)                                ->       6    0.000    0.000  {isinstance}
+expressions.py:390(__init__)                                  ->
+necompiler.py:441(nToChr)                                     ->       7    0.000    0.000  {chr}
 {method 'discard' of 'set' objects}                           ->       2    0.000    0.000  necompiler.py:81(__hash__)
+{method 'append' of 'pandas.lib.BlockPlacement' objects}      ->
 necompiler.py:296(getConstants)                               ->       1    0.000    0.000  necompiler.py:105(allOf)
                                                                        1    0.000    0.000  {method 'keys' of 'dict' objects}
                                                                        1    0.000    0.000  {method 'sort' of 'list' objects}
-fromnumeric.py:1291(ravel)                                    ->       2    0.000    0.000  numeric.py:394(asarray)
-                                                                       2    0.000    0.000  {method 'ravel' of 'numpy.ndarray' objects}
-nanops.py:130(_get_fill_value)                                ->
-necompiler.py:399(setRegisterNumbersForTemporaries)           ->       1    0.000    0.000  necompiler.py:96(typecode)
-                                                                       6    0.000    0.000  necompiler.py:99(postorderWalk)
-{method 'pop' of 'dict' objects}                              ->
-{method 'add' of 'set' objects}                               ->       2    0.000    0.000  necompiler.py:81(__hash__)
-expressions.py:390(__init__)                                  ->
-expressions.py:521(__init__)                                  ->       2    0.000    0.000  expressions.py:390(__init__)
-necompiler.py:441(nToChr)                                     ->       7    0.000    0.000  {chr}
 necompiler.py:365(<genexpr>)                                  ->
+expressions.py:521(__init__)                                  ->       2    0.000    0.000  expressions.py:390(__init__)
 expressions.py:77(get_optimization)                           ->       2    0.000    0.000  expressions.py:64(get)
-utils.py:145(__setitem__)                                     ->       2    0.000    0.000  {len}
-{max}                                                         ->
-{method 'append' of 'pandas.lib.BlockPlacement' objects}      ->
-expressions.py:70(set_new_context)                            ->       4    0.000    0.000  {method 'update' of 'dict' objects}
-necompiler.py:151(<genexpr>)                                  ->       4    0.000    0.000  necompiler.py:96(typecode)
-{method 'copy' of 'dict' objects}                             ->
 series.py:237(_constructor)                                   ->
-necompiler.py:96(typecode)                                    ->
+utils.py:145(__setitem__)                                     ->       2    0.000    0.000  {len}
+expressions.py:70(set_new_context)                            ->       4    0.000    0.000  {method 'update' of 'dict' objects}
 necompiler.py:263(isReduction)                                ->       2    0.000    0.000  {method 'startswith' of 'str' objects}
-internals.py:2442(<genexpr>)                                  ->
+necompiler.py:151(<genexpr>)                                  ->       4    0.000    0.000  necompiler.py:96(typecode)
+necompiler.py:196(__init__)                                   ->
+{chr}                                                         ->
+{method 'ravel' of 'numpy.ndarray' objects}                   ->
+{max}                                                         ->
+necompiler.py:96(typecode)                                    ->
+necompiler.py:363(<genexpr>)                                  ->
 {method 'index' of 'str' objects}                             ->
 necompiler.py:391(setOrderedRegisterNumbers)                  ->       2    0.000    0.000  {len}
-necompiler.py:196(__init__)                                   ->
-{method 'ravel' of 'numpy.ndarray' objects}                   ->
-{chr}                                                         ->
-necompiler.py:552(<genexpr>)                                  ->       2    0.000    0.000  {method 'get' of 'dict' objects}
-{method 'keys' of 'dict' objects}                             ->
-necompiler.py:363(<genexpr>)                                  ->
 {method 'sort' of 'list' objects}                             ->
+necompiler.py:552(<genexpr>)                                  ->       2    0.000    0.000  {method 'get' of 'dict' objects}
+internals.py:2442(<genexpr>)                                  ->
+necompiler.py:93(key)                                         ->
 {method 'index' of 'list' objects}                            ->
-expressions.py:67(get_current_context)                        ->
+{method 'keys' of 'dict' objects}                             ->
 {method 'startswith' of 'str' objects}                        ->
+{method 'disable' of '_lsprof.Profiler' objects}              ->
+expressions.py:67(get_current_context)                        ->
 {method 'count' of 'list' objects}                            ->
 expressions.py:64(get)                                        ->       2    0.000    0.000  {method 'get' of 'dict' objects}
-{method 'disable' of '_lsprof.Profiler' objects}              ->
-necompiler.py:93(key)                                         ->
 {method 'pop' of 'set' objects}                               ->
 
 

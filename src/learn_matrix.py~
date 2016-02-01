@@ -180,7 +180,7 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
     lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT') 
     par_seq_dict = {v:k for v,k in seq_dict.items() if k != (len(seq_dict)-1)}
     #drop any rows with ct = 0
-    df = df[df.loc[:,'ct'] != 0]
+    df = df[df['ct'] != 0]
     df.reset_index(drop=True,inplace=True)
     #If there are sequences of different lengths, then print error but continue
     if len(set(df[seq_col_name].apply(len))) > 1:
