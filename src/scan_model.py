@@ -105,10 +105,17 @@ def wrapper(args):
     L = model_df.shape[0]
     if modeltype=='NBR':
         L += 1 
-
-    # Do not currently use pos offset
     
     chunksize = args.chunksize
+    if not chunksize>L:
+        raise SortSeqError(\
+            'chunksize=%d must be larger than model length=%d'%(chunksize,L))
+
+    if args.numsites <= 0:
+        raise SortSeqError('numsites=%d must be positive.'%args.numsites)
+
+    if args.i and args.seq:
+        raise SortSeqError('Cannot use flags -i and -s simultaneously.')
 
     # If sequence is provided manually
     if args.seq:
