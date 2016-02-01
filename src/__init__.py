@@ -48,3 +48,4 @@ def shutthefuckup(func):
     
     # Return the wrapper function
     return func_wrapper
+    

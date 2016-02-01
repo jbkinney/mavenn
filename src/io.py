@@ -184,6 +184,9 @@ def load_profile_info(file_arg):
 def load_meanstd(file_arg):
     return load(file_arg, file_type='meanstd')
 
+def load_sitelist(file_arg):
+    return load(file_arg, file_type='sitelist')
+
 # JBK: I want to switch to using only this function
 def load(file_arg, file_type, **kwargs):
     """ Loads file of any specified type
@@ -197,7 +200,8 @@ def load(file_arg, file_type, **kwargs):
     'profile_freq'  : qc.validate_profile_freq,
     'profile_mut'   : qc.validate_profile_mut,
     'profile_info'  : qc.validate_profile_info,
-    'meanstd'       : qc.validate_meanstd
+    'meanstd'       : qc.validate_meanstd,
+    'sitelist'      : qc.validate_sitelist
     }
 
     df = load_text(file_arg)

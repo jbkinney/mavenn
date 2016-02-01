@@ -69,6 +69,9 @@ simulate_expression.add_subparser(subparsers)
 import sst.validate as validate
 validate.add_subparser(subparsers)
 
+import sst.scan_model as scan_model
+scan_model.add_subparser(subparsers)
+
 # Final incantiation needed for this to work
 args = parser.parse_args()
 args.func(args=args)

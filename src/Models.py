@@ -12,6 +12,7 @@ import pdb
 import sst.qc as qc
 import sst.io as io
 import time
+from sst import SortSeqError
 
 
 class ExpModel:
