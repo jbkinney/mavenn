@@ -107,9 +107,9 @@ def wrapper(args):
         L += 1 
     
     chunksize = args.chunksize
-    if not chunksize>L:
+    if not chunksize>0:
         raise SortSeqError(\
-            'chunksize=%d must be larger than model length=%d'%(chunksize,L))
+            'chunksize=%d must be positive'%chunksize)
 
     if args.numsites <= 0:
         raise SortSeqError('numsites=%d must be positive.'%args.numsites)
@@ -142,13 +142,16 @@ def wrapper(args):
             if args.circular:
                 full_contig_str += full_contig_str[:L-1] 
 
-            pos_offset = 0
-            while pos_offset+chunksize < len(full_contig_str):
-                contig_str = full_contig_str[pos_offset:pos_offset+chunksize]
-                contig_list.append((contig_str,name,pos_offset))
-                pos_offset += chunksize-L
-            contig_str = full_contig_str[pos_offset:]
-            contig_list.append((contig_str,name,pos_offset))
+            # Define chunks containing chunksize sites
+            start = 0
+            end = start+chunksize+L-1
+            while end < len(full_contig_str):
+                contig_str = full_contig_str[start:end]
+                contig_list.append((contig_str,name,start))
+                start += chunksize
+                end = start+chunksize+L-1
+            contig_str = full_contig_str[start:]
+            contig_list.append((contig_str,name,start))
 
         if len(contig_list)==0:
             raise SortSeqError('No input sequences to read.')
@@ -179,11 +182,11 @@ def add_subparser(subparsers):
         )
     p.add_argument(
         '-n','--numsites', type=int, default=10, 
-        help="Maximum number of sites to record."
+        help="Maximum number of sites to record. Positive integer."
         )
     p.add_argument(
-        '-k','--chunksize', type=int, default=10000, 
-        help="chunksize to use when parsing FASTA files."
+        '-k','--chunksize', type=int, default=100000, 
+        help="chunksize to use when parsing FASTA files. Positive integer."
         )
     p.add_argument(
         '-c','--circular', action='store_true', 
