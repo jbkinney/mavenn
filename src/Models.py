@@ -11,6 +11,7 @@ import pandas as pd
 import pdb
 import sst.qc as qc
 import sst.io as io
+import sst.fast as fast
 import time
 from sst import SortSeqError
 
@@ -34,6 +35,7 @@ class LinearModel(ExpModel):
             raise SortSeqError('Invalid modeltype: %s'%modeltype)
 
         seq_dict,inv_dict = utils.choose_dict(seqtype,modeltype=modeltype)
+        self.seqtype = seqtype
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
         self.df = model_df
@@ -42,6 +44,7 @@ class LinearModel(ExpModel):
         # Extract matrix part of model dataframe
         headers = qc.get_cols_from_df(model_df,'vals')
         self.matrix = np.transpose(np.array(model_df[headers]))
+        self.matrix_vec = np.matrix(self.matrix.T.ravel()).T
 
     def genexp(self,seqs):
         return self.evaluate(seqs)
@@ -57,11 +60,13 @@ class LinearModel(ExpModel):
 
         # Compute seqmats
         t0 = time.time()
-        seqmats = [utils.seq2mat(s,self.seq_dict) for s in seqs]
+        #seqmats = [utils.seq2mat(s,self.seq_dict) for s in seqs]
+        seqarray = fast.seqs2array_for_matmodel(list(seqs),self.seqtype)
         t1 = time.time()
 
         # Compute and return values
-        vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        #vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        vals = np.matrix(seqarray)*self.matrix_vec
         t2 = time.time()
 
         #print 't1-t0 = %.4f, t1-t2 = %.4f'%(t1-t0,t2-t1)
@@ -81,6 +86,7 @@ class NeighborModel(ExpModel):
             raise SortSeqError('Invalid modeltype: %s'%modeltype)
 
         seq_dict,inv_dict = utils.choose_dict(seqtype,modeltype=modeltype)
+        self.seqtype = seqtype
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
         self.df = model_df
@@ -89,6 +95,7 @@ class NeighborModel(ExpModel):
         # Extract matrix part of model dataframe
         headers = qc.get_cols_from_df(model_df,'vals')
         self.matrix = np.transpose(np.array(model_df[headers]))
+        self.matrix_vec = np.matrix(self.matrix.T.ravel()).T
 
     def genexp(self,seqs):
         return self.evaluate(seqs)
@@ -104,11 +111,13 @@ class NeighborModel(ExpModel):
 
         # Compute seqmats
         t0 = time.time()
-        seqmats = [utils.seq2matpair(s,self.seq_dict) for s in seqs]
+        #seqmats = [utils.seq2matpair(s,self.seq_dict) for s in seqs]
+        seqarray = fast.seqs2array_for_nbrmodel(list(seqs),self.seqtype)
         t1 = time.time()
 
         # Compute and return values
-        vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        #vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        vals = np.matrix(seqarray)*self.matrix_vec
         t2 = time.time()
 
         #print 't1-t0 = %.4f, t1-t2 = %.4f'%(t1-t0,t2-t1)

@@ -9,7 +9,7 @@ import pandas as pd
 import sys
 import sst.Models as Models
 import sst.utils as utils
-import sst.simulate_evaluate as simulate_evaluate
+#import sst.simulate_evaluate as simulate_evaluate
 
 def main(
     df,dicttype,modeltype,mp,noisetype,npar,nbins,sequence_library=True,

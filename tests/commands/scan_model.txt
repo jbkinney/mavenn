@@ -12,5 +12,5 @@ good: sst scan_model -m model_crp_mat.txt -i genome_ecoli_1000lines.fa -n 100
 bad:  sst scan_model -m model_crp_rna.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
 bad:  sst scan_model -m model_crp_mat.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
 bad:  sst scan_model -m model_crp_mat.txt -s AAAAAAAGTGAG
-bad: sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -n -100
-bad: sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -k 10
+bad:  sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -n -100
+good: sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -k 10
