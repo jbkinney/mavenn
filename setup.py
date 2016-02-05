@@ -38,3 +38,4 @@ setup(
     #package_data = {'sst':['../data/sortseq/crp-wt/*.txt']}, # template from weblogo version 3.4
 )
 
+
