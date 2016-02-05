@@ -3,8 +3,10 @@ validation: | sst validate -t dataset
 
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT 
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna -tags
 bad:  sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t rna
 good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t protein
+good: sst simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t protein -tags
 bad:  sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t dna
 good: sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t rna
 bad:  sst simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t protein

@@ -63,7 +63,7 @@ def main(dataset_df,model_df,left=None,right=None):
         raise SortSeqError('Unrecognized model type %s'%modeltype)
  
     # Compute values
-    out_df['val'] = mymodel.genexp(out_df['seq']) 
+    out_df['val'] = mymodel.evaluate(out_df)
 
     # Validate dataframe and return
     return qc.validate_dataset(out_df,fix=True)
