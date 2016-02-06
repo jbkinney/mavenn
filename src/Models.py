@@ -11,8 +11,10 @@ import pandas as pd
 import pdb
 import sst.qc as qc
 import sst.io as io
+import sst.fast as fast
 import time
 from sst import SortSeqError
+import sst.numerics as numerics
 
 
 class ExpModel:
@@ -34,6 +36,7 @@ class LinearModel(ExpModel):
             raise SortSeqError('Invalid modeltype: %s'%modeltype)
 
         seq_dict,inv_dict = utils.choose_dict(seqtype,modeltype=modeltype)
+        self.seqtype = seqtype
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
         self.df = model_df
@@ -48,24 +51,38 @@ class LinearModel(ExpModel):
 
     def evaluate(self,seqs):
         # Check seqs container
-        if not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
-            raise SortSeqError('Sequences must be input as a list')
+        if isinstance(seqs,pd.DataFrame):
+            seq_col = qc.get_cols_from_df(seqs,'seqs')[0]
+            seqs_to_use = list(seqs[seq_col])
+        elif not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
+            raise SortSeqError('Sequences must be input as a list, pd.Series, or pd.DataFrame')
+        else:
+            seqs_to_use = list(seqs)
+
         # Check length
-        if len(seqs[0]) != self.matrix.shape[1]:
+        if len(seqs_to_use[0]) != self.length:
             raise SortSeqError(\
                 'Energy Matrix Length does not equal Sequence Length')
 
         # Compute seqmats
         t0 = time.time()
-        seqmats = [utils.seq2mat(s,self.seq_dict) for s in seqs]
+        seqarray = fast.seqs2array_for_matmodel(list(seqs_to_use),self.seqtype)
         t1 = time.time()
 
         # Compute and return values
-        vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        vals = self.evaluate_on_seqarray(seqarray)
         t2 = time.time()
 
         #print 't1-t0 = %.4f, t1-t2 = %.4f'%(t1-t0,t2-t1)
         return vals 
+
+    def evaluate_on_seqarray(self, seqarray):
+        matrix_vec = np.matrix(np.array(self.matrix.T).ravel()).T
+        return np.array(np.matrix(seqarray)*matrix_vec).ravel()
+
+    def evaluate_on_mutarray(self, mutarray, wtrow):
+        return numerics.eval_modelmatrix_on_mutarray(\
+            modelmatrix=self.matrix.T, mutarray=mutarray, wtrow=wtrow)
 
 class NeighborModel(ExpModel):
     ''' This model generates energies of binding 
@@ -81,6 +98,7 @@ class NeighborModel(ExpModel):
             raise SortSeqError('Invalid modeltype: %s'%modeltype)
 
         seq_dict,inv_dict = utils.choose_dict(seqtype,modeltype=modeltype)
+        self.seqtype = seqtype
         self.seq_dict = seq_dict
         self.inv_dict = inv_dict
         self.df = model_df
@@ -95,25 +113,38 @@ class NeighborModel(ExpModel):
 
     def evaluate(self,seqs):
         # Check seqs container
-        if not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
-            raise SortSeqError('Sequences must be input as a list')
+        if isinstance(seqs,pd.DataFrame):
+            seq_col = qc.get_cols_from_df(seqs,'seqs')[0]
+            seqs_to_use = list(seqs[seq_col])
+        elif not (isinstance(seqs,list) or isinstance(seqs,pd.Series)):
+            raise SortSeqError('Sequences must be input as a list, pd.Series, or pd.DataFrame')
+        else:
+            seqs_to_use = list(seqs)
+
         # Check length
-        if len(seqs[0]) != self.matrix.shape[1]+1:
+        if len(seqs_to_use[0]) != self.length:
             raise SortSeqError(\
                 'Energy Matrix Length does not equal Sequence Length')
 
         # Compute seqmats
         t0 = time.time()
-        seqmats = [utils.seq2matpair(s,self.seq_dict) for s in seqs]
+        seqarray = fast.seqs2array_for_nbrmodel(seqs_to_use,self.seqtype)
         t1 = time.time()
 
         # Compute and return values
-        vals = np.array([np.sum(self.matrix*s) for s in seqmats])
+        vals = self.evaluate_on_seqarray(seqarray)
         t2 = time.time()
 
-        #print 't1-t0 = %.4f, t1-t2 = %.4f'%(t1-t0,t2-t1)
-
         return vals 
+
+    def evaluate_on_seqarray(self, seqarray):
+        matrix_vec = np.matrix(np.array(self.matrix.T).ravel()).T
+        return np.array(np.matrix(seqarray)*matrix_vec).ravel()
+
+    def evaluate_on_mutarray(self, mutarray, wtrow):
+        return numerics.eval_modelmatrix_on_mutarray(\
+            modelmatrix=self.matrix.T, mutarray=mutarray, wtrow=wtrow)
+
 
 class RaveledModel(ExpModel):
     '''This model type generates an energy matrix model, 

@@ -6,6 +6,8 @@ import pdb
 import numpy as np
 from sst import SortSeqError
 
+rc_dict = {'A':'T','C':'G','G':'C','T':'A'} 
+
 # Reverse complements DNA
 def rc(dna_str):
     if re.search(r"[^ACGT]",dna_str):
@@ -46,6 +48,34 @@ seqtype_to_alphabet_dict = {
 }
 alphabet_to_seqtype_dict = {v: k for k, v in seqtype_to_alphabet_dict.items()}
 alphabets = alphabet_to_seqtype_dict.keys()
+
+# Create complied regular expressions to verify sequences
+seqerr_re_dict = {}
+for seqtype, alphabet in seqtype_to_alphabet_dict.items():
+    seqerr_re_dict[seqtype] = re.compile(r"[^%s]"%alphabet)
+
+# For representing and evaluating matrix models
+char_to_mat_index_dicts = {}
+for seq_type, alphabet in seqtype_to_alphabet_dict.items():
+    num_char = len(alphabet)
+    d = {}
+    for i in range(num_char):
+        a = alphabet[i]
+        d[a] = i
+    char_to_mat_index_dicts[seq_type] = d.copy()
+
+# For representing and evaluating neighbor models
+char_to_nbr_index_dicts = {}
+for seq_type, alphabet in seqtype_to_alphabet_dict.items():
+    num_char = len(alphabet)
+    d = {}
+    for i in range(num_char):
+        a = alphabet[i]
+        for j in range(num_char):
+            b = alphabet[j]
+            d[a+b] = i*num_char + j
+    char_to_nbr_index_dicts[seq_type] = d.copy()
+
 colname_to_seqtype_dict = {
     'seq':'dna',
     'seq_rna':'rna',

@@ -85,10 +85,11 @@ def main(wtseq=None, mutrate=0.10, numseq=10000,dicttype='dna',probarr=None,
 
     # If simulating tags, each generated seq gets a unique tag
     if tags:
-        alphabet_list = seq_dict.keys()
+        tag_seq_dict,tag_inv_dict = utils.choose_dict('dna')
+        tag_alphabet_list = tag_seq_dict.keys()
 
         # Make sure tag_length is long enough for the number of tags needed
-        if len(alphabet_list)**tag_length < 2*numseq:
+        if len(tag_alphabet_list)**tag_length < 2*numseq:
             raise SortSeqError(\
                 'tag_length=%d is too short for num_tags_needed=%d'%\
                 (tag_length,numseq))
@@ -97,7 +98,7 @@ def main(wtseq=None, mutrate=0.10, numseq=10000,dicttype='dna',probarr=None,
         tag_set = set([])
         while len(tag_set) < numseq:
             num_tags_left = numseq - len(tag_set)
-            new_tags = [''.join(choice(alphabet_list,size=tag_length)) \
+            new_tags = [''.join(choice(tag_alphabet_list,size=tag_length)) \
                 for i in range(num_tags_left)]
             tag_set = tag_set.union(new_tags)
 

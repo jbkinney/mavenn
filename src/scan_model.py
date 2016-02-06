@@ -17,6 +17,7 @@ import sst.utils as utils
 import sst.Models as Models
 import sst.io as io
 import sst.qc as qc
+import sst.fast as fast
 import re
 import pdb
 from sst import SortSeqError
@@ -57,7 +58,8 @@ def main(model_df, contig_list, numsites=10, verbose=False):
         poss = np.arange(num_sites).astype(int) 
         this_df['left'] = poss + pos_offset
         this_df['right']  = poss + pos_offset + L - 1 
-        this_df[seq_col] = [contig_str[i:(i+L)] for i in poss]
+        #this_df[seq_col] = [contig_str[i:(i+L)] for i in poss]
+        this_df[seq_col] = fast.seq2sitelist(contig_str,L)  #Cython
         this_df['ori'] = '+'
         this_df['contig'] = contig_name
         this_df['val'] = model_obj.evaluate(this_df[seq_col])
@@ -65,7 +67,8 @@ def main(model_df, contig_list, numsites=10, verbose=False):
 
         # If scanning DNA, scan reverse-complement as well
         if seqtype=='dna':
-            this_df[seq_col] = [qc.rc(s) for s in this_df[seq_col]]
+            #this_df[seq_col] = [qc.rc(s) for s in this_df[seq_col]]
+            this_df[seq_col] = fast.seq2sitelist(contig_str,L,rc=True)  #Cython
             this_df['ori'] = '-'
             this_df['val'] = model_obj.evaluate(this_df[seq_col])
             sitelist_df = pd.concat([sitelist_df,this_df], ignore_index=True)

@@ -57,9 +57,9 @@ simulate_library.add_subparser(subparsers)
 import sst.simulate_sort as simulate_sort
 simulate_sort.add_subparser(subparsers)
 
-#simulate_evaluate
-import sst.simulate_evaluate as simulate_evaluate
-simulate_evaluate.add_subparser(subparsers)
+# #simulate_evaluate
+# import sst.simulate_evaluate as simulate_evaluate
+# simulate_evaluate.add_subparser(subparsers)
 
 #simulate_sort
 import sst.simulate_expression as simulate_expression

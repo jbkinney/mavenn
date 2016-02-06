@@ -51,7 +51,7 @@ def main(
     df_sorted.reset_index(inplace=True)
     #we must divide by the total number of counts in each bin for the MI calculator
     df_sorted[col_headers] = df_sorted[col_headers].div(df_sorted['ct'],axis=0)     
-    MI = EstimateMutualInfoforMImax.alt2(df_sorted)
+    MI = EstimateMutualInfoforMImax.alt4(df_sorted)
     if no_err:
         Std = np.NaN
     else:

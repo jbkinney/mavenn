@@ -71,39 +71,53 @@ def MaximizeMI_test(
     return emat_mean
 
 def MaximizeMI_memsaver(
-        seq_mat,df,emat_0,db=None,burnin=1000,iteration=30000,thin=10,
+        raveledmat,df,emat_0,db=None,burnin=1000,iteration=30000,thin=10,
         runnum=0,verbose=False):
     '''Performs MCMC MI maximzation in the case where lm = memsaver'''    
-
-    @pymc.stochastic(observed=True,dtype=int)
+    '''
+    @pymc.stochastic(observed=True,dtype=sp.sparse.csr_matrix)
     def sequences(value=seq_mat):
         return 0
+    '''
     @pymc.stochastic(observed=True,dtype=pd.DataFrame)
     def pymcdf(value=df):
         return 0
     @pymc.stochastic(dtype=float)
-    def emat(s=sequences,p=pymcdf,value=emat_0):               
-        dot = value[:,:,sp.newaxis]*s
-        p['val'] = dot.sum(0).sum(0)                    
+    def emat(p=pymcdf,value=emat_0):         
+        p['val'] = raveledmat.multiply(emat_0).sum(axis=1)                   
         df_sorted = p.sort(columns='val')
         df_sorted.reset_index(inplace=True)
-        n_seqs = s.shape[2]     
+        n_seqs = raveledmat.shape[0]     
         MI = EstimateMutualInfoforMImax.alt4(df_sorted.copy())  # New and improved
         return n_seqs*MI
     if db:
         dbname = db + '_' + str(runnum) + '.sql'
-        M = pymc.MCMC([sequences,pymcdf,emat],db='sqlite',dbname=dbname)
+        M = pymc.MCMC([pymcdf,emat],db='sqlite',dbname=dbname)
     else:
-        M = pymc.MCMC([sequences,pymcdf,emat])
-    M.use_step_method(stepper.GaugePreservingStepper,emat)
+        M = pymc.MCMC([pymcdf,emat])
+    M.use_step_method(pymc.Metropolis,emat)
 
     if not verbose:
         M.sample = shutthefuckup(M.sample)
 
     M.sample(iteration,thin=thin)
-
+    emat_list = M.trace('emat')[burnin:]
+    emat_fixed = np.zeros(len(seq_dict),len(emat_list.shape[1]),emat_list.shape[0])
+    emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict),wtseq,seq_dict)        
+        if modeltype == 'NBR':
+             emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
+        elif modeltype == 'MAT':
+             emat_typical = gauge_fix.fix_matrix(np.transpose(emat_typical))
+    if modeltype == 'MAT':
+        for i in range(emat_list.shape[0]):
+            emat_temp = utils.emat_typical_parameterization(emat_list[i,:],len(seq_dict),wtseq,seq_dict)
+            emat_new[:,:,i] = utils.emat_typical = gauge_fix.fix_matrix(np.transpose(emat_typical))
+    elif modeltype == 'NBR':
+        for i in range(emat_list.shape[0]):
+            emat_temp = utils.emat_typical_parameterization(emat_list[i,:],len(seq_dict),wtseq,seq_dict)
+            emat_new[:,:,i] = utils.emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
     emat_mean = np.mean(M.trace('emat')[burnin:],axis=0)
-    return emat_mean
+    return np.mean(emat_new,axis=2)
 
 
 def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
@@ -177,10 +191,12 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
     #set name of sequences column based on type of sequence
     type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}
     seq_col_name = type_name_dict[dicttype]
-    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT') 
+    lin_seq_dict,lin_inv_dict = utils.choose_dict(dicttype,modeltype='MAT')
+    wtseq = utils.profile_counts(df.copy(),dicttype,return_wtseq=True,start=start,end=end)
+    wt_seq_dict_list = [{inv_dict[np.mod(i+1+seq_dict[w],len(seq_dict))]:i for i in range(len(seq_dict)-1)} for w in wtseq]
     par_seq_dict = {v:k for v,k in seq_dict.items() if k != (len(seq_dict)-1)}
     #drop any rows with ct = 0
-    df = df[df['ct'] != 0]
+    df = df[df.loc[:,'ct'] != 0]
     df.reset_index(drop=True,inplace=True)
     #If there are sequences of different lengths, then print error but continue
     if len(set(df[seq_col_name].apply(len))) > 1:
@@ -254,7 +270,7 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
                     column exists''')
         #parameterize sequences into 3xL vectors                       
         raveledmat,batch,sw = utils.genweightandmat(
-                                  df,par_seq_dict,dicttype,means=means,modeltype=modeltype)
+                                  df,wt_seq_dict_list,dicttype,means=means,modeltype=modeltype)
         #Use ridge regression to find matrix.       
         emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha)
 
@@ -281,7 +297,9 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
             seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0])-1,len(df.index)],dtype=int)
             for i in range(len(df.index)):
                 seq_mat[:,:,i] = utils.seq2matpair(df[seq_col_name][i],seq_dict)
-        elif modeltype == 'MAT':            
+        elif modeltype == 'MAT':     
+            raveledmat,batch,sw = utils.genweightandmat(
+                                  df,par_seq_dict,dicttype,means=means,modeltype=modeltype)       
             seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0]),len(df.index)],dtype=int)
             for i in range(len(df.index)):
                 seq_mat[:,:,i] = utils.seq2mat(df[seq_col_name][i],seq_dict)
@@ -290,6 +308,17 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
                 seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
                 thin=thin,runnum=runnum,verbose=verbose)
     if lm == 'memsaver':
+        if modeltype == 'NBR':
+            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0])-1,len(df.index)],dtype=int)
+            for i in range(len(df.index)):
+                seq_mat[:,:,i] = utils.seq2matpair(df[seq_col_name][i],seq_dict)
+        elif modeltype == 'MAT':
+            raveledmat,batch,sw = utils.genweightandmat(
+                                  df.copy(),wt_seq_dict_list,dicttype,means='None',modeltype=modeltype)
+        print wtseq
+        print df.seq[1]
+        print raveledmat[1,:].todense()
+        print wt_seq_dict_list[0:4]
         #this is also an MCMC routine, do the same as above.
         if initialize == 'Rand':
             if modeltype == 'MAT':
@@ -297,24 +326,15 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
             elif modeltype == 'NBR':
                 emat_0 = utils.RandEmat(len(df[seq_col_name][0])-1,len(seq_dict)**2)
         elif initialize == 'LeastSquares':
-            emat_0_df = main(df.copy(),lm='LS',modeltype=modeltype,\
-                alpha=alpha,verbose=verbose)
-            emat_0 = np.transpose(np.array(emat_0_df[val_cols]))
+            emat_0 = Compute_Least_Squares(raveledmat,batch,sw,alpha=.5)
         df['ct'] = df[col_headers].sum(axis=1)
-        if modeltype == 'NBR':
-            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0])-1,len(df.index)],dtype=int)
-            for i in range(len(df.index)):
-                seq_mat[:,:,i] = utils.seq2matpair(df[seq_col_name][i],seq_dict)
-        elif modeltype == 'MAT':
-            seq_mat = np.zeros([len(seq_dict),len(df[seq_col_name][0]),len(df.index)],dtype=int)
-            for i in range(len(df.index)):
-                seq_mat[:,:,i] = utils.seq2mat(df[seq_col_name][i],seq_dict)
+        
             #pymc doesn't take sparse mat        
         emat = MaximizeMI_memsaver(
-                seq_mat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
+                raveledmat,df,emat_0,db=db,iteration=iteration,burnin=burnin,
                 thin=thin,runnum=runnum,verbose=verbose)
     #now format the energy matrices to get them ready to output
-    if (lm == 'IM' or lm == 'memsaver'):       
+    if (lm == 'IM'):       
         if modeltype == 'NBR':
              emat_typical = gauge_fix.fix_neighbor(np.transpose(emat))
         elif modeltype == 'MAT':
@@ -327,8 +347,8 @@ def main(df,lm='memsaver',modeltype='MAT',LS_means_std=None,\
         emat_typical = emat[emat_cols]
         emat_typical = (gauge_fix.fix_matrix((np.array(emat_typical))))
         
-    else: #must be Least squares
-        emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))        
+    elif (lm=='LS' or lm=='memsaver'): #must be Least squares
+        emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict),wtseq,seq_dict)        
         if modeltype == 'NBR':
              emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
         elif modeltype == 'MAT':
