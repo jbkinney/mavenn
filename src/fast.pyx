@@ -134,7 +134,5 @@ def seqs2array_for_nbrmodel(list seq_list, bytes seq_type, safe=True):
             k = c_to_i_dict[<bytes> dichar]
             mat[n,num_dichars*i+k] = 1
     return mat
-    
-
 
 

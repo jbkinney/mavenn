@@ -9,15 +9,28 @@ import pandas as pd
 import sys
 import sst.Models as Models
 import sst.utils as utils
-#import sst.simulate_evaluate as simulate_evaluate
+import sst.io as io
+import sst.evaluate_model as evaluate_model
+from sst import SortSeqError
 
 def main(
-    df,dicttype,modeltype,mp,noisetype,npar,nbins,sequence_library=True,
+    df,mp,noisetype,npar,nbins,sequence_library=True,
     start=0,end=None):
-
+    #validate noise parameters
+    if not isinstance(npar,list):
+        raise SortSeqError('Noise parameters must be given as a list')
+    if noisetype == 'Normal':
+        if len(npar) != 1:
+            raise SortSeqError('''For a normal noise model, there must be one 
+                 input parameter (width of normal distribution)''')
+    if noisetype == 'LogNormal':
+        if len(npar) != 2:
+             raise SortSeqError('''For a LogNormal noise model there must 
+                 be 2 input parameters''')
+    if nbins <= 1:
+        raise SortSeqError('number of bins must be greater than 1')
     #generate predicted energy of each sequence.
-    df['val'] = simulate_evaluate.main(
-        df,[mp],dicttype,modeltype=modeltype,is_df=True,start=start,end=end)
+    df = evaluate_model.main(df,mp,left=start,right=None)
     #Determine model type to use for noise
     if noisetype == 'LogNormal':
         NoiseModelSort = Models.LogNormalNoise(npar)
@@ -63,8 +76,11 @@ def wrapper(args):
         df = pd.io.parsers.read_csv(
             sys.stdin,delim_whitespace=True,
             dtype={'seqs':str,'batch':int})
+    if len(utils.get_column_headers(df)) > 0:
+         raise SortSeqError('Library already sorted!')
+    model_df = io.load_model(args.model)
     output_df = main(
-        df,args.type,args.modeltype,args.modelparam,args.noisemodel,npar,
+        df,model_df,args.noisemodel,npar,
         nbins,start=args.start,end=args.end)
     
     if args.out:
@@ -88,9 +104,9 @@ def add_subparser(subparsers):
     p.add_argument(
         '-mt', '--modeltype', type=str,choices=['RandomLinear','MAT'
         ,'NBR'],default='MAT',help ='Type of Model to use')
-    p.add_argument('-m', '--modelparam', default=None,
+    p.add_argument('-m', '--model', default=None,
         help='''
-        RandomLinear=LengthofSeq,MAT=FileName,NBR=Filename.
+        MAT=FileName,NBR=Filename.
         ''')
     p.add_argument(
         '-i','--i',default=False,help='''Read input from file instead 

@@ -24,8 +24,8 @@ import pstats
 
 #load in data sets for the test, we will just use the sort-seq crp-wt set
 
-df = io.load_dataset('input/crp.txt')
-model_df = io.load_model('input/crp_model_old')
+df = io.load_dataset('input/rnap-wt-format.txt')
+model_df = io.load_model('input/rnap_model')
 
 #Profile profile_info
 #stats_fn = 'Profile_profile_info'
@@ -42,7 +42,7 @@ df_copy = df.copy()
 #profile learn_matrix lm=LS
 stats_fn = 'profile/Profile_learn_matrix_LS'
 stats_fn_hr = 'profile/Profile_learn_matrix_LS_hr'
-cProfile.run('''learn_matrix.main(df_copy,'LS',start=3,end=25)''',stats_fn)
+cProfile.run('''learn_matrix.main(df_copy,'LS',start=37,end=71)''',stats_fn)
 
 #Reformat and print to human readable profile
 p = pstats.Stats(stats_fn,stream=open(stats_fn_hr,'w'))
@@ -62,7 +62,7 @@ df_copy = df.copy()
 #profile learn_matrix lm=IM
 stats_fn = 'profile/Profile_learn_matrix_IM'
 stats_fn_hr = 'profile/Profile_learn_matrix_IM_hr'
-cProfile.run('''learn_matrix.main(df_copy,'memsaver',iteration=5,start=3,end=25,initialize='Rand',burnin=0)''',stats_fn)
+cProfile.run('''learn_matrix.main(df_copy,'memsaver',iteration=5,start=37,end=71,initialize='Rand',burnin=0)''',stats_fn)
 
 #Reformat and print to human readable profile
 p = pstats.Stats(stats_fn,stream=open(stats_fn_hr,'w'))
@@ -82,7 +82,7 @@ df_copy = df.copy()
 #profile predictiveinfo
 stats_fn = 'profile/Profile_predictiveinfo'
 stats_fn_hr = 'profile/Profile_predictiveinfo_hr'
-cProfile.run('''predictiveinfo.main(df_copy,model_df,start=3,end=25)''',stats_fn)
+cProfile.run('''predictiveinfo.main(df_copy,model_df,start=37,end=71)''',stats_fn)
 
 #Reformat and print to human readable profile
 p = pstats.Stats(stats_fn,stream=open(stats_fn_hr,'w'))

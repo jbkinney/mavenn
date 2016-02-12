@@ -205,9 +205,11 @@ def alt4(df, coarse_graining_level = 0.01):
     cts_grouped = sp.zeros([n_groups,n_batches])
     group_num = 0
     frac_empty = 1.0
-    df.to_csv(open('test_6','w'))
-    # Sort rows based on 'val' column 
-    tmp_df.sort(columns='val',inplace=True)
+    
+    #copy dataframe
+    tmp_df = df.copy(binheaders+['val'])
+    
+
     # Speed computation by coarse-graining model predictions
     if coarse_graining_level:
         assert type(coarse_graining_level)==float
@@ -215,11 +217,11 @@ def alt4(df, coarse_graining_level = 0.01):
         vals = tmp_df['val'].values
         scale = np.std(vals)
         coarse_vals = np.floor((vals/scale)/coarse_graining_level)
-        tmp_df['coarse_val'] = coarse_vals
-        grouped = tmp_df.groupby('coarse_val')
+        tmp_df['val'] = coarse_vals
+        grouped = tmp_df.groupby('val')
         grouped_tmp_df = grouped.aggregate(np.sum)
-    with open('test_error_4','w') as f:
-         np.savetxt(f,grouped_tmp_df)
+    # Sort rows based on 'val' column 
+    grouped_tmp_df.sort(columns='val',inplace=True)
     # Get ct_xxx columns
     ct_df = grouped_tmp_df[binheaders].astype(float)
     cts_per_group = ct_df.sum(axis=0).sum()/n_groups
@@ -236,13 +238,10 @@ def alt4(df, coarse_graining_level = 0.01):
 
             # Only do once per group_num
             cts_grouped[group_num,:] = group_vec.copy() 
-
             # Reset for new group_num
             group_num += 1
             frac_empty = 1.0
             group_vec[:] = 0.0
-
-        
         group_vec += row_frac_vec*row_ct_tot
         
         frac_empty -= row_ct_tot/cts_per_group
@@ -253,13 +252,8 @@ def alt4(df, coarse_graining_level = 0.01):
     else:
         raise TypeError(\
             'group_num=%d does not match n_groups=%s'%(group_num,n_groups))
-    with open('test_error_3','w') as f:
-         np.savetxt(f,cts_grouped)
     # Smooth empirical distribution with gaussian KDE
     f_reg = scipy.ndimage.gaussian_filter1d(cts_grouped,0.04*n_groups,axis=0)
-
-    with open('test_error_2','w') as f:
-         np.savetxt(f,f_reg)
 
     # Return mutual information
     return info.mutualinfo(f_reg)

@@ -157,7 +157,7 @@ class RaveledModel(ExpModel):
     def genexp(self,sparse_seqs_mat,sample_weight=None):
         if sp.sparse.issparse(sparse_seqs_mat):
             '''If modeltype is an energy matrix for repression or activation,
-                this will calculate the binding energy of a sequence, which will 
+                this will calculate the binding energy of a sequence, which will
                 be monotonically correlated with expression.'''
             n_seqs = sparse_seqs_mat.shape[0]
             #energies = sp.zeros(n_seqs) 
@@ -166,7 +166,7 @@ class RaveledModel(ExpModel):
             for i in range(0,n_seqs):
                  energies[i] = energiestemp[i]
         else:
-            raise ValueError('Enter sparse sequence matrix.')
+            raise SortSeqError('Enter sparse sequence matrix.')
         if sample_weight:
             t_exp = np.zeros(np.sum(sample_weights))
             counter=0
@@ -209,6 +209,8 @@ class LogNormalNoise(NoiseModel):
     def __init__(self,npar):
         self.auto = float(npar[0])
         self.scale = float(npar[1])
+        if self.auto <=0 or self.scale <= 0:
+            raise SortSeqError('Noise model parameters must be great than zero')
 
     def gennoisyexp(self,logexp):
         exp = np.exp(logexp) + self.auto
@@ -222,10 +224,10 @@ class NormalNoise(NoiseModel):
         try:
             self.scale = float(npar[0])
         except ValueError:
-            raise IOError('your input parameter must be a float')
+            raise SortSeqError('your input parameter must be a float')
         #Check that scale is in the correct range
-        if self.scale < 0:
-            raise IOError('''your input scale for normal noise must be greater
+        if self.scale <= 0:
+            raise SortSeqError('''your input scale for normal noise must be greater\
                 than zero''')       
 
     def gennoisyexp(self,logexp):

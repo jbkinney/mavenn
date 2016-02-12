@@ -137,6 +137,9 @@ def collapse_further(df):
     seq_col_name = [x for x in df.columns if 'seq' in x][0]
     output_df = df.groupby(seq_col_name).sum()
     output_df = output_df.reset_index()
+    #now reorder columns so we have 'ct' first and 'seq' last
+    ct_columns = [x for x in df.columns if 'ct' in x]
+    output_df = output_df[ct_columns + [seq_col_name]]
     #The evaluated column will now be incorrect, so we should delete it.
     try:
         output_df = output_df.drop('val',axis=1)
@@ -149,12 +152,12 @@ def is_seq_valid(seq,seq_dict):
     # Checks validity of a sequence
     return set(seq).issubset(set(seq_dict.keys()))
 
-def seq2matsparse(seq,wt_seq_dict_list):
+def seq2matsparse(seq,par_seq_dict):
     #Parameterize each sequence and put into a sparse matrix
-    seqlist = np.zeros(len(wt_seq_dict_list[0])*len(seq))
+    seqlist = np.zeros(len(par_seq_dict)*len(seq))
     for i,bp in enumerate(seq):
         try:
-            seqlist[i*(len(wt_seq_dict_list[i])) + wt_seq_dict_list[i][bp]] = 1
+            seqlist[i*(len(par_seq_dict)) + par_seq_dict[bp]] = 1
         except:
             pass
     return seqlist
@@ -320,7 +323,7 @@ def format_string(x):
     '''This is how we control the format of our output DFs. It will be float format'''
     return '%10.6f' %x
 
-def genweightandmat(weights_df,seq_dict,dicttype,wtseq=None,means=None,modeltype='MAT'):
+def genweightandmat(weights_df,seq_dict,dicttype,means=None,modeltype='MAT'):
     '''For use with learn_matrix, linear regressions. Generates a flattened
          matrix representation of the sequences, with corresponding batch and 
          number of counts (in sequence weighting vector)'''
@@ -332,13 +335,13 @@ def genweightandmat(weights_df,seq_dict,dicttype,wtseq=None,means=None,modeltype
     nbins=len(binheaders)
     
     if modeltype == 'MAT':
-         lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict[0])*mut_region_length))
+         lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict)*mut_region_length))
     elif modeltype == 'NBR':
-         lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict[0])*(mut_region_length-1)))
+         lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict)*(mut_region_length-1)))
     counter = 0
     sample_weights = np.zeros(n_seqs)
     batch = np.zeros(n_seqs)
- 
+    
     for i,s in enumerate(weights_df[seq_col_name]):
              if modeltype == 'MAT':
                  lasso_mat[i,:] = seq2matsparse(s,seq_dict)
@@ -425,7 +428,7 @@ def parameterize_seq(seq,seq_dict):
             pass
     return mat
 
-def emat_typical_parameterization(emat,Ldict,wtseq,seq_dict):
+def emat_typical_parameterization(emat,Ldict):
     '''Takes a parameterized emat (3xL_seq), and returns a 'typical' 
         energy matrix(4xL), with unit norm and average energy 0'''
     L = len(emat)/(Ldict-1)
@@ -433,8 +436,6 @@ def emat_typical_parameterization(emat,Ldict,wtseq,seq_dict):
     zmat = np.zeros(L)
     emat = np.vstack([emat,zmat])
     emat = fix_matrix_gauge(emat)
-    for i,bp in enumerate(wtseq):
-        emat[:,i] = np.roll(emat[:,i],seq_dict[bp] + 1)
     return emat
 
 def parameterize_emat(emat,Ldict):
@@ -470,9 +471,6 @@ def fix_matrix_gauge_df(df,inv_dict):
 def RandEmat(L,Ldict):
     '''Makes 4xL random emat'''
     emat_0 = fix_matrix_gauge(sp.randn(Ldict,L))
-    #parameterize emat by removing last row and ravel it 
-    emat_0 = emat_0[:-1,:]
-    emat_0 = emat_0.ravel(order='F') 
     return emat_0
 
     
