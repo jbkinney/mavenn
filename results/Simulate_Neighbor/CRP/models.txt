@@ -1,0 +1,14 @@
+exp	file    Model_Type
+2_bin_BVH       2_bin_sorted_BVH	LinearEmat
+2_bin_LS        2_bin_LS       LinearEmat
+2_bin_MCMC	2_bin_sorted_MCMC       LinearEmat
+2_bin_neighbor_LS	2_bin_sorted_Neighbor_LS Neighbor
+2_bin_neighbor	2_bin_sorted_neighbor_initLS Neighbor
+2_bin_dms       2_bin_dms_tools         LinearEmat
+10_bin_BVH	10_bin_sorted_BVH       LinearEmat
+10_bin_LS	10_bin_LS        LinearEmat
+10_bin_MCMC	10_bin_sorted_MCMC_2    LinearEmat
+10_bin_neighbor_LS	10_bin_sorted_Neighbor_LS Neighbor
+10_bin_neighbor	10_bin_sorted_neighbor_initLS Neighbor
+10_bin_dms	bvh_model	LinearEmat
+True		/home/bill/tests_on_sortseq/all_tests/full-150_0_neighbor_Model_all_bins Neighbor

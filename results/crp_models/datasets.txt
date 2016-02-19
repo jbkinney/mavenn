@@ -1,0 +1,6 @@
+exp	file
+full-wt	full-wt.txt
+crp-wt	crp_wt.txt
+full-0	full-0.txt
+full-150	full-150.txt
+full-500	full-500.txt

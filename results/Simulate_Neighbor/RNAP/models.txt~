@@ -1,0 +1,11 @@
+exp	file    Model_Type
+2_bin_BVH       2_bin_sorted_bvh_jan2016	LinearEmat
+2_bin_iterLS        RNAP_2_bin_LS       LinearEmat
+2_bin_MCMC	RNAP_2_bin_sorted_MCMC_initLS     LinearEmat
+2_bin_neighbor_LS	RNAP_2_bin_sorted_neighbor_LS Neighbor
+2_bin_neighbor	RNAP_2_bin_sorted_neighbor_initLS Neighbor
+10_bin_BVH	10_bin_sorted_bvh_jan2016       LinearEmat
+10_bin_LS	RNAP_10_bin_LS        LinearEmat
+10_bin_MCMC	RNAP_10_bin_sorted_MCMC_initLS.txt    LinearEmat
+10_bin_neighbor_LS	RNAP_10_bin_sorted_neighbor_LS Neighbor
+10_bin_neighbor	RNAP_10_bin_sorted_neighbor_initLS Neighbor

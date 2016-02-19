@@ -1,0 +1,6 @@
+exp	file
+2_bin_train    2_bin_sorted
+2_bin_test     2_bin_sorted_test
+10_bin_train   10_bin_sorted
+10_bin_test    10_bin_sorted_test
+

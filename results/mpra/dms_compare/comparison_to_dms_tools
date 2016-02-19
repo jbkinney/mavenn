@@ -1,0 +1,7 @@
+         Training/Test  MPRA_Train  MPRA_Test
+              dms_Rep1    0.100461   0.058781
+ Rep1_ratio_estimation    0.100461   0.058782
+              BVH_Rep1    0.100462   0.058782
+              BVH_Rep2    0.099104   0.058698
+ Rep2_ratio_estimation    0.099105   0.058698
+              dms_Rep2    0.099105   0.058698

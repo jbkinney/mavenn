@@ -1,0 +1,3 @@
+exp	file
+MPRA_Train	CRE_100uM_ds
+MPRA_Test	CRE_100uM_test
