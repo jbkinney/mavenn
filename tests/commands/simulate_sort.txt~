@@ -1,17 +1,17 @@
 # Validation to use for good commands from now on
-validation: | sst validate -t dataset
+validation: | sortseq_tools validate -t dataset
 
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt
 #test noise models
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel LogNormal --noiseparam [.1,.5]
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [.3]
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel None
-bad: sst simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [-.1]
-bad: sst simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam .2
-bad: sst simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [0]
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --start 1 --end 2
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --start 2 --end 1
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --sequence_library
-good: sst simulate_sort -m model_crp_mat.txt -i library.txt --nbins 10
-bad: sst simulate_sort -m model_crp_mat.txt -i library.txt --nbins 0
-bad: sst simulate_sort -m model_crp_mat.txt -i library.txt --nbins -1
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel LogNormal --noiseparam [.1,.5]
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [.3]
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel None
+bad: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [-.1]
+bad: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam .2
+bad: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [0]
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --start 1 --end 2
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --start 2 --end 1
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --sequence_library
+good: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --nbins 10
+bad: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --nbins 0
+bad: sortseq_tools simulate_sort -m model_crp_mat.txt -i library.txt --nbins -1

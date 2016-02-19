@@ -1,10 +1,10 @@
-good: sst validate -t profile_freq -i profile_freq_good.txt 
-good: sst validate -t profile_freq -i profile_freq_good_pro.txt
-good: sst validate -t profile_freq -i profile_freq_good_rna.txt
+good: sortseq_tools validate -t profile_freq -i profile_freq_good.txt 
+good: sortseq_tools validate -t profile_freq -i profile_freq_good_pro.txt
+good: sortseq_tools validate -t profile_freq -i profile_freq_good_rna.txt
 
-bad:  sst validate -t profile_freq -i profile_freq_bad_missingval.txt
-bad:  sst validate -t profile_freq -i profile_freq_bad_nanfreq.txt
-bad:  sst validate -t profile_freq -i profile_freq_bad_negval.txt
-bad:  sst validate -t profile_freq -i profile_freq_bad_nonconsecpos.txt
-bad:  sst validate -t profile_freq -i profile_freq_bad_wrongalphabet.txt
-bad:  sst validate -t profile_freq -i profile_freq_bad_wrongsum.txt
+bad:  sortseq_tools validate -t profile_freq -i profile_freq_bad_missingval.txt
+bad:  sortseq_tools validate -t profile_freq -i profile_freq_bad_nanfreq.txt
+bad:  sortseq_tools validate -t profile_freq -i profile_freq_bad_negval.txt
+bad:  sortseq_tools validate -t profile_freq -i profile_freq_bad_nonconsecpos.txt
+bad:  sortseq_tools validate -t profile_freq -i profile_freq_bad_wrongalphabet.txt
+bad:  sortseq_tools validate -t profile_freq -i profile_freq_bad_wrongsum.txt

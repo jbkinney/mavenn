@@ -1,19 +1,19 @@
-validation: | sst validate -t dataset -f
+validation: | sortseq_tools validate -t dataset -f
 
 # Run on truncated dataset
-good: sst evaluate_model -m model_crp_mat.txt -i dataset_crp_head.txt
-good: sst evaluate_model -m model_crp_nbr.txt -i dataset_crp_head.txt
+good: sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp_head.txt
+good: sortseq_tools evaluate_model -m model_crp_nbr.txt -i dataset_crp_head.txt
 
 # Run on full dataset
-good: sst evaluate_model -i dataset_crp.txt -m model_crp_nbr.txt -f
-good: sst evaluate_model -i dataset_crp.txt -m model_crp_mat.txt -f
+good: sortseq_tools evaluate_model -i dataset_crp.txt -m model_crp_nbr.txt -f
+good: sortseq_tools evaluate_model -i dataset_crp.txt -m model_crp_mat.txt -f
 
 # Run on full sliced datasets
-good: sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 0  -f
-good: sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 10 -f
-bad:  sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 60 -f
-good: sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 74 -f
-good: sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 60 -f
-bad:  sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 10 -f
-bad:  sst evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 0 -r 21 -f
+good: sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 0  -f
+good: sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 10 -f
+bad:  sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 60 -f
+good: sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 74 -f
+good: sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 60 -f
+bad:  sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 10 -f
+bad:  sortseq_tools evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 0 -r 21 -f
 

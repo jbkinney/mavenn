@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import time
-import sst.qc as qc
-import sst.utils as utils
-import sst.fast as fast
+import sortseq_tools.qc as qc
+import sortseq_tools.utils as utils
+import sortseq_tools.fast as fast
 import numpy as np
 
 

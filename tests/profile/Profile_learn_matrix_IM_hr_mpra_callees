@@ -1766,7 +1766,7 @@ generic.py:120(_init_mgr)                                              ->     42
 common.py:2603(is_list_like)                                           ->     445    0.000    0.000  {hasattr}
                                                                               428    0.000    0.000  {isinstance}
 internals.py:79(_consolidate_key)                                      ->     830    0.000    0.000  internals.py:228(dtype)
-re.py:230(_compile)                                                    ->       2    0.000    0.000  sre_compile.py:546(isstring)
+re.py:230(_compile)                                                    ->       2    0.000    0.000  sre_compile.py:546(isortseq_toolsring)
                                                                                 2    0.000    0.000  sre_compile.py:567(compile)
                                                                                 2    0.000    0.000  {isinstance}
                                                                                 2    0.000    0.000  {len}
@@ -2114,7 +2114,7 @@ internals.py:529(setitem)                                              ->       
                                                                                 8    0.000    0.000  {len}
                                                                                 4    0.000    0.000  {numpy.core.multiarray.array}
 {pandas.lib.is_float}                                                  ->
-sre_compile.py:567(compile)                                            ->       2    0.000    0.000  sre_compile.py:546(isstring)
+sre_compile.py:567(compile)                                            ->       2    0.000    0.000  sre_compile.py:546(isortseq_toolsring)
                                                                                 2    0.000    0.000  sre_compile.py:552(_code)
                                                                                 2    0.000    0.000  sre_parse.py:706(parse)
                                                                                 2    0.000    0.000  {_sre.compile}
@@ -2723,7 +2723,7 @@ utils.py:87(choose_dict)                                               ->
 {method 'repeat' of 'numpy.ndarray' objects}                           ->
 arrayprint.py:661(__init__)                                            ->
 lil.py:134(set_shape)                                                  ->       1    0.000    0.000  {len}
-sre_compile.py:546(isstring)                                           ->       4    0.000    0.000  {isinstance}
+sre_compile.py:546(isortseq_toolsring)                                           ->       4    0.000    0.000  {isinstance}
 {ord}                                                                  ->
 ram.py:165(__init__)                                                   ->
 sre_parse.py:139(__delitem__)                                          ->

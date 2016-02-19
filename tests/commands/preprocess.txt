@@ -1,49 +1,49 @@
 # Validation to use for good commands from now on
-validation: | sst validate -t dataset
+validation: | sortseq_tools validate -t dataset
 
 # Test use of tags
-good: sst preprocess -i files_good_tags.txt --tagkey tagkey_good_usethis.txt
-bad:  sst preprocess -i files_good_tags_someunknown.txt --tagkey tagkey_good_usethis.txt
-bad:  sst preprocess -i files_good_tags.txt --tagkey tagkey_bad_badseqcol.txt
-bad:  sst preprocess -i files_bad_tags_variablelength.txt --tagkey tagkey_good_usethis.txt
-bad:  sst preprocess -i files_bad_tags_rnacol.txt --tagkey tagkey_good_usethis.txt
-bad:  sst preprocess -i files_bad_tags_rnachars.txt --tagkey tagkey_good_usethis.txt
+good: sortseq_tools preprocess -i files_good_tags.txt --tagkey tagkey_good_usethis.txt
+bad:  sortseq_tools preprocess -i files_good_tags_someunknown.txt --tagkey tagkey_good_usethis.txt
+bad:  sortseq_tools preprocess -i files_good_tags.txt --tagkey tagkey_bad_badseqcol.txt
+bad:  sortseq_tools preprocess -i files_bad_tags_variablelength.txt --tagkey tagkey_good_usethis.txt
+bad:  sortseq_tools preprocess -i files_bad_tags_rnacol.txt --tagkey tagkey_good_usethis.txt
+bad:  sortseq_tools preprocess -i files_bad_tags_rnachars.txt --tagkey tagkey_good_usethis.txt
 
 # seqtype option is applied properly
-good: sst preprocess -i files_good.txt 
-good: sst preprocess -i files_good.txt --seqtype=dna
-bad:  sst preprocess -i files_good.txt --seqtype=rna
-bad:  sst preprocess -i files_good.txt --seqtype=protein
-bad:  sst preprocess -i files_good_rna.txt --seqtype=dna
-good: sst preprocess -i files_good_rna.txt --seqtype=rna
-bad:  sst preprocess -i files_good_rna.txt --seqtype=protein
-bad:  sst preprocess -i files_good_pro.txt --seqtype=dna
-bad:  sst preprocess -i files_good_pro.txt --seqtype=rna
-good: sst preprocess -i files_good_pro.txt --seqtype=protein
+good: sortseq_tools preprocess -i files_good.txt 
+good: sortseq_tools preprocess -i files_good.txt --seqtype=dna
+bad:  sortseq_tools preprocess -i files_good.txt --seqtype=rna
+bad:  sortseq_tools preprocess -i files_good.txt --seqtype=protein
+bad:  sortseq_tools preprocess -i files_good_rna.txt --seqtype=dna
+good: sortseq_tools preprocess -i files_good_rna.txt --seqtype=rna
+bad:  sortseq_tools preprocess -i files_good_rna.txt --seqtype=protein
+bad:  sortseq_tools preprocess -i files_good_pro.txt --seqtype=dna
+bad:  sortseq_tools preprocess -i files_good_pro.txt --seqtype=rna
+good: sortseq_tools preprocess -i files_good_pro.txt --seqtype=protein
 
 # fasta files are processed properly
-good: sst preprocess -i files_good_fasta.txt --seqtype=dna
-bad:  sst preprocess -i files_good_fasta.txt --seqtype=rna
-bad:  sst preprocess -i files_good_fasta.txt
-good: sst preprocess -i files_good_fasta.txt --seqtype=protein
+good: sortseq_tools preprocess -i files_good_fasta.txt --seqtype=dna
+bad:  sortseq_tools preprocess -i files_good_fasta.txt --seqtype=rna
+bad:  sortseq_tools preprocess -i files_good_fasta.txt
+good: sortseq_tools preprocess -i files_good_fasta.txt --seqtype=protein
 
 # mix of formats
-good: sst preprocess -i files_good_mixofdnaformats.txt --seqtype=dna
-bad:  sst preprocess -i files_good_mixofdnaformats.txt --seqtype=rna
-bad:  sst preprocess -i files_good_mixofdnaformats.txt --seqtype=protein
-bad:  sst preprocess -i files_good_mixofdnaformats.txt
+good: sortseq_tools preprocess -i files_good_mixofdnaformats.txt --seqtype=dna
+bad:  sortseq_tools preprocess -i files_good_mixofdnaformats.txt --seqtype=rna
+bad:  sortseq_tools preprocess -i files_good_mixofdnaformats.txt --seqtype=protein
+bad:  sortseq_tools preprocess -i files_good_mixofdnaformats.txt
 
 # Variations within good files are tolerated
-good: sst preprocess -i files_good_comments.txt
-good: sst preprocess -i files_good_nonconsecutivebins.txt
-good: sst preprocess -i files_good_samefile.txt
+good: sortseq_tools preprocess -i files_good_comments.txt
+good: sortseq_tools preprocess -i files_good_nonconsecutivebins.txt
+good: sortseq_tools preprocess -i files_good_samefile.txt
 
-bad:  sst preprocess -i files_bad_badcols.txt
-bad:  sst preprocess -i files_bad_extracol.txt
-bad:  sst preprocess -i files_bad_nofiles.txt
-bad:  sst preprocess -i files_bad_nonintegerbins.txt
-bad:  sst preprocess -i files_bad_nonuniquebins.txt
-bad:  sst preprocess -i files_badio_nonexistentfile.txt
-bad:  sst preprocess -i files_badtype_dnaandprotein.txt
-bad:  sst preprocess -i files_badtype_dnaandrna.txt
-bad:  sst preprocess -i files_badtype_rnaandprotein.txt
+bad:  sortseq_tools preprocess -i files_bad_badcols.txt
+bad:  sortseq_tools preprocess -i files_bad_extracol.txt
+bad:  sortseq_tools preprocess -i files_bad_nofiles.txt
+bad:  sortseq_tools preprocess -i files_bad_nonintegerbins.txt
+bad:  sortseq_tools preprocess -i files_bad_nonuniquebins.txt
+bad:  sortseq_tools preprocess -i files_badio_nonexistentfile.txt
+bad:  sortseq_tools preprocess -i files_badtype_dnaandprotein.txt
+bad:  sortseq_tools preprocess -i files_badtype_dnaandrna.txt
+bad:  sortseq_tools preprocess -i files_badtype_rnaandprotein.txt

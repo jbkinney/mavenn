@@ -1468,7 +1468,7 @@ _methods.py:77(_var)                                                   ->       
 _methods.py:123(_std)                                                  ->       6    0.001    0.001  _methods.py:77(_var)
                                                                                 6    0.000    0.000  {hasattr}
                                                                                 6    0.000    0.000  {isinstance}
-re.py:230(_compile)                                                    ->       2    0.000    0.000  sre_compile.py:546(isstring)
+re.py:230(_compile)                                                    ->       2    0.000    0.000  sre_compile.py:546(isortseq_toolsring)
                                                                                 2    0.000    0.000  sre_compile.py:567(compile)
                                                                                 2    0.000    0.000  {isinstance}
                                                                                 2    0.000    0.000  {len}
@@ -1868,7 +1868,7 @@ index.py:610(set_names)                                                ->      2
 base.py:782(_process_toarray_args)                                     ->       7    0.000    0.000  base.py:93(get_shape)
                                                                                 7    0.000    0.000  data.py:28(_get_dtype)
                                                                                 7    0.000    0.000  {numpy.core.multiarray.zeros}
-sre_compile.py:567(compile)                                            ->       2    0.000    0.000  sre_compile.py:546(isstring)
+sre_compile.py:567(compile)                                            ->       2    0.000    0.000  sre_compile.py:546(isortseq_toolsring)
                                                                                 2    0.000    0.000  sre_compile.py:552(_code)
                                                                                 2    0.000    0.000  sre_parse.py:706(parse)
                                                                                 2    0.000    0.000  {_sre.compile}
@@ -2701,7 +2701,7 @@ _weakrefset.py:20(__enter__)                                           ->       
 {callable}                                                             ->
 arrayprint.py:661(__init__)                                            ->
 {method 'values' of 'dict' objects}                                    ->
-sre_compile.py:546(isstring)                                           ->       4    0.000    0.000  {isinstance}
+sre_compile.py:546(isortseq_toolsring)                                           ->       4    0.000    0.000  {isinstance}
 {method 'startswith' of 'str' objects}                                 ->
 Model.py:514(fset)                                                     ->
 ram.py:165(__init__)                                                   ->

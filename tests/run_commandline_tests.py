@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import subprocess
 import re
-from sst import SortSeqError
+from sortseq_tools import SortSeqError
 import glob
 import sys
 import time

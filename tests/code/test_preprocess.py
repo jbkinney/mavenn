@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import sst.io as io
-import sst.qc as qc
-import sst.preprocess as preprocess
+import sortseq_tools.io as io
+import sortseq_tools.qc as qc
+import sortseq_tools.preprocess as preprocess
 import glob
-from sst import SortSeqError
-from sst import shutthefuckup
+from sortseq_tools import SortSeqError
+from sortseq_tools import shutthefuckup
 
 class TestPreprocess(unittest.TestCase):
     def setUp(self):
@@ -18,7 +18,7 @@ class TestPreprocess(unittest.TestCase):
     
     #@shutthefuckup
     def test_preprocess(self):
-        """ Test the ability of sst.preprocess to collate data in multiple sequence files
+        """ Test the ability of sortseq_tools.preprocess to collate data in multiple sequence files
         """
 
         print '\nIn test_preprocess...'

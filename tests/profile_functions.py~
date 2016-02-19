@@ -10,16 +10,16 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import sst.qc as qc
-import sst.io as io
+import sortseq_tools.qc as qc
+import sortseq_tools.io as io
 import os
-import sst.profile_ct as profile_ct
+import sortseq_tools.profile_ct as profile_ct
 import pdb
-from sst import SortSeqError
+from sortseq_tools import SortSeqError
 import cProfile
-import sst.profile_info as profile_info
-import sst.learn_matrix as learn_matrix
-import sst.predictiveinfo as predictiveinfo
+import sortseq_tools.profile_info as profile_info
+import sortseq_tools.learn_matrix as learn_matrix
+import sortseq_tools.predictiveinfo as predictiveinfo
 import pstats
 
 #load in data sets for the test, we will just use the sort-seq crp-wt set

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import sst.io as io
+import sortseq_tools.io as io
 import glob
 import numpy as np
-import sst.info
-from sst import SortSeqError
-from sst import shutthefuckup
+import sortseq_tools.info
+from sortseq_tools import SortSeqError
+from sortseq_tools import shutthefuckup
 
 
 class TestLoading(unittest.TestCase):
@@ -38,11 +38,11 @@ class TestLoading(unittest.TestCase):
                         %(key,method,str(err)),
                     try:
                         if err:
-                            ent, ent_err = sst.info.estimate_entropy(ns,\
+                            ent, ent_err = sortseq_tools.info.estimate_entropy(ns,\
                                     method=method,err=True)
                             self.assertTrue(ent_err >= 0.0)
                         else:
-                            ent = sst.info.estimate_entropy(ns,\
+                            ent = sortseq_tools.info.estimate_entropy(ns,\
                                     method=method,err=False)
 
                         # Naive estimates should always be nonnegative
@@ -73,7 +73,7 @@ class TestLoading(unittest.TestCase):
                     print '\tTesting %s with method=%s, err=%s: '\
                         %(key,method,str(err)),
                     executable = lambda: \
-                        sst.info.estimate_entropy(ns,method=method,err=err)
+                        sortseq_tools.info.estimate_entropy(ns,method=method,err=err)
                     try:
                         self.assertRaises(SortSeqError,executable)
                         print 'bad.'
@@ -108,11 +108,11 @@ class TestLoading(unittest.TestCase):
                         %(key,method,str(err)),
                     try:
                         if err:
-                            mi, mi_err = sst.info.estimate_mutualinfo(counts,\
+                            mi, mi_err = sortseq_tools.info.estimate_mutualinfo(counts,\
                                     method=method,err=True)
                             self.assertTrue(mi_err >= 0.0)
                         else:
-                            mi = sst.info.estimate_mutualinfo(counts,\
+                            mi = sortseq_tools.info.estimate_mutualinfo(counts,\
                                     method=method,err=False)
 
                         # Naive estimates should always be nonnegative
@@ -148,7 +148,7 @@ class TestLoading(unittest.TestCase):
                     print '\tTesting %s with method=%s, err=%s: '\
                         %(key,method,str(err)),
                     executable = lambda: \
-                        sst.info.estimate_mutualinfo(counts,method=method)
+                        sortseq_tools.info.estimate_mutualinfo(counts,method=method)
                     try:
                         self.assertRaises(SortSeqError,executable)
                         print 'bad.'

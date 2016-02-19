@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import sst.io as io
-import sst.qc as qc
-import sst.profile_freq as profile_freq
+import sortseq_tools.io as io
+import sortseq_tools.qc as qc
+import sortseq_tools.profile_freq as profile_freq
 import glob
-from sst import SortSeqError
-from sst import shutthefuckup
+from sortseq_tools import SortSeqError
+from sortseq_tools import shutthefuckup
 
 class Tests(unittest.TestCase):
     def setUp(self):
@@ -17,7 +17,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_freq_totalcounts(self):
-        """ Test the ability of sst.profile_freq to compute frequencies based on total count values
+        """ Test the ability of sortseq_tools.profile_freq to compute frequencies based on total count values
         """
 
         print '\nIn test_profile_freq_totalcounts...'
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_freq_bincounts(self):
-        """ Test the ability of sst.profile_freq to count frequencies
+        """ Test the ability of sortseq_tools.profile_freq to count frequencies
         """
 
         print '\nIn test_profile_freq_bincounts...'
@@ -113,7 +113,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_freq_seqslicing(self):
-        """ Test the ability of sst.profile_freq to slice sequences properly, and to raise the correct errors
+        """ Test the ability of sortseq_tools.profile_freq to slice sequences properly, and to raise the correct errors
         """
 
         print '\nIn test_profile_freq_seqslicing...'

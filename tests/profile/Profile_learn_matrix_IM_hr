@@ -908,7 +908,7 @@ Mon Feb  8 10:09:28 2016    profile/Profile_learn_matrix_IM
         7    0.000    0.000    0.000    0.000 {callable}
         6    0.000    0.000    0.000    0.000 arrayprint.py:661(__init__)
        14    0.000    0.000    0.000    0.000 {method 'values' of 'dict' objects}
-        4    0.000    0.000    0.000    0.000 sre_compile.py:546(isstring)
+        4    0.000    0.000    0.000    0.000 sre_compile.py:546(isortseq_toolsring)
         2    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
         3    0.000    0.000    0.000    0.000 Model.py:514(fset)
         1    0.000    0.000    0.000    0.000 ram.py:165(__init__)

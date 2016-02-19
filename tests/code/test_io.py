@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import unittest
-import sst.io as io
+import sortseq_tools.io as io
 import glob
-from sst import SortSeqError
-from sst import shutthefuckup
+from sortseq_tools import SortSeqError
+from sortseq_tools import shutthefuckup
 
 
 

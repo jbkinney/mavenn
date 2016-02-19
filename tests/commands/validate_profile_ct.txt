@@ -1,14 +1,14 @@
-good: sst validate -t profile_ct -i profile_ct_good.txt 
-good: sst validate -t profile_ct -i profile_ct_good_pro.txt 
-good: sst validate -t profile_ct -i profile_ct_good_rna.txt
-good: sst validate -t profile_ct -i profile_ct_good_shifted.txt
-good: sst validate -t profile_ct -i profile_ct_good_ctmissing.txt
+good: sortseq_tools validate -t profile_ct -i profile_ct_good.txt 
+good: sortseq_tools validate -t profile_ct -i profile_ct_good_pro.txt 
+good: sortseq_tools validate -t profile_ct -i profile_ct_good_rna.txt
+good: sortseq_tools validate -t profile_ct -i profile_ct_good_shifted.txt
+good: sortseq_tools validate -t profile_ct -i profile_ct_good_ctmissing.txt
 
-bad:  sst validate -t profile_ct -i bacterium.jpg 
-bad:  sst validate -t profile_ct -i profile_ct_bad_fraccount.txt
-bad:  sst validate -t profile_ct -i profile_ct_bad_negcount.txt
-bad:  sst validate -t profile_ct -i profile_ct_bad_negpos.txt
-bad:  sst validate -t profile_ct -i profile_ct_bad_nonconsecpos.txt
-bad:  sst validate -t profile_ct -i profile_ct_bad_unevenct.txt
-bad:  sst validate -t profile_ct -i profile_ct_bad_wrongalphabet.txt
-bad:  sst validate -t profile_ct -i profile_ct_bad_wrongsum.txt
+bad:  sortseq_tools validate -t profile_ct -i bacterium.jpg 
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_fraccount.txt
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_negcount.txt
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_negpos.txt
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_nonconsecpos.txt
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_unevenct.txt
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_wrongalphabet.txt
+bad:  sortseq_tools validate -t profile_ct -i profile_ct_bad_wrongsum.txt

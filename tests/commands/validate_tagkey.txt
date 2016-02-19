@@ -1,10 +1,10 @@
-good: sst validate -t tagkey -i tagkey_good.txt
-good: sst validate -t tagkey -i tagkey_good_comments.txt
-good: sst validate -t tagkey -i tagkey_good_seqrna.txt
-good: sst validate -t tagkey -i tagkey_fix_columnorder.txt
-good: sst validate -t tagkey -i tagkey_fix_lowercasetags.txt
+good: sortseq_tools validate -t tagkey -i tagkey_good.txt
+good: sortseq_tools validate -t tagkey -i tagkey_good_comments.txt
+good: sortseq_tools validate -t tagkey -i tagkey_good_seqrna.txt
+good: sortseq_tools validate -t tagkey -i tagkey_fix_columnorder.txt
+good: sortseq_tools validate -t tagkey -i tagkey_fix_lowercasetags.txt
 
-bad:  sst validate -t tagkey -i tagkey_bad_badseqcol.txt
-bad:  sst validate -t tagkey -i tagkey_bad_badtagcol.txt
-bad:  sst validate -t tagkey -i tagkey_bad_seqlength.txt
-bad:  sst validate -t tagkey -i tagkey_bad_taglength.txt
+bad:  sortseq_tools validate -t tagkey -i tagkey_bad_badseqcol.txt
+bad:  sortseq_tools validate -t tagkey -i tagkey_bad_badtagcol.txt
+bad:  sortseq_tools validate -t tagkey -i tagkey_bad_seqlength.txt
+bad:  sortseq_tools validate -t tagkey -i tagkey_bad_taglength.txt

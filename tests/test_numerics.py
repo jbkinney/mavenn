@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import time
-import sst.simulate_library
-import sst.fast as fast
-import sst.qc as qc
-from sst.profile_mut import main as profile_mut
-from sst.simulate_library import main as simulate_library
+import sortseq_tools.simulate_library
+import sortseq_tools.fast as fast
+import sortseq_tools.qc as qc
+from sortseq_tools.profile_mut import main as profile_mut
+from sortseq_tools.simulate_library import main as simulate_library
 import numpy as np
 from scipy.sparse import csr, csr_matrix, lil_matrix
-from sst import SortSeqError
+from sortseq_tools import SortSeqError
 import pdb
 import sys
 import pandas as pd
-import sst.numerics as numerics
+import sortseq_tools.numerics as numerics
 from numpy.random import randn
-import sst.Models as Models
+import sortseq_tools.Models as Models
 import time
 
 # Create sequences to test this on

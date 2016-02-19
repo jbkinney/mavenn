@@ -1,16 +1,16 @@
-validation: | sst validate -t sitelist
+validation: | sortseq_tools validate -t sitelist
 
-good: sst scan_model -m model_crp_mat.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
-good: sst scan_model -m model_crp_nbr.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
-good: sst scan_model -m model_crp_rna.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
-good: sst scan_model -m model_crp_mat.txt -s AAGTGAGATGGCAATCTAATTC
-good: cat fasta_plac.txt | sst scan_model -m model_crp_mat.txt
-good: sst scan_model -m model_crp_mat.txt -i fasta_plac.txt
-good: sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt
-good: sst scan_model -m model_crp_mat.txt -i genome_ecoli_1000lines.fa -n 100
+good: sortseq_tools scan_model -m model_crp_mat.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
+good: sortseq_tools scan_model -m model_crp_nbr.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
+good: sortseq_tools scan_model -m model_crp_rna.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
+good: sortseq_tools scan_model -m model_crp_mat.txt -s AAGTGAGATGGCAATCTAATTC
+good: cat fasta_plac.txt | sortseq_tools scan_model -m model_crp_mat.txt
+good: sortseq_tools scan_model -m model_crp_mat.txt -i fasta_plac.txt
+good: sortseq_tools scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt
+good: sortseq_tools scan_model -m model_crp_mat.txt -i genome_ecoli_1000lines.fa -n 100
 
-bad:  sst scan_model -m model_crp_rna.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
-bad:  sst scan_model -m model_crp_mat.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
-bad:  sst scan_model -m model_crp_mat.txt -s AAAAAAAGTGAG
-bad:  sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -n -100
-good: sst scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -k 10
+bad:  sortseq_tools scan_model -m model_crp_rna.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
+bad:  sortseq_tools scan_model -m model_crp_mat.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
+bad:  sortseq_tools scan_model -m model_crp_mat.txt -s AAAAAAAGTGAG
+bad:  sortseq_tools scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -n -100
+good: sortseq_tools scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -k 10

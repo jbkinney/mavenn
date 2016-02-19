@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import sst.io as io
-import sst.qc as qc
-import sst.profile_mut as profile_mut
+import sortseq_tools.io as io
+import sortseq_tools.qc as qc
+import sortseq_tools.profile_mut as profile_mut
 import glob
-from sst import SortSeqError
-from sst import shutthefuckup
+from sortseq_tools import SortSeqError
+from sortseq_tools import shutthefuckup
 
 class Tests(unittest.TestCase):
     def setUp(self):
@@ -17,7 +17,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_mut_total_err(self):
-        """ Test the ability of sst.profile_mut to compute mutation rates based on total count values
+        """ Test the ability of sortseq_tools.profile_mut to compute mutation rates based on total count values
         """
 
         print '\nIn test_profile_mut_total_err...'
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_mut_bin_noerr(self):
-        """ Test the ability of sst.profile_mut to compute mutation rates
+        """ Test the ability of sortseq_tools.profile_mut to compute mutation rates
         """
 
         print '\nIn test_profile_mut_bin_noerr_...'
@@ -113,7 +113,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_mut_seqslicing(self):
-        """ Test the ability of sst.profile_mut to slice sequences properly, and to raise the correct errors
+        """ Test the ability of sortseq_tools.profile_mut to slice sequences properly, and to raise the correct errors
         """
 
         print '\nIn test_profile_mut_seqslicing...'
