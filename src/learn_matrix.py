@@ -9,19 +9,19 @@ import scipy as sp
 import sys
 #Our miscellaneous functions
 import pandas as pd
-import sst.utils as utils
+import sortseq_tools.utils as utils
 from sklearn import linear_model
-import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import sortseq_tools.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
-import sst.stepper as stepper
+import sortseq_tools.stepper as stepper
 import os
-from sst import SortSeqError
-import sst.io as io
-import sst.gauge_fix as gauge_fix
-import sst.qc as qc
+from sortseq_tools import SortSeqError
+import sortseq_tools.io as io
+import sortseq_tools.gauge_fix as gauge_fix
+import sortseq_tools.qc as qc
 import pdb
-from sst import shutthefuckup
-import sst.numerics as numerics
+from sortseq_tools import shutthefuckup
+import sortseq_tools.numerics as numerics
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''

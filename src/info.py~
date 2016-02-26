@@ -16,7 +16,8 @@ def mutualinfo(raw_pxy, tol=1E-10):
     """
     Simply computes mutual information given a 2d probability distribution 
     """
-   
+    with open('test_error','w') as f:
+         np.savetxt(f,raw_pxy)
     # Fix up probability distributions for entorpy calculations
     pxy = fix_probs_2d(raw_pxy)
     px = fix_probs(pxy.sum(axis=1))

@@ -5,7 +5,7 @@ This module is a python version of Mathematica functions by Christian Mendl,
 with a python implementation by Sungho Hong, and altered by Bill Ireland, 
 implementing the Nemenman-Shafee-Bialek (NSB) estimator of entropy.
 
-Interface to this functionality is supplied through sortseq_tools.info.entropy()
+Interface to this functionality is supplied through sst.info.entropy()
 
 """
 import sys

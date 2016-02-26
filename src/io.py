@@ -7,8 +7,17 @@ import numpy as np
 import os
 import qc
 import utils
-from sst import SortSeqError
+from sortseq_tools import SortSeqError
 import time
+
+def format_fasta(s):
+    '''Function which takes in the raw fastq format and returns only the sequence'''
+    #find end of first line(which shows when sequence actually starts
+    location = s.find('\n')
+    s = s[location+1:]
+    #remove all line terminators
+    s = s.replace('\n','')
+    return s
 
 def load_text(file_arg):
     """
@@ -109,9 +118,13 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         colname = qc.seqtype_to_seqcolname_dict[seq_type]
 
         # Fill in dataframe with fasta or fastq data
-        df = pd.DataFrame(columns=[colname])
-        for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
-            df.loc[i] = str(record.seq)
+        #First read in the sequence and sequence identifier into each line
+        df = pd.io.parsers.read_csv(file_arg,lineterminator='>',engine='c',names='s')
+        df.rename(columns={'s':colname},inplace=True)
+        #now remove sequence identifiers
+        df.loc[:,colname] = df.loc[:,colname].apply(format_fasta)
+        
+        
 
     # If type is fastq, set sequence type to dna
     elif file_type=='fastq':
@@ -125,9 +138,12 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         colname = qc.seqtype_to_seqcolname_dict[seq_type]
 
         # Fill in dataframe with fasta or fastq data
+        temp_df = pd.io.parsers.read_csv(file_arg,engine='c',names='s')
+        temp_df.rename(columns={'s':colname},inplace=True)
         df = pd.DataFrame(columns=[colname])
-        for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
-            df.loc[i] = str(record.seq)
+        df.loc[:,colname] = temp_df.loc[1::4,colname]
+        df.reset_index(inplace=True,drop=True)
+        print df
 
     # For text file, just load as whitespace-delimited data frame
     elif file_type=='text':

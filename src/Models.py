@@ -5,16 +5,16 @@
 import importlib
 import sys
 import numpy as np
-import sst.utils as utils	
+import sortseq_tools.utils as utils	
 import scipy as sp
 import pandas as pd
 import pdb
-import sst.qc as qc
-import sst.io as io
-import sst.fast as fast
+import sortseq_tools.qc as qc
+import sortseq_tools.io as io
+import sortseq_tools.fast as fast
 import time
-from sst import SortSeqError
-import sst.numerics as numerics
+from sortseq_tools import SortSeqError
+import sortseq_tools.numerics as numerics
 
 
 class ExpModel:

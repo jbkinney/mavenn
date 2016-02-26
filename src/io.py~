@@ -7,7 +7,30 @@ import numpy as np
 import os
 import qc
 import utils
-from sst import SortSeqError
+from sortseq_tools import SortSeqError
+import time
+
+def format_fasta(s):
+    '''Function which takes in the raw fastq format and returns only the sequence'''
+    #find end of first line(which shows when sequence actually starts
+    location = s.find('\n')
+    s = s[location+1:]
+    #remove all line terminators
+    s = s.replace('\n','')
+    return s
+
+def load_text(file_arg):
+    """
+    General function used to load data from a text file
+    """
+    file_handle = validate_file_for_reading(file_arg)
+    try:
+        df = pd.read_csv(file_handle,delim_whitespace=True,\
+            comment='#', skip_blank_lines=True, engine='c')
+    except:
+        raise SortSeqError(\
+            'Could not interpret text file %s as dataframe.'%repr(file_handle))
+    return df.dropna(axis=0, how='all')   # Drop rows with all NaNs
 
 
 def validate_file_for_reading(file_arg):
@@ -43,7 +66,7 @@ def validate_file_for_reading(file_arg):
     return file_handle
 
 
-def validate_file_for_wrtiting(file_arg):
+def validate_file_for_writing(file_arg):
     """ Checks that a specified file can be written
     """
     # If user passed file name
@@ -68,7 +91,7 @@ def validate_file_for_wrtiting(file_arg):
     # Return validated file handle
     return file_handle
 
-
+# JBK: This function is currently too complex to be refactored into load()
 def load_dataset(file_arg, file_type='text',seq_type=None):
     """ Loads a dataset file, returns a data frame. 
         Can load text, fasta, or fastq files
@@ -95,6 +118,9 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         colname = qc.seqtype_to_seqcolname_dict[seq_type]
 
         # Fill in dataframe with fasta or fastq data
+        #First read in the sequence and sequence identifier into each line
+        temp_df = pd.io.parsers.read_csv(file_arg,lineterminator='>',engine='c',names='s')
+        #now remove sequence identifiers
         df = pd.DataFrame(columns=[colname])
         for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
             df.loc[i] = str(record.seq)
@@ -111,14 +137,17 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         colname = qc.seqtype_to_seqcolname_dict[seq_type]
 
         # Fill in dataframe with fasta or fastq data
+        temp_df = pd.io.parsers.read_csv(file_arg,engine='c',names='s')
+        temp_df.rename(columns={'s':colname},inplace=True)
         df = pd.DataFrame(columns=[colname])
-        for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
-            df.loc[i] = str(record.seq)
+        df.loc[:,colname] = temp_df.loc[1::4,colname]
+        df.reset_index(inplace=True,drop=True)
+        print df
 
     # For text file, just load as whitespace-delimited data frame
     elif file_type=='text':
-        df = pd.read_csv(file_arg,delim_whitespace=True,\
-            comment='#')
+
+        df = load_text(file_arg)
 
         # If seq_type is specified, get corresponding column name
         if seq_type:
@@ -143,125 +172,75 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
             df['ct'] = 1
 
     # Return validated/fixed dataframe
-    df_valid = qc.validate_dataset(df, fix=True)
-    return df_valid
+    return qc.validate_dataset(df, fix=True)
 
-
+# JBK: I want to get rid of these
 def load_model(file_arg):
-    """ Loads a model from a text file into a dataframe
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_model(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='model')
 
 def load_filelist(file_arg):
-    """ Loads a filelist from a text file into a dataframe
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_filelist(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='filelist')
 
 def load_tagkey(file_arg):
-    """ Loads a tagkey from a text file into a dataframe
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_tagkey(df, fix=True)
-    return df_valid
-
-
+    return load(file_arg, file_type='tagkey')
 
 def load_profile_ct(file_arg):
-    """ Loads a profile_ct dataframe from a text file
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_ct(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='profile_ct')
 
 def load_profile_freq(file_arg):
-    """ Loads a profile_freq dataframe from a text file
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_freq(df, fix=True)
-    return df_valid
-
+    return load(file_arg, file_type='profile_freq')
 
 def load_profile_mut(file_arg):
-    """ Loads a profile_mut dataframe from a text file
-    """
-
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
-
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
-
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_mut(df, fix=True)
-    return df_valid
+    return load(file_arg, file_type='profile_mut')
 
 def load_profile_info(file_arg):
-    """ Loads a profile_info dataframe from a text file
+    return load(file_arg, file_type='profile_info')
+
+def load_meanstd(file_arg):
+    return load(file_arg, file_type='meanstd')
+
+def load_sitelist(file_arg):
+    return load(file_arg, file_type='sitelist')
+
+# JBK: I want to switch to using only this function
+def load(file_arg, file_type, **kwargs):
+    """ Loads file of any specified type
     """
+    validate_func_dict = {
+    #'dataset'       : qc.validate_dataset,  # This won't work right now
+    'model'         : qc.validate_model,
+    'filelist'      : qc.validate_filelist,
+    'tagkey'        : qc.validate_tagkey,
+    'profile_ct'    : qc.validate_profile_ct,
+    'profile_freq'  : qc.validate_profile_freq,
+    'profile_mut'   : qc.validate_profile_mut,
+    'profile_info'  : qc.validate_profile_info,
+    'meanstd'       : qc.validate_meanstd,
+    'sitelist'      : qc.validate_sitelist
+    }
 
-    # Check that the file can be read
-    file_handle = validate_file_for_reading(file_arg)
+    df = load_text(file_arg)
 
-    df = pd.read_csv(file_handle,delim_whitespace=True,\
-            comment='#')
+    if 'dataset' in file_type:
+        raise SortSeqError('file_type %s is not supported in load()'%file_type)
 
-    # Return validated/fixed dataframe
-    df_valid = qc.validate_profile_info(df, fix=True)
-    return df_valid
+    if file_type not in validate_func_dict.keys():
+        raise SortSeqError('Unrecognized file_type %s'%file_type)
+
+    func = validate_func_dict[file_type]
+    return func(df,fix=True,**kwargs)
 
 
-def write(df,file_arg):
+def write(df,file_arg,fast=False):
     """ Writes a data frame to specified file, given as name or handle
     """
-
-    file_handle = validate_file_for_wrtiting(file_arg)
-
-    # Write dataframe to file
-    pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns
-    df_string = df.to_string(\
-        index=False, col_space=5, float_format=utils.format_string)
-    file_handle.write(df_string+'\n') # Add trailing return
-    file_handle.close()
-    #df.to_csv(file_arg,sep='\t')
+    file_handle = validate_file_for_writing(file_arg)
+    if fast:
+        df.to_csv(file_handle,sep='\t',float_format='%10.6f')
+    else:
+        pd.set_option('max_colwidth',int(1e6)) # Dont truncate columns
+        df_string = df.to_string(\
+            index=False, col_space=5, float_format=utils.format_string)
+        file_handle.write(df_string+'\n') # Add trailing return
+        file_handle.close()
 

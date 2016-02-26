@@ -76,7 +76,7 @@ def wrapper(args):
         df = pd.io.parsers.read_csv(
             sys.stdin,delim_whitespace=True,
             dtype={'seqs':str,'batch':int})
-    if len(utils.get_column_headers(df) > 0):
+    if len(utils.get_column_headers(df)) > 0:
          raise SortSeqError('Library already sorted!')
     model_df = io.load_model(args.model)
     output_df = main(

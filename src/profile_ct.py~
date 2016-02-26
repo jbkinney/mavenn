@@ -7,9 +7,9 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import sortseq_tools.qc as qc
-import sortseq_tools.io as io
-from sortseq_tools import SortSeqError
+import sst.qc as qc
+import sst.io as io
+from sst import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None):
     """

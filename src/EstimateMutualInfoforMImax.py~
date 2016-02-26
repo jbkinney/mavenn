@@ -220,8 +220,9 @@ def alt4(df, coarse_graining_level = 0.01):
         tmp_df['val'] = coarse_vals
         grouped = tmp_df.groupby('val')
         grouped_tmp_df = grouped.aggregate(np.sum)
-    # Sort rows based on 'val' column 
-    grouped_tmp_df.sort(columns='val',inplace=True)
+        grouped_tmp_df.sort_index(inplace=True)
+    else:
+        tmp_df.sort(columns='val',inplace=True)
     # Get ct_xxx columns
     ct_df = grouped_tmp_df[binheaders].astype(float)
     cts_per_group = ct_df.sum(axis=0).sum()/n_groups

@@ -209,6 +209,8 @@ class LogNormalNoise(NoiseModel):
     def __init__(self,npar):
         self.auto = float(npar[0])
         self.scale = float(npar[1])
+        if self.auto <=0 or self.scale <= 0:
+            raise SortSeqError('Noise model parameters must be great than zero')
 
     def gennoisyexp(self,logexp):
         exp = np.exp(logexp) + self.auto

@@ -14,9 +14,9 @@ from cStringIO import StringIO
 import pandas as pd
 import scipy as sp
 import scipy.ndimage
-import sst.utils as utils
+import sortseq_tools.utils as utils
 import pdb
-import sst.info as info
+import sortseq_tools.info as info
 
 
 ''' This script estimates MI by implementing a Density Estimation through 

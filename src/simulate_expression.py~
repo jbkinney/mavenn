@@ -14,7 +14,7 @@ from sst import SortSeqError
 import sst.evaluate_model as evaluate_model
 
 def main(df,model_df,T_LibCounts,T_mRNACounts,start=0,end=None):
-   df = evaluate_model.main(df,mp,left=start,right=None)
+   df = evaluate_model.main(df,model_df,left=start,right=None)
    #We assume only noise is binomial noise(which we approx as poisson)
    mymodel = Models.PoissonNoise()
    #calculate new expression levels based on energies of each sequence.	 

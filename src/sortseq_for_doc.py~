@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.7
 
-''' Primary function for sst.ools. Currently supports: 
+''' Primary function for sortseq_tools.ools. Currently supports: 
 
 simulate_library
 simulate_sublib
-simulate_sst
+simulate_sortseq_tools
 simulate_selection
 simulate_mpra
 '''
@@ -26,39 +26,43 @@ parser.add_argument('-o','--out',default=False,help='Output location/type, by de
 subparsers = parser.add_subparsers()
 
 # preprocess
-import sst.preprocess as preprocess
+import sortseq_tools.preprocess as preprocess
 preprocess.add_subparser(subparsers)
 
 #profile_mutrate
-import sst.profile_mut as profile_mut
+import sortseq_tools.profile_mut as profile_mut
 profile_mut.add_subparser(subparsers)
 
 #learn_matrix
-import sst.learn_matrix as learn_matrix
+import sortseq_tools.learn_matrix as learn_matrix
 learn_matrix.add_subparser(subparsers)
 
 #predictiveinfo
-import sst.predictiveinfo as predictiveinfo
+import sortseq_tools.predictiveinfo as predictiveinfo
 predictiveinfo.add_subparser(subparsers)
 
+#profile_info
+import sortseq_tools.profile_info as profile_info
+profile_info.add_subparser(subparsers)
+
 #Scan
-import sst.Scan as Scan
+import sortseq_tools.scan_model as scan_model
 Scan.add_subparser(subparsers)
 
 #simualte_library
-import sst.simulate_library as simulate_library
+import sortseq_tools.simulate_library as simulate_library
 simulate_library.add_subparser(subparsers)
 
 #simulate_sort
-import sst.simulate_sort as simulate_sort
+import sortseq_tools.simulate_sort as simulate_sort
 simulate_sort.add_subparser(subparsers)
 
-#simulate_evaluate
-import sst.simulate_evaluate as simulate_evaluate
-simulate_evaluate.add_subparser(subparsers)
+# #simulate_evaluate
+# import sortseq_tools.simulate_evaluate as simulate_evaluate
+# simulate_evaluate.add_subparser(subparsers)
 
 #simulate_sort
-import sst.simulate_expression as simulate_expression
+import sortseq_tools.simulate_expression as simulate_expression
 simulate_expression.add_subparser(subparsers)
 
 # Final incantiation needed for this to work

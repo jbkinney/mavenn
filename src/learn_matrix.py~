@@ -9,19 +9,19 @@ import scipy as sp
 import sys
 #Our miscellaneous functions
 import pandas as pd
-import sst.utils as utils
+import sortseq_tools.utils as utils
 from sklearn import linear_model
-import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import sortseq_tools.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
-import sst.stepper as stepper
+import sortseq_tools.stepper as stepper
 import os
-from sst import SortSeqError
-import sst.io as io
-import sst.gauge_fix as gauge_fix
-import sst.qc as qc
+from sortseq_tools import SortSeqError
+import sortseq_tools.io as io
+import sortseq_tools.gauge_fix as gauge_fix
+import sortseq_tools.qc as qc
 import pdb
-from sst import shutthefuckup
-import sst.numerics as numerics
+from sortseq_tools import shutthefuckup
+import sortseq_tools.numerics as numerics
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''
@@ -217,6 +217,9 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
                                
         raveledmat,batch,sw = utils.genweightandmat(
                                   df,par_seq_dict,dicttype,means=means,modeltype=modeltype)
+        print raveledmat
+        print batch
+        print sw
         #Use ridge regression to find matrix.       
         emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha)
 
@@ -227,7 +230,7 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
             if modeltype == 'MAT':
                 emat_0 = utils.RandEmat(len(df[seq_col_name][0]),len(seq_dict))
             elif modeltype == 'NBR':
-                emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict)**2)
+                emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict))
         elif initialize == 'LeastSquares':
             emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
             emat_0_df = main(df.copy(),lm='LS',modeltype=modeltype,alpha=alpha,start=0,end=None,verbose=verbose)

@@ -17,9 +17,9 @@ good: sortseq_tools simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t protein
 good: sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -n 100
 bad:  sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -n -100
 
-good: sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT --mutrate 0.5
-bad:  sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT --mutrate -0.5
-bad:  sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT --mutrate 1.5
+good: sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m 0.5
+bad:  sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m -0.5
+bad:  sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m 1.5
 
 good: sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tags
 good: sortseq_tools simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tl 10 -tags -n 100

@@ -4,7 +4,7 @@ good: sortseq_tools validate -t dataset -i seq_good_comments.txt
 good: sortseq_tools validate -t dataset -i seq_good_rna.txt
 good: sortseq_tools validate -t dataset -i seq_good_pro.txt
 good: sortseq_tools validate -t dataset -i seq_good_pro_actuallydnabutvalidprotein.txt
-good: sortseq_tools validate -t dataset -i seq_good_pro_hasstop.txt
+good: sortseq_tools validate -t dataset -i seq_good_pro_hasortseq_toolsop.txt
 good: sortseq_tools validate -t dataset -i seq_fix_lowercaseseq.txt
 good: sortseq_tools validate -t dataset -i seq_fix_nocounts.txt
 

@@ -7,11 +7,11 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import sst.Models as Models
-import sst.utils as utils
-import sst.io as io
-from sst import SortSeqError
-import sst.evaluate_model as evaluate_model
+import sortseq_tools.Models as Models
+import sortseq_tools.utils as utils
+import sortseq_tools.io as io
+from sortseq_tools import SortSeqError
+import sortseq_tools.evaluate_model as evaluate_model
 
 def main(df,model_df,T_LibCounts,T_mRNACounts,start=0,end=None):
    df = evaluate_model.main(df,model_df,left=start,right=None)

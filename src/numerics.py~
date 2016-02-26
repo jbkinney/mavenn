@@ -51,9 +51,7 @@ def dataset2mutarray(dataset_df, modeltype, chunksize=1000, rowsforwtcalc=100):
 
     # Compute the wt sequence
     rowsforwtcalc = min(rowsforwtcalc,dataset_df.shape[0])
-    print dataset_df
     dataset_head_df = dataset_df.head(rowsforwtcalc)
-    print dataset_head_df
     mut_df = profile_mut(dataset_head_df)
     wtseq = ''.join(list(mut_df[wtcol]))
     wtrow = seqs2array([wtseq], seq_type=seqtype).ravel().astype(bool)

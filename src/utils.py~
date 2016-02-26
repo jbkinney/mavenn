@@ -471,9 +471,6 @@ def fix_matrix_gauge_df(df,inv_dict):
 def RandEmat(L,Ldict):
     '''Makes 4xL random emat'''
     emat_0 = fix_matrix_gauge(sp.randn(Ldict,L))
-    #parameterize emat by removing last row and ravel it 
-    emat_0 = emat_0[:-1,:]
-    emat_0 = emat_0.ravel(order='F') 
     return emat_0
 
     

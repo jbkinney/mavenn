@@ -11,12 +11,12 @@ import sys
 import pdb
 import time
 
-import sst.Models as Models
-import sst.utils as utils
-import sst.qc as qc
-import sst.io as io
-from sst import SortSeqError
-from sst import shutthefuckup
+import sortseq_tools.Models as Models
+import sortseq_tools.utils as utils
+import sortseq_tools.qc as qc
+import sortseq_tools.io as io
+from sortseq_tools import SortSeqError
+from sortseq_tools import shutthefuckup
 
 
 def main(dataset_df,model_df,left=None,right=None):

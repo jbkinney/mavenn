@@ -1301,7 +1301,6 @@ static char __pyx_k_dna[] = "dna";
 static char __pyx_k_int[] = "int";
 static char __pyx_k_mat[] = "mat";
 static char __pyx_k_seq[] = "seq";
-static char __pyx_k_sst[] = "sst";
 static char __pyx_k_join[] = "join";
 static char __pyx_k_main[] = "__main__";
 static char __pyx_k_safe[] = "safe";
@@ -1316,7 +1315,6 @@ static char __pyx_k_zeros[] = "zeros";
 static char __pyx_k_dichar[] = "dichar";
 static char __pyx_k_import[] = "__import__";
 static char __pyx_k_search[] = "search";
-static char __pyx_k_sst_qc[] = "sst.qc";
 static char __pyx_k_dna_str[] = "dna_str";
 static char __pyx_k_rc_dict[] = "rc_dict";
 static char __pyx_k_num_seqs[] = "num_seqs";
@@ -1336,7 +1334,9 @@ static char __pyx_k_site_length[] = "site_length";
 static char __pyx_k_RuntimeError[] = "RuntimeError";
 static char __pyx_k_SortSeqError[] = "SortSeqError";
 static char __pyx_k_seq2sitelist[] = "seq2sitelist";
+static char __pyx_k_sortseq_tools[] = "sortseq_tools";
 static char __pyx_k_seqerr_re_dict[] = "seqerr_re_dict";
+static char __pyx_k_sortseq_tools_qc[] = "sortseq_tools.qc";
 static char __pyx_k_Invalid_seq_type_s[] = "Invalid seq_type: %s.";
 static char __pyx_k_reverse_complement[] = "reverse_complement";
 static char __pyx_k_site_length_seq_length[] = "site_length > seq_length.";
@@ -1417,9 +1417,9 @@ static PyObject *__pyx_n_s_seqtypes;
 static PyObject *__pyx_n_s_site_length;
 static PyObject *__pyx_kp_s_site_length_seq_length;
 static PyObject *__pyx_n_s_site_list;
+static PyObject *__pyx_n_s_sortseq_tools;
+static PyObject *__pyx_n_s_sortseq_tools_qc;
 static PyObject *__pyx_n_s_src_fast;
-static PyObject *__pyx_n_s_sst;
-static PyObject *__pyx_n_s_sst_qc;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_kp_u_unknown_dtype_code_in_numpy_pxd;
 static PyObject *__pyx_n_s_zeros;
@@ -5609,9 +5609,9 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_site_length, __pyx_k_site_length, sizeof(__pyx_k_site_length), 0, 0, 1, 1},
   {&__pyx_kp_s_site_length_seq_length, __pyx_k_site_length_seq_length, sizeof(__pyx_k_site_length_seq_length), 0, 0, 1, 0},
   {&__pyx_n_s_site_list, __pyx_k_site_list, sizeof(__pyx_k_site_list), 0, 0, 1, 1},
+  {&__pyx_n_s_sortseq_tools, __pyx_k_sortseq_tools, sizeof(__pyx_k_sortseq_tools), 0, 0, 1, 1},
+  {&__pyx_n_s_sortseq_tools_qc, __pyx_k_sortseq_tools_qc, sizeof(__pyx_k_sortseq_tools_qc), 0, 0, 1, 1},
   {&__pyx_n_s_src_fast, __pyx_k_src_fast, sizeof(__pyx_k_src_fast), 0, 0, 1, 1},
-  {&__pyx_n_s_sst, __pyx_k_sst, sizeof(__pyx_k_sst), 0, 0, 1, 1},
-  {&__pyx_n_s_sst_qc, __pyx_k_sst_qc, sizeof(__pyx_k_sst_qc), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_kp_u_unknown_dtype_code_in_numpy_pxd, __pyx_k_unknown_dtype_code_in_numpy_pxd, sizeof(__pyx_k_unknown_dtype_code_in_numpy_pxd), 0, 1, 0, 0},
   {&__pyx_n_s_zeros, __pyx_k_zeros, sizeof(__pyx_k_zeros), 0, 0, 1, 1},
@@ -5937,16 +5937,16 @@ PyMODINIT_FUNC PyInit_fast(void)
   /* "src/fast.pyx":5
  * from cpython cimport bool
  * 
- * import sst.qc as qc             # <<<<<<<<<<<<<<
+ * import sortseq_tools.qc as qc             # <<<<<<<<<<<<<<
  * import re
- * from sst import SortSeqError
+ * from sortseq_tools import SortSeqError
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 5; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_s__14);
   __Pyx_GIVEREF(__pyx_n_s__14);
   PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s__14);
-  __pyx_t_2 = __Pyx_Import(__pyx_n_s_sst_qc, __pyx_t_1, -1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 5; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_Import(__pyx_n_s_sortseq_tools_qc, __pyx_t_1, -1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 5; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_qc, __pyx_t_2) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 5; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -5954,9 +5954,9 @@ PyMODINIT_FUNC PyInit_fast(void)
 
   /* "src/fast.pyx":6
  * 
- * import sst.qc as qc
+ * import sortseq_tools.qc as qc
  * import re             # <<<<<<<<<<<<<<
- * from sst import SortSeqError
+ * from sortseq_tools import SortSeqError
  * 
  */
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_re, 0, -1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -5965,9 +5965,9 @@ PyMODINIT_FUNC PyInit_fast(void)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "src/fast.pyx":7
- * import sst.qc as qc
+ * import sortseq_tools.qc as qc
  * import re
- * from sst import SortSeqError             # <<<<<<<<<<<<<<
+ * from sortseq_tools import SortSeqError             # <<<<<<<<<<<<<<
  * 
  * DTYPE = np.int
  */
@@ -5976,7 +5976,7 @@ PyMODINIT_FUNC PyInit_fast(void)
   __Pyx_INCREF(__pyx_n_s_SortSeqError);
   __Pyx_GIVEREF(__pyx_n_s_SortSeqError);
   PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_SortSeqError);
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_sst, __pyx_t_2, -1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_sortseq_tools, __pyx_t_2, -1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_SortSeqError); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -5986,7 +5986,7 @@ PyMODINIT_FUNC PyInit_fast(void)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "src/fast.pyx":9
- * from sst import SortSeqError
+ * from sortseq_tools import SortSeqError
  * 
  * DTYPE = np.int             # <<<<<<<<<<<<<<
  * ctypedef np.int_t DTYPE_t

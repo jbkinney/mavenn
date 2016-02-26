@@ -13,11 +13,11 @@ import pandas as pd
 #Our miscellaneous functions
 #This module will allow us to easily tally the letter counts at a particular position
 
-import sst.utils as utils
-import sst.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
-import sst.qc as qc
-import sst.numerics as numerics
-from sst import SortSeqError
+import sortseq_tools.utils as utils
+import sortseq_tools.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import sortseq_tools.qc as qc
+import sortseq_tools.numerics as numerics
+from sortseq_tools import SortSeqError
 
 
 def main(
@@ -60,7 +60,7 @@ def main(
     seq_mat,wtrow = numerics.dataset2mutarray(data_df.copy(),modeltype)
     temp_df = data_df.copy()
     temp_df['val'] = numerics.eval_modelmatrix_on_mutarray(np.array(model_df[model_df_headers]),seq_mat,wtrow) 
-    temp_sorted = temp_df.sort(columns='val')
+    temp_sorted = temp_df.sort_values(by='val')
     temp_sorted.reset_index(inplace=True,drop=True)
     #we must divide by the total number of counts in each bin for the MI calculator
     temp_sorted[col_headers] = temp_sorted[col_headers].div(temp_sorted['ct'],axis=0)     

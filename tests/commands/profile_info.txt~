@@ -9,8 +9,8 @@ good: sortseq_tools profile_info -i dataset_good.txt -s 2
 good: sortseq_tools profile_info -i dataset_good.txt -e 10
 good: sortseq_tools profile_info -i dataset_good.txt --err True
 good: sortseq_tools profile_info -i dataset_good.txt -s 2 -e 10 -d True
-good: sortseq_tools profile_info -i dataset_good.txt  --method naive -s 2 -e 10
-good: sortseq_tools profile_info -i dataset_good.txt  --method nsb -s 2 -e 10
+good: sortseq_tools profile_info -i dataset_good.txt  -m naive -s 2 -e 10
+good: sortseq_tools profile_info -i dataset_good.txt  -m nsb -s 2 -e 10
 good: sortseq_tools profile_info -i dataset_good.txt  -p 10
 
 bad:  sortseq_tools profile_info -i seq_good.txt

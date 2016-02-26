@@ -34,7 +34,6 @@ def main(dataset_df,model_df,left=None,right=None):
         raise SortSeqError('Cannot set both left and right at same time.')
     if not (left is None):
         start = left
-        print model_df.shape
         end = start + model_df.shape[0] + (1 if modeltype=='NBR' else 0)
     elif not (right is None):
         end = right 
