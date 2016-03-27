@@ -20,8 +20,6 @@ setup(
     name = 'sortseq_tools', 
     description = 'Tools for analysis of Sort-Seq experiments.',
     version = '0.0.13',
-    author = 'Bill Ireland',
-    author_email = 'irelandb99999@gmail.com',
     #long_description = readme,
     install_requires = [\
         'biopython>=1.6',\

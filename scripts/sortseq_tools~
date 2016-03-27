@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.7
 
-''' Primary function for sst.ools. Currently supports: 
+''' Primary function for sortseq_tools.ools. Currently supports: 
 
 simulate_library
 simulate_sublib
-simulate_sst
+simulate_sortseq_tools
 simulate_selection
 simulate_mpra
 '''
@@ -16,7 +16,7 @@ import argparse
 import sys
 import csv
 
-# sst only works at the commandline
+# sortseq_tools only works at the commandline
 assert __name__ == '__main__'
 
 # Create argparse parser. 
@@ -28,48 +28,45 @@ parser.add_argument('-o','--out',default=False,help='Output location/type, by de
 # Add various subcommands individually viva subparsers
 subparsers = parser.add_subparsers()
 
-import sst.sortseq_for_doc as sortseq_for_doc
+import sortseq_tools.sortseq_for_doc as sortseq_for_doc
 
-import sst.evaluate_model as evaluate_model
+import sortseq_tools.evaluate_model as evaluate_model
 evaluate_model.add_subparser(subparsers)
 
-import sst.preprocess as preprocess
+import sortseq_tools.preprocess as preprocess
 preprocess.add_subparser(subparsers)
 
-import sst.learn_matrix as learn_matrix
+import sortseq_tools.learn_matrix as learn_matrix
 learn_matrix.add_subparser(subparsers)
 
-import sst.profile_ct as profile_ct
+import sortseq_tools.profile_ct as profile_ct
 profile_ct.add_subparser(subparsers)
 
-import sst.profile_mut as profile_mut
+import sortseq_tools.profile_mut as profile_mut
 profile_mut.add_subparser(subparsers)
 
-import sst.profile_info as profile_info
+import sortseq_tools.profile_info as profile_info
 profile_info.add_subparser(subparsers)
 
-import sst.profile_freq as profile_freq
+import sortseq_tools.profile_freq as profile_freq
 profile_freq.add_subparser(subparsers)
 
-import sst.predictiveinfo as predictiveinfo
+import sortseq_tools.predictiveinfo as predictiveinfo
 predictiveinfo.add_subparser(subparsers)
 
-import sst.Scan as Scan
-predictiveinfo.add_subparser(subparsers)
-
-import sst.simulate_library as simulate_library
+import sortseq_tools.simulate_library as simulate_library
 simulate_library.add_subparser(subparsers)
 
-import sst.simulate_sort as simulate_sort
+import sortseq_tools.simulate_sort as simulate_sort
 simulate_sort.add_subparser(subparsers)
 
-import sst.simulate_expression as simulate_expression
+import sortseq_tools.simulate_expression as simulate_expression
 simulate_expression.add_subparser(subparsers)
 
-import sst.validate as validate
+import sortseq_tools.validate as validate
 validate.add_subparser(subparsers)
 
-import sst.scan_model as scan_model
+import sortseq_tools.scan_model as scan_model
 scan_model.add_subparser(subparsers)
 
 # Final incantiation needed for this to work

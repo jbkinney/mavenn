@@ -25,7 +25,7 @@ def load_text(file_arg):
     """
     file_handle = validate_file_for_reading(file_arg)
     try:
-        df = pd.read_csv(file_handle,delim_whitespace=True,\
+        df = pd.io.parsers.read_csv(file_handle,delim_whitespace=True,\
             comment='#', skip_blank_lines=True, engine='c')
     except:
         raise SortSeqError(\

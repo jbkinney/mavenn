@@ -129,7 +129,7 @@ def main(filelist_df,tags_df=None,indir='./',seq_type=None):
         data_tags = set(out_df[tag_col])
         all_tags = set(tags_df[tag_col])
         if not (data_tags <= all_tags):
-            raise SortSeqError('Error. Some tags probably could not be identified.')
+            sys.stderr.write('Some tags probably could not be identified.')
 
         # Get name of seq column       
         seq_cols = qc.get_cols_from_df(tags_df, 'seqs')

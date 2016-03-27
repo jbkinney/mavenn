@@ -1,0 +1,3 @@
+include src/fast.pyx
+include tests/*
+include tests/commands/*

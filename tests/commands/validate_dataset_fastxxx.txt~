@@ -1,6 +1,6 @@
 # Fasta files
 bad:  sortseq_tools validate -t dataset               -i seq_good.fasta
-good:  sortseq_tools validate -t dataset_fastq         -i seq_good.fasta  
+bad:  sortseq_tools validate -t dataset_fastq         -i seq_good.fasta  
 good: sortseq_tools validate -t dataset_fasta_dna     -i seq_good.fasta
 bad:  sortseq_tools validate -t dataset_fasta_rna     -i seq_good.fasta
 good: sortseq_tools validate -t dataset_fasta_protein -i seq_good.fasta

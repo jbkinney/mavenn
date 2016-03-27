@@ -119,11 +119,12 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
 
         # Fill in dataframe with fasta or fastq data
         #First read in the sequence and sequence identifier into each line
-        temp_df = pd.io.parsers.read_csv(file_arg,lineterminator='>',engine='c',names='s')
+        df = pd.io.parsers.read_csv(file_arg,lineterminator='>',engine='c',names='s')
+        df.rename(columns={'s':colname},inplace=True)
         #now remove sequence identifiers
-        df = pd.DataFrame(columns=[colname])
-        for i,record in enumerate(SeqIO.parse(file_handle,file_type)):
-            df.loc[i] = str(record.seq)
+        df.loc[:,colname] = df.loc[:,colname].apply(format_fasta)
+        
+        
 
     # If type is fastq, set sequence type to dna
     elif file_type=='fastq':
