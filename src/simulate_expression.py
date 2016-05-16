@@ -47,8 +47,7 @@ def wrapper(args):
     else:
         outloc = sys.stdout
     pd.set_option('max_colwidth',int(1e8))
-    df.to_string(
-        outloc, index=False,col_space=10,float_format=utils.format_string)
+    io.write(output_df,outloc)
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
