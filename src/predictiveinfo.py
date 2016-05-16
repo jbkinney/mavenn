@@ -18,6 +18,7 @@ import sortseq_tools.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import sortseq_tools.qc as qc
 import sortseq_tools.numerics as numerics
 from sortseq_tools import SortSeqError
+import sortseq_tools.io as io
 
 
 def main(
@@ -35,13 +36,9 @@ def main(
     if (start != 0 or end):
         data_df.loc[:,seq_col_name] = data_df.loc[:,seq_col_name].str.slice(start,end)
         if modeltype=='MAT':
-            print len(data_df.loc[0,seq_col_name])
-            print len(model_df.loc[:,'pos'])
             if len(data_df.loc[0,seq_col_name]) != len(model_df.loc[:,'pos']):
                 raise SortSeqError('model length does not match dataset length')
         elif modeltype=='NBR':
-            print len(data_df.loc[0,seq_col_name])
-            print len(model_df.loc[:,'pos'])
             if len(data_df.loc[0,seq_col_name]) != len(model_df.loc[:,'pos'])+1:
                 raise SortSeqError('model length does not match dataset length')
     col_headers = utils.get_column_headers(data_df)
@@ -80,12 +77,12 @@ def main(
      
 def wrapper(args):
     
-    data_df = pd.io.parsers.read_csv(args.dataset,delim_whitespace=True)    	    
+    data_df = io.load_dataset(args.dataset)    	    
     # Take input from standard input or through the -i flag.
     if args.model:
-        model_df = pd.io.parsers.read_csv(args.model,delim_whitespace=True)
+        model_df = io.load_model(args.model)
     else:
-        model_df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
+        model_df = io.load_model(sys.stdin)
     MI,Std = main(
         data_df,model_df,start=args.start,
         end=args.end,modeltype=args.modeltype,err=args.err)
