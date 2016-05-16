@@ -81,15 +81,14 @@ def wrapper(args):
     model_df = io.load_model(args.model)
     output_df = main(
         df,model_df,args.noisemodel,npar,
-        nbins,start=args.start,end=args.end)
+        nbins,mt=args.modeltype,start=args.start,end=args.end)
     
     if args.out:
         outloc = open(args.out,'w')
     else:
         outloc = sys.stdout
     pd.set_option('max_colwidth',int(1e8))
-    output_df.to_string(
-        outloc, index=False,col_space=10,float_format=utils.format_string)
+    io.write(output_df,outloc)
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):

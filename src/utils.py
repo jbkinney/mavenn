@@ -431,7 +431,7 @@ def parameterize_seq(seq,seq_dict):
 def emat_typical_parameterization(emat,Ldict):
     '''Takes a parameterized emat (3xL_seq), and returns a 'typical' 
         energy matrix(4xL), with unit norm and average energy 0'''
-    L = len(emat)/(Ldict-1)
+    L = int(len(emat)/(Ldict-1))
     emat = emat.reshape([(Ldict-1),L],order='F')
     zmat = np.zeros(L)
     emat = np.vstack([emat,zmat])
