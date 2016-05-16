@@ -87,7 +87,8 @@ def wrapper(args):
         data_df,model_df,start=args.start,
         end=args.end,modeltype=args.modeltype,err=args.err)
     output_df = pd.DataFrame([MI],columns=['info'])
-    output_df = pd.concat([output_df,pd.Series(Std,name='err')],axis=1)
+    if args.err:
+        output_df = pd.concat([output_df,pd.Series(Std,name='info_err')],axis=1)
   
     if args.out:
         outloc = open(args.out,'w')
