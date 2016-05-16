@@ -10,6 +10,7 @@ import sys
 import sortseq_tools.Models as Models
 import sortseq_tools.utils as utils
 import sortseq_tools.io as io
+import sortseq_tools.qc as qc
 from sortseq_tools import SortSeqError
 import sortseq_tools.evaluate_model as evaluate_model
 
@@ -47,6 +48,9 @@ def wrapper(args):
     else:
         outloc = sys.stdout
     pd.set_option('max_colwidth',int(1e8))
+
+    # Validate dataframe for writting
+    df = qc.validate_dataset(df,fix=True)
     io.write(df,outloc)
         
 

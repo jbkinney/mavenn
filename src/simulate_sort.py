@@ -10,6 +10,7 @@ import sys
 import sortseq_tools.Models as Models
 import sortseq_tools.utils as utils
 import sortseq_tools.io as io
+import sortseq_tools.qc as qc
 import sortseq_tools.evaluate_model as evaluate_model
 from sortseq_tools import SortSeqError
 
@@ -55,7 +56,7 @@ def main(
     if sequence_library:
         df['ct_0'] = utils.sample(df['ct'],int(df['ct'].sum()/nbins))
     output_df = pd.concat([df,pd.DataFrame(seqs_arr,columns=col_labels)],axis=1)      
-    
+    output_df = output_df.drop('val',axis=1)
     return output_df
 
 
@@ -88,6 +89,9 @@ def wrapper(args):
     else:
         outloc = sys.stdout
     pd.set_option('max_colwidth',int(1e8))
+
+    # Validate dataframe for writting
+    output_df = qc.validate_dataset(output_df,fix=True)
     io.write(output_df,outloc)
 
 # Connects argparse to wrapper
