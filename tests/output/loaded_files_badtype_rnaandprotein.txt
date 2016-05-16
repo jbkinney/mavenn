@@ -1,0 +1,4 @@
+  bin           file
+    0  bin_0_rna.txt
+    1  bin_1_pro.txt
+    2  bin_2_rna.txt
