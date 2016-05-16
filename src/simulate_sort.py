@@ -81,7 +81,7 @@ def wrapper(args):
     model_df = io.load_model(args.model)
     output_df = main(
         df,model_df,args.noisemodel,npar,
-        nbins,mt=args.modeltype,start=args.start,end=args.end)
+        nbins,start=args.start,end=args.end)
     
     if args.out:
         outloc = open(args.out,'w')
