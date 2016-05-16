@@ -1,3 +1,5 @@
 include src/fast.pyx
-include tests/*
-include tests/commands/*
+include sortseq_tools_tests/commands/*
+include sortseq_tools_tests/*
+include sortseq_tools_tests/input/*
+include sortseq_tools_tests/output/*
