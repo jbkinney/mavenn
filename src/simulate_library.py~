@@ -8,7 +8,7 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import sortseq.utils as utils
+import sortseq_tools.utils as utils
 import sortseq_tools.qc as qc
 import sortseq_tools.io as io
 from sortseq_tools import SortSeqError

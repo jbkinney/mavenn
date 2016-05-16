@@ -1,0 +1,18 @@
+# Validation to use for good commands from now on
+validation: | sortseq_tools validate -t profile_mut
+
+good: sortseq_tools profile_mut -i seq_good.txt
+good: sortseq_tools profile_mut -i seq_good_rna.txt
+good: sortseq_tools profile_mut -i seq_good_pro.txt
+good: sortseq_tools profile_mut -i dataset_good.txt
+good: sortseq_tools profile_mut -i dataset_good.txt -b 2
+good: sortseq_tools profile_mut -i dataset_good.txt -s 2 
+good: sortseq_tools profile_mut -i dataset_good.txt -e 10
+good: sortseq_tools profile_mut -i dataset_good.txt --err
+good: sortseq_tools profile_mut -i dataset_good.txt -s 2 -e 10 -b 2 --er
+
+bad:  sortseq_tools profile_mut -i bacterium.jpg
+bad:  sortseq_tools profile_mut -i dataset_bad_badcounts.txt
+bad:  sortseq_tools profile_mut -i dataset_good.txt -b 5
+bad:  sortseq_tools profile_mut -i dataset_good.txt -s 100
+bad:  sortseq_tools profile_mut -i dataset_good.txt -e 0

@@ -180,7 +180,8 @@ def add_subparser(subparsers):
     p = subparsers.add_parser('preprocess')
     p.add_argument(
         '-i', '--i', type=str, default=None, help='''Input file, otherwise input through the standard input.''')
-    p.add_argument('--tagkeys',default=None)
+    p.add_argument('--tagkeys',default=None,help='''If there is a tag-key file,
+        supply the file name after this flag''')
     p.add_argument(\
         '-o', '--out', type=str, default=None,help='''Output file, otherwise use standard output.''')
     p.add_argument(

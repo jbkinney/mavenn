@@ -106,7 +106,7 @@ def add_subparser(subparsers):
         ,'NBR'],default='MAT',help ='Type of Model to use')
     p.add_argument('-m', '--model', default=None,
         help='''
-        MAT=FileName,NBR=Filename.
+        Filename of Model.
         ''')
     p.add_argument(
         '-i','--i',default=False,help='''Read input from file instead 

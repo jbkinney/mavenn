@@ -7,11 +7,11 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import sst.qc as qc
-import sst.io as io
-import sst.profile_ct as profile_ct
+import sortseq_tools.qc as qc
+import sortseq_tools.io as io
+import sortseq_tools.profile_ct as profile_ct
 import pdb
-from sst import SortSeqError
+from sortseq_tools import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None, err=False):
     """
@@ -91,6 +91,6 @@ def add_subparser(subparsers):
     p.add_argument(\
         '-o', '--out', type=str, default=None,help='''Output file, otherwise use standard output.''')
     p.add_argument(
-        '-d','--err',type=bool,default = False, help='''Whether or not to include error estimates.''')
+        '-d','--err',type=bool,default = False,action='store_true', help='''Whether or not to include error estimates.''')
     p.set_defaults(func=wrapper)
 

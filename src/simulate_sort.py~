@@ -7,11 +7,11 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import sst.Models as Models
-import sst.utils as utils
-import sst.io as io
-import sst.evaluate_model as evaluate_model
-from sst import SortSeqError
+import sortseq_tools.Models as Models
+import sortseq_tools.utils as utils
+import sortseq_tools.io as io
+import sortseq_tools.evaluate_model as evaluate_model
+from sortseq_tools import SortSeqError
 
 def main(
     df,mp,noisetype,npar,nbins,sequence_library=True,

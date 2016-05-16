@@ -1282,10 +1282,10 @@ def validate_meanstd(df, fix=False):
 
     return df
 
-def validate_input_arguments_for_learn_matrix(modeltype=None,learningmethod=None,
+def validate_input_arguments_for_learn_model(modeltype=None,learningmethod=None,
         start=None,end=None,iteration=None,burnin=None,thin=None,pseudocounts=None,
         foreground=None,background=None):
-    '''We need to make sure that the input arguments to learn_matrix are
+    '''We need to make sure that the input arguments to learn_model are
        reasonable. This means we need to check that 
         -none of the arguments are negative
         -start > end

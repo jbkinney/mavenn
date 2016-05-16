@@ -262,7 +262,6 @@ def fix_counts_2d(raw_counts):
     if len(counts.shape)!=2:
         raise SortSeqError('counts array is not 2d.')
     if not all(np.isfinite(counts.flatten())):
-        print raw_counts.shape
         raise SortSeqError('counts are all finite.')
     if not all(counts.flatten() >= 0.0):
         raise SortSeqError('counts are not nonnegative.')

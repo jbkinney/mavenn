@@ -10,6 +10,8 @@ from sortseq_tools import SortSeqError
 import glob
 import sys
 import time
+from pkg_resources import resource_filename
+import tests
 
 # Define commandline wrapper
 def wrapper(args):
@@ -19,17 +21,19 @@ def wrapper(args):
 
     # Start clock
     start_time = time.time()
-    base_path = os.path.abspath(os.path.dirname(__file__))
-    print base_path
+    
     # Commands must be execulted in cwd to work
-    cwd = os.path.join(base_path,'tests','input')
-
+    command_file_path = os.path.abspath(resource_filename('sortseq_tools_tests', 'test_fast.py'))
+    command_path = os.path.dirname(command_file_path)
+    print command_path
+    cwd = os.path.join(command_path,'input')
+    print cwd
     # If files passed via commandline, use those.
     #if len(sys.argv)>1:
     #     filenames = sys.argv[1:]
     # Otherwise, run on all files in commands/
-    filenames_path = os.path.join(base_path,'tests','commands','*.txt')
-    print filenames_path
+    filenames_path = os.path.join(command_path,'commands','*.txt')
+    
     filenames = glob.glob(filenames_path)
 
     print 'Testing SortSeqTools on commands in the following files:'
@@ -44,6 +48,7 @@ def wrapper(args):
     for filename in filenames:
 
         print 'Processing commands in %s...'%filename
+        print 'Input files are drawn from %s' %cwd
         # Read lines. Strip whitespace
         with open(filename) as f:
             lines = [l.strip() for l in f.readlines()]
@@ -93,7 +98,6 @@ def wrapper(args):
             if test_type=='good' and stderr_str:
                 prepend = 'E '
                 print stderr_str
-                print stdout_str
                 failed_tests.append(line)
 
             elif test_type=='bad' and not ('SortSeqError' in stderr_str):

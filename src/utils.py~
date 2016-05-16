@@ -252,7 +252,7 @@ def shuffle_rank(expression,y):
 
 def genlassomat(df,modeltype,seq_dict,dicttype): 
     '''generates a paramaterized form of the sequence in a csr matrix. This is for
-        use in learn_matrix for lasso mat'''
+        use in learn_model for lasso mat'''
     type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}
     seq_col_name = type_name_dict[dicttype]
     n_seqs = int(np.sum(df['ct']))
@@ -324,7 +324,7 @@ def format_string(x):
     return '%10.6f' %x
 
 def genweightandmat(weights_df,seq_dict,dicttype,means=None,modeltype='MAT'):
-    '''For use with learn_matrix, linear regressions. Generates a flattened
+    '''For use with learn_model, linear regressions. Generates a flattened
          matrix representation of the sequences, with corresponding batch and 
          number of counts (in sequence weighting vector)'''
     type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}

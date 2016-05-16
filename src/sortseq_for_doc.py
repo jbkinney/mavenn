@@ -33,9 +33,17 @@ preprocess.add_subparser(subparsers)
 import sortseq_tools.profile_mut as profile_mut
 profile_mut.add_subparser(subparsers)
 
-#learn_matrix
-import sortseq_tools.learn_matrix as learn_matrix
-learn_matrix.add_subparser(subparsers)
+#profile_mutrate
+import sortseq_tools.profile_ct as profile_ct
+profile_ct.add_subparser(subparsers)
+
+#profile_mutrate
+import sortseq_tools.profile_freq as profile_freq
+profile_freq.add_subparser(subparsers)
+
+#learn_model
+import sortseq_tools.learn_model as learn_model
+learn_model.add_subparser(subparsers)
 
 #predictiveinfo
 import sortseq_tools.predictiveinfo as predictiveinfo
@@ -56,6 +64,12 @@ simulate_library.add_subparser(subparsers)
 #simulate_sort
 import sortseq_tools.simulate_sort as simulate_sort
 simulate_sort.add_subparser(subparsers)
+
+#evaluate_model
+
+#simulate_sort
+import sortseq_tools.evaluate_model as evaluate_model
+evaluate_model.add_subparser(subparsers)
 
 # #simulate_evaluate
 # import sortseq_tools.simulate_evaluate as simulate_evaluate

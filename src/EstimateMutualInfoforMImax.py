@@ -208,7 +208,6 @@ def alt4(df, coarse_graining_level = 0.01):
     
     #copy dataframe
     tmp_df = df.copy(binheaders+['val'])
-    
 
     # Speed computation by coarse-graining model predictions
     if coarse_graining_level:
@@ -222,7 +221,8 @@ def alt4(df, coarse_graining_level = 0.01):
         grouped_tmp_df = grouped.aggregate(np.sum)
         grouped_tmp_df.sort_index(inplace=True)
     else:
-        tmp_df.sort(columns='val',inplace=True)
+        grouped_tmp_df = tmp_df
+        grouped_tmp_df.sort_values(by='val',inplace=True)
     # Get ct_xxx columns
     ct_df = grouped_tmp_df[binheaders].astype(float)
     cts_per_group = ct_df.sum(axis=0).sum()/n_groups

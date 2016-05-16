@@ -22,6 +22,7 @@ import sortseq_tools.qc as qc
 import pdb
 from sortseq_tools import shutthefuckup
 import sortseq_tools.numerics as numerics
+from sklearn.preprocessing import StandardScaler
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''
@@ -109,15 +110,15 @@ def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
 def Compute_Least_Squares(raveledmat,batch,sw,alpha=0):
     '''Ridge regression is the only sklearn regressor that supports sample
         weights, which will make this much faster'''
-    clf = linear_model.Ridge(alpha=alpha)
+    clf = linear_model.Ridge(alpha=alpha,max_iter=10000,normalize=True)
     clf.fit(raveledmat,batch,sample_weight=sw)
     emat = clf.coef_
     return emat
     
 
 def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
-    LS_iterations=4,db=None,iteration=30000,burnin=1000,thin=10,\
-    runnum=0,initialize='LeastSquares',start=0,end=None,foreground=1,\
+    db=None,iteration=30000,burnin=1000,thin=10,\
+    runnum=0,initialize='LS',start=0,end=None,foreground=1,\
     background=0,alpha=0,pseudocounts=1,test=False,drop_library=False,\
     verbose=False):
     
@@ -217,21 +218,20 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
                                
         raveledmat,batch,sw = utils.genweightandmat(
                                   df,par_seq_dict,dicttype,means=means,modeltype=modeltype)
-        print raveledmat
-        print batch
-        print sw
+        scaler = StandardScaler(with_mean=False)
+        raveledmat = scaler.fit_transform(raveledmat,y=batch)
         #Use ridge regression to find matrix.       
         emat = Compute_Least_Squares(raveledmat,batch,sw,alpha=alpha)
 
     if lm == 'IM':
         seq_mat,wtrow = numerics.dataset2mutarray(df.copy(),modeltype)
         #this is also an MCMC routine, do the same as above.
-        if initialize == 'Rand':
+        if initialize == 'rand':
             if modeltype == 'MAT':
                 emat_0 = utils.RandEmat(len(df[seq_col_name][0]),len(seq_dict))
             elif modeltype == 'NBR':
                 emat_0 = utils.RandEmat(len(df['seq'][0])-1,len(seq_dict))
-        elif initialize == 'LeastSquares':
+        elif initialize == 'LS':
             emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
             emat_0_df = main(df.copy(),lm='LS',modeltype=modeltype,alpha=alpha,start=0,end=None,verbose=verbose)
             emat_0 = np.transpose(np.array(emat_0_df[emat_cols]))   
@@ -277,7 +277,7 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
 def wrapper(args):
 
     #validate some of the input arguments
-    qc.validate_input_arguments_for_learn_matrix(
+    qc.validate_input_arguments_for_learn_model(
         foreground=args.foreground,background=args.background,
         modeltype=args.modeltype,learningmethod=args.learningmethod,
         start=args.start,end=args.end,iteration=args.iteration,
@@ -292,7 +292,7 @@ def wrapper(args):
     output_df = main(input_df,lm=args.learningmethod,\
         modeltype=args.modeltype,db=args.db_filename,\
         LS_means_std=args.LS_means_std,\
-        LS_iterations=args.LS_iterations,iteration=args.iteration,\
+        iteration=args.iteration,\
         burnin=args.burnin,thin=args.thin,start=args.start,end=args.end,\
         runnum=args.runnum,initialize=args.initialize,\
         foreground=args.foreground,background=args.background,\
@@ -304,7 +304,7 @@ def wrapper(args):
 
 # Connects argparse to wrapper
 def add_subparser(subparsers):
-    p = subparsers.add_parser('learn_matrix')
+    p = subparsers.add_parser('learn_model')
     p.add_argument(
         '-s','--start',type=int,default=0,
         help ='Position to start your analyzed region')
@@ -313,8 +313,7 @@ def add_subparser(subparsers):
         help='Position to end your analyzed region')
     p.add_argument('--penalty',type=float,default=0,help='Ridge Regression Penalty')
     p.add_argument(
-        '-lm','--learningmethod',choices=['ER','LS','lasso','IM',
-        'iterative_LS'],default='LS',
+        '-lm','--learningmethod',choices=['ER','LS','IM'],default='LS',
         help = '''Algorithm for determining matrix parameters.''')
     p.add_argument(
         '-mt','--modeltype', choices=['MAT','NBR'], default='MAT')
@@ -325,16 +324,13 @@ def add_subparser(subparsers):
         of each bin for least squares regression. Defaults to bin number and 1
         respectively.''')
     p.add_argument(
-        '--LS_iterations',type=int,default=4,
-        help='Number of iterations for iterative_LS')
-    p.add_argument(
         '-fg','--foreground',default=1,type=int,help='''The sequence bin to use
         as foreground for the berg-von-hippel model''')
     p.add_argument(
         '-bg','--background',default=0,type=int,help='''The sequence bin to use
         as background for the berg-von-hippel model''')
     p.add_argument(
-        '--initialize',default='LeastSquares',choices=['Rand','LeastSquares'],
+        '--initialize',default='LS',choices=['rand','LS'],
         help='''How to choose starting point for MCMC''')
     p.add_argument(
         '-rn','--runnum',default=0,help='''For multiple runs this will change

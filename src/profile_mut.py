@@ -91,6 +91,6 @@ def add_subparser(subparsers):
     p.add_argument(\
         '-o', '--out', type=str, default=None,help='''Output file, otherwise use standard output.''')
     p.add_argument(
-        '-d','--err',type=bool,default = False, help='''Whether or not to include error estimates.''')
+        '-d','--err',default = False,action='store_true', help='''Whether or not to include error estimates.''')
     p.set_defaults(func=wrapper)
 

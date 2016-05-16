@@ -143,7 +143,8 @@ def add_subparser(subparsers):
     p.add_argument('-tags','--tags',action='store_true',help='''Simulate Tags''')
     p.add_argument('-tl','--tag_length', default=10, type=int, help='''Length of Tag''')
     p.add_argument(
-        '-t', '--type', choices=qc.seqtypes, default='dna')
+        '-t', '--type', choices=qc.seqtypes, default='dna',help='''Type of base
+        or amino acid to simulate''')
     p.add_argument('-o', '--out', default=None)
     p.set_defaults(func=wrapper)
     return p

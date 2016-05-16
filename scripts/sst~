@@ -28,7 +28,7 @@ parser.add_argument('-o','--out',default=False,help='Output location/type, by de
 # Add various subcommands individually viva subparsers
 subparsers = parser.add_subparsers()
 
-#learn_matrix
+#learn_model
 import sst.sortseq_for_doc as sortseq_for_doc
 sortseq_for_doc.add_subparser(subparsers)
 
@@ -36,9 +36,9 @@ sortseq_for_doc.add_subparser(subparsers)
 import sst.preprocess as preprocess
 preprocess.add_subparser(subparsers)
 
-#learn_matrix
-import sst.learn_matrix as learn_matrix
-learn_matrix.add_subparser(subparsers)
+#learn_model
+import sst.learn_model as learn_model
+learn_model.add_subparser(subparsers)
 
 #profile_ct
 import sst.profile_ct as profile_ct

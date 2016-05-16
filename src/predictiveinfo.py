@@ -63,8 +63,8 @@ def main(
     temp_sorted = temp_df.sort_values(by='val')
     temp_sorted.reset_index(inplace=True,drop=True)
     #we must divide by the total number of counts in each bin for the MI calculator
-    temp_sorted[col_headers] = temp_sorted[col_headers].div(temp_sorted['ct'],axis=0)     
-    MI = EstimateMutualInfoforMImax.alt4(temp_sorted)
+    #temp_sorted[col_headers] = temp_sorted[col_headers].div(temp_sorted['ct'],axis=0)     
+    MI = EstimateMutualInfoforMImax.alt4(temp_sorted,coarse_graining_level=0)
     if not err:
         Std = np.NaN
     else:
@@ -108,7 +108,7 @@ def add_subparser(subparsers):
         '-mt','--modeltype',default='MAT',
         choices=['MAT','NBR'],help='''Type of model to be evaluated''')
     p.add_argument(
-        '--err',action='store_true',help='''Flag to use if you do not want to
+        '--err',action='store_true',help='''Flag to use if you want to
         calculate error''')
     p.add_argument(
         '-s','--start',type=int,default=0,help ='''Position to start your 

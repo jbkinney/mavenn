@@ -108,7 +108,7 @@ def main(dataset_df, err=False, method='naive',\
 # Define commandline wrapper
 def wrapper(args):
     """ Commandline wrapper for main()
-    """ 
+    """
     inloc = io.validate_file_for_reading(args.i) if args.i else sys.stdin
     outloc = io.validate_file_for_writing(args.out) if args.out else sys.stdout
     input_df = io.load_dataset(inloc)
@@ -129,9 +129,9 @@ def add_subparser(subparsers):
     p.add_argument(\
         '-o', '--out', type=str, default=None,help='''Output file, otherwise use standard output.''')
     p.add_argument(
-        '-d','--err',type=bool ,default = False, help='''Whether or not to include error estimates.''')
+        '-d','--err',default = False,action='store_true', help='''Whether or not to include error estimates.''')
     p.add_argument(
-        '-m','--method', type=str, default='naive', choices=['naive','nsb'],\
+        '-m','--method', type=str, default='naive', choices=['naive','tpm','nsb'],\
         help='''Whether or not to include error estimates.''')
     p.add_argument(
         '-p','--pseudocount', type=float, default=1.0, help='''Pseudocount used to compute information values.''')

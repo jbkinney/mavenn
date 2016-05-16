@@ -36,8 +36,8 @@ evaluate_model.add_subparser(subparsers)
 import sortseq_tools.preprocess as preprocess
 preprocess.add_subparser(subparsers)
 
-import sortseq_tools.learn_matrix as learn_matrix
-learn_matrix.add_subparser(subparsers)
+import sortseq_tools.learn_model as learn_model
+learn_model.add_subparser(subparsers)
 
 import sortseq_tools.profile_ct as profile_ct
 profile_ct.add_subparser(subparsers)
