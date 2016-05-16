@@ -47,7 +47,7 @@ def main(dataset_df,model_df,left=None,right=None):
     seq_length = len(dataset_df[seqcol][0])
     if start < 0:
         raise SortSeqError('Invalid start=%d'%start)
-    if end >= seq_length:
+    if end > seq_length:
         raise SortSeqError('Invalid end=%d for seq_length=%d'%(end,seq_length))
 
     #select target sequence region
