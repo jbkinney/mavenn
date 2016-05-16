@@ -1,0 +1,3 @@
+  bin       file
+    0  bin_0.txt
+    2  bin_2.txt

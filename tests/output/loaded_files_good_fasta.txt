@@ -1,0 +1,4 @@
+  bin         file
+    0  bin_0.fasta
+    1  bin_1.fasta
+    2  bin_2.fasta
