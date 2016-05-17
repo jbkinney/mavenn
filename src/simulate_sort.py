@@ -104,9 +104,6 @@ def add_subparser(subparsers):
         '-npar','--noiseparam',default = '[.2]',help = '''
         Parameters for your noise model, as a list. The required parameters are
         LogNormal=[autoflouro,scale],Normal=[scale].''')
-    p.add_argument(
-        '-mt', '--modeltype', type=str,choices=['RandomLinear','MAT'
-        ,'NBR'],default='MAT',help ='Type of Model to use')
     p.add_argument('-m', '--model', default=None,
         help='''
         Filename of Model.
