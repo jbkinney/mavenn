@@ -56,7 +56,7 @@ def main(
     if sequence_library:
         df['ct_0'] = utils.sample(df['ct'],int(df['ct'].sum()/nbins))
     output_df = pd.concat([df,pd.DataFrame(seqs_arr,columns=col_labels)],axis=1)
-    col_labels = utils.get_column_headers(output_df)
+    col_labels = utils.get_column_headers(df)
     output_df['ct'] = output_df[col_labels].sum(axis=1)      
     output_df = output_df.drop('val',axis=1)
     return output_df

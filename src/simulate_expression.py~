@@ -43,7 +43,6 @@ def wrapper(args):
     ec = pd.Series(expcounts,name='ct_1')
     df['ct_0'] = lc
     df['ct_1'] = ec
-    df['ct'] = df[['ct_0','ct_1']].sum(axis=1)
     if args.out:
         outloc = open(args.out,'w')
     else:

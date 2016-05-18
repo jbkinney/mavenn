@@ -22,7 +22,7 @@ import sortseq_tools.io as io
 
 
 def main(
-        data_df,model_df,
+        data_df,model_df,modeltype='MAT',
         start=0,end=None,err=False):
     dicttype, modeltype = qc.get_model_type(model_df)
     seq_cols = qc.get_cols_from_df(data_df,'seqs')
@@ -85,7 +85,7 @@ def wrapper(args):
         model_df = io.load_model(sys.stdin)
     MI,Std = main(
         data_df,model_df,start=args.start,
-        end=args.end,err=args.err)
+        end=args.end,modeltype=args.modeltype,err=args.err)
     output_df = pd.DataFrame([MI],columns=['info'])
     if args.err:
         output_df = pd.concat([output_df,pd.Series(Std,name='info_err')],axis=1)

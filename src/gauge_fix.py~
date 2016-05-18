@@ -135,6 +135,7 @@ def fix_matrix(matrix_model, verbose=False, rcond=1.0E-10):
     # Convert result back to matrix
     fixed_matrix_model = np.array(proj_matrix_model_vec.reshape([P,C]))
     sum_of_var = np.sum(np.var(fixed_matrix_model,axis=1))
+    print sum_of_var
     fixed_neighbor_model = fixed_matrix_model/sum_of_var
 
     # Return matrix model
@@ -181,6 +182,7 @@ def fix_neighbor(neighbor_model, verbose=False, rcond=1.0E-10):
     
     # Now Fix it such that sum of variances = 1
     sum_of_var = np.sum(np.var(fixed_neighbor_model,axis=1))
+    print sum_of_var
     fixed_neighbor_model = fixed_neighbor_model/sum_of_var
     return fixed_neighbor_model
  
