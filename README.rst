@@ -16,92 +16,92 @@ To run all the commands will take approximately 30 hours on a laptop.
 
 CRP matrix models:
 
-sortseq_tools learn_model -lm IM -i crp_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/crp-wt-formatted.txt -o crp-wt_MCMC_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm LS -i crp_models/crp-wt_formatted.txt -o crp-wt_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/crp-wt-formatted.txt -o crp-wt_LS_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm ER -i crp_models/crp-wt_formatted.txt -o crp-wt_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/crp-wt-formatted.txt -o crp-wt_ER_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm IM -i crp_models/full-wt_formatted.txt -o full-wt_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-wt-formatted.txt -o full-wt_MCMC_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm LS -i crp_models/full-wt_formatted.txt -o full-wt_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-wt-formatted.txt -o full-wt_LS_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm ER -i crp_models/full-wt_formatted.txt -o full-wt_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-wt-formatted.txt -o full-wt_ER_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm IM -i crp_models/full-500_formatted.txt -o full-500_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-500-formatted.txt -o full-500_MCMC_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm LS -i crp_models/full-500_formatted.txt -o full-500_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-500-formatted.txt -o full-500_LS_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm ER -i crp_models/full-500_formatted.txt -o full-500_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-500-formatted.txt -o full-500_ER_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm IM -i crp_models/full-150_formatted.txt -o full-150_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-150-formatted.txt -o full-150_MCMC_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm LS -i crp_models/full-150_formatted.txt -o full-150_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-150-formatted.txt -o full-150_LS_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm ER -i crp_models/full-150_formatted.txt -o full-150_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-150-formatted.txt -o full-150_ER_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm IM -i crp_models/full-0_formatted.txt -o full-0_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-0-formatted.txt -o full-0_MCMC_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm LS -i crp_models/full-0_formatted.txt -o full-0_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-0-formatted.txt -o full-0_LS_crp -s 3 -e 25
 
-sortseq_tools learn_model -lm ER -i crp_models/full-0_formatted.txt -o full-0_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-0-formatted.txt -o full-0_ER_crp -s 3 -e 25
 
 CRP neighbor models:
-sortseq_tools learn_model -lm IM -i crp_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/crp-wt-formatted.txt -o crp-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR
 
-sortseq_tools learn_model -lm IM -i crp_models/full-wt_formatted.txt -o full-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-wt-formatted.txt -o full-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR
 
-sortseq_tools learn_model -lm IM -i crp_models/full-500_formatted.txt -o full-500_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-500-formatted.txt -o full-500_MCMC_crp_NBR -s 3 -e 25 -mt NBR
 
-sortseq_tools learn_model -lm IM -i crp_models/full-150_formatted.txt -o full-150_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-150-formatted.txt -o full-150_MCMC_crp_NBR -s 3 -e 25 -mt NBR
 
-sortseq_tools learn_model -lm IM -i crp_models/full-0_formatted.txt -o full-0_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-0-formatted.txt -o full-0_MCMC_crp_NBR -s 3 -e 25 -mt NBR
 
 RNAP matrix models:
 
-sortseq_tools learn_model -lm IM -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i crp_models/rnap-wt-formatted.txt -o rnap-wt_MCMC_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm LS -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i crp_models/rnap-wt-formatted.txt -o rnap-wt_LS_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm ER -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i crp_models/rnap-wt-formatted.txt -o rnap-wt_ER_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-wt_formatted.txt -o full-wt_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i crp_models/full-wt-formatted.txt -o full-wt_MCMC_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm LS -i rnap_models/full-wt_formatted.txt -o full-wt_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i crp_models/full-wt-formatted.txt -o full-wt_LS_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm ER -i rnap_models/full-wt_formatted.txt -o full-wt_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i crp_models/full-wt-formatted.txt -o full-wt_ER_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-500_formatted.txt -o full-500_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i crp_models/full-500-formatted.txt -o full-500_MCMC_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm LS -i rnap_models/full-500_formatted.txt -o full-500_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i crp_models/full-500-formatted.txt -o full-500_LS_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm ER -i rnap_models/full-500_formatted.txt -o full-500_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i crp_models/full-500-formatted.txt -o full-500_ER_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-150_formatted.txt -o full-150_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i crp_models/full-150-formatted.txt -o full-150_MCMC_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm LS -i rnap_models/full-150_formatted.txt -o full-150_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i crp_models/full-150-formatted.txt -o full-150_LS_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm ER -i rnap_models/full-150_formatted.txt -o full-150_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i crp_models/full-150-formatted.txt -o full-150_ER_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-0_formatted.txt -o full-0_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i crp_models/full-0-formatted.txt -o full-0_MCMC_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm LS -i rnap_models/full-0_formatted.txt -o full-0_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i crp_models/full-0-formatted.txt -o full-0_LS_rnap -s 37 -e 71
 
-sortseq_tools learn_model -lm ER -i rnap_models/full-0_formatted.txt -o full-0_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i crp_models/full-0-formatted.txt -o full-0_ER_rnap -s 37 -e 71
 
-#learn RNAP neighbor models
+RNAP neighbor models:
 
-sortseq_tools learn_model -lm IM -i rnap_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/crp-wt-formatted.txt -o crp-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-wt_formatted.txt -o full-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-wt-formatted.txt -o full-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-500_formatted.txt -o full-500_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-500-formatted.txt -o full-500_MCMC_crp_NBR -s 37 -e 71 -mt NBR
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-150_formatted.txt -o full-150_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-150-formatted.txt -o full-150_MCMC_crp_NBR -s 37 -e 71 -mt NBR
 
-sortseq_tools learn_model -lm IM -i rnap_models/full-0_formatted.txt -o full-0_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-0-formatted.txt -o full-0_MCMC_crp_NBR -s 37 -e 71 -mt NBR
 
-#learn DMS models of the two data sets
+DMS matrix models:
 
 sortseq_tools learn_model -lm IM -i dms/dms_1_formatted -o dms_1_MCMC
 
@@ -115,7 +115,7 @@ sortseq_tools learn_model -lm LS -i dms/dms_2_formatted -o dms_2_LS
 
 sortseq_tools learn_model -lm ER -i dms/dms_2_formatted -o dms_2_ER
 
-#learn mpra models 
+MPRA matrix models: 
 
 sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_MCMC
 
@@ -129,9 +129,16 @@ sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_test_formatted -o CRE_100uM_t
 
 sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_ER
 
-#learn mpra Neighbor models
+MPRA neighbor models:
 
 sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_MCMC_NBR -mt NBR
 
 sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_MCMC_NBR -mt NBR
+
+We also perform predictive information calculations to produce the figues in the paper. The commands
+have the form 
+
+sortseq_tools predictiveinfo -ds dataset.txt -m model.txt -o outfile.txt
+
+Some executable commands 
 

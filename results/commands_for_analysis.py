@@ -16,72 +16,72 @@ Commands should probably be run individually'''
 
 '''MCMC analysis'''
 #learn CRP models
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm LS -i crp_models/crp-wt_formatted.txt -o crp-wt_LS_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm ER -i crp_models/crp-wt_formatted.txt -o crp-wt_ER_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-wt_formatted.txt -o full-wt_MCMC_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm LS -i crp_models/full-wt_formatted.txt -o full-wt_LS_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm ER -i crp_models/full-wt_formatted.txt -o full-wt_ER_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-500_formatted.txt -o full-500_MCMC_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm LS -i crp_models/full-500_formatted.txt -o full-500_LS_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm ER -i crp_models/full-500_formatted.txt -o full-500_ER_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-150_formatted.txt -o full-150_MCMC_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm LS -i crp_models/full-150_formatted.txt -o full-150_LS_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm ER -i crp_models/full-150_formatted.txt -o full-150_ER_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-0_formatted.txt -o full-0_MCMC_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm LS -i crp_models/full-0_formatted.txt -o full-0_LS_crp -s 3 -e 25''')
-os.system('''sortseq_tools learn_model -lm ER -i crp_models/full-0_formatted.txt -o full-0_ER_crp -s 3 -e 25''')
+sortseq_tools learn_model -lm IM -i crp_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/crp-wt_formatted.txt -o crp-wt_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/crp-wt_formatted.txt -o crp-wt_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-wt_formatted.txt -o full-wt_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-wt_formatted.txt -o full-wt_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-wt_formatted.txt -o full-wt_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-500_formatted.txt -o full-500_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-500_formatted.txt -o full-500_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-500_formatted.txt -o full-500_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-150_formatted.txt -o full-150_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-150_formatted.txt -o full-150_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-150_formatted.txt -o full-150_ER_crp -s 3 -e 25
+sortseq_tools learn_model -lm IM -i crp_models/full-0_formatted.txt -o full-0_MCMC_crp -s 3 -e 25
+sortseq_tools learn_model -lm LS -i crp_models/full-0_formatted.txt -o full-0_LS_crp -s 3 -e 25
+sortseq_tools learn_model -lm ER -i crp_models/full-0_formatted.txt -o full-0_ER_crp -s 3 -e 25
 
 #learn CRP neighbor models
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-wt_formatted.txt -o full-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-500_formatted.txt -o full-500_MCMC_crp_NBR -s 3 -e 25 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-150_formatted.txt -o full-150_MCMC_crp_NBR -s 3 -e 25 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i crp_models/full-0_formatted.txt -o full-0_MCMC_crp_NBR -s 3 -e 25 -mt NBR''')
+sortseq_tools learn_model -lm IM -i crp_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-wt_formatted.txt -o full-wt_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-500_formatted.txt -o full-500_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-150_formatted.txt -o full-150_MCMC_crp_NBR -s 3 -e 25 -mt NBR
+sortseq_tools learn_model -lm IM -i crp_models/full-0_formatted.txt -o full-0_MCMC_crp_NBR -s 3 -e 25 -mt NBR
 
 #learn RNAP models
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_MCMC_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm LS -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_LS_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm ER -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_ER_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-wt_formatted.txt -o full-wt_MCMC_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm LS -i rnap_models/full-wt_formatted.txt -o full-wt_LS_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm ER -i rnap_models/full-wt_formatted.txt -o full-wt_ER_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-500_formatted.txt -o full-500_MCMC_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm LS -i rnap_models/full-500_formatted.txt -o full-500_LS_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm ER -i rnap_models/full-500_formatted.txt -o full-500_ER_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-150_formatted.txt -o full-150_MCMC_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm LS -i rnap_models/full-150_formatted.txt -o full-150_LS_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm ER -i rnap_models/full-150_formatted.txt -o full-150_ER_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-0_formatted.txt -o full-0_MCMC_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm LS -i rnap_models/full-0_formatted.txt -o full-0_LS_rnap -s 37 -e 71''')
-os.system('''sortseq_tools learn_model -lm ER -i rnap_models/full-0_formatted.txt -o full-0_ER_rnap -s 37 -e 71''')
+sortseq_tools learn_model -lm IM -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i rnap_models/rnap-wt_formatted.txt -o rnap-wt_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i rnap_models/full-wt_formatted.txt -o full-wt_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i rnap_models/full-wt_formatted.txt -o full-wt_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i rnap_models/full-wt_formatted.txt -o full-wt_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i rnap_models/full-500_formatted.txt -o full-500_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i rnap_models/full-500_formatted.txt -o full-500_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i rnap_models/full-500_formatted.txt -o full-500_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i rnap_models/full-150_formatted.txt -o full-150_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i rnap_models/full-150_formatted.txt -o full-150_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i rnap_models/full-150_formatted.txt -o full-150_ER_rnap -s 37 -e 71
+sortseq_tools learn_model -lm IM -i rnap_models/full-0_formatted.txt -o full-0_MCMC_rnap -s 37 -e 71
+sortseq_tools learn_model -lm LS -i rnap_models/full-0_formatted.txt -o full-0_LS_rnap -s 37 -e 71
+sortseq_tools learn_model -lm ER -i rnap_models/full-0_formatted.txt -o full-0_ER_rnap -s 37 -e 71
 
 #learn RNAP neighbor models
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-wt_formatted.txt -o full-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-500_formatted.txt -o full-500_MCMC_crp_NBR -s 37 -e 71 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-150_formatted.txt -o full-150_MCMC_crp_NBR -s 37 -e 71 -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i rnap_models/full-0_formatted.txt -o full-0_MCMC_crp_NBR -s 37 -e 71 -mt NBR''')
+sortseq_tools learn_model -lm IM -i rnap_models/crp-wt_formatted.txt -o crp-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i rnap_models/full-wt_formatted.txt -o full-wt_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i rnap_models/full-500_formatted.txt -o full-500_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i rnap_models/full-150_formatted.txt -o full-150_MCMC_crp_NBR -s 37 -e 71 -mt NBR
+sortseq_tools learn_model -lm IM -i rnap_models/full-0_formatted.txt -o full-0_MCMC_crp_NBR -s 37 -e 71 -mt NBR
 
 #learn DMS models of the two data sets
-os.system('''sortseq_tools learn_model -lm IM -i dms/dms_1_formatted -o dms_1_MCMC''')
-os.system('''sortseq_tools learn_model -lm LS -i dms/dms_1_formatted -o dms_1_LS''')
-os.system('''sortseq_tools learn_model -lm ER -i dms/dms_1_formatted -o dms_1_ER''')
-os.system('''sortseq_tools learn_model -lm IM -i dms/dms_2_formatted -o dms_2_MCMC''')
-os.system('''sortseq_tools learn_model -lm LS -i dms/dms_2_formatted -o dms_2_LS''')
-os.system('''sortseq_tools learn_model -lm ER -i dms/dms_2_formatted -o dms_2_ER''')
+sortseq_tools learn_model -lm IM -i dms/dms_1_formatted -o dms_1_MCMC
+sortseq_tools learn_model -lm LS -i dms/dms_1_formatted -o dms_1_LS
+sortseq_tools learn_model -lm ER -i dms/dms_1_formatted -o dms_1_ER
+sortseq_tools learn_model -lm IM -i dms/dms_2_formatted -o dms_2_MCMC
+sortseq_tools learn_model -lm LS -i dms/dms_2_formatted -o dms_2_LS
+sortseq_tools learn_model -lm ER -i dms/dms_2_formatted -o dms_2_ER
 
 #learn mpra models 
-os.system('''sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_MCMC''')
-os.system('''sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_LS''')
-os.system('''sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_ER''')
-os.system('''sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_MCMC''')
-os.system('''sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_LS''')
-os.system('''sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_ER''')
+sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_MCMC
+sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_LS
+sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_ER
+sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_MCMC
+sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_LS
+sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_ER
 
 #learn mpra Neighbor models
-os.system('''sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_MCMC_NBR -mt NBR''')
-os.system('''sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_MCMC_NBR -mt NBR''')
+sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted -o CRE_100uM_ds_MCMC_NBR -mt NBR
+sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_test_formatted -o CRE_100uM_test_MCMC_NBR -mt NBR
 '''calculate the predictive information'''
 
 #CRP models predictive info
