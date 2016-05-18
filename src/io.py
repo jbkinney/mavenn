@@ -143,7 +143,6 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         df = pd.DataFrame(columns=[colname])
         df.loc[:,colname] = temp_df.loc[1::4,colname]
         df.reset_index(inplace=True,drop=True)
-        print df
 
     # For text file, just load as whitespace-delimited data frame
     elif file_type=='text':

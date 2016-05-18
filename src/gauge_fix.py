@@ -134,8 +134,10 @@ def fix_matrix(matrix_model, verbose=False, rcond=1.0E-10):
  
     # Convert result back to matrix
     fixed_matrix_model = np.array(proj_matrix_model_vec.reshape([P,C]))
+    print fixed_matrix_model
     sum_of_var = np.sum(np.var(fixed_matrix_model,axis=1))
-    fixed_neighbor_model = fixed_matrix_model/np.sqrt(sum_of_var)
+    print sum_of_var
+    fixed_matrix_model = fixed_matrix_model/np.sqrt(sum_of_var)
 
     # Return matrix model
     return fixed_matrix_model
