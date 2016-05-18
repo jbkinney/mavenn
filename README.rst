@@ -140,5 +140,7 @@ have the form
 
 sortseq_tools predictiveinfo -ds dataset.txt -m model.txt -o outfile.txt
 
-Some executable commands 
+Some executable commands which calculate information values seen in the paper are:
+
+sortseq_tools predictiveinfo -ds crp_models/crp-wt-formatted.txt -m crp-wt_LS_crp -s 3 -e 25
 
