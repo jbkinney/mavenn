@@ -247,6 +247,7 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
         emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))        
         if modeltype == 'NBR':
              emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
+
         elif modeltype == 'MAT':
              emat_typical = gauge_fix.fix_matrix(np.transpose(emat_typical))
     
