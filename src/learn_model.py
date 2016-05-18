@@ -17,7 +17,7 @@ import sortseq_tools.stepper as stepper
 import os
 from sortseq_tools import SortSeqError
 import sortseq_tools.io as io
-import sortseq_tools.gauge_fix as gauge_fix
+import sortseq_tools.gauge as gauge
 import sortseq_tools.qc as qc
 import pdb
 from sortseq_tools import shutthefuckup
@@ -232,23 +232,32 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
     #now format the energy matrices to get them ready to output
     if (lm == 'IM' or lm == 'memsaver'):       
         if modeltype == 'NBR':
-             emat_typical = gauge_fix.fix_neighbor(np.transpose(emat))
+             emat_typical = gauge.fix_neighbor(np.transpose(emat))
         elif modeltype == 'MAT':
-             emat_typical = gauge_fix.fix_matrix(np.transpose(emat))
+             emat_typical = gauge.fix_matrix(np.transpose(emat))
     
     elif lm == 'ER': 
         '''the emat for this format is currently transposed compared to other formats
         it is also already a data frame with columns [pos,val_...]'''
         emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
         emat_typical = emat[emat_cols]
-        emat_typical = (gauge_fix.fix_matrix((np.array(emat_typical))))
+        emat_typical = (gauge.fix_matrix((np.array(emat_typical))))
         
     else: #must be Least squares
         emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))        
         if modeltype == 'NBR':
+<<<<<<< Updated upstream
              emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
+=======
+<<<<<<< HEAD
+             emat_typical = gauge.fix_neighbor(np.transpose(emat_typical))
+
+=======
+             emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
+>>>>>>> origin/master
+>>>>>>> Stashed changes
         elif modeltype == 'MAT':
-             emat_typical = gauge_fix.fix_matrix(np.transpose(emat_typical))
+             emat_typical = gauge.fix_matrix(np.transpose(emat_typical))
     
     em = pd.DataFrame(emat_typical)
     em.columns = val_cols
