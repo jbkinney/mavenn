@@ -246,16 +246,8 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
     else: #must be Least squares
         emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))        
         if modeltype == 'NBR':
-<<<<<<< Updated upstream
-             emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
-=======
-<<<<<<< HEAD
              emat_typical = gauge.fix_neighbor(np.transpose(emat_typical))
 
-=======
-             emat_typical = gauge_fix.fix_neighbor(np.transpose(emat_typical))
->>>>>>> origin/master
->>>>>>> Stashed changes
         elif modeltype == 'MAT':
              emat_typical = gauge.fix_matrix(np.transpose(emat_typical))
     
