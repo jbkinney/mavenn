@@ -71,7 +71,7 @@ def main(
             sub_df = data_df_for_sub.sample(int(len(data_df_for_sub.index)/2))
             sub_df.reset_index(inplace=True,drop=True)
             sub_MI[i],sub_std = main(
-                sub_df,model_df,modeltype=modeltype,err=False)
+                sub_df,model_df,err=False)
         Std = np.std(sub_MI)/np.sqrt(2)
     return MI,Std
      

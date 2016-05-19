@@ -25,8 +25,7 @@ bad:  sortseq_tools learn_model -lm ER -i dataset.txt --pseudocounts -1
 #test LS learning method
 good: sortseq_tools learn_model -lm LS -i dataset.txt --penalty .1
 
-#if no penalty, there will be some bases with no counts, and the algorithm will fail
-bad:  sortseq_tools learn_model -lm LS -i dataset.txt 
+#test whether setting penalty works or not
 good: cat dataset.txt | sortseq_tools learn_model -lm LS --penalty .1
 good: sortseq_tools learn_model -lm LS -i dataset.txt --LS_means_std test_means_std.txt --penalty .1
 bad:  sortseq_tools learn_model -lm LS -i dataset.txt --LS_means_std test_means_std_bad.txt --penalty .1

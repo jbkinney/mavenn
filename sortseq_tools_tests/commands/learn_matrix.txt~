@@ -47,13 +47,13 @@ bad:  sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 -
 good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1 --foreground 10 --background 50
 
 #test different initialization conditions
-good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize Rand --thin 1
-good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --penalty .1 --thin 1
-good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LeastSquares --LS_means_std test_means_std.txt --penalty .1 --thin 1
+good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize rand --thin 1
+good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LS --penalty .1 --thin 1
+good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LS --LS_means_std test_means_std.txt --penalty .1 --thin 1
 
 #Test Neighbor Models
 bad:  sortseq_tools learn_model -lm ER -i dataset.txt --modeltype NBR --pseudocounts 1
 good: sortseq_tools learn_model -lm LS -i dataset.txt --modeltype NBR --penalty .1 --thin 1
 good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --thin 1 --penalty .1 
-good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize Rand --thin 1
-good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize LeastSquares --penalty .1 --thin 1
+good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize rand --thin 1
+good: sortseq_tools learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize LS --penalty .1 --thin 1
