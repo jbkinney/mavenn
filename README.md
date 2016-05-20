@@ -1,8 +1,8 @@
-Sort-Seq Tools 
+# Sort-Seq Tools 
 version 0.01.01
-
 Written by William T. Ireland and Justin B. Kinney
 Copyright 2016
+========
 
 Overview
 
