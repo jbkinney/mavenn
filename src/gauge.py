@@ -10,7 +10,7 @@ class Info:
 alphabets = {
     'DNA':'ACGT', 
     'RNA':'ACGU',
-    'protein':'ACDEFGHIKLMNPQRSTVWY'
+    'protein':'*ACDEFGHIKLMNPQRSTVWY'
 }
 
 def load_matrix(filename, wtseq, mutrate, seqtype='DNA', normalize=False, \

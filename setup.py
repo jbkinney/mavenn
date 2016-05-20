@@ -20,9 +20,9 @@ ext_modules = Extension("sortseq_tools.fast",["src/fast.pyx"])
 setup(
     name = 'sortseq_tools', 
     description = 'Tools for analysis of Sort-Seq experiments.',
-    version = '0.0.20',
+    version = '0.01.01',
     author = 'Bill Ireland',
-    author_email = 'irelandb99999@gmail.com',
+    author_email = 'wireland@caltech.edu',
     #long_description = readme,
     install_requires = [\
         'biopython>=1.6',\

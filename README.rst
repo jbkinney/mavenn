@@ -1,205 +1,38 @@
-SortSeqTools is a software package for use in analyzing Sort-Seq,
-Massively Parallel Reporter Assays, Deep Protein Mutagenesis Assays, and Selex-Seq
-experiments.
+Sort-Seq Tools 
+version 0.01.01
 
-For help using and installing this package please refer to our paper, the
-github examples, and the `sortseq_tools documentation`_
+Written by William T. Ireland and Justin B. Kinney
+Copyright 2016
+
+Overview
+
+Sort-Seq Tools is a software package for analyzing data from a variety massively parallel assays, including Sort-Seq assays, Massively Parallel Reporter assays, and Deep Mutational Scanning assays. Sort-Seq Tools provides a set of command line routines, which are listed in the documentation [link]. Details can be found in the accompanying paper
+
+Ireland WT, Kinney JB (2016) Sort-Seq Tools: modeling sequence-function relationships from massively parallel assays. bioRxiv doi:???
+
+Requriements
+
+Sort-Seq Tools is written in Python 2.9.7 and in Cython 0.23.4. It requires that the following Python packages also be installed: biopython, pymc, scikit-learn, statsmodels, mpmath, pandas, weblogo, and matplotlib. Sort-Seq Tools is currently in alpha testing and has been verified to work on Linux and Mac OS X. 
+
+Installation
+
+To install Sort-Seq Tools, clone this repository, navigate to the folder containing this README file, and execute
+
+python setup.py install
+
+Alternatively, Sort-Seq Tools can be installed from PyPI by executing
+
+pip install sortseq_tools
+
+This approach will also install all of Sort-Seq Tools's dependencies. After Sort-Seq Tools is installed, you can test the functionality of all methods by running
+
+sortseq_tolls run_tests
+
+Documentation
+
+The commands used to perform the analysis in Ireland & Kinney (2016) are described here [link to analysis.rst]. Documentation on each of the Sort-Seq Tools functions is provided at `sortseq_tools documentation`_
 
 .. _`sortseq_tools documentation`: http://jbkinney.github.io/sortseq
 
-Code for Analysis:
 
-The commands for producing the models analysed in our paper are below.
-In order to run these commands download the code from github, open a terminal, and navigate to the data/formatted/
-folder. Copy one of the following commands into the terminal and it will produce one model.
-To run all the commands will take approximately 30 hours on a laptop.
-
-Commands for Figure 4:
-
-CRP matrix models:
-
-sortseq_tools learn_model -lm IM -i sortseq/crp-wt-formatted.txt -o crp-wt_MCMC_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm LS -i sortseq/crp-wt-formatted.txt -o crp-wt_LS_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm ER -i sortseq/crp-wt-formatted.txt -o crp-wt_ER_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm IM -i sortseq/full-wt-formatted.txt -o full-wt_MCMC_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm LS -i sortseq/full-wt-formatted.txt -o full-wt_LS_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm ER -i sortseq/full-wt-formatted.txt -o full-wt_ER_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm IM -i sortseq/full-500-formatted.txt -o full-500_MCMC_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm LS -i sortseq/full-500-formatted.txt -o full-500_LS_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm ER -i sortseq/full-500-formatted.txt -o full-500_ER_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm IM -i sortseq/full-150-formatted.txt -o full-150_MCMC_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm LS -i sortseq/full-150-formatted.txt -o full-150_LS_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm ER -i sortseq/full-150-formatted.txt -o full-150_ER_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm IM -i sortseq/full-0-formatted.txt -o full-0_MCMC_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm LS -i sortseq/full-0-formatted.txt -o full-0_LS_crp.txt -s 3 -e 25
-
-sortseq_tools learn_model -lm ER -i sortseq/full-0-formatted.txt -o full-0_ER_crp.txt -s 3 -e 25
-
-CRP neighbor models:
-sortseq_tools learn_model -lm IM -i sortseq/crp-wt-formatted.txt -o crp-wt_MCMC_crp_NBR.txt -s 3 -e 25 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-wt-formatted.txt -o full-wt_MCMC_crp_NBR.txt -s 3 -e 25 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-500-formatted.txt -o full-500_MCMC_crp_NBR.txt -s 3 -e 25 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-150-formatted.txt -o full-150_MCMC_crp_NBR.txt -s 3 -e 25 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-0-formatted.txt -o full-0_MCMC_crp_NBR.txt -s 3 -e 25 -mt NBR
-
-RNAP matrix models:
-
-sortseq_tools learn_model -lm IM -i sortseq/rnap-wt-formatted.txt -o rnap-wt_MCMC_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm LS -i sortseq/rnap-wt-formatted.txt -o rnap-wt_LS_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm ER -i sortseq/rnap-wt-formatted.txt -o rnap-wt_ER_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm IM -i sortseq/full-wt-formatted.txt -o full-wt_MCMC_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm LS -i sortseq/full-wt-formatted.txt -o full-wt_LS_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm ER -i sortseq/full-wt-formatted.txt -o full-wt_ER_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm IM -i sortseq/full-500-formatted.txt -o full-500_MCMC_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm LS -i sortseq/full-500-formatted.txt -o full-500_LS_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm ER -i sortseq/full-500-formatted.txt -o full-500_ER_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm IM -i sortseq/full-150-formatted.txt -o full-150_MCMC_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm LS -i sortseq/full-150-formatted.txt -o full-150_LS_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm ER -i sortseq/full-150-formatted.txt -o full-150_ER_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm IM -i sortseq/full-0-formatted.txt -o full-0_MCMC_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm LS -i sortseq/full-0-formatted.txt -o full-0_LS_rnap.txt -s 37 -e 71
-
-sortseq_tools learn_model -lm ER -i sortseq/full-0-formatted.txt -o full-0_ER_rnap.txt -s 37 -e 71
-
-RNAP neighbor models:
-
-sortseq_tools learn_model -lm IM -i sortseq/crp-wt-formatted.txt -o crp-wt_MCMC_crp_NBR.txt -s 37 -e 71 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-wt-formatted.txt -o full-wt_MCMC_crp_NBR.txt -s 37 -e 71 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-500-formatted.txt -o full-500_MCMC_crp_NBR.txt -s 37 -e 71 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-150-formatted.txt -o full-150_MCMC_crp_NBR.txt -s 37 -e 71 -mt NBR
-
-sortseq_tools learn_model -lm IM -i sortseq/full-0-formatted.txt -o full-0_MCMC_crp_NBR.txt -s 37 -e 71 -mt NBR
-
-Commands for Figure 5:
-
-Simulation of Sort Seq Data:
-
-CRP:
-
-Simulate Data Set:
-
-sortseq_tools simulate_library  -w ACAGGTATACAGTACCATACCT -n 1000000 -o Simulated/CRP/simulated_library_train.txt
-
-sortseq_tools simulate_sort -m Simulated/CRP/true_model.txt -n_bins 2 -i simulated_library_train.txt -o Simulated/CRP/2_bin_sorted-formatted.txt
-
-sortseq_tools simulate_sort -m Simulated/CRP/true_model.txt -n_bins 10 -i simulated_library_train.txt -o Simulated/CRP/10_bin_sorted-formatted.txt
-
-sortseq_tools simulate_library  -w ACAGGTATACAGTACCATACCT -n 1000000 -o Simulated/CRP/simulated_library_test.txt
-
-sortseq_tools simulate_sort -m Simulated/CRP/true_model.txt -n_bins 2 -i simulated_library_test.txt -o Simulated/CRP/2_bin_sorted_test-formatted.txt
-
-sortseq_tools simulate_sort -m Simulated/CRP/true_model.txt -n_bins 10 -i simulated_library_test.txt -o Simulated/CRP/10_bin_sorted_test-formatted.txt
-
-Learn Models:
-
-sortseq_tools learn_model -lm IM -i Simulated/CRP/2_bin_sorted-formatted.txt -o sim_2_bin_IM_crp.txt 
-
-sortseq_tools learn_model -lm LS -i Simulated/CRP/2_bin_sorted-formatted.txt -o sim_2_bin_LS_crp.txt 
-
-sortseq_tools learn_model -lm ER -i Simulated/CRP/2_bin_sorted-formatted.txt -o sim_2_bin_ER_crp.txt
-
-sortseq_tools learn_model -lm IM -i Simulated/CRP/2_bin_sorted-formatted.txt -o sim_2_bin_IM_crp_NBR.txt -mt NBR
-
-sortseq_tools learn_model -lm LS -i Simulated/CRP/2_bin_sorted-formatted.txt -o sim_2_bin_LS_crp_NBR.txt -mt NBR
-
-RNAP:
-
-Simulate Data Set:
-
-sortseq_tools simulate_library  -w GCTTTACACTTTATGCTTCCGGCTCGTATGTTGT -n 1000000 -o Simulated/RNAP/simulated_library_train.txt
-
-sortseq_tools simulate_sort -m Simulated/RNAP/true_model.txt -n_bins 2 -i simulated_library_train.txt -o Simulated/RNAP/RNAP_2_bin_sorted-formatted.txt
-
-sortseq_tools simulate_sort -m Simulated/RNAP/true_model.txt -n_bins 10 -i simulated_library_train.txt -o Simulated/RNAP/RNAP_10_bin_sorted-formatted.txt
-
-sortseq_tools simulate_library  -w GCTTTACACTTTATGCTTCCGGCTCGTATGTTGT -n 1000000 -o Simulated/RNAP/simulated_library_test.txt
-
-sortseq_tools simulate_sort -m Simulated/RNAP/true_model.txt -n_bins 2 -i simulated_library_test.txt -o Simulated/RNAP/RNAP_2_bin_sorted_test-formatted.txt
-
-sortseq_tools simulate_sort -m Simulated/RNAP/true_model.txt -n_bins 10 -i simulated_library_test.txt -o Simulated/RNAP/RNAP_10_bin_sorted_test-formatted.txt
-
-Learn Models:
-
-sortseq_tools learn_model -lm IM -i Simulated/RNAP/RNAP_2_bin_sorted-formatted.txt -o sim_2_bin_IM_RNAP.txt 
-
-sortseq_tools learn_model -lm LS -i Simulated/RNAP/RNAP_2_bin_sorted-formatted.txt -o sim_2_bin_LS_RNAP.txt 
-
-sortseq_tools learn_model -lm ER -i Simulated/RNAP/RNAP_2_bin_sorted-formatted.txt -o sim_2_bin_ER_RNAP.txt
-
-sortseq_tools learn_model -lm IM -i Simulated/RNAP/RNAP_2_bin_sorted-formatted.txt -o sim_2_bin_IM_RNAP_NBR.txt -mt NBR
-
-sortseq_tools learn_model -lm LS -i Simulated/RNAP/RNAP_2_bin_sorted-formatted.txt -o sim_2_bin_LS_RNAP_NBR.txt -mt NBR
-
-
-Commands for Figure 6:
-
-DMS matrix models:
-
-sortseq_tools learn_model -lm IM -i dms/dms_1_formatted.txt -o dms_1_MCMC.txt
-
-sortseq_tools learn_model -lm LS -i dms/dms_1_formatted.txt -o dms_1_LS.txt
-
-sortseq_tools learn_model -lm ER -i dms/dms_1_formatted.txt -o dms_1_ER.txt
-
-sortseq_tools learn_model -lm IM -i dms/dms_2_formatted.txt -o dms_2_MCMC.txt
-
-sortseq_tools learn_model -lm LS -i dms/dms_2_formatted.txt -o dms_2_LS.txt
-
-sortseq_tools learn_model -lm ER -i dms/dms_2_formatted.txt -o dms_2_ER.txt
-
-MPRA matrix models: 
-
-sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_ds_formatted.txt -o CRE_100uM_ds_MCMC.txt
-
-sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_ds_formatted.txt -o CRE_100uM_ds_LS.txt
-
-sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_ds_formatted.txt -o CRE_100uM_ds_ER.txt
-
-sortseq_tools learn_model -lm IM -i mpra/CRE_100uM_test_formatted.txt -o CRE_100uM_test_MCMC.txt
-
-sortseq_tools learn_model -lm LS -i mpra/CRE_100uM_test_formatted.txt -o CRE_100uM_test_LS.txt
-
-sortseq_tools learn_model -lm ER -i mpra/CRE_100uM_test_formatted.txt -o CRE_100uM_test_ER.txt
-
-We also perform predictive information calculations to produce the figues in the paper. The commands
-have the form 
-
-sortseq_tools predictiveinfo -ds dataset.txt -m model.txt -o outfile.txt
-
-Some executable commands which calculate information values seen in the paper are:
-
-sortseq_tools predictiveinfo -ds sortseq/crp-wt-formatted.txt -m crp-wt_LS_crp.txt -s 3 -e 25
 
