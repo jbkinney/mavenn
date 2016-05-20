@@ -1,2 +1,0 @@
-include src/fast.pyx
-include tests/*
