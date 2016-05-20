@@ -1,11 +1,11 @@
 Sort-Seq Tools 
 ========
 
-version 0.01.01
+* Quantitative modeling of sequence-function relationships from massively parallel assays *
 
 Written by William T. Ireland and Justin B. Kinney
-
 Copyright 2016
+Current version: 0.01.01
 
 ## Overview
 
