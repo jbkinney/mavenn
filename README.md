@@ -92,7 +92,7 @@ Evaluate the inferred matrix model on all sites in the dataset:
 sortseq_tools evaluate_model -m matrix_model.txt -i dataset.txt -o dataset_with_values.txt
 ```
 
-Scan the *Escherichia coli* genome using the inferred matrix model:
+Scan the *Escherichia coli* genome ([genome_ecoli.fa](examples/genome_ecoli.fa)) using the inferred matrix model:
 ```
 sortseq_tools scan_model -n 100 -m matrix_model.txt -i genome_ecoli.fa -o genome_sites.txt
 ```
