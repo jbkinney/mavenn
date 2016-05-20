@@ -38,7 +38,7 @@ sortseq_tools run_tests
 
 ## Documentation
 
-The commands used to perform the analysis in Ireland & Kinney (2016) are described here [link to analysis.rst]. Documentation on each of the Sort-Seq Tools functions is provided [here][documentation].
+The commands used to perform the analysis in Ireland & Kinney (2016) are described [here](analysis.md). Documentation on each of the Sort-Seq Tools functions is provided [here][documentation].
 
 ## Quick start guide
 
