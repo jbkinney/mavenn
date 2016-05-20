@@ -40,64 +40,64 @@ sortseq_tools run_tests
 
 The commands used to perform the analysis in Ireland & Kinney (2016) are described here [link to analysis.rst]. Documentation on each of the Sort-Seq Tools functions is provided [here][documentation].
 
-## Quick start
+## Quick start guide
 
-Change directories to examples/, then execute the following commands. 
+Below are the commands described in the "Overview" section of the Supplemental Information of Ireland and Kinney (2016). These commands provide a quick entry into the capabilities of Sort-Seq Tools. To execute them, first change to the [examples](examples/) directory, which contains the necessary inpupt files [true_model.txt](examples/true_model.txt) and [genome_ecoli.fa](examples/genome_ecoli.fa)). 
 
-### Simulating data
+#### Simulating data
 
-To generate a library of binding sites for the CRP transcription factor, 
+Simualte a library of binding sites for the CRP transcription factor:
 ```
 sortseq_tools simulate_library -w TAATGTGAGTTAGCTCACTCAT -n 100000 -m 0.24 -o library.txt
 ```
 
-To simulate a Sort-Seq experiment using a model of CRP-DNA binding,
+Simulate a Sort-Seq experiment using a model ([true_model.txt](examples/true_model.txt)) of CRP-DNA affinity:
 ```
 sortseq_tools simulate_sort -m true_model.txt -n 4 -i library.txt -o dataset.txt
 ```
 
-### Computing summary statistics
+#### Computing summary statistics
 
-To compute a mutation profile of the simluated library
+Compute a mutation profile of the simluated library:
 ```
 sortseq_tools profile_mut -i library.txt -o mutprofile.txt
 ```
 
-To compute compute the frequency of occurance of each base at each position in the library
+Compute the occurance frequency of each base at each position in the library:
 ```
 sortseq_tools profile_freq -i library.txt -o freqprofile.txt
 ```
 
-To compute an information profile from the simulated dataset
+Compute an information profile (a.k.a information footprint) from the simulated data:
 ```
 sortseq_tools profile_info --err -i dataset.txt -o infoprofile.txt
 ```
 
-### Inferring quantitative models
+#### Inferring quantitative models
 
-To infer a matrix model for CRP from the simulated data
+Infer a matrix model for CRP from the simulated data:
 ```
 sortseq_tools learn_model -lm LS -mt MAT -i dataset.txt -o matrix_model.txt
 ```
 
-To infer a neighbor model for CRP from the simulated data
+Infer a neighbor model for CRP from the simulated data:
 ```
 sortseq_tools learn_model -lm LS -mt NBR -i dataset.txt -o neighbor_model.txt
 ```
 
-### Evaluating models
+#### Evaluating models
 
-Computing activity values for every site in the dataset using the inferred matrix model
+Evaluate the inferred matrix model on all sites in the dataset:
 ```
 sortseq_tools evaluate_model -m matrix_model.txt -i dataset.txt -o dataset_with_values.txt
 ```
 
-Scanning the E. coli genome using the inferred matrix model
+Scan the *Escherichia coli* genome using the inferred matrix model:
 ```
 sortseq_tools scan_model -n 100 -m matrix_model.txt -i genome_ecoli.fa -o genome_sites.txt
 ```
 
-Computing the predictive information of the inferred model and the true model on simulated data
+Compute the predictive information of the inferred matrix model and the true model on the simulated data:
 ```
 sortseq_tools predictiveinfo -m matrix_model.txt -ds dataset.txt
 sortseq_tools predictiveinfo -m true_model.txt -ds dataset.txt
