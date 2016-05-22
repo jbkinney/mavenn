@@ -9,6 +9,8 @@ Current version: 0.01.01
 Citation:  
 Ireland WT, Kinney JB (2016) *Sort-Seq Tools: modeling sequence-function relationships from massively parallel assays.* [bioRxiv doi: http://dx.doi.org/10.1101/054676][preprint]
 
+Please address questions or problems regarding this software to Justin B. Kinney at jkinney@cshl.edu.
+
 ## Overview
 
 Sort-Seq Tools is a software package for analyzing data from a variety massively parallel assays, including Sort-Seq assays, Massively Parallel Reporter assays, and Deep Mutational Scanning assays. Sort-Seq Tools provides a set of command line routines, which are listed in the [documentation][documentation]. Details can be found in the [accompanying preprint][preprint].
