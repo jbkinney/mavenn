@@ -6,15 +6,25 @@ Sort-Seq Tools
 Written by William T. Ireland and Justin B. Kinney  
 Current version: 0.01.01  
 
+Citation:  
+Ireland WT, Kinney JB (2016) *Sort-Seq Tools: modeling sequence-function relationships from massively parallel assays.* [bioRxiv doi: http://dx.doi.org/10.1101/054676][preprint]
+
 ## Overview
 
-Sort-Seq Tools is a software package for analyzing data from a variety massively parallel assays, including Sort-Seq assays, Massively Parallel Reporter assays, and Deep Mutational Scanning assays. Sort-Seq Tools provides a set of command line routines, which are listed in the [documentation][documentation]. Details can be found in the accompanying paper
-
-Citation: Ireland WT, Kinney JB (2016) Sort-Seq Tools: modeling sequence-function relationships from massively parallel assays. bioRxiv doi:???
+Sort-Seq Tools is a software package for analyzing data from a variety massively parallel assays, including Sort-Seq assays, Massively Parallel Reporter assays, and Deep Mutational Scanning assays. Sort-Seq Tools provides a set of command line routines, which are listed in the [documentation][documentation]. Details can be found in the [accompanying preprint][preprint].
 
 ## Requriements
 
-Sort-Seq Tools is written in Python 2.9.7 and in Cython 0.23.4. It requires that the following Python packages also be installed: biopython, pymc, scikit-learn, statsmodels, mpmath, pandas, weblogo, and matplotlib. Sort-Seq Tools is currently in alpha testing and has been verified to work on Linux and Mac OS X. 
+Sort-Seq Tools is written in Python 2.9.7. It has been verified to work on Linux and Mac OS X. Installation currently requires a number of other Python packages:
+* biopython>=1.6
+* pymc>=2.3.4
+* scikit-learn>=0.15.2, <= 0.16.1
+* statsmodels>=0.5.0
+* mpmath>=0.19
+* pandas>=0.16.0
+* weblogo>=3.4
+* Cython>=0.23.4
+* matplotlib<=1.5.0
 
 ## Installation
 
@@ -30,19 +40,21 @@ Alternatively, Sort-Seq Tools can be installed from PyPI by executing
 pip install sortseq_tools
 ```
 
-This approach will also install all of Sort-Seq Tools's dependencies. After Sort-Seq Tools is installed, you can test the functionality of all methods by running
+This approach will (at least attempt to) install all of Sort-Seq Tools's dependencies, as well as Sort-Seq Tools itself. After Sort-Seq Tools is installed, you can test the functionality of all methods by running
 
 ```
 sortseq_tools run_tests
 ```
 
+This suite of tests takes ~10 min to execute. 
+
 ## Documentation
 
-The commands used to perform the analysis in Ireland & Kinney (2016) are described [here](analysis.md). Documentation on each of the Sort-Seq Tools functions is provided [here][documentation].
+The commands used to perform the analysis in Ireland & Kinney (2016) are described in [analysis.md](analysis.md). Documentation on each of the Sort-Seq Tools functions is provided [here][documentation].
 
 ## Quick start guide
 
-Below are the commands described in the "Overview" section of the Supplemental Information of Ireland and Kinney (2016). These commands provide a quick entry into the capabilities of Sort-Seq Tools. To execute them, first change to the [examples](examples/) directory, which contains the necessary inpupt files [true_model.txt](examples/true_model.txt) and [genome_ecoli.fa](examples/genome_ecoli.fa)). 
+Below are the commands described in the "Overview" section of the [Supplemental Information of Ireland and Kinney (2016)](http://biorxiv.org/content/early/2016/05/21/054676.figures-only). These commands provide a quick entry into the capabilities of Sort-Seq Tools. To execute them, first change to the [examples](examples/) directory, which contains the necessary inpupt files [true_model.txt](examples/true_model.txt) and [genome_ecoli.fa](examples/genome_ecoli.fa). 
 
 #### Simulating data
 
@@ -104,5 +116,6 @@ sortseq_tools predictiveinfo -m true_model.txt -ds dataset.txt
 ```
 
 [documentation]: http://jbkinney.github.io/sortseq_tools/
+[preprint]: http://biorxiv.org/content/early/2016/05/21/054676
 
 
