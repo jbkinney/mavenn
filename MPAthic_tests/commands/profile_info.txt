@@ -1,0 +1,21 @@
+# Validation to use for good commands from now on
+validation: | MPAthic validate -t profile_info
+
+good: MPAthic profile_info -i dataset_good.txt
+good: MPAthic profile_info -i dataset_good_rna.txt
+good: MPAthic profile_info -i dataset_good_pro.txt
+good: MPAthic profile_info -i dataset_good.txt
+good: MPAthic profile_info -i dataset_good.txt -s 2 
+good: MPAthic profile_info -i dataset_good.txt -e 10
+good: MPAthic profile_info -i dataset_good.txt --err
+good: MPAthic profile_info -i dataset_good.txt -s 2 -e 10 --err
+good: MPAthic profile_info -i dataset_good.txt  --method naive -s 2 -e 10
+good: MPAthic profile_info -i dataset_good.txt  --method nsb -s 2 -e 10
+good: MPAthic profile_info -i dataset_good.txt  -p 10
+
+bad:  MPAthic profile_info -i seq_good.txt
+bad:  MPAthic profile_info -i bacterium.jpg
+bad:  MPAthic profile_info -i dataset_bad_badcounts.txt
+bad:  MPAthic profile_info -i dataset_good.txt -s 100
+bad:  MPAthic profile_info -i dataset_good.txt -e 0
+bad:  MPAthic profile_info -i dataset_good.txt -p -1

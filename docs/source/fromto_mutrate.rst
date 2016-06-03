@@ -12,7 +12,7 @@ Overview
 your library. Specifically, given a wild type sequence. It calculates the probability
 of occurance of all bases. 
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

@@ -7,11 +7,11 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import sortseq_tools.qc as qc
-import sortseq_tools.io as io
-import sortseq_tools.profile_ct as profile_ct
+import MPAthic.qc as qc
+import MPAthic.io as io
+import MPAthic.profile_ct as profile_ct
 import pdb
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None):
     """

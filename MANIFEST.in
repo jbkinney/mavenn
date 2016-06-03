@@ -1,5 +1,5 @@
 include src/fast.pyx
-include sortseq_tools_tests/commands/*
-include sortseq_tools_tests/*
-include sortseq_tools_tests/input/*
-include sortseq_tools_tests/output/*
+include MPAthic_tests/commands/*
+include MPAthic_tests/*
+include MPAthic_tests/input/*
+include MPAthic_tests/output/*

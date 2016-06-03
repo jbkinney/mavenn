@@ -1,0 +1,10 @@
+good: MPAthic validate -t model -i model_good_mat.txt
+good: MPAthic validate -t model -i model_good_nbr.txt
+
+bad:  MPAthic validate -t model -i model_bad_mat_badcol.txt
+bad:  MPAthic validate -t model -i model_bad_mat_floatpos.txt
+bad:  MPAthic validate -t model -i model_bad_mat_missingcol.txt
+bad:  MPAthic validate -t model -i model_bad_mat_missingval.txt
+bad:  MPAthic validate -t model -i model_bad_mat_nanpos.txt
+bad:  MPAthic validate -t model -i model_bad_mat_nanval.txt
+bad:  MPAthic validate -t model -i model_bad_mat_nonconsecutivepos.txt

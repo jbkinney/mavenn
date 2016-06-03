@@ -8,11 +8,11 @@
 
 Overview
 -------------
-``predictiveinfo`` is a program within the sortseq_tools package which computes
+``predictiveinfo`` is a program within the MPAthic package which computes
 the mutual information between a linear energy matrix model and a data set.
 Models which are closer to reality will have a higher mutual information value.
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

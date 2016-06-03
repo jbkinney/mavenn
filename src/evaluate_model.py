@@ -11,12 +11,12 @@ import sys
 import pdb
 import time
 
-import sortseq_tools.Models as Models
-import sortseq_tools.utils as utils
-import sortseq_tools.qc as qc
-import sortseq_tools.io as io
-from sortseq_tools import SortSeqError
-from sortseq_tools import shutthefuckup
+import MPAthic.Models as Models
+import MPAthic.utils as utils
+import MPAthic.qc as qc
+import MPAthic.io as io
+from MPAthic import SortSeqError
+from MPAthic import shutthefuckup
 
 
 def main(dataset_df,model_df,left=None,right=None):

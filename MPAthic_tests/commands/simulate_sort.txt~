@@ -1,0 +1,17 @@
+# Validation to use for good commands from now on
+validation: | MPAthic validate -t dataset
+
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt
+#test noise models
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel LogNormal --noiseparam [.1,.5]
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [.3]
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel None
+bad: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [-.1]
+bad: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam .2
+bad: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --noisemodel Normal --noiseparam [0]
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --start 1 --end 2
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --start 2 --end 1
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --sequence_library
+good: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --nbins 10
+bad: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --nbins 0
+bad: MPAthic simulate_sort -m model_crp_mat.txt -i library.txt --nbins -1

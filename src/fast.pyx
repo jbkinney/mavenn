@@ -2,9 +2,9 @@ import numpy as np
 cimport numpy as np
 from cpython cimport bool
 
-import sortseq_tools.qc as qc
+import MPAthic.qc as qc
 import re
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 
 DTYPE = np.int
 ctypedef np.int_t DTYPE_t

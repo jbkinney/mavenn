@@ -13,17 +13,17 @@ import pandas as pd
 #Our miscellaneous functions
 #This module will allow us to easily tally the letter counts at a particular position
 
-import sortseq_tools.utils as utils
-import sortseq_tools.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
-import sortseq_tools.qc as qc
-import sortseq_tools.numerics as numerics
-from sortseq_tools import SortSeqError
-import sortseq_tools.io as io
+import MPAthic.utils as utils
+import MPAthic.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import MPAthic.qc as qc
+import MPAthic.numerics as numerics
+from MPAthic import SortSeqError
+import MPAthic.io as io
 
 
 def main(
         data_df,model_df,
-        start=0,end=None,err=False):
+        start=0,end=None,err=False,coarse_graining_level=0):
     dicttype, modeltype = qc.get_model_type(model_df)
     seq_cols = qc.get_cols_from_df(data_df,'seqs')
     if not len(seq_cols)==1:
@@ -61,7 +61,7 @@ def main(
     temp_sorted.reset_index(inplace=True,drop=True)
     #we must divide by the total number of counts in each bin for the MI calculator
     #temp_sorted[col_headers] = temp_sorted[col_headers].div(temp_sorted['ct'],axis=0)     
-    MI = EstimateMutualInfoforMImax.alt4(temp_sorted,coarse_graining_level=0)
+    MI = EstimateMutualInfoforMImax.alt4(temp_sorted,coarse_graining_level=coarse_graining_level)
     if not err:
         Std = np.NaN
     else:
@@ -85,7 +85,7 @@ def wrapper(args):
         model_df = io.load_model(sys.stdin)
     MI,Std = main(
         data_df,model_df,start=args.start,
-        end=args.end,err=args.err)
+        end=args.end,err=args.err,coarse_graining_level = args.coarse_graining_level)
     output_df = pd.DataFrame([MI],columns=['info'])
     if args.err:
         output_df = pd.concat([output_df,pd.Series(Std,name='info_err')],axis=1)
@@ -111,6 +111,10 @@ def add_subparser(subparsers):
     p.add_argument(
         '-e','--end',type=int,default = None, 
         help='''Position to end your analyzed region''')
+    p.add_argument(
+        '-cg','--coarse_graining_level',default=0,type=float,help='''coarse graining
+        level to use for mutual information calculation, higher values will
+        speed up computation''')
     p.add_argument(
         '-m', '--model', default=None,help='''Model file, otherwise input
         through the standard input.''')            

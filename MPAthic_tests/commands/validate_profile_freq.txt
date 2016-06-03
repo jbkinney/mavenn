@@ -1,0 +1,10 @@
+good: MPAthic validate -t profile_freq -i profile_freq_good.txt 
+good: MPAthic validate -t profile_freq -i profile_freq_good_pro.txt
+good: MPAthic validate -t profile_freq -i profile_freq_good_rna.txt
+
+bad:  MPAthic validate -t profile_freq -i profile_freq_bad_missingval.txt
+bad:  MPAthic validate -t profile_freq -i profile_freq_bad_nanfreq.txt
+bad:  MPAthic validate -t profile_freq -i profile_freq_bad_negval.txt
+bad:  MPAthic validate -t profile_freq -i profile_freq_bad_nonconsecpos.txt
+bad:  MPAthic validate -t profile_freq -i profile_freq_bad_wrongalphabet.txt
+bad:  MPAthic validate -t profile_freq -i profile_freq_bad_wrongsum.txt

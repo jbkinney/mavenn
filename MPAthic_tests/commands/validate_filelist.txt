@@ -1,0 +1,22 @@
+bad:  MPAthic validate -t filelist -i file_does_not_exist.txt
+
+good: MPAthic validate -t filelist -i files_good.txt
+good: MPAthic validate -t filelist -i files_good_comments.txt
+good: MPAthic validate -t filelist -i files_good_fasta.txt
+good: MPAthic validate -t filelist -i files_good_mixofdnaformats.txt
+good: MPAthic validate -t filelist -i files_good_nonconsecutivebins.txt
+good: MPAthic validate -t filelist -i files_good_pro.txt
+good: MPAthic validate -t filelist -i files_good_raw.txt
+good: MPAthic validate -t filelist -i files_good_rna.txt
+good: MPAthic validate -t filelist -i files_good_samefile.txt
+good: MPAthic validate -t filelist -i files_badio_nonexistentfile.txt
+good: MPAthic validate -t filelist -i files_badtype_dnaandprotein.txt
+good: MPAthic validate -t filelist -i files_badtype_dnaandrna.txt
+good: MPAthic validate -t filelist -i files_badtype_rnaandprotein.txt
+good: MPAthic validate -t filelist -i files_fix_switchedcolumns.txt
+
+bad:  MPAthic validate -t filelist -i files_bad_badcols.txt
+bad:  MPAthic validate -t filelist -i files_bad_extracol.txt
+bad:  MPAthic validate -t filelist -i files_bad_nofiles.txt
+bad:  MPAthic validate -t filelist -i files_bad_nonintegerbins.txt
+bad:  MPAthic validate -t filelist -i files_bad_nonuniquebins.txt

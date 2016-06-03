@@ -13,14 +13,14 @@ import sys
 #Our miscellaneous functions
 import pandas as pd
 from Bio import SeqIO
-import sortseq_tools.utils as utils
-import sortseq_tools.Models as Models
-import sortseq_tools.io as io
-import sortseq_tools.qc as qc
-import sortseq_tools.fast as fast
+import MPAthic.utils as utils
+import MPAthic.Models as Models
+import MPAthic.io as io
+import MPAthic.qc as qc
+import MPAthic.fast as fast
 import re
 import pdb
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 
 def main(model_df, contig_list, numsites=10, verbose=False):
 

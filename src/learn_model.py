@@ -9,19 +9,19 @@ import scipy as sp
 import sys
 #Our miscellaneous functions
 import pandas as pd
-import sortseq_tools.utils as utils
+import MPAthic.utils as utils
 from sklearn import linear_model
-import sortseq_tools.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import MPAthic.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
-import sortseq_tools.stepper as stepper
+import MPAthic.stepper as stepper
 import os
-from sortseq_tools import SortSeqError
-import sortseq_tools.io as io
-import sortseq_tools.gauge as gauge
-import sortseq_tools.qc as qc
+from MPAthic import SortSeqError
+import MPAthic.io as io
+import MPAthic.gauge as gauge
+import MPAthic.qc as qc
 import pdb
-from sortseq_tools import shutthefuckup
-import sortseq_tools.numerics as numerics
+from MPAthic import shutthefuckup
+import MPAthic.numerics as numerics
 from sklearn.preprocessing import StandardScaler
 
 def weighted_std(values,weights):

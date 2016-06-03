@@ -5,16 +5,16 @@
 import importlib
 import sys
 import numpy as np
-import sortseq_tools.utils as utils	
+import MPAthic.utils as utils	
 import scipy as sp
 import pandas as pd
 import pdb
-import sortseq_tools.qc as qc
-import sortseq_tools.io as io
-import sortseq_tools.fast as fast
+import MPAthic.qc as qc
+import MPAthic.io as io
+import MPAthic.fast as fast
 import time
-from sortseq_tools import SortSeqError
-import sortseq_tools.numerics as numerics
+from MPAthic import SortSeqError
+import MPAthic.numerics as numerics
 
 
 class ExpModel:
@@ -216,6 +216,20 @@ class LogNormalNoise(NoiseModel):
         exp = np.exp(logexp) + self.auto
         nexp = np.random.lognormal(np.log(exp),self.scale)
         return np.log(nexp)
+
+#class PlasmidNoise(NoiseModel):
+#    '''Noise model that adds autoflourescence and then draws the noisy 
+#        measurement from a log normal distribution with this mean'''
+
+#    def __init__(self,npar):
+#        R = 10
+#        N_mean = 10
+
+#    def gennoisyexp(self,logexp):
+#        Ns = np.
+#        exp = np.exp(logexp) + self.auto
+#        nexp = np.random.lognormal(np.log(exp),self.scale)
+#        return np.log(nexp)
 
 class NormalNoise(NoiseModel):
     '''Add Gaussian Noise'''

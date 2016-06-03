@@ -8,11 +8,11 @@
 
 Overview
 -------------
-``simulate_evaluate`` is a program within the sortseq_tools package which 
+``simulate_evaluate`` is a program within the MPAthic package which 
 uses an energy model to calculate the predicted energies of each sequence in a
 library. A simulated library must be evaluated before simulate_sort can be used.
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

@@ -8,10 +8,10 @@
 
 Overview
 -------------
-``learn_matrix`` is a program within the sortseq_tools package which generates
+``learn_matrix`` is a program within the MPAthic package which generates
 linear energy matrix models for sections of a sorted library.
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

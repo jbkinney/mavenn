@@ -3,7 +3,7 @@
 =======================================
 Programs
 =======================================
-All programs which can be run through the sortseq_tools package.
+All programs which can be run through the MPAthic package.
 
 Main Programs:
 ------------------

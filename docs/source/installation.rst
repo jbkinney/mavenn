@@ -8,7 +8,7 @@ Installation
 
 Installation using pip:
 ---------------------------------------
-The easiest way to install sortseq_tools is to download it from PyPi. You can 
+The easiest way to install MPAthic is to download it from PyPi. You can 
 do this using the command::
 
     pip install sortseq

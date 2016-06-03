@@ -6,7 +6,7 @@ from __future__ import division
 import os
 import subprocess
 import re
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 import glob
 import sys
 import time
@@ -23,7 +23,7 @@ def wrapper(args):
     start_time = time.time()
     
     # Commands must be execulted in cwd to work
-    command_file_path = os.path.abspath(resource_filename('sortseq_tools_tests', 'test_fast.py'))
+    command_file_path = os.path.abspath(resource_filename('MPAthic_tests', 'test_fast.py'))
     command_path = os.path.dirname(command_file_path)
     print command_path
     cwd = os.path.join(command_path,'input')

@@ -10,15 +10,15 @@ from setuptools import find_packages
 
 if (sys.version_info[0], sys.version_info[1]) != (2, 7):
     raise RuntimeError('sortseq is currently only compatible with Python 2.7.\nYou are using Python %d.%d' % (sys.version_info[0], sys.version_info[1]))
-input_data_list_commands = glob.glob('sortseq_tools_tests/commands/*.txt')
-input_data_list_inputs = glob.glob('sortseq_tools_tests/input/*')
+input_data_list_commands = glob.glob('MPAthic_tests/commands/*.txt')
+input_data_list_inputs = glob.glob('MPAthic_tests/input/*')
 
 # DON'T FORGET THIS
-ext_modules = Extension("sortseq_tools.fast",["src/fast.pyx"])
+ext_modules = Extension("MPAthic.fast",["src/fast.pyx"])
 
 # main setup command
 setup(
-    name = 'sortseq_tools', 
+    name = 'MPAthic', 
     description = 'Tools for analysis of Sort-Seq experiments.',
     version = '0.01.01',
     author = 'Bill Ireland',
@@ -36,11 +36,11 @@ setup(
         'matplotlib<=1.5.0'
         ],
     platforms = 'Linux (and maybe also Mac OS X).',
-    packages = ['sortseq_tools'] + find_packages(),
-    package_dir = {'sortseq_tools':'src'},
+    packages = ['MPAthic'] + find_packages(),
+    package_dir = {'MPAthic':'src'},
     download_url = 'https://github.com/jbkinney/sortseq/tarball/0.1',
     scripts = [
-            'scripts/sortseq_tools'
+            'scripts/MPAthic'
             ],
     zip_safe=False,
     ext_modules = cythonize(ext_modules),
@@ -48,12 +48,12 @@ setup(
     include_package_data=True,
     
     package_data = {
-                     'sortseq_tools_tests.commands': ['*.txt'],
-                     'sortseq_tools_tests': ['*.py','*.sh'],
-                     'sortseq_tools_tests.input': ['*'],
-                     'sortseq_tools_tests.output': ['*']
+                     'MPAthic_tests.commands': ['*.txt'],
+                     'MPAthic_tests': ['*.py','*.sh'],
+                     'MPAthic_tests.input': ['*'],
+                     'MPAthic_tests.output': ['*']
                  }
-    #package_data = {'sortseq_tools':['tests/*']} # data for command line testing
+    #package_data = {'MPAthic':['tests/*']} # data for command line testing
 )
 
 

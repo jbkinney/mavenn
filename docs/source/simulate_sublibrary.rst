@@ -14,7 +14,7 @@ a sublibrary file. A sublibrary file has only a small number of unique sequences
 for using as a test data set to test the performance of your model. It is also 
 useful for using totalinfo to calculate the best possible performance of any model.
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

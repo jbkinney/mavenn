@@ -1,0 +1,11 @@
+good: MPAthic validate -t sitelist -i sitelist_good.txt
+good: MPAthic validate -t sitelist -i sitelist_good_pro.txt
+good: MPAthic validate -t sitelist -i sitelist_good_rna.txt
+good: MPAthic validate -t sitelist -i sitelist_good_spacesincontig.txt
+
+bad:  MPAthic validate -t sitelist -i sitelist_bad_nanval.txt
+bad:  MPAthic validate -t sitelist -i sitelist_bad_invalidori.txt
+bad:  MPAthic validate -t sitelist -i sitelist_bad_rnawithbadori.txt
+bad:  MPAthic validate -t sitelist -i sitelist_bad_seqsdifferentlengths.txt
+bad:  MPAthic validate -t sitelist -i sitelist_bad_wronglengths.txt
+bad:  MPAthic validate -t sitelist -i sitelist_bad_wrongseqtype.txt

@@ -1,0 +1,26 @@
+# Validation to use for good commands from now on
+validation: | MPAthic validate -t dataset
+
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT 
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t dna -tags
+bad:  MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t rna
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t protein
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -t protein -tags
+bad:  MPAthic simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t dna
+good: MPAthic simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t rna
+bad:  MPAthic simulate_library -w AAUUAAUGUGAGUUAGCUCACUCAUU -t protein
+bad:  MPAthic simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t dna
+bad:  MPAthic simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t rna
+good: MPAthic simulate_library -w AGWEMAKTSSGQRYFLNHIDQTTTW -t protein
+
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -n 100
+bad:  MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -n -100
+
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m 0.5
+bad:  MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m -0.5
+bad:  MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -m 1.5
+
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tags
+good: MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tl 10 -tags -n 100
+bad:  MPAthic simulate_library -w AATTAATGTGAGTTAGCTCACTCATT -tl 2 -tags -n 100

@@ -8,11 +8,11 @@
 
 Overview
 -------------
-``profile_info`` is a program within the sortseq_tools package which calculates
+``profile_info`` is a program within the MPAthic package which calculates
 the mutual information between base identity at a given position and expression
 for each position in the given data set.
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

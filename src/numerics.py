@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import time
-import sortseq_tools.simulate_library
-import sortseq_tools.fast as fast
-import sortseq_tools.qc as qc
-from sortseq_tools.profile_mut import main as profile_mut
-from sortseq_tools.simulate_library import main as simulate_library
+import MPAthic.simulate_library
+import MPAthic.fast as fast
+import MPAthic.qc as qc
+from MPAthic.profile_mut import main as profile_mut
+from MPAthic.simulate_library import main as simulate_library
 import numpy as np
 from scipy.sparse import csr, csr_matrix, lil_matrix
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 import pdb
 import sys
 
@@ -22,9 +22,9 @@ def nbytes(array):
 def dataset2seqarray(dataset_df, modeltype):
     # Determine the type of model and set seq2array function appropriately
     if modeltype=='MAT':
-        seqs2array = sortseq_tools.fast.seqs2array_for_matmodel
+        seqs2array = MPAthic.fast.seqs2array_for_matmodel
     elif modeltype=='NBR':
-        seqs2array = sortseq_tools.fast.seqs2array_for_nbrmodel
+        seqs2array = MPAthic.fast.seqs2array_for_nbrmodel
     else:
         raise SortSeqError('Unknown model type: %s'%modeltype)
     seqcol = qc.get_cols_from_df(dataset_df,'seqs')[0]  
@@ -38,9 +38,9 @@ def dataset2mutarray(dataset_df, modeltype, chunksize=1000, rowsforwtcalc=100):
 
     # Determine the type of model and set seq2array function appropriately
     if modeltype=='MAT':
-        seqs2array = sortseq_tools.fast.seqs2array_for_matmodel
+        seqs2array = MPAthic.fast.seqs2array_for_matmodel
     elif modeltype=='NBR':
-        seqs2array = sortseq_tools.fast.seqs2array_for_nbrmodel
+        seqs2array = MPAthic.fast.seqs2array_for_nbrmodel
     else:
         raise SortSeqError('Unknown model type: %s'%modeltype)
 

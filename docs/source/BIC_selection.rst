@@ -8,10 +8,10 @@
 
 Overview
 -------------
-``simulate_library`` is a program within the sortseq_tools package which creates a library of
+``simulate_library`` is a program within the MPAthic package which creates a library of
 random mutants from an initial wildtype sequence and mutation rate.
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

@@ -8,10 +8,10 @@
 
 Overview
 -------------
-``simulate_expression`` is a program within the sortseq_tools package which simulates
+``simulate_expression`` is a program within the MPAthic package which simulates
 an MPRA experiment. 
 
-After you install `sortseq_tools`_, this program will be available to run at the command line. 
+After you install `MPAthic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

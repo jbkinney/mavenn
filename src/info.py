@@ -6,7 +6,7 @@ import scipy as sp
 import pandas as pd
 import _nsb
 import pdb
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 
 #
 # Public probability functionals

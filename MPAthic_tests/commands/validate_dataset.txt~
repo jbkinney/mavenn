@@ -1,0 +1,53 @@
+# Text files containing single library information
+good: MPAthic validate -t dataset -i seq_good.txt
+good: MPAthic validate -t dataset -i seq_good_comments.txt
+good: MPAthic validate -t dataset -i seq_good_rna.txt
+good: MPAthic validate -t dataset -i seq_good_pro.txt
+good: MPAthic validate -t dataset -i seq_good_pro_actuallydnabutvalidprotein.txt
+good: MPAthic validate -t dataset -i seq_good_pro_haMPAthicop.txt
+good: MPAthic validate -t dataset -i seq_fix_lowercaseseq.txt
+good: MPAthic validate -t dataset -i seq_fix_nocounts.txt
+
+bad:  MPAthic validate -t dataset -i seq_bad_actuallyfasta.fastq
+bad:  MPAthic validate -t dataset -i seq_bad_actuallyfastq.fasta
+bad:  MPAthic validate -t dataset -i seq_bad_ambiguousseq.fasta
+bad:  MPAthic validate -t dataset -i seq_bad_ambiguousseq.txt
+bad:  MPAthic validate -t dataset -i seq_bad_differentseqlengths.fasta
+bad:  MPAthic validate -t dataset -i seq_bad_differentseqlengths.txt
+bad:  MPAthic validate -t dataset -i seq_bad_dna_actuallyrna.txt
+bad:  MPAthic validate -t dataset -i seq_bad_fracitonalcount.txt
+bad:  MPAthic validate -t dataset -i seq_bad_hasNs.fastq
+bad:  MPAthic validate -t dataset -i seq_bad_invalidcount.txt
+bad:  MPAthic validate -t dataset -i seq_bad_nancount.txt
+bad:  MPAthic validate -t dataset -i seq_bad_negativecount.txt
+bad:  MPAthic validate -t dataset -i seq_bad_pro_fasta.txt
+bad:  MPAthic validate -t dataset -i seq_bad_pro_hasX.txt
+bad:  MPAthic validate -t dataset -i seq_bad_rna_hasT.txt
+
+# Dataset files containing counts from multiple libraries
+good: MPAthic validate -t dataset -i dataset_good.txt
+good: MPAthic validate -t dataset -i dataset_good_rna.txt
+good: MPAthic validate -t dataset -i dataset_good_pro.txt
+good: MPAthic validate -t dataset -i dataset_good_nonconsecutivebins.txt
+
+bad:  MPAthic validate -t dataset -i dataset_bad_badseqtype.txt
+bad:  MPAthic validate -t dataset -i dataset_bad_badseqs.txt
+bad:  MPAthic validate -t dataset -i dataset_bad_badcounts.txt
+
+# Bin files used to test preprocess
+good: MPAthic validate -t dataset -i bin_0.txt
+good: MPAthic validate -t dataset -i bin_1.txt
+good: MPAthic validate -t dataset -i bin_2.txt
+
+good: MPAthic validate -t dataset -i bin_0_rna.txt
+good: MPAthic validate -t dataset -i bin_1_rna.txt
+good: MPAthic validate -t dataset -i bin_2_rna.txt
+
+good: MPAthic validate -t dataset -i bin_0_pro.txt
+good: MPAthic validate -t dataset -i bin_1_pro.txt
+good: MPAthic validate -t dataset -i bin_2_pro.txt
+
+bad: MPAthic validate -t dataset -i bin_2_pro_wrongseqtype.txt
+
+good: MPAthic validate -t dataset -i bin_hbsites.txt
+good: MPAthic validate -t dataset -i bin_hbsites_noct.txt

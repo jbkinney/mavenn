@@ -7,7 +7,7 @@ import numpy as np
 import os
 import qc
 import utils
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 import time
 
 def format_fasta(s):

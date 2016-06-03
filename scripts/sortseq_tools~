@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.7
 
-''' Primary function for sortseq_tools.ools. Currently supports: 
+''' Primary function for MPAthic.ools. Currently supports: 
 
 simulate_library
 simulate_sublib
-simulate_sortseq_tools
+simulate_MPAthic
 simulate_selection
 simulate_mpra
 '''
@@ -16,7 +16,7 @@ import argparse
 import sys
 import csv
 
-# sortseq_tools only works at the commandline
+# MPAthic only works at the commandline
 assert __name__ == '__main__'
 
 # Create argparse parser. 
@@ -28,45 +28,45 @@ parser.add_argument('-o','--out',default=False,help='Output location/type, by de
 # Add various subcommands individually viva subparsers
 subparsers = parser.add_subparsers()
 
-import sortseq_tools.sortseq_for_doc as sortseq_for_doc
+import MPAthic.sortseq_for_doc as sortseq_for_doc
 
-import sortseq_tools.evaluate_model as evaluate_model
+import MPAthic.evaluate_model as evaluate_model
 evaluate_model.add_subparser(subparsers)
 
-import sortseq_tools.preprocess as preprocess
+import MPAthic.preprocess as preprocess
 preprocess.add_subparser(subparsers)
 
-import sortseq_tools.learn_model as learn_model
+import MPAthic.learn_model as learn_model
 learn_model.add_subparser(subparsers)
 
-import sortseq_tools.profile_ct as profile_ct
+import MPAthic.profile_ct as profile_ct
 profile_ct.add_subparser(subparsers)
 
-import sortseq_tools.profile_mut as profile_mut
+import MPAthic.profile_mut as profile_mut
 profile_mut.add_subparser(subparsers)
 
-import sortseq_tools.profile_info as profile_info
+import MPAthic.profile_info as profile_info
 profile_info.add_subparser(subparsers)
 
-import sortseq_tools.profile_freq as profile_freq
+import MPAthic.profile_freq as profile_freq
 profile_freq.add_subparser(subparsers)
 
-import sortseq_tools.predictiveinfo as predictiveinfo
+import MPAthic.predictiveinfo as predictiveinfo
 predictiveinfo.add_subparser(subparsers)
 
-import sortseq_tools.simulate_library as simulate_library
+import MPAthic.simulate_library as simulate_library
 simulate_library.add_subparser(subparsers)
 
-import sortseq_tools.simulate_sort as simulate_sort
+import MPAthic.simulate_sort as simulate_sort
 simulate_sort.add_subparser(subparsers)
 
-import sortseq_tools.simulate_expression as simulate_expression
+import MPAthic.simulate_expression as simulate_expression
 simulate_expression.add_subparser(subparsers)
 
-import sortseq_tools.validate as validate
+import MPAthic.validate as validate
 validate.add_subparser(subparsers)
 
-import sortseq_tools.scan_model as scan_model
+import MPAthic.scan_model as scan_model
 scan_model.add_subparser(subparsers)
 
 # Final incantiation needed for this to work

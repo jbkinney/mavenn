@@ -1,9 +1,0 @@
-# Validation to use for good commands from now on
-validation: | sortseq_tools validate -t dataset
-
-good: sortseq_tools simulate_expression -i library.txt -m model_crp_mat.txt
-#test noise models
-good: sortseq_tools simulate_expression -i library.txt -m model_crp_mat.txt  --totallibcounts 1 --totalmRNAcounts 1
-bad: sortseq_tools simulate_expression -i library.txt -m model_crp_mat.txt  --totallibcounts -1 --totalmRNAcounts 1
-bad: sortseq_tools simulate_expression -i library.txt -m model_crp_mat.txt --totallibcounts 1 --totalmRNAcounts -1
-bad: sortseq_tools simulate_expression -i dataset.txt -m model_crp_mat.txt

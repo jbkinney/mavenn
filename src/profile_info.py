@@ -11,13 +11,13 @@ import csv
 #Our miscellaneous functions
 #This module will allow us to easily tally the letter counts at a particular position
 import pandas as pd
-import sortseq_tools.utils as utils
-import sortseq_tools.qc as qc
-import sortseq_tools.io as io
-import sortseq_tools.profile_ct as profile_ct
-import sortseq_tools.info as info
+import MPAthic.utils as utils
+import MPAthic.qc as qc
+import MPAthic.io as io
+import MPAthic.profile_ct as profile_ct
+import MPAthic.info as info
 import pdb
-from sortseq_tools import SortSeqError
+from MPAthic import SortSeqError
 
 def main(dataset_df, err=False, method='naive',\
     pseudocount=1.0, start=0, end=None):

@@ -8,10 +8,10 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import sortseq_tools.utils as utils
-import sortseq_tools.qc as qc
-import sortseq_tools.io as io
-from sortseq_tools import SortSeqError
+import MPAthic.utils as utils
+import MPAthic.qc as qc
+import MPAthic.io as io
+from MPAthic import SortSeqError
 import pdb
 from numpy.random import choice
 
