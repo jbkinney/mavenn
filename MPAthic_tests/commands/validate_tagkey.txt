@@ -1,10 +1,10 @@
-good: MPAthic validate -t tagkey -i tagkey_good.txt
-good: MPAthic validate -t tagkey -i tagkey_good_comments.txt
-good: MPAthic validate -t tagkey -i tagkey_good_seqrna.txt
-good: MPAthic validate -t tagkey -i tagkey_fix_columnorder.txt
-good: MPAthic validate -t tagkey -i tagkey_fix_lowercasetags.txt
+good: mpathic validate -t tagkey -i tagkey_good.txt
+good: mpathic validate -t tagkey -i tagkey_good_comments.txt
+good: mpathic validate -t tagkey -i tagkey_good_seqrna.txt
+good: mpathic validate -t tagkey -i tagkey_fix_columnorder.txt
+good: mpathic validate -t tagkey -i tagkey_fix_lowercasetags.txt
 
-bad:  MPAthic validate -t tagkey -i tagkey_bad_badseqcol.txt
-bad:  MPAthic validate -t tagkey -i tagkey_bad_badtagcol.txt
-bad:  MPAthic validate -t tagkey -i tagkey_bad_seqlength.txt
-bad:  MPAthic validate -t tagkey -i tagkey_bad_taglength.txt
+bad:  mpathic validate -t tagkey -i tagkey_bad_badseqcol.txt
+bad:  mpathic validate -t tagkey -i tagkey_bad_badtagcol.txt
+bad:  mpathic validate -t tagkey -i tagkey_bad_seqlength.txt
+bad:  mpathic validate -t tagkey -i tagkey_bad_taglength.txt

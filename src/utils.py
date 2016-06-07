@@ -4,7 +4,7 @@ import numpy as np
 import scipy as sp
 import scipy.ndimage
 import pandas as pd
-from MPAthic import SortSeqError
+from mpathic import SortSeqError
 
 
 def profile_counts(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,end=None):

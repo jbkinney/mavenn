@@ -8,11 +8,11 @@
 
 Overview
 -------------
-``profile_counts`` is a program within the MPAthic package which tallies
+``profile_counts`` is a program within the mpathic package which tallies
 the occurance of each base or amino acid at each position and outputs them in
 a table.
 
-After you install `MPAthic`_, this program will be available to run at the command line. 
+After you install `mpathic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

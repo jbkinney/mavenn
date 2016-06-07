@@ -8,11 +8,11 @@
 
 Overview
 -------------
-``profile_enrichment`` is a program within the MPAthic package which calculates
+``profile_enrichment`` is a program within the mpathic package which calculates
 the log enrichment of each amino acid at each position. Pseudo counts are added to
 each entry during the calculation.
 
-After you install `MPAthic`_, this program will be available to run at the command line. 
+After you install `mpathic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

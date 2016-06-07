@@ -935,7 +935,7 @@ Tue Feb  9 22:49:34 2016    profile/Profile_learn_model_IM_dms
         1    0.000    0.000    0.000    0.000 _weakrefset.py:20(__enter__)
         6    0.000    0.000    0.000    0.000 arrayprint.py:661(__init__)
         3    0.000    0.000    0.000    0.000 Node.py:131(_get_parents)
-        4    0.000    0.000    0.000    0.000 sre_compile.py:546(iMPAthicring)
+        4    0.000    0.000    0.000    0.000 sre_compile.py:546(impathicring)
         1    0.000    0.000    0.000    0.000 config.py:527(_select_options)
        21    0.000    0.000    0.000    0.000 {method 'append' of 'pandas.lib.BlockPlacement' objects}
         2    0.000    0.000    0.000    0.000 merge.py:1020(_maybe_check_integrity)

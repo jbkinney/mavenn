@@ -7,12 +7,12 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import MPAthic.Models as Models
-import MPAthic.utils as utils
-import MPAthic.io as io
-import MPAthic.qc as qc
-import MPAthic.evaluate_model as evaluate_model
-from MPAthic import SortSeqError
+import mpathic.Models as Models
+import mpathic.utils as utils
+import mpathic.io as io
+import mpathic.qc as qc
+import mpathic.evaluate_model as evaluate_model
+from mpathic import SortSeqError
 
 def main(
     df,mp,noisetype,npar,nbins,sequence_library=True,

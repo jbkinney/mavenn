@@ -923,7 +923,7 @@ Mon Feb  8 10:11:31 2016    profile/Profile_learn_model_IM_mpra
         1    0.000    0.000    0.000    0.000 {method 'repeat' of 'numpy.ndarray' objects}
         6    0.000    0.000    0.000    0.000 arrayprint.py:661(__init__)
         1    0.000    0.000    0.000    0.000 lil.py:134(set_shape)
-        4    0.000    0.000    0.000    0.000 sre_compile.py:546(iMPAthicring)
+        4    0.000    0.000    0.000    0.000 sre_compile.py:546(impathicring)
        13    0.000    0.000    0.000    0.000 {ord}
         1    0.000    0.000    0.000    0.000 ram.py:165(__init__)
         8    0.000    0.000    0.000    0.000 sre_parse.py:139(__delitem__)

@@ -7,11 +7,11 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import MPAthic.qc as qc
-import MPAthic.io as io
-import MPAthic.profile_ct as profile_ct
+import mpathic.qc as qc
+import mpathic.io as io
+import mpathic.profile_ct as profile_ct
 import pdb
-from MPAthic import SortSeqError
+from mpathic import SortSeqError
 
 def main(dataset_df, bin=None, start=0, end=None):
     """

@@ -9,19 +9,19 @@ import scipy as sp
 import sys
 #Our miscellaneous functions
 import pandas as pd
-import MPAthic.utils as utils
+import mpathic.utils as utils
 from sklearn import linear_model
-import MPAthic.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+import mpathic.EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
 import pymc
-import MPAthic.stepper as stepper
+import mpathic.stepper as stepper
 import os
-from MPAthic import SortSeqError
-import MPAthic.io as io
-import MPAthic.gauge_fix as gauge_fix
-import MPAthic.qc as qc
+from mpathic import SortSeqError
+import mpathic.io as io
+import mpathic.gauge_fix as gauge_fix
+import mpathic.qc as qc
 import pdb
-from MPAthic import shutthefuckup
-import MPAthic.numerics as numerics
+from mpathic import shutthefuckup
+import mpathic.numerics as numerics
 from sklearn.preprocessing import StandardScaler
 
 def weighted_std(values,weights):

@@ -1,27 +1,27 @@
 # Fasta files
-bad:  MPAthic validate -t dataset               -i seq_good.fasta
-good:  MPAthic validate -t dataset_fastq         -i seq_good.fasta  
-good: MPAthic validate -t dataset_fasta_dna     -i seq_good.fasta
-bad:  MPAthic validate -t dataset_fasta_rna     -i seq_good.fasta
-good: MPAthic validate -t dataset_fasta_protein -i seq_good.fasta
-bad:  MPAthic validate -t dataset_fasta_dna     -i seq_good_rna.fasta
-good: MPAthic validate -t dataset_fasta_rna     -i seq_good_rna.fasta
-bad:  MPAthic validate -t dataset_fasta_protein -i seq_good_rna.fasta
-bad:  MPAthic validate -t dataset_fasta_dna     -i seq_good_pro.fasta
-bad:  MPAthic validate -t dataset_fasta_rna     -i seq_good_pro.fasta
-good: MPAthic validate -t dataset_fasta_protein -i seq_good_pro.fasta
+bad:  mpathic validate -t dataset               -i seq_good.fasta
+good:  mpathic validate -t dataset_fastq         -i seq_good.fasta  
+good: mpathic validate -t dataset_fasta_dna     -i seq_good.fasta
+bad:  mpathic validate -t dataset_fasta_rna     -i seq_good.fasta
+good: mpathic validate -t dataset_fasta_protein -i seq_good.fasta
+bad:  mpathic validate -t dataset_fasta_dna     -i seq_good_rna.fasta
+good: mpathic validate -t dataset_fasta_rna     -i seq_good_rna.fasta
+bad:  mpathic validate -t dataset_fasta_protein -i seq_good_rna.fasta
+bad:  mpathic validate -t dataset_fasta_dna     -i seq_good_pro.fasta
+bad:  mpathic validate -t dataset_fasta_rna     -i seq_good_pro.fasta
+good: mpathic validate -t dataset_fasta_protein -i seq_good_pro.fasta
 
 # Fastq files
-bad:  MPAthic validate -t dataset                -i seq_good.fastq 
-bad:  MPAthic validate -t dataset_fasta_dna      -i seq_good.fastq
-bad:  MPAthic validate -t dataset_fasta_rna      -i seq_good.fastq 
-bad:  MPAthic validate -t dataset_fasta_protein  -i seq_good.fastq  
-good: MPAthic validate -t dataset_fastq          -i seq_good.fastq 
+bad:  mpathic validate -t dataset                -i seq_good.fastq 
+bad:  mpathic validate -t dataset_fasta_dna      -i seq_good.fastq
+bad:  mpathic validate -t dataset_fasta_rna      -i seq_good.fastq 
+bad:  mpathic validate -t dataset_fasta_protein  -i seq_good.fastq  
+good: mpathic validate -t dataset_fastq          -i seq_good.fastq 
 
 # Fasta bin files used to test preprocess
-good: MPAthic validate -t dataset_fasta_dna -i bin_hbsites.fa
-good: MPAthic validate -t dataset_fasta_dna -i bin_hbsites.fas
-good: MPAthic validate -t dataset_fasta_dna -i bin_hbsites.fasta
-good: MPAthic validate -t dataset_fasta_dna -i bin_hbsites.ffn
-good: MPAthic validate -t dataset_fasta_dna -i bin_hbsites.fna
-good: MPAthic validate -t dataset_fasta_dna -i bin_hbsites.fsa
+good: mpathic validate -t dataset_fasta_dna -i bin_hbsites.fa
+good: mpathic validate -t dataset_fasta_dna -i bin_hbsites.fas
+good: mpathic validate -t dataset_fasta_dna -i bin_hbsites.fasta
+good: mpathic validate -t dataset_fasta_dna -i bin_hbsites.ffn
+good: mpathic validate -t dataset_fasta_dna -i bin_hbsites.fna
+good: mpathic validate -t dataset_fasta_dna -i bin_hbsites.fsa

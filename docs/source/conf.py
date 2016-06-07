@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# MPAthic documentation build configuration file, created by
+# mpathic documentation build configuration file, created by
 # sphinx-quickstart on Wed Oct  7 10:27:41 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -54,7 +54,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'MPAthic'
+project = u'mpathic'
 copyright = u'2015, Bill Ireland'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -187,7 +187,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'MPAthicdoc'
+htmlhelp_basename = 'mpathicdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -207,7 +207,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'MPAthic.tex', u'sortseq\\_tools Documentation',
+  ('index', 'mpathic.tex', u'sortseq\\_tools Documentation',
    u'Bill Ireland', 'manual'),
 ]
 
@@ -237,7 +237,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'MPAthic', u'MPAthic Documentation',
+    ('index', 'mpathic', u'mpathic Documentation',
      [u'Bill Ireland'], 1)
 ]
 
@@ -251,8 +251,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'MPAthic', u'MPAthic Documentation',
-   u'Bill Ireland', 'MPAthic', 'One line description of project.',
+  ('index', 'mpathic', u'mpathic Documentation',
+   u'Bill Ireland', 'mpathic', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -272,13 +272,13 @@ texinfo_documents = [
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'MPAthic'
+epub_title = u'mpathic'
 epub_author = u'Bill Ireland'
 epub_publisher = u'Bill Ireland'
 epub_copyright = u'2015, Bill Ireland'
 
 # The basename for the epub file. It defaults to the project name.
-#epub_basename = u'MPAthic'
+#epub_basename = u'mpathic'
 
 # The HTML theme for the epub output. Since the default themes are not optimized
 # for small screen space, using the same theme for HTML and epub output is

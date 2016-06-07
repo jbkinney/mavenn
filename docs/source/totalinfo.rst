@@ -8,13 +8,13 @@
 
 Overview
 -------------
-``totalinfo`` is a program within the MPAthic package which calculates
+``totalinfo`` is a program within the mpathic package which calculates
 the mutual information between gene expression and knowledge of the entire sequence.
 This should be run on a sublibrary, which is a typical experiment, only run with 
 only 200-300 unique sequences. The mutual information calculated represents the 
 maximum amount of information acheivable by any model.
 
-After you install `MPAthic`_, this program will be available to run at the command line. 
+After you install `mpathic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

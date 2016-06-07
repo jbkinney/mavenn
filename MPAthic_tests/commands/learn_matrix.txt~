@@ -1,59 +1,59 @@
 # Validate that all stdout does in fact represent good models
-validation: | MPAthic validate -t model
+validation: | mpathic validate -t model
 
 #test ER learning method 
-good: MPAthic learn_model -lm ER -i dataset.txt
-good: MPAthic learn_model -lm ER -i dataset.txt --start 1 --end 2
-bad:  MPAthic learn_model -lm ER -i dataset.txt --start 2 --end 1
+good: mpathic learn_model -lm ER -i dataset.txt
+good: mpathic learn_model -lm ER -i dataset.txt --start 1 --end 2
+bad:  mpathic learn_model -lm ER -i dataset.txt --start 2 --end 1
 
 #start or end outside of bounds
-bad:  MPAthic learn_model -lm ER -i dataset.txt --start -2 --end 3
-good: MPAthic learn_model -lm ER -i dataset.txt --start 1 --end 2
-good: cat dataset.txt | MPAthic learn_model -lm ER
-good: MPAthic learn_model -lm ER -i dataset.txt -fg 1 -bg 0
-good: MPAthic learn_model -lm ER -i dataset.txt -fg 0 -bg 1
-good: MPAthic learn_model -lm ER -i dataset.txt --db_filename not_relavent --iteration 10 --burnin 0
-bad:  MPAthic learn_model -lm ER -i dataset.txt -fg 15 -bg 0
-bad:  MPAthic learn_model -lm ER -i dataset.txt -fg 0 -bg 15
-bad:  MPAthic learn_model -lm ER -i dataset.txt -fg 1 -bg 1
-good: MPAthic learn_model -lm ER -i dataset.txt --pseudocounts 2
+bad:  mpathic learn_model -lm ER -i dataset.txt --start -2 --end 3
+good: mpathic learn_model -lm ER -i dataset.txt --start 1 --end 2
+good: cat dataset.txt | mpathic learn_model -lm ER
+good: mpathic learn_model -lm ER -i dataset.txt -fg 1 -bg 0
+good: mpathic learn_model -lm ER -i dataset.txt -fg 0 -bg 1
+good: mpathic learn_model -lm ER -i dataset.txt --db_filename not_relavent --iteration 10 --burnin 0
+bad:  mpathic learn_model -lm ER -i dataset.txt -fg 15 -bg 0
+bad:  mpathic learn_model -lm ER -i dataset.txt -fg 0 -bg 15
+bad:  mpathic learn_model -lm ER -i dataset.txt -fg 1 -bg 1
+good: mpathic learn_model -lm ER -i dataset.txt --pseudocounts 2
 
 #without pseudocounts for this dataset you should get NaN in the calculation
-bad:  MPAthic learn_model -lm ER -i dataset.txt --pseudocounts 0
-bad:  MPAthic learn_model -lm ER -i dataset.txt --pseudocounts -1
+bad:  mpathic learn_model -lm ER -i dataset.txt --pseudocounts 0
+bad:  mpathic learn_model -lm ER -i dataset.txt --pseudocounts -1
 
 #test LS learning method
-good: MPAthic learn_model -lm LS -i dataset.txt --penalty .1
+good: mpathic learn_model -lm LS -i dataset.txt --penalty .1
 
 #if no penalty, there will be some bases with no counts, and the algorithm will fail
-bad:  MPAthic learn_model -lm LS -i dataset.txt 
-good: cat dataset.txt | MPAthic learn_model -lm LS --penalty .1
-good: MPAthic learn_model -lm LS -i dataset.txt --LS_means_std test_means_std.txt --penalty .1
-bad:  MPAthic learn_model -lm LS -i dataset.txt --LS_means_std test_means_std_bad.txt --penalty .1
+bad:  mpathic learn_model -lm LS -i dataset.txt 
+good: cat dataset.txt | mpathic learn_model -lm LS --penalty .1
+good: mpathic learn_model -lm LS -i dataset.txt --LS_means_std test_means_std.txt --penalty .1
+bad:  mpathic learn_model -lm LS -i dataset.txt --LS_means_std test_means_std_bad.txt --penalty .1
 
 #test IM learning method
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1
-good: cat dataset.txt | MPAthic learn_model -lm IM --iteration 10 --burnin 0 --thin 1 --penalty .1
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --db_filename not_relavent --thin 1 --penalty .1
-bad:  MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 10 --thin 1 --penalty .1
-bad:  MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 10 --penalty .1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1
+good: cat dataset.txt | mpathic learn_model -lm IM --iteration 10 --burnin 0 --thin 1 --penalty .1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --db_filename not_relavent --thin 1 --penalty .1
+bad:  mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 10 --thin 1 --penalty .1
+bad:  mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 10 --penalty .1
 
 #burning higher than iteration
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --runnum 1 --thin 1 --penalty .1
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --drop_library --thin 1 --penalty .1
-bad:  MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 20
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --runnum 1 --thin 1 --penalty .1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --drop_library --thin 1 --penalty .1
+bad:  mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 20
 
 #test an irrelavant options to make sure they don't break anything
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1 --foreground 10 --background 50
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --thin 1 --penalty .1 --foreground 10 --background 50
 
 #test different initialization conditions
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize rand --thin 1
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LS --penalty .1 --thin 1
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LS --LS_means_std test_means_std.txt --penalty .1 --thin 1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize rand --thin 1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LS --penalty .1 --thin 1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --initialize LS --LS_means_std test_means_std.txt --penalty .1 --thin 1
 
 #Test Neighbor Models
-bad:  MPAthic learn_model -lm ER -i dataset.txt --modeltype NBR --pseudocounts 1
-good: MPAthic learn_model -lm LS -i dataset.txt --modeltype NBR --penalty .1 --thin 1
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --thin 1 --penalty .1 
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize rand --thin 1
-good: MPAthic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize LS --penalty .1 --thin 1
+bad:  mpathic learn_model -lm ER -i dataset.txt --modeltype NBR --pseudocounts 1
+good: mpathic learn_model -lm LS -i dataset.txt --modeltype NBR --penalty .1 --thin 1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --thin 1 --penalty .1 
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize rand --thin 1
+good: mpathic learn_model -lm IM -i dataset.txt --iteration 5 --burnin 0 --modeltype NBR --initialize LS --penalty .1 --thin 1

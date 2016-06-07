@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import MPAthic.io as io
-import MPAthic.qc as qc
-import MPAthic.preprocess as preprocess
+import mpathic.io as io
+import mpathic.qc as qc
+import mpathic.preprocess as preprocess
 import glob
-from MPAthic import SortSeqError
-from MPAthic import shutthefuckup
+from mpathic import SortSeqError
+from mpathic import shutthefuckup
 
 class TestPreprocess(unittest.TestCase):
     def setUp(self):
@@ -18,7 +18,7 @@ class TestPreprocess(unittest.TestCase):
     
     #@shutthefuckup
     def test_preprocess(self):
-        """ Test the ability of MPAthic.preprocess to collate data in multiple sequence files
+        """ Test the ability of mpathic.preprocess to collate data in multiple sequence files
         """
 
         print '\nIn test_preprocess...'

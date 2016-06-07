@@ -10,16 +10,16 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import MPAthic.qc as qc
-import MPAthic.io as io
+import mpathic.qc as qc
+import mpathic.io as io
 import os
-import MPAthic.profile_ct as profile_ct
+import mpathic.profile_ct as profile_ct
 import pdb
-from MPAthic import SortSeqError
+from mpathic import SortSeqError
 import cProfile
-import MPAthic.profile_info as profile_info
-import MPAthic.learn_model as learn_model
-import MPAthic.predictiveinfo as predictiveinfo
+import mpathic.profile_info as profile_info
+import mpathic.learn_model as learn_model
+import mpathic.predictiveinfo as predictiveinfo
 import pstats
 
 #load in data sets for the test, we will just use the sort-seq crp-wt set

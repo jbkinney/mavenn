@@ -1,11 +1,11 @@
 from __future__ import division
 import argparse
 import sys
-import MPAthic.io as io
-import MPAthic.qc as qc
+import mpathic.io as io
+import mpathic.qc as qc
 import re
 import pdb
-from MPAthic import SortSeqError
+from mpathic import SortSeqError
 
 # Filetypes and corrsponding load functions
 filetype_to_loadfunc_dict = {

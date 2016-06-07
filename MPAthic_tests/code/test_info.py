@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import MPAthic.io as io
+import mpathic.io as io
 import glob
 import numpy as np
-import MPAthic.info
-from MPAthic import SortSeqError
-from MPAthic import shutthefuckup
+import mpathic.info
+from mpathic import SortSeqError
+from mpathic import shutthefuckup
 
 
 class TestLoading(unittest.TestCase):
@@ -38,11 +38,11 @@ class TestLoading(unittest.TestCase):
                         %(key,method,str(err)),
                     try:
                         if err:
-                            ent, ent_err = MPAthic.info.estimate_entropy(ns,\
+                            ent, ent_err = mpathic.info.estimate_entropy(ns,\
                                     method=method,err=True)
                             self.assertTrue(ent_err >= 0.0)
                         else:
-                            ent = MPAthic.info.estimate_entropy(ns,\
+                            ent = mpathic.info.estimate_entropy(ns,\
                                     method=method,err=False)
 
                         # Naive estimates should always be nonnegative
@@ -73,7 +73,7 @@ class TestLoading(unittest.TestCase):
                     print '\tTesting %s with method=%s, err=%s: '\
                         %(key,method,str(err)),
                     executable = lambda: \
-                        MPAthic.info.estimate_entropy(ns,method=method,err=err)
+                        mpathic.info.estimate_entropy(ns,method=method,err=err)
                     try:
                         self.assertRaises(SortSeqError,executable)
                         print 'bad.'
@@ -108,11 +108,11 @@ class TestLoading(unittest.TestCase):
                         %(key,method,str(err)),
                     try:
                         if err:
-                            mi, mi_err = MPAthic.info.estimate_mutualinfo(counts,\
+                            mi, mi_err = mpathic.info.estimate_mutualinfo(counts,\
                                     method=method,err=True)
                             self.assertTrue(mi_err >= 0.0)
                         else:
-                            mi = MPAthic.info.estimate_mutualinfo(counts,\
+                            mi = mpathic.info.estimate_mutualinfo(counts,\
                                     method=method,err=False)
 
                         # Naive estimates should always be nonnegative
@@ -148,7 +148,7 @@ class TestLoading(unittest.TestCase):
                     print '\tTesting %s with method=%s, err=%s: '\
                         %(key,method,str(err)),
                     executable = lambda: \
-                        MPAthic.info.estimate_mutualinfo(counts,method=method)
+                        mpathic.info.estimate_mutualinfo(counts,method=method)
                     try:
                         self.assertRaises(SortSeqError,executable)
                         print 'bad.'

@@ -8,10 +8,10 @@
 
 Overview
 -------------
-``simulate_selection`` is a program within the MPAthic package which simulates
+``simulate_selection`` is a program within the mpathic package which simulates
 a protein selection experiment.
 
-After you install `MPAthic`_, this program will be available to run at the command line. 
+After you install `mpathic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

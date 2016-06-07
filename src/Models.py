@@ -5,16 +5,16 @@
 import importlib
 import sys
 import numpy as np
-import MPAthic.utils as utils	
+import mpathic.utils as utils	
 import scipy as sp
 import pandas as pd
 import pdb
-import MPAthic.qc as qc
-import MPAthic.io as io
-import MPAthic.fast as fast
+import mpathic.qc as qc
+import mpathic.io as io
+import mpathic.fast as fast
 import time
-from MPAthic import SortSeqError
-import MPAthic.numerics as numerics
+from mpathic import SortSeqError
+import mpathic.numerics as numerics
 
 
 class ExpModel:

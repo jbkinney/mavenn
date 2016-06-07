@@ -3,7 +3,7 @@
 =======================================
 Programs
 =======================================
-All programs which can be run through the MPAthic package.
+All programs which can be run through the mpathic package.
 
 Main Programs:
 ------------------

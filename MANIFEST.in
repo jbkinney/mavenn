@@ -1,5 +1,5 @@
 include src/fast.pyx
-include MPAthic_tests/commands/*
-include MPAthic_tests/*
-include MPAthic_tests/input/*
-include MPAthic_tests/output/*
+include mpathic_tests/commands/*
+include mpathic_tests/*
+include mpathic_tests/input/*
+include mpathic_tests/output/*

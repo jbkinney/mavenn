@@ -14,9 +14,9 @@ from cStringIO import StringIO
 import pandas as pd
 import scipy as sp
 import scipy.ndimage
-import MPAthic.utils as utils
+import mpathic.utils as utils
 import pdb
-import MPAthic.info as info
+import mpathic.info as info
 
 
 ''' This script estimates MI by implementing a Density Estimation through 

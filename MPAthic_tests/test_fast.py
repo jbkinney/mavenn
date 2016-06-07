@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import time
-import MPAthic.qc as qc
-import MPAthic.utils as utils
-import MPAthic.fast as fast
+import mpathic.qc as qc
+import mpathic.utils as utils
+import mpathic.fast as fast
 import numpy as np
 
 

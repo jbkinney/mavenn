@@ -10,15 +10,15 @@ from setuptools import find_packages
 
 if (sys.version_info[0], sys.version_info[1]) != (2, 7):
     raise RuntimeError('sortseq is currently only compatible with Python 2.7.\nYou are using Python %d.%d' % (sys.version_info[0], sys.version_info[1]))
-input_data_list_commands = glob.glob('MPAthic_tests/commands/*.txt')
-input_data_list_inputs = glob.glob('MPAthic_tests/input/*')
+input_data_list_commands = glob.glob('mpathic_tests/commands/*.txt')
+input_data_list_inputs = glob.glob('mpathic_tests/input/*')
 
 # DON'T FORGET THIS
-ext_modules = Extension("MPAthic.fast",["src/fast.pyx"])
+ext_modules = Extension("mpathic.fast",["src/fast.pyx"])
 
 # main setup command
 setup(
-    name = 'MPAthic', 
+    name = 'mpathic', 
     description = 'Tools for analysis of Sort-Seq experiments.',
     version = '0.01.01',
     author = 'Bill Ireland',
@@ -36,11 +36,11 @@ setup(
         'matplotlib<=1.5.0'
         ],
     platforms = 'Linux (and maybe also Mac OS X).',
-    packages = ['MPAthic'] + find_packages(),
-    package_dir = {'MPAthic':'src'},
+    packages = ['mpathic'] + find_packages(),
+    package_dir = {'mpathic':'src'},
     download_url = 'https://github.com/jbkinney/sortseq/tarball/0.1',
     scripts = [
-            'scripts/MPAthic'
+            'scripts/mpathic'
             ],
     zip_safe=False,
     ext_modules = cythonize(ext_modules),
@@ -48,12 +48,12 @@ setup(
     include_package_data=True,
     
     package_data = {
-                     'MPAthic_tests.commands': ['*.txt'],
-                     'MPAthic_tests': ['*.py','*.sh'],
-                     'MPAthic_tests.input': ['*'],
-                     'MPAthic_tests.output': ['*']
+                     'mpathic_tests.commands': ['*.txt'],
+                     'mpathic_tests': ['*.py','*.sh'],
+                     'mpathic_tests.input': ['*'],
+                     'mpathic_tests.output': ['*']
                  }
-    #package_data = {'MPAthic':['tests/*']} # data for command line testing
+    #package_data = {'mpathic':['tests/*']} # data for command line testing
 )
 
 

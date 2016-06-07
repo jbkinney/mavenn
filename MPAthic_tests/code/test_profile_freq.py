@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import MPAthic.io as io
-import MPAthic.qc as qc
-import MPAthic.profile_freq as profile_freq
+import mpathic.io as io
+import mpathic.qc as qc
+import mpathic.profile_freq as profile_freq
 import glob
-from MPAthic import SortSeqError
-from MPAthic import shutthefuckup
+from mpathic import SortSeqError
+from mpathic import shutthefuckup
 
 class Tests(unittest.TestCase):
     def setUp(self):
@@ -17,7 +17,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_freq_totalcounts(self):
-        """ Test the ability of MPAthic.profile_freq to compute frequencies based on total count values
+        """ Test the ability of mpathic.profile_freq to compute frequencies based on total count values
         """
 
         print '\nIn test_profile_freq_totalcounts...'
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_freq_bincounts(self):
-        """ Test the ability of MPAthic.profile_freq to count frequencies
+        """ Test the ability of mpathic.profile_freq to count frequencies
         """
 
         print '\nIn test_profile_freq_bincounts...'
@@ -113,7 +113,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_freq_seqslicing(self):
-        """ Test the ability of MPAthic.profile_freq to slice sequences properly, and to raise the correct errors
+        """ Test the ability of mpathic.profile_freq to slice sequences properly, and to raise the correct errors
         """
 
         print '\nIn test_profile_freq_seqslicing...'

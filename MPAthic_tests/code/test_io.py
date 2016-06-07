@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import unittest
-import MPAthic.io as io
+import mpathic.io as io
 import glob
-from MPAthic import SortSeqError
-from MPAthic import shutthefuckup
+from mpathic import SortSeqError
+from mpathic import shutthefuckup
 
 
 

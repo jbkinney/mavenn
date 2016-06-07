@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import time
-import MPAthic.simulate_library
-import MPAthic.fast as fast
-import MPAthic.qc as qc
-from MPAthic.profile_mut import main as profile_mut
-from MPAthic.simulate_library import main as simulate_library
+import mpathic.simulate_library
+import mpathic.fast as fast
+import mpathic.qc as qc
+from mpathic.profile_mut import main as profile_mut
+from mpathic.simulate_library import main as simulate_library
 import numpy as np
 from scipy.sparse import csr, csr_matrix, lil_matrix
-from MPAthic import SortSeqError
+from mpathic import SortSeqError
 import pdb
 import sys
 import pandas as pd
-import MPAthic.numerics as numerics
+import mpathic.numerics as numerics
 from numpy.random import randn
-import MPAthic.Models as Models
+import mpathic.Models as Models
 import time
 
 # Create sequences to test this on

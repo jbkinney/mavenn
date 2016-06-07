@@ -8,10 +8,10 @@
 
 Overview
 -------------
-``learn_matrix`` is a program within the MPAthic package which generates
+``learn_matrix`` is a program within the mpathic package which generates
 linear energy matrix models for sections of a sorted library.
 
-After you install `MPAthic`_, this program will be available to run at the command line. 
+After you install `mpathic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

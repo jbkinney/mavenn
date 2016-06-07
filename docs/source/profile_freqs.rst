@@ -8,10 +8,10 @@
 
 Overview
 -------------
-``profile_freqs`` is a program within the MPAthic package which calculates the
+``profile_freqs`` is a program within the mpathic package which calculates the
 fractional occurrence of each base or amino acid at each position.
 
-After you install `MPAthic`_, this program will be available to run at the command line. 
+After you install `mpathic`_, this program will be available to run at the command line. 
 
 Command-line usage
 ---------------------

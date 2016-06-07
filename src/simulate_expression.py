@@ -7,12 +7,12 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import MPAthic.Models as Models
-import MPAthic.utils as utils
-import MPAthic.io as io
-import MPAthic.qc as qc
-from MPAthic import SortSeqError
-import MPAthic.evaluate_model as evaluate_model
+import mpathic.Models as Models
+import mpathic.utils as utils
+import mpathic.io as io
+import mpathic.qc as qc
+from mpathic import SortSeqError
+import mpathic.evaluate_model as evaluate_model
 
 def main(df,model_df,T_LibCounts,T_mRNACounts,start=0,end=None):
    df = evaluate_model.main(df,model_df,left=start,right=None)

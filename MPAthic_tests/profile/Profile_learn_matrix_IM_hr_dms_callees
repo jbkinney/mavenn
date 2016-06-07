@@ -1660,7 +1660,7 @@ generic.py:1625(_update_inplace)                                       ->      5
 base.py:93(get_shape)                                                  ->
 common.py:2380(_index_labels_to_array)                                 ->      53    0.000    0.001  common.py:2347(_asarray_tuplesafe)
                                                                               106    0.000    0.000  {isinstance}
-re.py:230(_compile)                                                    ->       2    0.000    0.000  sre_compile.py:546(iMPAthicring)
+re.py:230(_compile)                                                    ->       2    0.000    0.000  sre_compile.py:546(impathicring)
                                                                                 2    0.000    0.000  sre_compile.py:567(compile)
                                                                                 2    0.000    0.000  {isinstance}
                                                                                 2    0.000    0.000  {len}
@@ -2074,7 +2074,7 @@ generic.py:386(ndim)                                                   ->     12
 groupby.py:2103(<genexpr>)                                             ->      52    0.000    0.000  index.py:1045(__contains__)
 {method 'items' of 'dict' objects}                                     ->
 indexing.py:91(_slice)                                                 ->       1    0.000    0.000  generic.py:1178(_slice)
-sre_compile.py:567(compile)                                            ->       2    0.000    0.000  sre_compile.py:546(iMPAthicring)
+sre_compile.py:567(compile)                                            ->       2    0.000    0.000  sre_compile.py:546(impathicring)
                                                                                 2    0.000    0.000  sre_compile.py:552(_code)
                                                                                 2    0.000    0.000  sre_parse.py:706(parse)
                                                                                 2    0.000    0.000  {_sre.compile}
@@ -2703,7 +2703,7 @@ Model.py:631(commit)                                                   ->       
 _weakrefset.py:20(__enter__)                                           ->       1    0.000    0.000  {method 'add' of 'set' objects}
 arrayprint.py:661(__init__)                                            ->
 Node.py:131(_get_parents)                                              ->
-sre_compile.py:546(iMPAthicring)                                           ->       4    0.000    0.000  {isinstance}
+sre_compile.py:546(impathicring)                                           ->       4    0.000    0.000  {isinstance}
 config.py:527(_select_options)                                         ->
 {method 'append' of 'pandas.lib.BlockPlacement' objects}               ->
 merge.py:1020(_maybe_check_integrity)                                  ->

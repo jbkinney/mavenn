@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import MPAthic.io as io
-import MPAthic.qc as qc
-import MPAthic.profile_info as profile_info
+import mpathic.io as io
+import mpathic.qc as qc
+import mpathic.profile_info as profile_info
 import glob
-from MPAthic import SortSeqError
-from MPAthic import shutthefuckup
+from mpathic import SortSeqError
+from mpathic import shutthefuckup
 
 class Tests(unittest.TestCase):
     def setUp(self):
@@ -18,7 +18,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_info(self):
-        """ Test the ability of MPAthic.profile_info to compute mutation rates based on total count values
+        """ Test the ability of mpathic.profile_info to compute mutation rates based on total count values
         """
 
         print '\nIn test_profile_info...'

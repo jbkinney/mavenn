@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import unittest
-import MPAthic.io as io
-import MPAthic.qc as qc
-import MPAthic.profile_mut as profile_mut
+import mpathic.io as io
+import mpathic.qc as qc
+import mpathic.profile_mut as profile_mut
 import glob
-from MPAthic import SortSeqError
-from MPAthic import shutthefuckup
+from mpathic import SortSeqError
+from mpathic import shutthefuckup
 
 class Tests(unittest.TestCase):
     def setUp(self):
@@ -17,7 +17,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_mut_total_err(self):
-        """ Test the ability of MPAthic.profile_mut to compute mutation rates based on total count values
+        """ Test the ability of mpathic.profile_mut to compute mutation rates based on total count values
         """
 
         print '\nIn test_profile_mut_total_err...'
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_mut_bin_noerr(self):
-        """ Test the ability of MPAthic.profile_mut to compute mutation rates
+        """ Test the ability of mpathic.profile_mut to compute mutation rates
         """
 
         print '\nIn test_profile_mut_bin_noerr_...'
@@ -113,7 +113,7 @@ class Tests(unittest.TestCase):
 
     @shutthefuckup
     def test_profile_mut_seqslicing(self):
-        """ Test the ability of MPAthic.profile_mut to slice sequences properly, and to raise the correct errors
+        """ Test the ability of mpathic.profile_mut to slice sequences properly, and to raise the correct errors
         """
 
         print '\nIn test_profile_mut_seqslicing...'

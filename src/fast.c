@@ -1425,9 +1425,9 @@ static const char __pyx_k_site_length[] = "site_length";
 static const char __pyx_k_RuntimeError[] = "RuntimeError";
 static const char __pyx_k_SortSeqError[] = "SortSeqError";
 static const char __pyx_k_seq2sitelist[] = "seq2sitelist";
-static const char __pyx_k_MPAthic[] = "MPAthic";
+static const char __pyx_k_mpathic[] = "mpathic";
 static const char __pyx_k_seqerr_re_dict[] = "seqerr_re_dict";
-static const char __pyx_k_MPAthic_qc[] = "MPAthic.qc";
+static const char __pyx_k_mpathic_qc[] = "mpathic.qc";
 static const char __pyx_k_Invalid_seq_type_s[] = "Invalid seq_type: %s.";
 static const char __pyx_k_reverse_complement[] = "reverse_complement";
 static const char __pyx_k_site_length_seq_length[] = "site_length > seq_length.";
@@ -1436,7 +1436,7 @@ static const char __pyx_k_char_to_nbr_index_dicts[] = "char_to_nbr_index_dicts";
 static const char __pyx_k_seqs2array_for_matmodel[] = "seqs2array_for_matmodel";
 static const char __pyx_k_seqs2array_for_nbrmodel[] = "seqs2array_for_nbrmodel";
 static const char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
-static const char __pyx_k_Users_jkinney_github_sortseq_to[] = "/Users/jkinney/github/MPAthic/src/fast.pyx";
+static const char __pyx_k_Users_jkinney_github_sortseq_to[] = "/Users/jkinney/github/mpathic/src/fast.pyx";
 static const char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype code in numpy.pxd (%d)";
 static const char __pyx_k_Format_string_allocated_too_shor[] = "Format string allocated too short, see comment in numpy.pxd";
 static const char __pyx_k_Invalid_character_found_in_DNA_s[] = "Invalid character found in DNA sequence.";
@@ -1508,8 +1508,8 @@ static PyObject *__pyx_n_s_seqtypes;
 static PyObject *__pyx_n_s_site_length;
 static PyObject *__pyx_kp_s_site_length_seq_length;
 static PyObject *__pyx_n_s_site_list;
-static PyObject *__pyx_n_s_MPAthic;
-static PyObject *__pyx_n_s_MPAthic_qc;
+static PyObject *__pyx_n_s_mpathic;
+static PyObject *__pyx_n_s_mpathic_qc;
 static PyObject *__pyx_n_s_src_fast;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_kp_u_unknown_dtype_code_in_numpy_pxd;
@@ -5659,8 +5659,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_site_length, __pyx_k_site_length, sizeof(__pyx_k_site_length), 0, 0, 1, 1},
   {&__pyx_kp_s_site_length_seq_length, __pyx_k_site_length_seq_length, sizeof(__pyx_k_site_length_seq_length), 0, 0, 1, 0},
   {&__pyx_n_s_site_list, __pyx_k_site_list, sizeof(__pyx_k_site_list), 0, 0, 1, 1},
-  {&__pyx_n_s_MPAthic, __pyx_k_MPAthic, sizeof(__pyx_k_MPAthic), 0, 0, 1, 1},
-  {&__pyx_n_s_MPAthic_qc, __pyx_k_MPAthic_qc, sizeof(__pyx_k_MPAthic_qc), 0, 0, 1, 1},
+  {&__pyx_n_s_mpathic, __pyx_k_mpathic, sizeof(__pyx_k_mpathic), 0, 0, 1, 1},
+  {&__pyx_n_s_mpathic_qc, __pyx_k_mpathic_qc, sizeof(__pyx_k_mpathic_qc), 0, 0, 1, 1},
   {&__pyx_n_s_src_fast, __pyx_k_src_fast, sizeof(__pyx_k_src_fast), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_kp_u_unknown_dtype_code_in_numpy_pxd, __pyx_k_unknown_dtype_code_in_numpy_pxd, sizeof(__pyx_k_unknown_dtype_code_in_numpy_pxd), 0, 1, 0, 0},
@@ -5985,16 +5985,16 @@ PyMODINIT_FUNC PyInit_fast(void)
   /* "src/fast.pyx":5
  * from cpython cimport bool
  * 
- * import MPAthic.qc as qc             # <<<<<<<<<<<<<<
+ * import mpathic.qc as qc             # <<<<<<<<<<<<<<
  * import re
- * from MPAthic import SortSeqError
+ * from mpathic import SortSeqError
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 5, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_s__14);
   __Pyx_GIVEREF(__pyx_n_s__14);
   PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s__14);
-  __pyx_t_2 = __Pyx_Import(__pyx_n_s_MPAthic_qc, __pyx_t_1, -1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Import(__pyx_n_s_mpathic_qc, __pyx_t_1, -1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_qc, __pyx_t_2) < 0) __PYX_ERR(0, 5, __pyx_L1_error)
@@ -6002,9 +6002,9 @@ PyMODINIT_FUNC PyInit_fast(void)
 
   /* "src/fast.pyx":6
  * 
- * import MPAthic.qc as qc
+ * import mpathic.qc as qc
  * import re             # <<<<<<<<<<<<<<
- * from MPAthic import SortSeqError
+ * from mpathic import SortSeqError
  * 
  */
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_re, 0, -1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 6, __pyx_L1_error)
@@ -6013,9 +6013,9 @@ PyMODINIT_FUNC PyInit_fast(void)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "src/fast.pyx":7
- * import MPAthic.qc as qc
+ * import mpathic.qc as qc
  * import re
- * from MPAthic import SortSeqError             # <<<<<<<<<<<<<<
+ * from mpathic import SortSeqError             # <<<<<<<<<<<<<<
  * 
  * DTYPE = np.int
  */
@@ -6024,7 +6024,7 @@ PyMODINIT_FUNC PyInit_fast(void)
   __Pyx_INCREF(__pyx_n_s_SortSeqError);
   __Pyx_GIVEREF(__pyx_n_s_SortSeqError);
   PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_SortSeqError);
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_MPAthic, __pyx_t_2, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_mpathic, __pyx_t_2, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_SortSeqError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
@@ -6034,7 +6034,7 @@ PyMODINIT_FUNC PyInit_fast(void)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "src/fast.pyx":9
- * from MPAthic import SortSeqError
+ * from mpathic import SortSeqError
  * 
  * DTYPE = np.int             # <<<<<<<<<<<<<<
  * ctypedef np.int_t DTYPE_t

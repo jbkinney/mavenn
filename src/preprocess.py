@@ -9,13 +9,13 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import MPAthic.utils as utils
+import mpathic.utils as utils
 from Bio import SeqIO
-import MPAthic.io as io
-import MPAthic.qc as qc
+import mpathic.io as io
+import mpathic.qc as qc
 import re
 import pdb
-from MPAthic import SortSeqError
+from mpathic import SortSeqError
 
 fasta_filename_patterns=r'(.fasta$|.fas$|.fsa$|.ffn$|.fna$|.fa$)'
 fastq_filename_patterns=r'(.fastq$|.fq$)'

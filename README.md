@@ -39,13 +39,13 @@ python setup.py install
 Alternatively, Sort-Seq Tools can be installed from PyPI by executing
 
 ```
-pip install MPAthic
+pip install mpathic
 ```
 
 This approach will (at least attempt to) install all of Sort-Seq Tools's dependencies, as well as Sort-Seq Tools itself. After Sort-Seq Tools is installed, you can test the functionality of all methods by running
 
 ```
-MPAthic run_tests
+mpathic run_tests
 ```
 
 This suite of tests takes ~10 min to execute. 
@@ -62,62 +62,62 @@ Below are the commands described in the "Overview" section of the [Supplemental 
 
 Simualte a library of binding sites for the CRP transcription factor:
 ```
-MPAthic simulate_library -w TAATGTGAGTTAGCTCACTCAT -n 100000 -m 0.24 -o library.txt
+mpathic simulate_library -w TAATGTGAGTTAGCTCACTCAT -n 100000 -m 0.24 -o library.txt
 ```
 
 Simulate a Sort-Seq experiment using a model ([true_model.txt](examples/true_model.txt)) of CRP-DNA affinity:
 ```
-MPAthic simulate_sort -m true_model.txt -n 4 -i library.txt -o dataset.txt
+mpathic simulate_sort -m true_model.txt -n 4 -i library.txt -o dataset.txt
 ```
 
 #### Computing summary statistics
 
 Compute a mutation profile of the simluated library:
 ```
-MPAthic profile_mut -i library.txt -o mutprofile.txt
+mpathic profile_mut -i library.txt -o mutprofile.txt
 ```
 
 Compute the occurance frequency of each base at each position in the library:
 ```
-MPAthic profile_freq -i library.txt -o freqprofile.txt
+mpathic profile_freq -i library.txt -o freqprofile.txt
 ```
 
 Compute an information profile (a.k.a information footprint) from the simulated data:
 ```
-MPAthic profile_info --err -i dataset.txt -o infoprofile.txt
+mpathic profile_info --err -i dataset.txt -o infoprofile.txt
 ```
 
 #### Inferring quantitative models
 
 Infer a matrix model for CRP from the simulated data:
 ```
-MPAthic learn_model -lm LS -mt MAT -i dataset.txt -o matrix_model.txt
+mpathic learn_model -lm LS -mt MAT -i dataset.txt -o matrix_model.txt
 ```
 
 Infer a neighbor model for CRP from the simulated data:
 ```
-MPAthic learn_model -lm LS -mt NBR -i dataset.txt -o neighbor_model.txt
+mpathic learn_model -lm LS -mt NBR -i dataset.txt -o neighbor_model.txt
 ```
 
 #### Evaluating models
 
 Evaluate the inferred matrix model on all sites in the dataset:
 ```
-MPAthic evaluate_model -m matrix_model.txt -i dataset.txt -o dataset_with_values.txt
+mpathic evaluate_model -m matrix_model.txt -i dataset.txt -o dataset_with_values.txt
 ```
 
 Scan the *Escherichia coli* genome ([genome_ecoli.fa](examples/genome_ecoli.fa)) using the inferred matrix model:
 ```
-MPAthic scan_model -n 100 -m matrix_model.txt -i genome_ecoli.fa -o genome_sites.txt
+mpathic scan_model -n 100 -m matrix_model.txt -i genome_ecoli.fa -o genome_sites.txt
 ```
 
 Compute the predictive information of the inferred matrix model and the true model on the simulated data:
 ```
-MPAthic predictiveinfo -m matrix_model.txt -ds dataset.txt
-MPAthic predictiveinfo -m true_model.txt -ds dataset.txt
+mpathic predictiveinfo -m matrix_model.txt -ds dataset.txt
+mpathic predictiveinfo -m true_model.txt -ds dataset.txt
 ```
 
-[documentation]: http://jbkinney.github.io/MPAthic/
+[documentation]: http://jbkinney.github.io/mpathic/
 [preprint]: http://biorxiv.org/content/early/2016/05/21/054676
 
 

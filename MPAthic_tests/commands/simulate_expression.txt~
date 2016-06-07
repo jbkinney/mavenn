@@ -1,9 +1,9 @@
 # Validation to use for good commands from now on
-validation: | MPAthic validate -t dataset
+validation: | mpathic validate -t dataset
 
-good: MPAthic simulate_expression -i library.txt -m model_crp_mat.txt
+good: mpathic simulate_expression -i library.txt -m model_crp_mat.txt
 #test noise models
-good: MPAthic simulate_expression -i library.txt -m model_crp_mat.txt  --totallibcounts 1 --totalmRNAcounts 1
-bad: MPAthic simulate_expression -i library.txt -m model_crp_mat.txt  --totallibcounts -1 --totalmRNAcounts 1
-bad: MPAthic simulate_expression -i library.txt -m model_crp_mat.txt --totallibcounts 1 --totalmRNAcounts -1
-bad: MPAthic simulate_expression -i dataset.txt -m model_crp_mat.txt
+good: mpathic simulate_expression -i library.txt -m model_crp_mat.txt  --totallibcounts 1 --totalmRNAcounts 1
+bad: mpathic simulate_expression -i library.txt -m model_crp_mat.txt  --totallibcounts -1 --totalmRNAcounts 1
+bad: mpathic simulate_expression -i library.txt -m model_crp_mat.txt --totallibcounts 1 --totalmRNAcounts -1
+bad: mpathic simulate_expression -i dataset.txt -m model_crp_mat.txt
