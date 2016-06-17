@@ -1,23 +1,23 @@
-Sort-Seq Tools 
+MPAthic 
 ========
 
-*Quantitative modeling of sequence-function relationships using data from massively parallel assays*
+*Quantitative modeling of sequence-function relationships for massively parallel assays*
 
 Written by William T. Ireland and Justin B. Kinney  
 Current version: 0.01.01  
 
 Citation:  
-Ireland WT, Kinney JB (2016) *Sort-Seq Tools: modeling sequence-function relationships from massively parallel assays.* [bioRxiv doi: http://dx.doi.org/10.1101/054676][preprint]
+Ireland WT, Kinney JB (2016) *MPAthic: quantitative modeling of sequence-function relationships for massively parallel assays.* 
 
 Please address questions or problems regarding this software to Justin B. Kinney at jkinney@cshl.edu.
 
 ## Overview
 
-Sort-Seq Tools is a software package for analyzing data from a variety massively parallel assays, including Sort-Seq assays, Massively Parallel Reporter assays, and Deep Mutational Scanning assays. Sort-Seq Tools provides a set of command line routines, which are listed in the [documentation][documentation]. Details can be found in the [accompanying preprint][preprint].
+MPAthic is a software package for analyzing data from a variety massively parallel assays, including Sort-Seq assays, Massively Parallel Reporter assays, and Deep Mutational Scanning assays. MPAthic provides a set of command line routines, which are listed in the [documentation][documentation]. Details can be found in the [accompanying preprint][preprint].
 
 ## Requriements
 
-Sort-Seq Tools is written in Python 2.9.7. It has been verified to work on Linux and Mac OS X. Installation currently requires a number of other Python packages:
+MPAthic is written in Python 2.9.7. It has been verified to work on Linux and Mac OS X. Installation currently requires a number of other Python packages:
 * biopython>=1.6
 * pymc>=2.3.4
 * scikit-learn>=0.15.2, <= 0.16.1
@@ -30,19 +30,19 @@ Sort-Seq Tools is written in Python 2.9.7. It has been verified to work on Linux
 
 ## Installation
 
-To install Sort-Seq Tools, clone this repository, navigate to the folder containing this README file, and execute
+To install MPAthic, clone this repository, navigate to the folder containing this README file, and execute
 
 ```
 python setup.py install
 ```
 
-Alternatively, Sort-Seq Tools can be installed from PyPI by executing
+Alternatively, MPAthic can be installed from PyPI by executing
 
 ```
 pip install mpathic
 ```
 
-This approach will (at least attempt to) install all of Sort-Seq Tools's dependencies, as well as Sort-Seq Tools itself. After Sort-Seq Tools is installed, you can test the functionality of all methods by running
+This approach will (at least attempt to) install all of MPAthic's dependencies, as well as MPAthic itself. After MPAthic is installed, you can test the functionality of all methods by running
 
 ```
 mpathic run_tests
@@ -52,11 +52,11 @@ This suite of tests takes ~10 min to execute.
 
 ## Documentation
 
-The commands used to perform the analysis in Ireland & Kinney (2016) are described in [analysis.md](analysis.md). Documentation on each of the Sort-Seq Tools functions is provided [here][documentation].
+The commands used to perform the analysis in Ireland & Kinney (2016) are described in [analysis.md](analysis.md). Documentation on each of the MPAthic functions is provided [here][documentation].
 
 ## Quick start guide
 
-Below are the commands described in the "Overview" section of the [Supplemental Information of Ireland and Kinney (2016)](http://biorxiv.org/content/early/2016/05/21/054676.figures-only). These commands provide a quick entry into the capabilities of Sort-Seq Tools. To execute them, first change to the [examples](examples/) directory, which contains the necessary inpupt files [true_model.txt](examples/true_model.txt) and [genome_ecoli.fa](examples/genome_ecoli.fa). 
+Below are the commands described in the "Overview" section of the [Supplemental Information of Ireland and Kinney (2016)](http://biorxiv.org/content/early/2016/05/21/054676.figures-only). These commands provide a quick entry into the capabilities of MPAthic. To execute them, first change to the [examples](examples/) directory, which contains the necessary inpupt files [true_model.txt](examples/true_model.txt) and [genome_ecoli.fa](examples/genome_ecoli.fa). 
 
 #### Simulating data
 
