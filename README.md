@@ -9,6 +9,10 @@ Current version: 0.01.01
 Citation:  
 Ireland WT, Kinney JB (2016) *MPAthic: quantitative modeling of sequence-function relationships for massively parallel assays.* 
 
+v0.01.01 Snapshot:    
+DOI 10.5281/zenodo.55837    
+https://zenodo.org/badge/latestdoi/22771/jbkinney/mpathic     
+
 Please address questions or problems regarding this software to Justin B. Kinney at jkinney@cshl.edu.
 
 ## Overview
