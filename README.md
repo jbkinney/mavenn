@@ -1,13 +1,15 @@
 MPAthic 
 ========
-
 *Quantitative modeling of sequence-function relationships for massively parallel assays*
 
 Written by William T. Ireland and Justin B. Kinney  
 Current version: 0.01.01  
 
+Notice:   
+This software package was formerly known as "**Sort-Seq Tools**"
+
 Citation:  
-Ireland WT, Kinney JB (2016) *MPAthic: quantitative modeling of sequence-function relationships for massively parallel assays.* 
+Ireland WT, Kinney JB (2016) *MPAthic: quantitative modeling of sequence-function relationships for massively parallel assays.* bioRxiv doi:10.1101/054676
 
 v0.01.01 Snapshot:    
 DOI 10.5281/zenodo.55837    
