@@ -2,7 +2,7 @@ MPAthic
 ========
 *Quantitative modeling of sequence-function relationships for massively parallel assays*
 
-Written by William T. Ireland and Justin B. Kinney  
+Written by William T. Ireland and [Justin B. Kinney][kinneylab]   
 Current version: 0.01.01  
 
 Notice:   
@@ -15,7 +15,7 @@ v0.01.01 Snapshot:
 DOI 10.5281/zenodo.55837    
 https://zenodo.org/badge/latestdoi/22771/jbkinney/mpathic     
 
-Please address questions or problems regarding this software to Justin B. Kinney at jkinney@cshl.edu.
+Please address questions or problems regarding this software to [Justin B. Kinney][kinneylab] at jkinney@cshl.edu.
 
 ## Overview
 
@@ -125,5 +125,6 @@ mpathic predictiveinfo -m true_model.txt -ds dataset.txt
 
 [documentation]: http://jbkinney.github.io/mpathic/
 [preprint]: http://biorxiv.org/content/early/2016/05/21/054676
+[kinneylab]: http://kinneylab.labsites.cshl.edu/
 
 
