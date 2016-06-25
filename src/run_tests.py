@@ -11,7 +11,6 @@ import glob
 import sys
 import time
 from pkg_resources import resource_filename
-import tests
 
 # Define commandline wrapper
 def wrapper(args):
