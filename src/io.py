@@ -124,7 +124,6 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         #now remove sequence identifiers
         df.loc[:,colname] = df.loc[:,colname].apply(format_fasta)
         
-        
 
     # If type is fastq, set sequence type to dna
     elif file_type=='fastq':
@@ -165,11 +164,17 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
     if not df.shape[0]>=1:
         SortSeqError('No data was loaded.')
 
-    # If a sequences or tags were loaded, 
-    # and there are no counts, then add counts
+    # If sequences or tags were loaded,     
     if any([qc.is_col_type(col,['seqs','tag']) for col in df.columns]):
-        if not any([qc.is_col_type(col,'cts') for col in df.columns]):
+
+        # If there are no counts, then add counts
+        ct_cols = [col for col in df.columns if qc.is_col_type(col,'cts')]
+        if len(ct_cols)==0:
             df['ct'] = 1
+
+        # Otherwise, if there are counts but no 'ct' column 
+        elif not 'ct' in ct_cols:
+            df['ct'] = df.loc[:,ct_cols].sum(axis=1)
 
     # Return validated/fixed dataframe
     return qc.validate_dataset(df, fix=True)

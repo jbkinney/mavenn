@@ -283,7 +283,7 @@ def fix_matrix(matrix_model, wtseq='', mutrate=1, seqtype='DNA', \
 
     # Compute projection matrix using SVD
     U, s, Vh = sp.linalg.svd(Lambda_mm)
-    tol = s.max()*max(Lambda_mm.shape)*rcond
+    tol = s.max()*max(Lambda_mm.shape)*rcond # This seems to be failing!
     rank = sum(s > tol)
     Q_cropped = np.matrix(U[:,s > tol])
     Proj = Q_cropped * Q_cropped.T
@@ -295,7 +295,7 @@ def fix_matrix(matrix_model, wtseq='', mutrate=1, seqtype='DNA', \
         print 'Computational: dim(G) = %d'%(D - rank)
 
     # Verify number of gauge freedoms
-    assert (D - rank) == P
+    assert (D - rank) == P # This is throwing errors! Maybe remove. 
 
     # Convert matrix to vector
     matrix_model_vec = np.matrix(matrix_model.flatten()).T
