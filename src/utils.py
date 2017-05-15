@@ -8,6 +8,8 @@ from mpathic import SortSeqError
 
 
 def profile_counts(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,end=None):
+    '''Takes the input data frame with sequences and counts in each bin
+        and returns a data frame with counts of each base at each position.'''
     type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}
     seq_col_name = type_name_dict[dicttype]
     seq_dict,inv_dict = choose_dict(dicttype)
@@ -42,6 +44,48 @@ def profile_counts(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,
         return wttest
     else:
         return output_df
+
+def profile_counts_neighbor(df,dicttype,wtseq=None,return_wtseq=False,bin_k=None,start=0,end=None):
+    '''Takes the input data frame with sequences and counts in each bin
+        and returns a data frame with counts of each nearest-neighbor pair at each position 
+        (indexed starting with the first base).'''
+    type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}
+    seq_col_name = type_name_dict[dicttype]
+    #create out dictionary which relates the 2 base pair grouping to a number (0-15).
+    seq_dict,inv_dict = choose_dict(dicttype,modeltype='NBR')
+    strings = df[seq_col_name].str.slice(start,end)
+    #if no counts column, then assume counts = 1
+    if bin_k is not None:
+         ct = df['ct_'+str(bin_k)]
+    else:
+         ct = df['ct']
+    seqL = len(strings[0])
+    mutfreq = np.zeros([seqL-1,len(seq_dict)])
+    #Dictionary with number corresponding to each base
+    wttest = []
+    for i in range(seqL-1):
+        #at this position make list of each base
+        letlist = strings.str.slice(i,i+2)
+        #tally the number of each
+        counts = [np.sum(ct[letlist==inv_dict[q]]) for q in range(len(seq_dict))]
+        #find the wild type pair for us to add to a column in the output data frame.
+        wtlet = np.argmax(counts)
+        wttest.append(inv_dict[wtlet])
+        mutfreq[i,:] = counts
+    if wtseq:
+        assert(wtseq==wttest)
+    if not is_seq_valid(wttest,seq_dict):
+        sys.exit('Wild type seq is invalid')
+    cols = ['ct_' + str(inv_dict[q]) for q in range(len(seq_dict))]
+    mf = pd.DataFrame(mutfreq,columns=cols)
+    pos = pd.Series(range(seqL-1),name='pos')
+    output_df = pd.concat([pos,mf],axis=1)
+    #we can use this function for obtaining the wtseq of our library
+    if return_wtseq:
+        return wttest
+    else:
+        return output_df
+
 
 def profile_freqs(df,dicttype,wtseq=None,bin_k=0):
     '''calculate the frequency of each base at each position for a given bin

@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 import scipy as sp
 import sys
+import scipy.sparse
 #Our miscellaneous functions
 import pandas as pd
 import mpathic.utils as utils
@@ -23,6 +24,8 @@ import pdb
 from mpathic import shutthefuckup
 import mpathic.numerics as numerics
 from sklearn.preprocessing import StandardScaler
+import cvxopt
+from cvxopt import solvers, matrix, spdiag, sqrt, div, exp
 
 def weighted_std(values,weights):
     '''Takes in a dataframe with seqs and cts and calculates the std'''
@@ -65,6 +68,125 @@ def MaximizeMI_memsaver(
     emat_mean = np.mean(M.trace('emat')[burnin:],axis=0)
     return emat_mean
 
+def convex_opt_agorithm(s,N0, Nsm,tm):
+    bins = tm.shape[1]
+    print bins
+    N0_matrix = np.matrix(N0)
+    tm_matrix = np.matrix(tm)
+    Nsm_matrix = np.matrix(Nsm)
+    tm_matrix_squared = np.matrix(np.multiply(tm,tm))
+    i,c = s.shape
+    #create s matrix, the elements of this matrix are delta_s@i * delta s2@j
+    #we will need this for hessian.
+    
+    s_hessian_mat = sp.sparse.lil_matrix((i,c*c))
+    for p in range(i):
+            temp_mat = (np.transpose(s[p,:])*s[p,:]).todense().ravel(order='F')
+            
+            s_hessian_mat[p,:] = scipy.sparse.csr_matrix(temp_mat)
+    def F(x=None, z=None):
+        if x is None: return 0, matrix(0.0, (c+bins,1))
+        
+        gm = np.transpose(np.array(x[c:]))
+        y = s*x[:c]
+        w = np.add(gm,y*tm_matrix)
+        term2 = np.array(N0)*np.array(np.exp(w))
+        term1 = np.multiply(np.array(Nsm),np.array(w))
+        f = cvxopt.matrix(-np.sum(term1-term2))
+        Df = np.zeros((1,c+bins))
+        
+        Nm = np.sum(Nsm,axis=0)
+        print Nm.shape
+        
+        Df_gm = Nm - sum(term2)
+        print Df_gm.shape
+        print c
+        print Df.shape
+        Df_theta =  np.transpose((Nsm - term2)*np.transpose(tm))*s
+    
+        Df[0,:c] = Df_theta
+        
+        Df[0,c:] = Df_gm
+        Df_cvx = cvxopt.matrix(-Df)
+        if z is None: return f, Df_cvx
+        H = np.zeros((c+bins,c+bins))
+        
+        #first do the theta_theta terms
+                
+        #first do N_0*tm**2, this will produce a ixm matrix where each term is Ni0 * tm**2.
+        Inner_term = N0*tm_matrix_squared
+        #now multiply by a column vector form of w, this will do the multiplication by y, and also sum over m.
+        #you now have an ix1 matrix
+        Inner_term2 = np.sum(np.array(Inner_term)*np.array(np.exp(w)),axis=1)
+        
+        #multiply by hessian matrix and sum over sequences...
+     
+        H_thetas_temp = Inner_term2*s_hessian_mat
+        
+        
+        #now we need to reshape such to fill in these values
+        H[:c,:c] = H_thetas_temp.reshape((c,c),order='F')
+        
+        
+        #now do mixed terms with partials of gms and thetas
+        #first multiply the N0 counts by the exponential term. This will give you a matrix of ixm
+        Inner_term = np.array(N0)*np.array(np.matrix(np.exp(w)))
+        #now use element wise multiplication to multiply by the tms, this will broadcasts their value down the rows
+        Inner_term2 = np.array(tm)*Inner_term
+        #now convert back to matrix form and multiply by s. This sums over sequence while multiplying by si, and
+        #yeilds a matrix of dimension mxc
+        H_gm_theta_temp = np.transpose(np.matrix(Inner_term2))*s
+        H[c:c+bins,:c] = H_gm_theta_temp
+        
+        #now we are going to do the last bit, the partials with respect to the gms
+        
+        #we can use the same 'Inner term' as above N0*exp(gm+tm*sum(theta*s))
+        #sum over s
+        Temp_term = np.sum(Inner_term,axis=0)
+        ident = np.identity(bins)
+        #use array multiplication to broadcast multiply such that all off diagonal terms are 0 and
+        #the on diagonal terms are equal to sum(Ns0*exp(gm+sum(theta*s)))
+        H_gms = np.array(Temp_term)*ident
+        H[c:c+bins,c:c+bins] = H_gms
+        
+        
+        #now insure that H is symmetric across diagonal
+        for q in range(c+bins):
+            for k in range(q):
+                H[k,q] = H[q,k]
+        
+        H = cvxopt.matrix(z[0]*H)            
+                
+        return f, Df_cvx, H
+    return solvers.cp(F)['x']
+
+def reverse_parameterization(output,wtrow,seq_dict,bins=1):
+    output = output[:-bins]
+    cols_for_keep = np.where(wtrow==False)[0]
+    df_out = np.zeros(len(wtrow))
+    df_out.flat[cols_for_keep] = output
+    df_out2 = df_out.reshape((len(seq_dict),len(df_out)/len(seq_dict)),order='F')
+    return df_out2
+
+def convex_opt(df,seq_dict,inv_dict,columns,tm=None):
+    seq_mat,wtrow = numerics.dataset2mutarray(df.copy(),'MAT')
+    cols_for_keep = [x for x in range(seq_mat.shape[1]) if x not in np.nonzero(wtrow)[0]]
+    seq_mat = seq_mat.tocsc()
+    seq_mat2 = seq_mat[:,cols_for_keep]
+    
+    columns = [x for x in columns if 'ct_0' != x]
+    N0 = np.matrix(df['ct_0']).T
+    Nsm = np.matrix(df[columns])
+    if tm:
+        tm = np.array(tm)
+    else:
+        tm = np.matrix([x for x in range(1,len(columns)+1)])
+    print tm
+    output = convex_opt_agorithm(seq_mat2,N0,Nsm,tm)
+    output_parameterized = reverse_parameterization(output,wtrow,seq_dict,bins=tm.shape[1])
+    print output_parameterized
+    print output_parameterized.shape
+    return output_parameterized
 
 def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     '''Learn models using berg von hippel model. The foreground sequences are
@@ -106,6 +228,117 @@ def Berg_von_Hippel(df,dicttype,foreground=1,background=0,pseudocounts=1):
     output_df = output_df.rename(columns=rename_dict)
     return output_df
 
+def compute_etas_for_markov(freqs_neighbor,freqs,seq_dict,inv_dict):
+    total_pairs = len(freqs.index)
+    #now lets find the eta value for the foreground bin
+    seq_dict_length = len(seq_dict)
+    eta = np.zeros((total_pairs-1,seq_dict_length**2))
+    # first we will do the first position.
+    for q in range(seq_dict_length): #loop through each possible pairing
+        for m in range(seq_dict_length): # loop through bases again to get pairs
+            #compute the value 
+            eta[0,q*seq_dict_length+m] = freqs_neighbor.loc[0,'ct_' +  \
+                inv_dict[q] + inv_dict[m]]*(np.sqrt(freqs.loc[0,'ct_' +  \
+                inv_dict[q]]/freqs.loc[1,'ct_' +  \
+                inv_dict[m]]))
+    
+    # now lets do the middle values
+    # loop through positions
+    for i in range(1,total_pairs - 2):
+        for q in range(seq_dict_length): #loop through each possible pairing
+            for m in range(seq_dict_length): # loop through bases again to get pairs
+                #compute the value 
+                eta[i,q*seq_dict_length+m] = freqs_neighbor.loc[i,'ct_' +  \
+                    inv_dict[q] + inv_dict[m]]/(np.sqrt(freqs.loc[i,'ct_' +  \
+                    inv_dict[q]]*freqs.loc[i+1,'ct_' +  \
+                    inv_dict[m]]))
+    
+    for q in range(seq_dict_length): #loop through each possible pairing
+        for m in range(seq_dict_length): # loop through bases again to get pairs
+            #compute the value 
+            eta[total_pairs-2,q*seq_dict_length+m] = freqs_neighbor.loc[total_pairs-2,'ct_' + \
+                inv_dict[q] + inv_dict[m]]*(np.sqrt(freqs.loc[total_pairs-1,'ct_' +  \
+                inv_dict[m]]/freqs.loc[total_pairs-2,'ct_' +  \
+                inv_dict[q]]))
+
+    #take the log of each entry
+    eta = np.log(eta)
+    return eta
+
+def Markov(df,dicttype,foreground=1,background=0,pseudocounts=1):
+    '''Learn models using berg von hippel model. The foreground sequences are
+         usually bin_1 and background in bin_0, this can be changed via flags.''' 
+    seq_dict,inv_dict = utils.choose_dict(dicttype)
+    seq_dict_length = len(seq_dict)
+    #check that the foreground and background chosen columns actually exist.
+    columns_to_check = {'ct_' + str(foreground),'ct_' + str(background)}
+    if not columns_to_check.issubset(set(df.columns)):
+        raise SortSeqError('Foreground or Background column does not exist!')
+
+    #get counts of each base at each position
+    foreground_counts = utils.profile_counts(df,dicttype,bin_k=foreground)   
+    background_counts = utils.profile_counts(df,dicttype,bin_k=background)    
+    binheaders = utils.get_column_headers(foreground_counts)
+    #get counts of each neighbor pair at each position
+    foreground_counts_neighbor = utils.profile_counts_neighbor(df,dicttype,bin_k=foreground)   
+    background_counts_neighbor = utils.profile_counts_neighbor(df,dicttype,bin_k=background)
+    binheaders_neighbor = utils.get_column_headers(foreground_counts_neighbor)
+    #add pseudocounts to each position
+    foreground_counts_neighbor[binheaders_neighbor] = \
+        foreground_counts_neighbor[binheaders_neighbor] + pseudocounts
+    background_counts_neighbor[binheaders_neighbor] = \
+        background_counts_neighbor[binheaders_neighbor] + pseudocounts
+
+    # do the same for the single base counts
+
+    foreground_counts[binheaders] = foreground_counts[binheaders] + pseudocounts*seq_dict_length
+    background_counts[binheaders] = background_counts[binheaders] + pseudocounts*seq_dict_length
+
+    #make sure there are no zeros in counts after addition of pseudocounts
+    ct_headers = utils.get_column_headers(foreground_counts_neighbor)
+    if foreground_counts_neighbor[ct_headers].isin([0]).values.any():
+        raise SortSeqError('''There are some bases without any representation in\
+            the foreground data, you should use pseudocounts to avoid failure \
+            of the learning method''')
+    if background_counts_neighbor[ct_headers].isin([0]).values.any():
+        raise SortSeqError('''There are some bases without any representation in\
+            the background data, you should use pseudocounts to avoid failure \
+            of the learning method''')
+    #We will now normalize to compute our model values, we will do this by dividing each row by the
+    #sum of all the rows (aka, dividing by counts + 16*psuedocounts)
+    foreground_freqs_neighbor = foreground_counts_neighbor.copy()
+    background_freqs_neighbor = background_counts_neighbor.copy()
+    foreground_freqs_neighbor[binheaders_neighbor] = \
+        foreground_freqs_neighbor[binheaders_neighbor].div( \
+        foreground_freqs_neighbor[binheaders_neighbor].sum(axis=1),axis=0)
+    background_freqs_neighbor[binheaders_neighbor] = \
+        background_freqs_neighbor[binheaders_neighbor].div( \
+        background_freqs_neighbor[binheaders_neighbor].sum(axis=1),axis=0)
+    print foreground_freqs_neighbor
+    #normalize to compute frequencies
+    foreground_freqs = foreground_counts.copy()
+    background_freqs = background_counts.copy()
+    foreground_freqs[binheaders] = foreground_freqs[binheaders].div( \
+        foreground_freqs[binheaders].sum(axis=1),axis=0)
+    background_freqs[binheaders] = background_freqs[binheaders].div( \
+        background_freqs[binheaders].sum(axis=1),axis=0)
+
+    eta_fg = compute_etas_for_markov(foreground_freqs_neighbor,foreground_freqs,seq_dict,inv_dict)
+
+    #now lets find the eta value for the background bin
+    
+    eta_bg = compute_etas_for_markov(background_freqs_neighbor,background_freqs,seq_dict,inv_dict)
+    #subtract etas to create model
+    model = eta_fg - eta_bg
+
+    #turn model into data frame.
+    model_df = pd.DataFrame(model)
+    #label columns
+    model_df.columns = ['val_' + inv_dict[q] + inv_dict[m] for q in range(seq_dict_length) for m in range(seq_dict_length)]
+    model_df['pos'] = foreground_counts_neighbor['pos']
+    
+    return model_df
+
 
 def Compute_Least_Squares(raveledmat,batch,sw,alpha=0):
     '''Ridge regression is the only sklearn regressor that supports sample
@@ -120,7 +353,7 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
     db=None,iteration=30000,burnin=1000,thin=10,\
     runnum=0,initialize='LS',start=0,end=None,foreground=1,\
     background=0,alpha=0,pseudocounts=1,test=False,drop_library=False,\
-    verbose=False):
+    verbose=False,tm=None):
     
     # Determine dictionary
     seq_cols = qc.get_cols_from_df(df,'seqs')
@@ -171,6 +404,14 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
         emat = Berg_von_Hippel(
             df,dicttype,foreground=foreground,background=background,
             pseudocounts=pseudocounts)
+    if lm == 'MK': # if your learning method is first order markov
+        #raise error if model type is not NBR matrix
+        if modeltype != 'NBR':
+             raise ValueError('You must have a NBR modeltype')
+        emat = Markov(df,dicttype,foreground=foreground,background=background,
+            pseudocounts=pseudocounts)
+    if lm == 'PR':
+        emat = convex_opt(df,seq_dict,inv_dict,col_headers,tm=tm)
     if lm == 'LS':
         '''First check that is we don't have a penalty for ridge regression,
             that we at least have all possible base values so that the analysis
@@ -229,6 +470,8 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
         emat = MaximizeMI_memsaver(
                 seq_mat,df.copy(),emat_0,wtrow,db=db,iteration=iteration,burnin=burnin,
                 thin=thin,runnum=runnum,verbose=verbose)
+
+    #We have infered out matrix.
     #now format the energy matrices to get them ready to output
     if (lm == 'IM' or lm == 'memsaver'):       
         if modeltype == 'NBR':
@@ -242,7 +485,14 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
         emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
         emat_typical = emat[emat_cols]
         emat_typical = (gauge.fix_matrix((np.array(emat_typical))))
-        
+
+    elif (lm == 'MK'):
+        '''The model is a first order markov model and its gauge does not need
+            to be changed.'''
+        emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
+        emat_typical = emat[emat_cols]
+    elif lm == 'PR':
+        emat_typical = np.transpose(emat)
     else: #must be Least squares
         emat_typical = utils.emat_typical_parameterization(emat,len(seq_dict))        
         if modeltype == 'NBR':
@@ -258,7 +508,6 @@ def main(df,lm='IM',modeltype='MAT',LS_means_std=None,\
     else:
         pos = pd.Series(range(start,start + len(df[seq_col_name][0])),name='pos')    
     output_df = pd.concat([pos,em],axis=1)
-
     # Validate model and return
     output_df = qc.validate_model(output_df,fix=True)
     return output_df
@@ -287,7 +536,7 @@ def wrapper(args):
         runnum=args.runnum,initialize=args.initialize,\
         foreground=args.foreground,background=args.background,\
         alpha=args.penalty,pseudocounts=args.pseudocounts,
-        verbose=args.verbose)
+        verbose=args.verbose,tm=args.tm)
 
     io.write(output_df,outloc)
 
@@ -303,7 +552,7 @@ def add_subparser(subparsers):
         help='Position to end your analyzed region')
     p.add_argument('--penalty',type=float,default=0.5,help='Ridge Regression Penalty')
     p.add_argument(
-        '-lm','--learningmethod',choices=['ER','LS','IM'],default='LS',
+        '-lm','--learningmethod',choices=['ER','LS','IM','MK','PR'],default='LS',
         help = '''Algorithm for determining matrix parameters.''')
     p.add_argument(
         '-mt','--modeltype', choices=['MAT','NBR'], default='MAT')
@@ -322,6 +571,8 @@ def add_subparser(subparsers):
     p.add_argument(
         '--initialize',default='LS',choices=['rand','LS'],
         help='''How to choose starting point for MCMC''')
+    p.add_argument(
+        '--tm',default=None,help='''How to choose starting point for MCMC''')
     p.add_argument(
         '-rn','--runnum',default=0,help='''For multiple runs this will change
         output data base file name''')            

@@ -33,6 +33,9 @@ import mpathic.sortseq_for_doc as sortseq_for_doc
 import mpathic.run_tests as run_tests
 run_tests.add_subparser(subparsers)
 
+import mpathic.draw as draw
+draw.add_subparser(subparsers)
+
 import mpathic.evaluate_model as evaluate_model
 evaluate_model.add_subparser(subparsers)
 
