@@ -52,7 +52,7 @@ def main(dataset_df,model_df,left=None,right=None):
 
     #select target sequence region
     out_df = dataset_df.copy()
-    out_df.loc[:,'seq'] = out_df.loc[:,'seq'].str.slice(start,end)
+    out_df.loc[:,seqcol] = out_df.loc[:,seqcol].str.slice(start,end)
 
     #Create model object of correct type
     if modeltype == 'MAT':
@@ -64,8 +64,8 @@ def main(dataset_df,model_df,left=None,right=None):
  
     # Compute values
     out_df['val'] = mymodel.evaluate(out_df)
-
     # Validate dataframe and return
+    print out_df['val']
     return qc.validate_dataset(out_df,fix=True)
 
 

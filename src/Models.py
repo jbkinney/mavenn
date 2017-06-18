@@ -2,6 +2,7 @@
 '''Class container for Model Handling in the sortseq package. We currently
     only support linear and nearest neighbor models for use within the package.
     In the future, support for additional model types will be added'''
+from __future__ import division
 import importlib
 import sys
 import numpy as np
@@ -189,8 +190,8 @@ class NoiseModel():
         T_counts = np.sum(df['ct'])
         nexp = np.zeros(T_counts)
         counter = 0
-        
-        for i,seq in enumerate(df['seq']):
+        seqcol = [c for c in df.columns if qc.is_col_type(c,'seqs')][0]
+        for i,seq in enumerate(df[seqcol]):
             exp = df['val'][i]
             counts = df['ct'][i]
             explist = [exp for z in range(counts)]
@@ -255,11 +256,14 @@ class NormalNoise(NoiseModel):
 class PoissonNoise(NoiseModel):
     '''Add Noise for mpra experiment Expression Measurements'''
 
-    def gennoisyexp(self,df,T_LibCounts,T_mRNACounts):
-        exp = np.exp(df['val'])
+    def gennoisyexp(self,df,T_LibCounts,T_mRNACounts,mult=1):
+        exp = np.exp(-df['val']*mult)
+        
         libcounts = df['ct']
+        
         weights = exp*libcounts
         meanexp = T_mRNACounts*weights/np.sum(weights)
+        
         meanlibcounts = libcounts/np.sum(libcounts)*T_LibCounts
         noisyexp = np.random.poisson(lam=meanexp)
         noisylibcounts = np.random.poisson(lam=meanlibcounts)

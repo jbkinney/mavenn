@@ -1299,9 +1299,6 @@ def validate_input_arguments_for_learn_model(modeltype=None,learningmethod=None,
         raise SortSeqError('Foreground and background bins cannot be the \
             same')
 
-    if modeltype == 'NBR' and (learningmethod == 'ER'):
-        raise SortSeqError('''Enrichment Ratio learning method cannot compute\
-            nearest neighbor models''') 
     if start is not None:
         if start < 0:
             raise SortSeqError('Start argument must be positive')

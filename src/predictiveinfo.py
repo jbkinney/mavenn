@@ -19,11 +19,13 @@ import mpathic.qc as qc
 import mpathic.numerics as numerics
 from mpathic import SortSeqError
 import mpathic.io as io
+import matplotlib.pyplot as plt
 
 
 def main(
         data_df,model_df,
-        start=0,end=None,err=False,coarse_graining_level=0):
+        start=0,end=None,err=False,coarse_graining_level=0,
+        rsquared=False,return_freg=False):
     dicttype, modeltype = qc.get_model_type(model_df)
     seq_cols = qc.get_cols_from_df(data_df,'seqs')
     if not len(seq_cols)==1:
@@ -60,8 +62,15 @@ def main(
     temp_sorted = temp_df.sort_values(by='val')
     temp_sorted.reset_index(inplace=True,drop=True)
     #we must divide by the total number of counts in each bin for the MI calculator
-    #temp_sorted[col_headers] = temp_sorted[col_headers].div(temp_sorted['ct'],axis=0)     
-    MI = EstimateMutualInfoforMImax.alt4(temp_sorted,coarse_graining_level=coarse_graining_level)
+    #temp_sorted[col_headers] = temp_sorted[col_headers].div(temp_sorted['ct'],axis=0)  
+    if return_freg:
+        fig,ax = plt.subplots()   
+        MI,freg = EstimateMutualInfoforMImax.alt4(temp_sorted,coarse_graining_level=coarse_graining_level,return_freg=return_freg)
+        plt.imshow(freg,interpolation='nearest',aspect='auto')
+        
+        plt.savefig(return_freg)
+    else:
+        MI = EstimateMutualInfoforMImax.alt4(temp_sorted,coarse_graining_level=coarse_graining_level,return_freg=return_freg)
     if not err:
         Std = np.NaN
     else:
@@ -73,7 +82,10 @@ def main(
             sub_MI[i],sub_std = main(
                 sub_df,model_df,err=False)
         Std = np.std(sub_MI)/np.sqrt(2)
-    return MI,Std
+    if rsquared:
+        return (1-2**(-2*MI)),(1-2**(-2*Std))
+    else:
+        return MI,Std
      
 def wrapper(args):
     
@@ -85,7 +97,8 @@ def wrapper(args):
         model_df = io.load_model(sys.stdin)
     MI,Std = main(
         data_df,model_df,start=args.start,
-        end=args.end,err=args.err,coarse_graining_level = args.coarse_graining_level)
+        end=args.end,err=args.err,coarse_graining_level = args.coarse_graining_level,
+        rsquared=args.rsquared,return_freg=args.return_freg)
     output_df = pd.DataFrame([MI],columns=['info'])
     if args.err:
         output_df = pd.concat([output_df,pd.Series(Std,name='info_err')],axis=1)
@@ -101,6 +114,7 @@ def wrapper(args):
 # Connects argparse to wrapper
 def add_subparser(subparsers):
     p = subparsers.add_parser('predictiveinfo')
+    p.add_argument('-rs','--rsquared',action='store_true',help='return effective r squared')
     p.add_argument('-ds','--dataset')
     p.add_argument(
         '--err',action='store_true',help='''Flag to use if you want to
@@ -111,6 +125,9 @@ def add_subparser(subparsers):
     p.add_argument(
         '-e','--end',type=int,default = None, 
         help='''Position to end your analyzed region''')
+    p.add_argument(
+        '-fr','--return_freg',type=str,
+        help='''return regularized plot and save it to this file name''')
     p.add_argument(
         '-cg','--coarse_graining_level',default=0,type=float,help='''coarse graining
         level to use for mutual information calculation, higher values will

@@ -96,7 +96,8 @@ def seqs2array_for_matmodel(list seq_list, bytes seq_type, bool safe=True):
 
 def seqs2array_for_nbrmodel(list seq_list, bytes seq_type, safe=True):
     """
-    Converts a list of sequences (all of which must be the same length) to a numpy array to be used for neighbor model evalution
+    Converts a list of sequences (all of which must be the same length) 
+    to a numpy array to be used for neighbor model evalution
     """
     cdef np.ndarray[DTYPE_t, ndim=2] mat
     cdef bytes seq, dichar
@@ -133,6 +134,50 @@ def seqs2array_for_nbrmodel(list seq_list, bytes seq_type, safe=True):
             dichar = seq[i:i+2]
             k = c_to_i_dict[<bytes> dichar]
             mat[n,num_dichars*i+k] = 1
+    return mat
+
+def seqs2array_for_pairmodel(list seq_list, bytes seq_type, safe=True):
+    """
+    Converts a list of sequences (all of which must be the same length) 
+    to a numpy array to be used for neighbor model evalution
+    """
+    cdef np.ndarray[DTYPE_t, ndim=2] mat
+    cdef bytes seq, dichar
+    cdef int num_seqs, seq_length, num_dichars, i, n, k, index
+    cdef dict c_to_i_dict
+
+    # Validate seq_type if in safe mode
+    if safe and (not seq_type in qc.seqtypes):
+        raise SortSeqError('Invalid seq_type: %s.'%seq_type)
+
+    # Get character dictionary
+    c_to_i_dict = qc.char_to_nbr_index_dicts[seq_type]
+    num_dichars = len(c_to_i_dict)
+
+    # Initialize matrix
+    num_seqs = len(seq_list)
+    seq_length = len(seq_list[0])
+    mat = np.zeros(\
+        [num_seqs,round(sp.misc.comb(seq_length,2))*num_dichars], dtype=DTYPE)
+
+    # Fill matrix row by row
+    for n, seq in enumerate(seq_list):
+
+        # Validate sequence composition if in safe mode
+        if safe and qc.seqerr_re_dict[seq_type].search(seq):
+            raise SortSeqError(\
+                'Invalid character found in %s sequence.'%seq_type)
+
+        # Validate sequence length if in safe mode
+        if safe and len(seq)!=seq_length:
+            raise SortSeqError('Sequences are not all the same length.')
+        index = 0 
+        # Fill in array
+        for i,bp in enumerate(seq):        
+            for z in range(i+1,seq_length):
+                k = (index*num_dichars + c_to_i_dict[bp + seq[z]])
+                index = index + 1
+                mat[n,k] = 1
     return mat
 
 

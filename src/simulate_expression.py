@@ -14,13 +14,26 @@ import mpathic.qc as qc
 from mpathic import SortSeqError
 import mpathic.evaluate_model as evaluate_model
 
-def main(df,model_df,T_LibCounts,T_mRNACounts,start=0,end=None):
-   df = evaluate_model.main(df,model_df,left=start,right=None)
-   #We assume only noise is binomial noise(which we approx as poisson)
-   mymodel = Models.PoissonNoise()
-   #calculate new expression levels based on energies of each sequence.	 
-   libcounts,expcounts = mymodel.gennoisyexp(df,T_LibCounts,T_mRNACounts)
-   return libcounts,expcounts
+def main(df,model_df,T_LibCounts,T_mRNACounts,start=0,end=None,mult=1):
+   output_df = pd.DataFrame()
+   for chunk in df:
+       chunk.reset_index(inplace=True,drop=True)
+       chunk = evaluate_model.main(chunk,model_df,left=start,right=None)
+       #We assume only noise is binomial noise(which we approx as poisson)
+       mymodel = Models.PoissonNoise()
+       #calculate new expression levels based on energies of each sequence.	 
+       libcounts,expcounts = mymodel.gennoisyexp(chunk,T_LibCounts,T_mRNACounts \
+       ,mult=mult)
+       temp_df = pd.DataFrame()
+       lc = pd.Series(libcounts,name='ct_0')
+       ec = pd.Series(expcounts,name='ct_1')
+       chunk['ct_0'] = lc
+       chunk['ct_1'] = ec
+       chunk['ct'] = chunk[['ct_0','ct_1']].sum(axis=1)
+       chunk = chunk[chunk['ct']!=0]
+       del chunk['val']
+       output_df = pd.concat([output_df,chunk],axis=0).copy()
+   return output_df
     
 # Define commandline wrapper
 def wrapper(args):
@@ -30,20 +43,15 @@ def wrapper(args):
         raise SortSeqError('Counts must be greater than zero')
     model_df = io.load_model(args.model)
     if args.i:
-        df = pd.io.parsers.read_csv(args.i,delim_whitespace=True)
+        df = pd.io.parsers.read_csv(args.i,delim_whitespace=True \
+            ,chunksize=args.chunksize)
     else:
-        df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True)
-    #make sure the library is not already sorted
-    if len(utils.get_column_headers(df)) > 0:
-         raise SortSeqError('Library already sorted!')
-    header = df.columns
-    libcounts,expcounts = main(df,model_df,T_LibCounts,T_mRNACounts,start=args.start,end=args.end)
-    #add these counts to input dataframe
-    lc = pd.Series(libcounts,name='ct_0')
-    ec = pd.Series(expcounts,name='ct_1')
-    df['ct_0'] = lc
-    df['ct_1'] = ec
-    df['ct'] = df[['ct_0','ct_1']].sum(axis=1)
+        df = pd.io.parsers.read_csv(sys.stdin,delim_whitespace=True, \
+            chunksize=args.chunksize)
+   
+    output_df = main(df,model_df,T_LibCounts,T_mRNACounts,start=args.start, \
+        end=args.end,mult=args.mult)
+    
     if args.out:
         outloc = open(args.out,'w')
     else:
@@ -51,8 +59,9 @@ def wrapper(args):
     pd.set_option('max_colwidth',int(1e8))
 
     # Validate dataframe for writting
-    df = qc.validate_dataset(df,fix=True)
-    io.write(df,outloc)
+    output_df.reset_index(inplace=True,drop=True)
+    df = qc.validate_dataset(output_df,fix=True)
+    io.write(output_df,outloc)
         
 
 # Connects argparse to wrapper
@@ -68,6 +77,7 @@ def add_subparser(subparsers):
         help='''
         MAT=FileName,NBR=Filename.
         ''')
+    p.add_argument('-cs','--chunksize',default=50000,type=int)
     p.add_argument(
         '-s','--start',type=int,default=0,
         help ='Position to start your analyzed region')
@@ -78,4 +88,6 @@ def add_subparser(subparsers):
         '-i', '--i', default=None,help='''Input file, otherwise input
         through the standard input.''')
     p.add_argument('-o', '--out', default=None)
+    p.add_argument('--mult',type=float,default=1,help='''Number to multiply your
+        model output by''')
     p.set_defaults(func=wrapper)
