@@ -1,7 +1,0 @@
-exp	file    Model_Type
-BVH_on_dms1	dms_1_bvh_jan2016    LinearEmat
-dms1_ratio_estimation	dms_1_ratio_estimation_formatted	LinearEmat
-dms1_dms	dms_1_prefs_formatted	LinearEmat
-BVH_on_dms2	dms_2_bvh_jan2016    LinearEmat
-dms1_ratio_estimation	dms_2_ratio_estimation_formatted	LinearEmat
-dms2_dms	dms_2_prefs_formatted	LinearEmat

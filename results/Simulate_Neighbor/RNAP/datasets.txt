@@ -1,6 +1,0 @@
-exp	file
-2_bin_train    RNAP_2_bin_sorted
-2_bin_test     RNAP_2_bin_sorted_test
-10_bin_train   RNAP_10_bin_sorted
-10_bin_test    RNAP_10_bin_sorted_test
-
