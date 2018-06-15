@@ -14,7 +14,6 @@ pip install mpathic
 ```
 
 * Documentation: http://mpathic.readthedocs.io/en/latest/
-* Github: https://github.com/atareen/mpathic
 
 ## Requriements
 
