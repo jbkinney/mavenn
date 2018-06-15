@@ -1,0 +1,18 @@
+#commands for the dms_tools package which carry out the inference that we then compare to.
+
+#Simulation with 2 bins ratio_estimation
+
+dms_inferprefs --chartype DNA --ratio_estimation 1 formatted_datasets/counts_2_bin_0_dms formatted_datasets/counts_2_bin_2_dms outfile
+
+#dms1 MCMC
+
+dms_inferprefs --chartype DNA formatted_datasets/counts_2_bin_0_dms formatted_datasets/counts_2_bin_2_dms outfile
+
+
+#dms2 ratio_estimation
+
+dms_inferprefs --chartype DNA --ratio_estimation 1 formatted_datasets/counts_10_bin_0_dms formatted_datasets/counts_10_bin_10_dms outfile
+
+#dms2 MCMC
+
+dms_inferprefs --chartype DNA formatted_datasets/counts_10_bin_0_dms formatted_datasets/counts_10_bin_10_dms outfile

@@ -1,0 +1,4 @@
+bin	file
+0	bin_0_raw.txt
+1	bin_1_raw.txt
+2	bin_2_raw.txt

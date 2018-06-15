@@ -1,0 +1,14 @@
+good: mpathic validate -t profile_ct -i profile_ct_good.txt 
+good: mpathic validate -t profile_ct -i profile_ct_good_pro.txt 
+good: mpathic validate -t profile_ct -i profile_ct_good_rna.txt
+good: mpathic validate -t profile_ct -i profile_ct_good_shifted.txt
+good: mpathic validate -t profile_ct -i profile_ct_good_ctmissing.txt
+
+bad:  mpathic validate -t profile_ct -i bacterium.jpg 
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_fraccount.txt
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_negcount.txt
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_negpos.txt
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_nonconsecpos.txt
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_unevenct.txt
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_wrongalphabet.txt
+bad:  mpathic validate -t profile_ct -i profile_ct_bad_wrongsum.txt

@@ -1,0 +1,6 @@
+exp	file
+full-wt	~/tests_on_sortseq/all_tests/full-wt.txt
+rnap-wt	~/tests_on_sortseq/all_tests/rnap-wt.txt
+full-0	~/tests_on_sortseq/all_tests/full-0.txt
+full-150	~/tests_on_sortseq/all_tests/full-150.txt
+full-500	~/tests_on_sortseq/all_tests/full-500.txt

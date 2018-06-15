@@ -1,0 +1,5 @@
+# Some comments
+bin	file
+0	bin_0.txt
+1	bin_1.txt
+2	bin_2.txt

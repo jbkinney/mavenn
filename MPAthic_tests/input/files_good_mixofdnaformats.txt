@@ -1,0 +1,9 @@
+bin	file
+1	bin_hbsites.fa
+2	bin_hbsites.fas
+3	bin_hbsites.fasta
+4	bin_hbsites.ffn
+5	bin_hbsites.fna
+6	bin_hbsites.fsa
+7	bin_hbsites.txt
+8	bin_hbsites_noct.txt

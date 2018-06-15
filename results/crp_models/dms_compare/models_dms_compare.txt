@@ -1,0 +1,16 @@
+exp	file    Model_Type
+full-wt_BVH	full-wt_bvh_jan2016    LinearEmat
+full-wt_ratio	full-wt_ratio_estimation_formatted     LinearEmat
+full-wt_dms	rnap_dms_MCMC_full-wt_formatted     LinearEmat
+rnap-wt_BVH	rnap-wt_bvh_jan2016    LinearEmat
+rnap-wt_ratio	rnap_ratio_estimation_formatted     LinearEmat
+rnap-wt_dms	rnap_dms_MCMC_rnap-wt_formatted     LinearEmat
+full-0_BVH	full-0_bvh_jan2016    LinearEmat
+full-0_ratio	full-0_ratio_estimation_formatted     LinearEmat
+full-0_dms	rnap_dms_MCMC_full-0_formatted     LinearEmat
+full-150_BVH	full-150_bvh_jan2016    LinearEmat
+full-150_ratio	full-150_ratio_estimation_formatted     LinearEmat
+full-150_dms	rnap_dms_MCMC_full-150_formatted     LinearEmat
+full-500_BVH	full-500_bvh_jan2016    LinearEmat 
+full-500_ratio	full-500_ratio_estimation_formatted     LinearEmat
+full-500_dms	rnap_dms_MCMC_full-500_formatted    LinearEmat

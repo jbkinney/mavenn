@@ -1,0 +1,111 @@
+# simulate sort seq
+
+import mpathic
+loader = mpathic.io
+mp_df = loader.load_model('./mpathic/data/sortseq/full-0/crp_model.txt')
+filename = "./mpathic/data/sortseq/full-0/data_small.txt"
+df = loader.load_dataset(filename)
+mpathic.simulate_sort_class(df=df,mp=mp_df)
+
+sample output:
+
+   ct  ct_0  ct_1  ct_2  ct_3  ct_4                     seq  ct_1  ct_2  ct_3
+0   4     0     0     1     0     0  AAAAAAGGTGAGTTAGCTAACT     1     0     0
+1   3     0     0     0     0     1  AAAAAATATAAGTTAGCTCGCT     0     1     0
+2   4     0     0     0     1     0  AAAAAATATGATTTAGCTGACT     0     1     0
+3   3     0     0     0     0     1  AAAAAATGTCAGTTAGCTCACT     0     0     1
+4   4     0     0     1     0     0  AAAAAATGTGAATTATCGCACT     0     1     0
+
+
+# learn model 
+
+import mpathic as mpa
+loaded_df = mpa.io.load_dataset("./mpathic/data/sortseq/full-0/data.txt")
+mpa.learn_model_class(df=loaded_df,verbose=True,lm='ER')
+
+# evaluate_model
+
+import mpathic as mpa
+model = mpa.io.load_model("./mpathic/data/sortseq/full-0/crp_model.txt")
+dataset = mpa.io.load_dataset("./mpathic/data/sortseq/full-0/data.txt")
+mpa.evaluate_model_class(dataset_df = dataset, model_df = model)
+
+output: 
+
+0        0.348108
+1       -0.248134
+2        0.009507
+3        0.238852
+4       -0.112121
+5       -0.048588
+6        0.387298
+7        0.487145
+8        0.316576
+9        0.273363
+10       0.097518
+11       0.115285
+12       0.268131
+13       0.035808
+14      -0.239748
+15      -0.079976
+
+# scan model
+
+import mpathic as mpa
+model = mpa.io.load_model("./mpathic/data/sortseq/full-0/crp_model.txt")
+fastafile = "./mpathic/examples/genome_ecoli_1000lines.fa"
+contig = mpa.io.load_contigs_from_fasta(fastafile,model)
+mpa.scan_model_class(model_df = model, contig_list = contig)
+
+output
+
+        val                     seq   left  right ori     contig
+0  2.040628  GGTCGTTTGCCTGCGCCGTGCA  11710  11731   +  MG1655.fa
+1  2.006080  GGAAGTCGCCGCCCGCACCGCT  74727  74748   -  MG1655.fa
+2  1.996992  TGGGTGTGGCGCGTGACCTGTT  45329  45350   +  MG1655.fa
+3  1.920821  GGTATGTGTCGCCAGCCAGGCA  38203  38224   +  MG1655.fa
+4  1.879852  GGTGATTTTGGCGTGGTGGCGT  73077  73098   -  MG1655.fa
+5  1.866188  GTTCTTTTCCGCGGGCTGGGAT  35967  35988   -  MG1655.fa
+6  1.866156  GGCTGGTGCGCCCGGACCTGTT  28010  28031   +  MG1655.fa
+7  1.862953  TGGCGTTAGCGCGTTGTCTGGT  72493  72514   -  MG1655.fa
+8  1.860541  GGAGTTGCTGCCCAGCTGCGCT  33605  33626   -  MG1655.fa
+9  1.859814  TGCATTTTGGCCCTGCCGCTGA  44145  44166   +  MG1655.fa
+
+
+# predictive info
+
+#model = mpa.io.load_model("./mpathic/data/sortseq/full-0/crp_model.txt")
+
+import mpathic as mpa
+model = mpa.io.load_model("./mpathic/MPAthic_tests/input/model_good_mat.txt")
+dataset = mpa.io.load_dataset("./mpathic/MPAthic_tests/input/dataset_crp.txt")
+mpa.predictiveinfo_class(data_df = dataset, model_df = model,start=52)
+
+# these dont work:
+import mpathic as mpa
+model = mpa.io.load_model("./mpathic/MPAthic_tests/input/model_good_mat.txt")
+#dataset = mpa.io.load_dataset("./mpathic/MPAthic_tests/input/dataset_crp.txt")
+
+# simulate library
+
+import mpathic as mpa
+mpa.simulate_library_class(wtseq="ACGTGTGCAAGTA")
+
+# profile freq class
+
+>>> import mpathic as mpa
+>>> mpa.profile_freq_class()
+
+
+# profile mut class
+
+>>> import mpathic as mpa
+>>> mpa.profile_mut_class()
+
+# profile info class
+
+>>> import mpathic as mpa
+>>> mpa.profile_info_class()
+
+
+

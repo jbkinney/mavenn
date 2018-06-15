@@ -1,0 +1,16 @@
+validation: | mpathic validate -t sitelist
+
+good: mpathic scan_model -m model_crp_mat.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
+good: mpathic scan_model -m model_crp_nbr.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
+good: mpathic scan_model -m model_crp_rna.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
+good: mpathic scan_model -m model_crp_mat.txt -s AAGTGAGATGGCAATCTAATTC
+good: cat fasta_plac.txt | mpathic scan_model -m model_crp_mat.txt
+good: mpathic scan_model -m model_crp_mat.txt -i fasta_plac.txt
+good: mpathic scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt
+good: mpathic scan_model -m model_crp_mat.txt -i genome_ecoli_1000lines.fa -n 100
+
+bad:  mpathic scan_model -m model_crp_rna.txt -s AAAAAAAGTGAGATGGCAATCTAATTCGGCACCCCAGGTTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG
+bad:  mpathic scan_model -m model_crp_mat.txt -s AAAAAAAGUGAGAUGGCAAUCUAAUUCGGCACCCCAGGUUUUACACUUUAUGCUUCCGGCUCGUAUGUUGUGUGG
+bad:  mpathic scan_model -m model_crp_mat.txt -s AAAAAAAGTGAG
+bad:  mpathic scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -n -100
+good: mpathic scan_model -m model_crp_mat.txt -i fasta_plac_nonames.txt -k 10

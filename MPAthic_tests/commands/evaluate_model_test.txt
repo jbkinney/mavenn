@@ -1,0 +1,19 @@
+validation: | mpathic validate -t dataset -f
+
+# Run on truncated dataset
+good: mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp_head.txt
+#good: mpathic evaluate_model -m model_crp_nbr.txt -i dataset_crp_head.txt
+
+# Run on full dataset
+#good: mpathic evaluate_model -i dataset_crp.txt -m model_crp_nbr.txt -f
+#good: mpathic evaluate_model -i dataset_crp.txt -m model_crp_mat.txt -f
+
+# Run on full sliced datasets
+#good: mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 0  -f
+#good: mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 10 -f
+#bad:  mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 60 -f
+#good: mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 74 -f
+#good: mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 60 -f
+#bad:  mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -r 10 -f
+#bad:  mpathic evaluate_model -m model_crp_mat.txt -i dataset_crp.txt -l 0 -r 21 -f
+

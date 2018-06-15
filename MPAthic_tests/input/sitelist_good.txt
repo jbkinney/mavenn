@@ -1,0 +1,4 @@
+     val      seq     left   right  ori   contig    
+    6.34    ACCAT   234321  234325    +     chr1    
+    5.03    ACCAT   453451  453455    +     chr1    
+    3.25    TCAGG    45623   45627    -     chr3    

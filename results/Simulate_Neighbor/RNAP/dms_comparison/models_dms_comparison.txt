@@ -1,0 +1,7 @@
+exp	file    Model_Type
+2_bin_BVH       2_bin_sorted_bvh_jan2016	LinearEmat
+2_bin_ratio	2_bin_sorted_ratio_estimation_formatted LinearEmat
+2_bin_dms	2_bin_sorted_dms_formatted LinearEmat
+10_bin_BVH	10_bin_sorted_bvh_jan2016       LinearEmat
+10_bin_ratio	10_bin_sorted_ratio_estimation_formatted LinearEmat
+10_bin_dms	10_bin_sorted_dms_formatted LinearEmat

@@ -1,0 +1,34 @@
+#commands for the dms_tools package which carry out the inference that we then compare to. To get model parameters, you must take the negative
+#logarithm of the infered preferences.
+
+#crp-wt ratio_estimation
+
+dms_inferprefs --chartype DNA --ratio_estimation 1 formatted_datasets/counts_0_crp-wt_dms formatted_datasets/counts_9_crp-wt_dms outfile
+
+#crp-wt MCMC
+
+dms_inferprefs --chartype DNA formatted_datasets/counts_0_crp-wt_dms formatted_datasets/counts_9_crp-wt_dms outfile
+
+#full-wt ratio_estimation
+
+dms_inferprefs --chartype DNA --ratio_estimation 1 formatted_datasets/counts_0_full-wt_dms formatted_datasets/counts_9_full-wt_dms outfile
+
+#full-wt MCMC
+
+dms_inferprefs --chartype DNA formatted_datasets/counts_0_full-wt_dms formatted_datasets/counts_9_full-wt_dms outfile
+
+#full-150 ratio_estimation
+
+dms_inferprefs --chartype DNA --ratio_estimation 1 formatted_datasets/counts_0_full-150_dms formatted_datasets/counts_4_full-150-wt_dms outfile
+
+#full-150 MCMC
+
+dms_inferprefs --chartype DNA formatted_datasets/counts_0_full-150_dms formatted_datasets/counts_4_full-150_dms outfile
+
+#full-500 ratio_estimation
+
+dms_inferprefs --chartype DNA --ratio_estimation 1 formatted_datasets/counts_0_full-500_dms formatted_datasets/counts_4_full-500-wt_dms outfile
+
+#full-500 MCMC
+
+dms_inferprefs --chartype DNA formatted_datasets/counts_0_full-500_dms formatted_datasets/counts_4_full-500_dms outfile
