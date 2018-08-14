@@ -6,14 +6,18 @@ from __future__ import division
 import importlib
 import sys
 import numpy as np
-import utils as utils
+#import utils as utils
+from mpathic.src import utils
 import scipy as sp
 import pandas as pd
 import pdb
-import qc as qc
-import io_local as io
+#import qc as qc
+from mpathic.src import qc
+#import io_local as io
+from mpathic.src import io_local as io
 
-import fast
+#import fast
+from mpathic.src import fast
 
 #from setuptools import Extension
 #Extension("fast",["fast.c"])
@@ -23,7 +27,8 @@ import time
 #from src.__init__ import SortSeqError
 #from __init__ import SortSeqError
 from mpathic import SortSeqError
-import numerics as numerics
+#import numerics as numerics
+from mpathic.src import numerics
 
 
 class ExpModel:
@@ -76,11 +81,38 @@ class LinearModel(ExpModel):
         # Compute seqmats
         t0 = time.time()
 
-        print('before fast')
-        print(fast.sources)
-        sys.exit()
+        # fast.seqs2array_for_matmodel expects seqtype to be bytes
+        #self.seqtype = str.encode(self.seqtype) -> type bytes
+        #print(self.seqtype)
+        #self.seqtype = str.encode(self.seqtype)
+        #self.seqtype = str(self.seqtype).encode()
+        #print('In Models...')
+        #print(type(self.seqtype))
+        # if not bytes, change to bytes
+        if not (isinstance(self.seqtype,bytes)):
+            self.seqtype = str(self.seqtype).encode('utf-8')
+        #print(type(self.seqtype))
 
-        seqarray = fast.seqs2array_for_matmodel(list(seqs_to_use),self.seqtype)
+        #print(type(self.seqtype))
+        #print(qc.seqtypes)
+        #seqs_to_use = list(map(bytes, str(seqs_to_use).encode('UTF-8')))
+        #seqs_to_use = list(map(bytes, seqs_to_use))
+        #print(seqs_to_use)
+
+        #if (isinstance(seqs_to_use[0], bytes)):
+            #print(seqs_to_use[0].decode())
+        #    for i in range(len(seqs_to_use)):
+        #        seqs_to_use[i] = seqs_to_use[i].decode()
+
+        # change elements to bytes if they're not bytes
+        if not (isinstance(seqs_to_use[0],bytes)):
+            #print('changing seq to bytes...')
+            for i in range(len(seqs_to_use)):
+                seqs_to_use[i] = str(seqs_to_use[i]).encode('utf-8')
+
+        #print('calling cython:')
+        #seqarray = fast.seqs2array_for_matmodel(list(seqs_to_use),self.seqtype)
+        seqarray = fast.seqs2array_for_matmodel(seqs_to_use, self.seqtype)
         t1 = time.time()
 
         # Compute and return values
@@ -142,6 +174,18 @@ class NeighborModel(ExpModel):
 
         # Compute seqmats
         t0 = time.time()
+        # python 3 fast.c update for string to bytes conversion
+
+        # if not bytes, change to bytes
+        if not (isinstance(self.seqtype,bytes)):
+            self.seqtype = str(self.seqtype).encode('utf-8')
+
+        # change elements to bytes if they're not bytes
+        if not (isinstance(seqs_to_use[0],bytes)):
+            #print('changing seq to bytes...')
+            for i in range(len(seqs_to_use)):
+                seqs_to_use[i] = str(seqs_to_use[i]).encode('utf-8')
+
         seqarray = fast.seqs2array_for_nbrmodel(seqs_to_use,self.seqtype)
         t1 = time.time()
 
@@ -199,6 +243,7 @@ class NoiseModel():
         return logexp
 
     def genlist(self,df):
+
         nlist = []
         T_counts = np.sum(df['ct'])
         nexp = np.zeros(T_counts)
