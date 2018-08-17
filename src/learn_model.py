@@ -278,7 +278,8 @@ class LearnModel:
             raveledmat, batch, sw = utils.genweightandmat(
                 df, par_seq_dict, dicttype, means=means, modeltype=modeltype)
             # Use ridge regression to find matrix.
-            emat = self.Compute_Least_Squares(raveledmat, batch, sw, alpha=alpha)
+            #emat = self.Compute_Least_Squares(raveledmat, batch, sw, alpha=alpha)
+            emat = self.Compute_Least_Squares(raveledmat.todense(), batch, sw, alpha=alpha)
 
         if lm == 'IM':
             seq_mat, wtrow = numerics.dataset2mutarray(df.copy(), modeltype)
