@@ -9,12 +9,15 @@ from __future__ import division
 import numpy as np
 import sys
 import pandas as pd
-import qc as qc
-import io_local as io
-import profile_ct as profile_ct
+#import qc as qc
+from mpathic.src import qc
+#import io_local as io
+from mpathic.src import io_local as io
+#import profile_ct as profile_ct
+from mpathic.src import profile_ct
 import pdb
 from mpathic import SortSeqError
-from utils import ControlledError, handle_errors, check
+from mpathic.src.utils import ControlledError, handle_errors, check
 
 
 
@@ -58,15 +61,14 @@ class ProfileMut:
         self.err = err
         self.mut_df = None
 
+
         # do input checks
         self._input_checks()
 
-        #filename = './mpathic/examples/data_set_simulated.txt'
-        #dataset_df = pd.read_csv(filename, delim_whitespace=True, dtype={'seqs': str, 'batch': int})
-    
         # Compute counts
         counts_df = profile_ct.main(dataset_df, bin=bin, start=start, end=end)
-    
+
+
         # Create columns for profile_freqs table
         ct_cols = [c for c in counts_df.columns if qc.is_col_type(c, 'ct_')]
     
@@ -94,7 +96,7 @@ class ProfileMut:
         for col in ct_cols:
             indices = (counts_df[col] == max_ct).values
             mut_df.loc[indices, wt_col] = col.split('_')[1]
-    
+
         # Validate as counts dataframe
         mut_df = qc.validate_profile_mut(mut_df, fix=True)
         self.mut_df = mut_df

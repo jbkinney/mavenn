@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 import time
-import simulate_library
+#import simulate_library
+from mpathic.src import simulate_library
 
 from setuptools import Extension
 fast = Extension("fast",["fast.c"])
 #import fast as fast
 
-import qc as qc
-#from profile_mut import main as profile_mut
-from profile_mut import ProfileMut
-from simulate_library import SimulateLibrary
+#import qc as qc
+from mpathic.src import qc
+#from profile_mut_old import main as profile_mut
+from mpathic.src.profile_mut import ProfileMut
+#from simulate_library_old import main as simulate_library
+from mpathic.src.simulate_library import SimulateLibrary
 import numpy as np
 from scipy.sparse import csr, csr_matrix, lil_matrix
 #from . import SortSeqError
@@ -19,7 +22,8 @@ from mpathic import SortSeqError
 import pdb
 import sys
 
-import fast
+#import fast
+from mpathic.src import fast
 
 def nbytes(array):
     if isinstance(array,np.ndarray):
@@ -63,10 +67,17 @@ def dataset2mutarray(dataset_df, modeltype, chunksize=1000, rowsforwtcalc=100):
     rowsforwtcalc = min(rowsforwtcalc,dataset_df.shape[0])
     dataset_head_df = dataset_df.head(rowsforwtcalc)
     #mut_df = profile_mut(dataset_head_df)
+
+    # in python 2, the following variable is none
     mut_df = ProfileMut(dataset_df=dataset_head_df).mut_df
+
     wtseq = ''.join(list(mut_df[wtcol]))
-    print(wtseq)
-    wtrow = seqs2array([wtseq], seq_type=seqtype).ravel().astype(bool)
+    #print(wtseq)
+
+    if(sys.version_info[0] == 2):
+        wtrow = seqs2array([wtseq], seq_type=seqtype).ravel().astype(bool) # this line is how it used to be
+    elif (sys.version_info[0] == 3):
+        wtrow = seqs2array([str.encode(wtseq)], seq_type=str.encode(seqtype)).ravel().astype(bool)  # this is my fix on August-17-2018
     numfeatures = len(wtrow)
 
     # Process dataframe in chunks
@@ -87,8 +98,15 @@ def dataset2mutarray(dataset_df, modeltype, chunksize=1000, rowsforwtcalc=100):
             matrix_filled = True
 
         # Compute seqarray
-        seqlist = list(dataset_df[seqcol][startrow:(endrow+1)])
-        seqarray = seqs2array(seqlist, seq_type=seqtype)
+        #seqlist = list(dataset_df[seqcol][startrow:(endrow+1)])
+        seqlist = list(dataset_df[seqcol][startrow:(endrow + 1)])
+
+        if(sys.version_info[0]==3):
+            # change list type to bytes for python 3 (August-20-2018)
+            seqlist = [str.encode(seqlist[q]) for q in range(len(seqlist))]
+
+        #seqarray = seqs2array(seqlist, seq_type=seqtype) # may have to separate these by python version
+        seqarray = seqs2array(seqlist, seq_type=str.encode(seqtype))
 
         # Remove wt entries
         tmp = seqarray.copy()
@@ -167,7 +185,7 @@ def dataset2mutarray_withwtseq(dataset_df, modeltype, wtseq, chunksize=1000):
 def eval_modelmatrix_on_mutarray(modelmatrix, mutarray, wtrow):
 
 
-    print("numerics: sizes: ",modelmatrix.size," ",wtrow.size)
+    #print("numerics: sizes: ",modelmatrix.size," ",wtrow.size)
     # Do error checking
     if not isinstance(modelmatrix,np.ndarray):
         raise SortSeqError('modelmatrix is not a np.ndarray')

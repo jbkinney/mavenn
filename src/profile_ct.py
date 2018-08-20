@@ -7,8 +7,10 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import qc as qc
-import io_local as io
+#import qc as qc
+from mpathic.src import qc
+#import io_local as io
+from mpathic.src import io_local as io
 #from . import SortSeqError
 #from src.__init__ import SortSeqError
 #from __init__ import SortSeqError
@@ -76,15 +78,37 @@ def main(dataset_df, bin=None, start=0, end=None):
 
     # Compute counts profile
     counts_array = np.zeros([num_poss,num_chars])
+
     counts_cols = ['ct_'+a for a in alphabet]
+
+    '''
+    print('in profile_counts.main() ...')
+    temp_char_list = dataset_df[colname].str.slice(21,21+1)
+    #print([(np.sum(counts[temp_char_list == a]),a) for a in alphabet])
+    print('lengths:')
+    print(len(counts[temp_char_list == 'A']))
+    print(len(counts[temp_char_list == 'C']))
+    print(len(counts[temp_char_list == 'G']))
+    print(len(counts[temp_char_list == 'T']))
+
+    print('sums:')
+    print(np.sum(counts[temp_char_list=='G']))
+    print(pd.Series.sum(counts[temp_char_list == 'G']))
+    '''
+
+
     for i,pos in enumerate(range(start,end)):
         char_list = dataset_df[colname].str.slice(pos,pos+1)
-        counts_array[i,:] = [np.sum(counts[char_list==a]) for a in alphabet]
+        #counts_array[i,:] = [np.sum(counts[char_list==a]) for a in alphabet]
+        counts_array[i, :] = [np.sum(counts[char_list == a]) if len(counts[char_list == a])!=0 else 0 for a in alphabet]
     temp_df = pd.DataFrame(counts_array,columns=counts_cols)
+
+
     counts_df = pd.concat([poss,temp_df],axis=1)
 
     # Validate as counts dataframe
     counts_df = qc.validate_profile_ct(counts_df,fix=True)
+
     return counts_df
 
 

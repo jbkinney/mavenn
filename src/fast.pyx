@@ -110,7 +110,7 @@ def seqs2array_for_matmodel(list seq_list, bytes seq_type, bool safe=True):
     #print(seq_type.decode('UTF-8'))
     #print(seq_list)
 
-    print('seq2array_for_mat_model')
+    #print('seq2array_for_mat_model')
 
 
     # Validate seq_type if in safe mode
