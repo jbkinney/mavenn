@@ -249,15 +249,19 @@ def seq2matsparse(seq,par_seq_dict):
             pass
     return seqlist
 
-def seq2mat_sparse_neighbor(seq,par_seq_dict): 
-    ''' returns which parameters are true for the sequence, 
-        where each parameter is a possible pairing'''
+
+def seq2mat_sparse_neighbor(seq,par_seq_dict):
+
+    # returns which parameters are true for the sequence,
+    # where each parameter is a possible pairing
+
     seqlist = np.zeros(len(par_seq_dict)*(len(seq)-1))
     for i in range(len(seq)-1):
         try:
             seqlist[i*(len(par_seq_dict)) + par_seq_dict[seq[i:i+2]]] = 1
         except:
             pass
+
     return seqlist
 
 def seq2mat2(seq): 
@@ -414,13 +418,14 @@ def genweightandmat(weights_df,seq_dict,dicttype,means=None,modeltype='MAT'):
     '''For use with learn_model, linear regressions. Generates a flattened
          matrix representation of the sequences, with corresponding batch and 
          number of counts (in sequence weighting vector)'''
+
     type_name_dict = {'dna':'seq','rna':'seq_rna','protein':'seq_pro'}
     seq_col_name = type_name_dict[dicttype]
     n_seqs = len(weights_df[seq_col_name])    
     mut_region_length = len(weights_df[seq_col_name][0])
     binheaders = get_column_headers(weights_df)
     nbins=len(binheaders)
-    
+
     if modeltype == 'MAT':
          lasso_mat = sp.sparse.lil_matrix((n_seqs,len(seq_dict)*mut_region_length))
     elif modeltype == 'NBR':
@@ -437,13 +442,13 @@ def genweightandmat(weights_df,seq_dict,dicttype,means=None,modeltype='MAT'):
              else:
                   raise ValueError('Incorrect Model Type')
              '''Find mean batch number for each sequence. If means is supplied,
-                 instead find a weighted average.'''   
+                 instead find a weighted average.'''
              if isinstance(means,pd.Series):
                  batch[i] = np.sum([weights_df[z][i]*means[z] for z in means.index]/(weights_df['ct'][i]))
-             else:  
+             else:
                  batch[i] = np.sum([weights_df[binheaders[z]][i]*z for z in range(nbins)]/weights_df['ct'][i])
              sample_weights[i] = weights_df['ct'][i]
-             
+
     return sp.sparse.csr_matrix(lasso_mat),batch,sample_weights
 
 def array_seqs_weights(df,dicttype,seq_dict):

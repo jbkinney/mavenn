@@ -70,14 +70,14 @@ def shutthefuckup(func):
 
 
 # simualte_library
-print(" about to import from init, cwd: ",os.getcwd())
+#print(" about to import from init, cwd: ",os.getcwd())
 #from mpathic.src.simulate_library_class import simulate_library_class
 #from checkouts.latest.src.simulate_library_class import simulate_library_class
 
 from utils import check
 
 # demo functions
-def demo(example='simulation'):
+def demo(example='model'):
     """
     Runs a demonstration of mpathic.
 

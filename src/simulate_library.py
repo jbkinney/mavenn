@@ -8,11 +8,16 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import utils as utils
-import qc as qc
-import io_local as io
+from mpathic.src import utils
+#import utils as utils
+#import qc as qc
+from mpathic.src import qc
+
+#import io_local as io
+from mpathic.src import io_local as io
 from mpathic import SortSeqError
-from utils import check, handle_errors
+#from utils import check, handle_errors
+from mpathic.src.utils import check, handle_errors
 import pdb
 from numpy.random import choice
 

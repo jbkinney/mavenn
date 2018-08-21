@@ -1,24 +1,84 @@
 import mpathic as mpa
+loader = mpa.io
 
-# Load dataset and model dataframes
-dataset_df = mpa.io.load_dataset('sort_seq_data.txt')
-model_df = mpa.io.load_model('crp_model.txt')
+##############################
+## load dataframe and model ##
+##############################
 
-# learn models example
-learned_model = mpa.LearnModel(df=dataset_df)
-learned_model.output_df.head()
+dataset_df = loader.load_dataset(mpa.__path__[0] + '/data/sortseq/full-0/library.txt')
+mp_df = loader.load_model(mpa.__path__[0] + '/examples/true_model.txt')
 
-# evaluate models example
-eval_model = mpa.EvaluateModel(dataset_df = dataset_df, model_df = model_df)
-eval_model.out_df.head()
+ss = mpa.SimulateSort(df=dataset_df, mp=mp_df)
 
-# scan models example
-# get contigs, provided with mpathic
+print('Library: \n')
+print(dataset_df.head(), '\n')
+
+print('Model: \n')
+print(mp_df.head(),'\n')
+
+#############################
+## simulate sort dataframe ##
+#############################
+
+temp_ss = ss.output_df
+cols = ['ct', 'ct_0', 'ct_1', 'ct_2', 'ct_3','seq']
+temp_ss = temp_ss[cols]
+
+print('Simulate Sort Dataset: \n')
+print(temp_ss.head(),'\n')
+
+#################
+## learn model ##
+#################
+
+lm = mpa.LearnModel(df=temp_ss, lm='LS', alpha=0.001, modeltype='NBR')
+
+print('Learned model: \n')
+print(lm.output_df.head(),'\n')
+
+df = lm.output_df
+normed_df = (df - df.mean()) / (df.max() - df.min())
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+heatmap_columns_list = []
+for column in normed_df:
+    if 'val' in column:
+        heatmap_columns_list.append(column)
+
+ax = sns.heatmap(normed_df[heatmap_columns_list],cmap='coolwarm')
+
+####################
+## evaluate model ##
+####################
+
+em = mpa.EvaluateModel(dataset_df = temp_ss, model_df = mp_df)
+
+print('Evaluated Model: \n')
+print(em.out_df.head(),'\n')
+
+################
+## scan model ##
+################
+
 fastafile = "./mpathic/examples/genome_ecoli_1000lines.fa"
-contig = mpa.io.load_contigs_from_fasta(fastafile, model_df)
+contig = mpa.io.load_contigs_from_fasta(fastafile, mp_df)
+sm = mpa.ScanModel(model_df = mp_df, contig_list = contig)
 
-scanned_model = mpa.ScanModel(model_df = model_df, contigs_list = contigs_list)
-scanned_model.sitelist_df.head()
+print('Scanned Model: \n')
+print(sm.sitelist_df, '\n')
 
-# predictive info example
-predictive_info = mpa.PredictiveInfo(data_df = dataset_df, model_df = model_df,start=52)
+############################
+## predictive information ##
+############################
+
+pi = mpa.PredictiveInfo(data_df = temp_ss, model_df = mp_df, start=0)
+
+print('Mutual Information: \n')
+print(pi.out_MI)
+
+# plot learned model
+
+plt.tight_layout()
+plt.show()

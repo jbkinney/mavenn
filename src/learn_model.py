@@ -12,28 +12,37 @@ import sys
 import scipy.sparse
 # Our miscellaneous functions
 import pandas as pd
-import utils as utils
+#import utils as utils
+from mpathic.src import utils
 from sklearn import linear_model
-import EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+#import EstimateMutualInfoforMImax as EstimateMutualInfoforMImax
+from mpathic.src import EstimateMutualInfoforMImax
 import pymc
-import stepper as stepper
+#import stepper as stepper
+from mpathic.src import stepper
 import os
 from mpathic import SortSeqError
-import io_local as io
-import gauge as gauge
-import qc as qc
+#import io_local as io
+from mpathic.src import io_local as io
+#import gauge as gauge
+from mpathic.src import gauge
+#import qc as qc
+from mpathic.src import qc
 import pdb
 from mpathic import shutthefuckup
-import numerics as numerics
+#import numerics as numerics
+from mpathic.src import numerics
 from sklearn.preprocessing import StandardScaler
 import cvxopt
 from cvxopt import solvers, matrix, spdiag, sqrt, div, exp
 import warnings
 #import profile_mut_old as profile_mut
-from profile_mut import ProfileMut
-from utils import handle_errors,check,ControlledError
+#from profile_mut import ProfileMut
+from mpathic.src.profile_mut import ProfileMut
+from mpathic.src.utils import handle_errors,check,ControlledError
 
-import fast
+#import fast
+from mpathic.src import fast
 
 class LearnModel:
     """
@@ -143,7 +152,7 @@ class LearnModel:
                  runnum=0,
                  initialize='LS',
                  start=0,
-                 end = None,
+                 end=None,
                  foreground=1,
                  background=0,
                  alpha=0.0,
@@ -184,7 +193,6 @@ class LearnModel:
         if not len(seq_cols) == 1:
             raise SortSeqError('Dataframe has multiple seq cols: %s' % str(seq_cols))
         dicttype = qc.colname_to_seqtype_dict[seq_cols[0]]
-
         seq_dict, inv_dict = utils.choose_dict(dicttype, modeltype=modeltype)
 
         '''Check to make sure the chosen dictionary type correctly describes
@@ -198,6 +206,7 @@ class LearnModel:
         # wtseq = utils.profile_counts(df.copy(),dicttype,return_wtseq=True,start=start,end=end)
         # wt_seq_dict_list = [{inv_dict[np.mod(i+1+seq_dict[w],len(seq_dict))]:i for i in range(len(seq_dict)-1)} for w in wtseq]
         par_seq_dict = {v: k for v, k in seq_dict.items() if k != (len(seq_dict) - 1)}
+
         # drop any rows with ct = 0
         df = df[df.loc[:, 'ct'] != 0]
         df.reset_index(drop=True, inplace=True)
@@ -272,11 +281,40 @@ class LearnModel:
                     raise SortSeqError('''drop_library option was passed, but no ct_0
                         column exists''')
             # parameterize sequences into 3xL vectors
-            print('init learn model: \n')
-            print(par_seq_dict)
-            print('dict: ', dicttype)
+            #print('init learn model: \n')
+            #print(par_seq_dict)
+            #print('dict: ', dicttype)
+            #par_seq_dict['T']=3
+            #print(par_seq_dict)
             raveledmat, batch, sw = utils.genweightandmat(
                 df, par_seq_dict, dicttype, means=means, modeltype=modeltype)
+
+            #print(raveledmat[0,:])
+            #print(raveledmat)
+
+            #print('\n')
+            #print(repr(raveledmat))
+            #print(raveledmat.todense())
+            #sys.exit()
+
+            '''
+            tuple: the first number in the tuple indicates sequence number.
+            the second number in the tuple indicates which position has a 
+            contribution from an epistatic interaction. The positions are raveled, 
+            so that instead being a 20 by 20 matrix, it will traverse 400 positions.
+            
+            The one indicates there was a positive contribution at the corresponding tuple location
+            
+            e.g. output:
+            
+              (0, 4)        1.0
+              (0, 16)       1.0
+              (0, 34)       1.0
+              (0, 43)       1.0
+              (0, 52)       1.0
+              (0, 76)       1.0
+
+            '''
             # Use ridge regression to find matrix.
             #emat = self.Compute_Least_Squares(raveledmat, batch, sw, alpha=alpha)
             emat = self.Compute_Least_Squares(raveledmat.todense(), batch, sw, alpha=alpha)
@@ -871,11 +909,13 @@ class LearnModel:
 
         return model_df
 
-    def Compute_Least_Squares(self, raveledmat, batch, sw, alpha=0):
+    #def Compute_Least_Squares(self, raveledmat, batch, sw, alpha=0):
+    def Compute_Least_Squares(self, raveledmat, batch, sw, alpha=0.001):
         '''Ridge regression is the only sklearn regressor that supports sample
             weights, which will make this much faster'''
         clf = linear_model.Ridge(alpha=alpha)
         clf.fit(raveledmat, batch, sample_weight=sw)
+
         emat = clf.coef_
         return emat
 

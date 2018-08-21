@@ -1,13 +1,20 @@
 '''A script which adds a predicted energy column to an input table. This is
     generated based on a energy model the user provides.'''
 from __future__ import division
-import Models as Models
-import utils as utils
-import qc as qc
-import io_local as io
+#import Models as Models
+from mpathic.src import Models
+#import utils as utils
+from mpathic.src import utils
+#import qc as qc
+from mpathic.src import qc
+#import io_local as io
+from mpathic.src import io_local as io
 from mpathic import SortSeqError
 from mpathic import shutthefuckup
-import fast
+#import fast
+from mpathic.src import fast
+from mpathic.src.utils import ControlledError, handle_errors, check
+import pandas as pd
 
 class EvaluateModel:
 
@@ -32,10 +39,14 @@ class EvaluateModel:
 
     def __init__(self,dataset_df, model_df, left=None, right=None):
 
-
-
+        self.dataset_df = dataset_df
         self.dataset_with_values = None
         self.out_df = None
+        self.model_df = model_df
+        self.left = left
+        self.right = right
+
+        #self._input_checks()
 
         qc.validate_dataset(dataset_df)
         qc.validate_model(model_df)
@@ -83,3 +94,40 @@ class EvaluateModel:
         self.dataset_with_values = qc.validate_dataset(out_df, fix=True)
         self.out_df = out_df
 
+    def _input_checks(self):
+
+        # dataset_df validation
+        if self.dataset_df is None:
+            raise ControlledError(
+                " The Evaluate Model class requires pandas dataframe as input dataframe. Entered dataset_df was 'None'.")
+
+        elif self.dataset_df is not None:
+            check(isinstance(self.dataset_df, pd.DataFrame),
+                  'type(dataset_df) = %s; must be a pandas dataframe ' % type(self.dataset_df))
+
+        # validate dataset
+        check(pd.DataFrame.equals(self.dataset_df, qc.validate_dataset(self.dataset_df)),
+              " Input dataframe failed quality control, \
+              please ensure input dataset has the correct format of an mpathic dataframe ")
+
+        # model validation
+        if self.model_df is None:
+            raise ControlledError(
+                " The Evaluate Model class requires pandas dataframe as input model dataframe. Entered model_df was 'None'.")
+
+        elif self.model_df is not None:
+            check(isinstance(self.model_df, pd.DataFrame),
+                  'type(model_df) = %s; must be a pandas dataframe ' % type(self.model_df))
+
+        # validate dataset
+        check(pd.DataFrame.equals(self.model_df, qc.validate_model(self.model_df)),
+              " Model dataframe failed quality control, \
+                                please ensure input model dataframe has the correct format of an mpathic dataframe ")
+
+        # check that left is an integer
+        check(isinstance(self.left, int),
+              'type(left) = %s; must be of type int ' % type(self.left))
+
+        # check that right is an integer
+        check(isinstance(self.right, int),
+              'type(right) = %s; must be of type int ' % type(self.right))

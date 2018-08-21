@@ -7,13 +7,19 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import sys
-import Models as Models
-import utils as utils
-import io_local as io
-import qc as qc
-from evaluate_model import EvaluateModel
+#import Models as Models
+from mpathic.src import Models
+#import utils as utils
+from mpathic.src import utils
+from mpathic.src import io_local as io
+#import io_local as io
+#import qc as qc
+from mpathic.src import qc
+#import evaluate_model_old as evaluate_model
+#from evaluate_model import EvaluateModel
+from mpathic.src.evaluate_model import EvaluateModel
 from mpathic import SortSeqError
-from utils import check, handle_errors, ControlledError
+from mpathic.src.utils import check, handle_errors, ControlledError
 
 
 class SimulateSort:
@@ -125,6 +131,8 @@ class SimulateSort:
             col_labels = utils.get_column_headers(temp_output_df)
             # temp_output_df['ct'] = temp_output_df[col_labels].sum(axis=1)
             temp_output_df.drop('val', axis=1, inplace=True)
+
+            #print(temp_output_df)
             #print output_df.shape
             output_df = pd.concat([output_df, temp_output_df], axis=0).copy()
             i = i + 1

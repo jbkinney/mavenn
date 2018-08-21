@@ -1,11 +1,12 @@
 import pandas as pd
-#from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 import re
 import pdb
 import numpy as np
 import sys
 from mpathic import SortSeqError
+#from utils import handle_errors
+from mpathic.src.utils import handle_errors
 
 rc_dict = {'A':'T','C':'G','G':'C','T':'A'} 
 
@@ -213,8 +214,23 @@ def _validate_seqs_cols(df, fix=False):
 
         # Check that all characters are from the correct alphabet
         search_string = r"[^%s]"%alphabet
+
+        # need to fix he following
+        if sys.version_info[0] == 3:
+            # if columns are bytes, change to strings so they will work with re.search()
+            if(isinstance(df[col][0],bytes)):
+
+                '''
+                for i in range(len(df[col])):
+                    #print(df[col][i].decode())
+                    df[col][i] = df[col][i].decode()
+                    #print(df[col][i])
+                '''
+                df[col] = df[col].str.decode("utf-8")
+
+
         if not all([re.search(search_string,seq)==None for seq in df[col]]):
-            print sum([re.search(search_string,seq)==None for seq in df[col]])
+            print(sum([re.search(search_string,seq)==None for seq in df[col]]))
             raise SortSeqError('Invalid character found in sequences.')
 
     return df
@@ -617,11 +633,11 @@ def _validate_info_cols(df, fix=False):
     return df
 
 # Validates dataset dataframes
-def validate_dataset(df, fix=False):
+def validate_dataset(df, fix=True):
     """ 
     Validates the form of a dataset dataframe. A dataset dataframe must look something like this:
 
-    ct      ct_0    ct_1    ct_2    val     tag     seq     
+    ct      ct_0    ct_1    ct_2    val     tag     seq
     3       1       2       0       0.012   CTG     ACCAT
     2       2       0       0      -4.52    CTA     ACCAT
     1       0       0       1       0.000   CCA     TCAGG

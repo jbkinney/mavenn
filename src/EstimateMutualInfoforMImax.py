@@ -10,13 +10,16 @@ from sklearn.model_selection import GridSearchCV
 if __name__== '__main__':
     import sortseq.utils
 from collections import Counter
-from cStringIO import StringIO
+#from cStringIO import StringIO
+from io import StringIO
 import pandas as pd
 import scipy as sp
 import scipy.ndimage
-import utils as utils
+#import utils as utils
+from mpathic.src import utils
 import pdb
-import info as info
+#import info as info
+from mpathic.src import info
 
 
 ''' This script estimates MI by implementing a Density Estimation through 

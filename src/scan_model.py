@@ -1,9 +1,9 @@
-#!/usr/bin/env python
-
-'''A script which accepts an model of binding energy and a wild type sequence.
-    The script scans the model across the sequence, and generates an energy
-    prediction for each starting position. It then sorts by best binding and
-    displays all posibilities.'''
+"""
+The ScanModel class accepts an model of binding energy and a wild type sequence.
+The class scans the model across the sequence, and generates an energy
+prediction for each starting position. It then sorts by best binding and
+displays all possibilities
+"""
 from __future__ import division
 # Our standard Modules
 import argparse
@@ -13,20 +13,44 @@ import sys
 # Our miscellaneous functions
 import pandas as pd
 from Bio import SeqIO
-import utils as utils
-import Models as Models
-import io_local as io
-import qc as qc
+#import utils as utils
+from mpathic.src import utils
+#import Models as Models
+from mpathic.src import Models
+#import io_local as io
+from mpathic.src import io_local as io
+#import qc as qc
+from mpathic.src import qc
 
-import fast
+#import fast
+from mpathic.src import fast
 
 import re
 import pdb
 from mpathic import SortSeqError
 
+
 class ScanModel:
+    """
+
+        Parameters
+        ----------
+
+        model_df: (pandas dataframe)
+            The dataframe containing a model of the binding energy and a wild type sequence
+        contig_list: (list)
+            list containing contigs. Can be loaded from fasta file via
+            mpathic.io.load_contigs
+        numsites: (int)
+            Number of sites
+        verbose: (bool)
+            A value of True will force the 'flush' the buffer and everything will
+            be written to screen.
+
+    """
 
     def __init__(self, model_df, contig_list, numsites=10, verbose=False):
+
 
         self.sitelist_df = None
         # Determine type of string from model
@@ -64,6 +88,7 @@ class ScanModel:
             this_df['left'] = poss + pos_offset
             this_df['right'] = poss + pos_offset + L - 1
             # this_df[seq_col] = [contig_str[i:(i+L)] for i in poss]
+            contig_str = str(contig_str).encode('UTF-8')
             this_df[seq_col] = fast.seq2sitelist(contig_str, L)  # Cython
             this_df['ori'] = '+'
             this_df['contig'] = contig_name
@@ -73,6 +98,7 @@ class ScanModel:
             # If scanning DNA, scan reverse-complement as well
             if seqtype == 'dna':
                 # this_df[seq_col] = [qc.rc(s) for s in this_df[seq_col]]
+                #print('scan model, contig str type: ',type(contig_str))
                 this_df[seq_col] = fast.seq2sitelist(contig_str, L, rc=True)  # Cython
                 this_df['ori'] = '-'
                 this_df['val'] = model_obj.evaluate(this_df[seq_col])
