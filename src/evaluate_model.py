@@ -37,6 +37,7 @@ class EvaluateModel:
 
     """
 
+    @handle_errors
     def __init__(self,dataset_df, model_df, left=None, right=None):
 
         self.dataset_df = dataset_df
@@ -46,7 +47,7 @@ class EvaluateModel:
         self.left = left
         self.right = right
 
-        #self._input_checks()
+        self._input_checks()
 
         qc.validate_dataset(dataset_df)
         qc.validate_model(model_df)
@@ -101,20 +102,25 @@ class EvaluateModel:
             raise ControlledError(
                 " The Evaluate Model class requires pandas dataframe as input dataframe. Entered dataset_df was 'None'.")
 
+
         elif self.dataset_df is not None:
             check(isinstance(self.dataset_df, pd.DataFrame),
                   'type(dataset_df) = %s; must be a pandas dataframe ' % type(self.dataset_df))
 
+
+        '''
+        # the following logic is incorrect. Ask Justin why.
         # validate dataset
         check(pd.DataFrame.equals(self.dataset_df, qc.validate_dataset(self.dataset_df)),
               " Input dataframe failed quality control, \
               please ensure input dataset has the correct format of an mpathic dataframe ")
+        '''
 
         # model validation
         if self.model_df is None:
             raise ControlledError(
                 " The Evaluate Model class requires pandas dataframe as input model dataframe. Entered model_df was 'None'.")
-
+        
         elif self.model_df is not None:
             check(isinstance(self.model_df, pd.DataFrame),
                   'type(model_df) = %s; must be a pandas dataframe ' % type(self.model_df))
@@ -124,10 +130,15 @@ class EvaluateModel:
               " Model dataframe failed quality control, \
                                 please ensure input model dataframe has the correct format of an mpathic dataframe ")
 
-        # check that left is an integer
-        check(isinstance(self.left, int),
-              'type(left) = %s; must be of type int ' % type(self.left))
+        if self.left is not None:
+            # check that left is an integer
+            check(isinstance(self.left, int),
+                  'type(left) = %s; must be of type int ' % type(self.left))
+
 
         # check that right is an integer
-        check(isinstance(self.right, int),
-              'type(right) = %s; must be of type int ' % type(self.right))
+        if self.right is not None:
+            check(isinstance(self.right, int),
+                  'type(right) = %s; must be of type int ' % type(self.right))
+        
+

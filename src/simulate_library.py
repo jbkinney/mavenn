@@ -125,7 +125,9 @@ class SimulateLibrary:
         # If simulating tags, each generated seq gets a unique tag
         if tags:
             tag_seq_dict,tag_inv_dict = utils.choose_dict('dna')
-            tag_alphabet_list = tag_seq_dict.keys()
+            #tag_alphabet_list = tag_seq_dict.keys()
+            # the following is a fix for python 3
+            tag_alphabet_list = list(tag_seq_dict.keys())
 
             check(len(tag_alphabet_list) ** tag_length > 2 * numseq,
                   'tag_length=%d is too short for num_tags_needed=%d' % (tag_length, numseq))
@@ -134,8 +136,7 @@ class SimulateLibrary:
             tag_set = set([])
             while len(tag_set) < numseq:
                 num_tags_left = numseq - len(tag_set)
-                new_tags = [''.join(choice(tag_alphabet_list,size=tag_length)) \
-                    for i in range(num_tags_left)]
+                new_tags = [''.join(choice(tag_alphabet_list, size=tag_length)) for i in range(num_tags_left)]
                 tag_set = tag_set.union(new_tags)
 
             df = seqs_df.copy()
