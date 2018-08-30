@@ -381,6 +381,11 @@ def test_evaluate_model():
     ss = mpathic.SimulateSort(df=dataset_df, mp=mp_df)
     temp_ss = ss.output_df
 
+    temp_ss = ss.output_df
+    # print(temp_ss.columns)
+    cols = ['ct', 'ct_0', 'ct_1', 'ct_2', 'ct_3', 'seq']
+    temp_ss = temp_ss[cols]
+
     # test dataset_df
     test_parameter_values(func=mpathic.EvaluateModel, var_name='dataset_df', fail_list=[None, 2.4,'x'],success_list=[temp_ss],model_df=mp_df)
 
@@ -394,11 +399,52 @@ def test_evaluate_model():
     test_parameter_values(func=mpathic.EvaluateModel, var_name='right', fail_list=[2.4, 'x', -1, 4],success_list=[None,22], model_df=mp_df, dataset_df=temp_ss)
 
 
+def test_scan_model():
+
+
+    loader = mpathic.io
+    mp_df = loader.load_model(mpathic.__path__[0] + '/examples/true_model.txt')
+    fastafile = mpathic.__path__[0] + "/examples/genome_ecoli_1000lines.fa"
+    contig = mpathic.io.load_contigs_from_fasta(fastafile, mp_df)
+
+    # model_df
+    test_parameter_values(func=mpathic.ScanModel, var_name='model_df',fail_list=[None,12,'x',True],success_list=[mp_df],contig_list=contig)
+
+
+def test_predictive_info():
+    loader = mpathic.io
+
+    loader = mpathic.io
+    dataset_df = loader.load_dataset(mpathic.__path__[0] + '/data/sortseq/full-0/library.txt')
+    mp_df = loader.load_model(mpathic.__path__[0] + '/examples/true_model.txt')
+    ss = mpathic.SimulateSort(df=dataset_df, mp=mp_df)
+    temp_ss = ss.output_df
+
+    temp_ss = ss.output_df
+    # print(temp_ss.columns)
+    cols = ['ct', 'ct_0', 'ct_1', 'ct_2', 'ct_3', 'seq']
+    temp_ss = temp_ss[cols]
+
+    # data_df
+    test_parameter_values(func=mpathic.PredictiveInfo,var_name='data_df',fail_list=[None,12,'x',True],success_list=[temp_ss],model_df=mp_df, start=0)
+
+    # model_df
+    test_parameter_values(func=mpathic.PredictiveInfo, var_name='model_df', fail_list=[None, 12, 'x', True],success_list=[mp_df], data_df=temp_ss, start=0)
+
+    # start tests
+    test_parameter_values(func=mpathic.PredictiveInfo, var_name='start', fail_list=[-1, 0.1, 'x', 1.2, None],success_list=[0], data_df=temp_ss,model_df=mp_df)
+
+    # end tests. Should the value 0 here end in success?
+    test_parameter_values(func=mpathic.PredictiveInfo, var_name='end', fail_list=[0.1, 'x', 1.2],success_list=[None,0], data_df=temp_ss, model_df=mp_df,start=0)
+
+
+
 # temporary method used only for debugging. Could be deleted
 def run_single_test():
     pass
 
 #run_single_test()
+
 test_mpathic_io()
 test_simulate_library()
 test_simulate_sort()
@@ -407,5 +453,7 @@ test_profile_mut()
 test_profile_info()
 test_learn_model()
 test_evaluate_model()
+test_scan_model()
+test_predictive_info()
 
 
