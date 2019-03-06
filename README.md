@@ -13,7 +13,10 @@ MPAthic can be installed from PyPI by executing
 pip install mpathic
 ```
 
+[![Downloads](https://pepy.tech/badge/mpathic)](https://pepy.tech/project/mpathic)
+
 * Documentation: http://mpathic.readthedocs.io/en/latest/
+
 
 ## Requriements
 
