@@ -5,16 +5,20 @@ import numpy as np
 import argparse
 import sys
 from subprocess import Popen, PIPE
+#from sklearn.grid_search import GridSearchCV
 from sklearn.model_selection import GridSearchCV
 if __name__== '__main__':
     import sortseq.utils
 from collections import Counter
+#from cStringIO import StringIO
 from io import StringIO
 import pandas as pd
 import scipy as sp
 import scipy.ndimage
+#import utils as utils
 from mpathic.src import utils
 import pdb
+#import info as info
 from mpathic.src import info
 
 
@@ -120,10 +124,7 @@ def alt4(df, coarse_graining_level = 0.01,return_freg=False):
     cts_grouped = sp.zeros([n_groups,n_batches])
     group_num = 0
     frac_empty = 1.0
-
-    #print('printing dataframe head in alt4...')
-    #print(df.head())
-
+    
     #copy dataframe
     tmp_df = df.copy(binheaders+['val'])
 
@@ -178,7 +179,6 @@ def alt4(df, coarse_graining_level = 0.01,return_freg=False):
     if return_freg:
        return info.mutualinfo(f_reg),f_reg
     else:
-       #print('Mutual information: ',info.mutualinfo(f_reg))
        return info.mutualinfo(f_reg)
 
 

@@ -4,7 +4,8 @@ from __future__ import division
 import numpy as np
 import scipy as sp
 import pandas as pd
-import _nsb
+#import _nsb
+from mpathic.src import _nsb
 import pdb
 #from . import SortSeqError
 from mpathic import SortSeqError

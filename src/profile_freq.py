@@ -7,12 +7,15 @@ import argparse
 import numpy as np
 import sys
 import pandas as pd
-import qc as qc
-import io_local as io
-import profile_ct as profile_ct
+#import qc as qc
+from mpathic.src import qc
+#import io_local as io
+from mpathic.src import io_local as io
+#import profile_ct as profile_ct
+from mpathic.src import profile_ct
 import pdb
 from mpathic import SortSeqError
-from utils import handle_errors, check, ControlledError
+from mpathic.src.utils import handle_errors, check, ControlledError
 
 class ProfileFreq:
 

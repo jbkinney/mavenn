@@ -6,6 +6,7 @@ import qc as qc
 import re
 import pdb
 #from . import SortSeqError
+#from __init__ import SortSeqError
 from mpathic import SortSeqError
 
 # Filetypes and corrsponding load functions

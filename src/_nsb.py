@@ -86,7 +86,8 @@ def S(x, N, K):
   mp.pretty = True
   
   f = lambda w: _Si(w, nxkx, N, K)
-  g = lambda w: _measure(w, nxkx, N, K)  
+  g = lambda w: _measure(w, nxkx, N, K)
+
   return np.log2(np.exp(1))*quadgl(f, [0, 1])/quadgl(g, [0, 1])
 def nsb_integrand_variance_term1(beta,nxkx,N,m): 
     '''computer variance of the nsb esimator, with term 1,2  

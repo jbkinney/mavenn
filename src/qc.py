@@ -47,7 +47,11 @@ seqtype_to_alphabet_dict = {
     'dna':''.join(sorted(IUPAC.IUPACUnambiguousDNA.letters)),
     'rna':''.join(sorted(IUPAC.IUPACUnambiguousRNA.letters)),
     'protein':''.join(sorted(IUPAC.IUPACProtein.letters+'*'))
+    #'protein':''.join(sorted(IUPAC.IUPACProtein.letters))
 }
+
+#{"K":0, "R":1, "H":2, "E":3, "D":4, "N":5, "Q":6, "T":7, "S":8, "C":9, "G":10, "A":11, "V":12, "L":13, "I":14, "M":15, "P":16, "Y":17, "F":18, "W":19}
+
 alphabet_to_seqtype_dict = {v: k for k, v in seqtype_to_alphabet_dict.items()}
 alphabets = alphabet_to_seqtype_dict.keys()
 
@@ -951,6 +955,10 @@ def validate_model(df, fix=False):
 
     # Validate parameter column names
     val_cols = sorted([c for c in df.columns if is_col_type(c,'vals')])
+    #print('IN validate_model()... ')
+    #print('val_cols: ' )
+    #val_cols.remove('val_*')
+    #print(val_cols)
     ok = False
     for cols in model_parameters_dict.values():
         # Check if cols and df.columns are identical

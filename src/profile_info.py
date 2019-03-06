@@ -12,13 +12,18 @@ import csv
 #Our miscellaneous functions
 #This module will allow us to easily tally the letter counts at a particular position
 import pandas as pd
-import utils as utils
-import qc as qc
-import io_local as io
-import profile_ct as profile_ct
-import info as info
+#import utils as utils
+from mpathic.src import utils
+#import qc as qc
+from mpathic.src import qc
+#import io_local as io
+from mpathic.src import io_local as io
+#import profile_ct as profile_ct
+from mpathic.src import profile_ct
+#import info as info
+from mpathic.src import info
 import pdb
-from utils import check, ControlledError, handle_errors
+from mpathic.src.utils import check, ControlledError, handle_errors
 from mpathic import SortSeqError
 
 class ProfileInfo:

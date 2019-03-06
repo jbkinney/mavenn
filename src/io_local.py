@@ -1,12 +1,17 @@
 import pandas as pd
 import os
-import qc
-import utils
-from utils import ControlledError, handle_errors
+#import qc
+from mpathic.src import qc
+#import utils
+from mpathic.src import utils
+from mpathic.src.utils import ControlledError, handle_errors
+#from utils import ControlledError, handle_errors
 from mpathic import SortSeqError
 import sys
 from Bio import SeqIO
-from utils import clean_SortSeqError
+#from utils import clean_SortSeqError
+from mpathic.src.utils import clean_SortSeqError
+
 
 def format_fasta(s):
     '''Function which takes in the raw fastq format and returns only the sequence'''
@@ -123,6 +128,11 @@ def load_dataset(file_arg, file_type='text',seq_type=None):
         Pandas dataframe is returned.
     """
 
+    # for tutorial:
+    if file_arg == 'sort_seq_data.txt':
+        #file_arg = "./mpathic/data/sortseq/full-0/data_small.txt"
+        file_arg = "./mpathic/data/sortseq/full-0/data.txt"
+
     # Check that the file can be read
     file_handle = validate_file_for_reading(file_arg)
 
@@ -238,6 +248,10 @@ def load_contigs_from_fasta(file_arg,model_df,chunksize=10000,circular=False):
 # JBK: I want to get rid of these
 @handle_errors
 def load_model(file_arg):
+
+    # making these changes for the tutorial
+    if file_arg == 'crp_model.txt':
+        file_arg = './mpathic/data/sortseq/full-0/crp_model.txt'
     return load(file_arg, file_type='model')
 
 def load_filelist(file_arg):

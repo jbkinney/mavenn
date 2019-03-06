@@ -15,6 +15,7 @@ import pandas as pd
 from Bio import SeqIO
 #import utils as utils
 from mpathic.src import utils
+from mpathic.src.utils import check,handle_errors, ControlledError
 #import Models as Models
 from mpathic.src import Models
 #import io_local as io
@@ -48,20 +49,29 @@ class ScanModel:
             be written to screen.
 
     """
+    @handle_errors
+    def __init__(self,
+                 model_df,
+                 contig_list,
+                 numsites=10,
+                 verbose=False):
 
-    def __init__(self, model_df, contig_list, numsites=10, verbose=False):
+        self.model_df = model_df
+        self.contig_list = contig_list
+        self.numsites = numsites
 
+        self._input_checks()
 
         self.sitelist_df = None
         # Determine type of string from model
-        qc.validate_model(model_df)
-        seqtype, modeltype = qc.get_model_type(model_df)
+        qc.validate_model(self.model_df)
+        seqtype, modeltype = qc.get_model_type(self.model_df)
         seq_dict, inv_dict = utils.choose_dict(seqtype, modeltype=modeltype)
 
         # Check that all characters are from the correct alphabet
         alphabet = qc.seqtype_to_alphabet_dict[seqtype]
         search_string = r"[^%s]" % alphabet
-        for contig_str, contig_name, pos_offset in contig_list:
+        for contig_str, contig_name, pos_offset in self.contig_list:
             if re.search(search_string, contig_str):
                 raise SortSeqError( \
                     'Invalid character for seqtype %s found in %s.' % \
@@ -69,16 +79,16 @@ class ScanModel:
 
         # Create model object to evaluate on seqs
         if modeltype == 'MAT':
-            model_obj = Models.LinearModel(model_df)
+            model_obj = Models.LinearModel(self.model_df)
         elif modeltype == 'NBR':
-            model_obj = Models.NeighborModel(model_df)
+            model_obj = Models.NeighborModel(self.model_df)
 
         # Create list of dataframes, one for each contig
         seq_col = qc.seqtype_to_seqcolname_dict[seqtype]
         L = model_obj.length
         sitelist_df = pd.DataFrame( \
             columns=['val', seq_col, 'left', 'right', 'ori', 'contig'])
-        for contig_str, contig_name, pos_offset in contig_list:
+        for contig_str, contig_name, pos_offset in self.contig_list:
             if len(contig_str) < L:
                 continue
             this_df = pd.DataFrame( \
@@ -109,8 +119,8 @@ class ScanModel:
             sitelist_df.reset_index(drop=True, inplace=True)
 
             # Crop list at numsites
-            if sitelist_df.shape[0] > numsites:
-                sitelist_df.drop(sitelist_df.index[numsites:], inplace=True)
+            if sitelist_df.shape[0] > self.numsites:
+                sitelist_df.drop(sitelist_df.index[self.numsites:], inplace=True)
 
             if verbose:
                 print ('.',
@@ -128,5 +138,35 @@ class ScanModel:
         sitelist_df = qc.validate_sitelist(sitelist_df, fix=True)
         #return sitelist_df
         self.sitelist_df = sitelist_df
+
+    def _input_checks(self):
+
+        # model validation
+        if self.model_df is None:
+            raise ControlledError(
+                " The Scan Model class requires pandas dataframe as input model dataframe. Entered model_df was 'None'.")
+
+        elif self.model_df is not None:
+            check(isinstance(self.model_df, pd.DataFrame),
+                  'type(model_df) = %s; must be a pandas dataframe ' % type(self.model_df))
+
+
+        # validate model df
+        check(pd.DataFrame.equals(self.model_df, qc.validate_model(self.model_df)),
+              " Model dataframe failed quality control, \
+                                please ensure input model dataframe has the correct format of an mpathic dataframe ")
+
+        # check contig_list
+        if self.contig_list is None:
+            raise ControlledError(
+                " The Scan Model class requires a contig_list. Entered contig_list was 'None'.")
+
+
+        if self.contig_list is not None:
+            check(isinstance(self.contig_list,list), 'type(contig_list) = %s; must be of type list ' % type(self.contig_list))
+
+        # how do I check if the contig_list passed in is valid?
+
+        check(isinstance(self.numsites,int),'type(numsites) = %s; must be of type int ' % type(self.numsites))
 
 

@@ -325,8 +325,19 @@ class LearnModel:
             if initialize == 'rand':
                 if modeltype == 'MAT':
                     emat_0 = utils.RandEmat(len(df[seq_col_name][0]), len(seq_dict))
+                    #print('in learn model initialize, initial emat_0')
+                    #print(type(emat_0))
+                    #print(np.shape(emat_0))
+                    #np.savetxt('IM_initialize_matrix_format.csv',emat_0,delimiter=',')
+                    #sys.exit()
+
                 elif modeltype == 'NBR':
                     emat_0 = utils.RandEmat(len(df[seq_col_name][0]) - 1, len(seq_dict))
+
+            elif initialize == 'custom':
+
+                emat_0 = np.loadtxt('NN_dense_layer_weights_for_GFP_IM_initialization.csv', delimiter=',')
+
             elif initialize == 'LS':
 
                 emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
@@ -337,6 +348,8 @@ class LearnModel:
                 emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
                 emat_0_df = LearnModel(df.copy(), lm='PR', modeltype=modeltype, start=0, end=None).output_df
                 emat_0 = np.transpose(np.array(emat_0_df[emat_cols]))
+
+            print('learn model about to call maximizeMI_memsaver')
             emat = self.MaximizeMI_memsaver(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
                                             burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
 
@@ -401,6 +414,8 @@ class LearnModel:
         output_df = pd.concat([pos, em], axis=1)
         # Validate model and return
         output_df = qc.validate_model(output_df, fix=True)
+        print('printing in learn model init, output_df ... ')
+        print(output_df)
         self.output_df = output_df
 
     def _input_checks(self):
@@ -469,7 +484,7 @@ class LearnModel:
         # check that initialize is a string and it's value is valid
         check(isinstance(self.initialize,str),"type(initialize) = %s must be a string " % type(self.initialize))
 
-        valid_initialize_values = ['rand', 'LS', 'PR']
+        valid_initialize_values = ['rand', 'LS', 'PR','custom']
         check(self.initialize in valid_initialize_values,
               'initialize = %s; must be in %s' % (self.initialize, valid_initialize_values))
 
@@ -537,6 +552,8 @@ class LearnModel:
         @pymc.stochastic(dtype=float)
         def emat(p=pymcdf, value=emat_0):
             p['val'] = numerics.eval_modelmatrix_on_mutarray(np.transpose(value), seq_mat, wtrow)
+            #print('hab in learn model in MaximizeMI_memsaver')
+            #print(p.copy())
             MI = EstimateMutualInfoforMImax.alt4(p.copy())  # New and improved
             return n_seqs * MI
 
