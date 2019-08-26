@@ -320,7 +320,9 @@ class LearnModel:
             emat = self.Compute_Least_Squares(raveledmat.todense(), batch, sw, alpha=alpha)
 
         if lm == 'IM':
+            # seq_mat is a scipy.sparse.csr_matrix, format lil_matrix
             seq_mat, wtrow = numerics.dataset2mutarray(df.copy(), modeltype)
+
             # this is also an MCMC routine, do the same as above.
             if initialize == 'rand':
                 if modeltype == 'MAT':
@@ -343,6 +345,8 @@ class LearnModel:
                 emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
                 emat_0_df = LearnModel(df.copy(), lm='LS', modeltype=modeltype, alpha=alpha, start=0, end=None, verbose=verbose).output_df
                 emat_0 = np.transpose(np.array(emat_0_df[emat_cols]))
+                # emat_0 is an ndarray with shape alphabet_size by sequence length
+
                 # pymc doesn't take sparse mat
             elif initialize == 'PR':
                 emat_cols = ['val_' + inv_dict[i] for i in range(len(seq_dict))]
@@ -350,8 +354,12 @@ class LearnModel:
                 emat_0 = np.transpose(np.array(emat_0_df[emat_cols]))
 
             print('learn model about to call maximizeMI_memsaver')
+            #the following two are the original lines for maximizeMI_memsaver
             emat = self.MaximizeMI_memsaver(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
                                             burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
+
+            # emat = self.MaximizeMI_memsaver1(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
+            #                                  burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
 
         # We have infered out matrix.
         # now format the energy matrices to get them ready to output
@@ -404,7 +412,9 @@ class LearnModel:
                 except:
                     sys.stderr.write('Gauge Fixing Failed')
                     emat_typical = np.transpose(emat_typical)
+
         em = pd.DataFrame(emat_typical)
+
         em.columns = val_cols
         # add position column
         if modeltype == 'NBR':
@@ -414,8 +424,8 @@ class LearnModel:
         output_df = pd.concat([pos, em], axis=1)
         # Validate model and return
         output_df = qc.validate_model(output_df, fix=True)
-        print('printing in learn model init, output_df ... ')
-        print(output_df)
+        #print('printing in learn model init, output_df ... ')
+        #print(output_df)
         self.output_df = output_df
 
     def _input_checks(self):
@@ -534,6 +544,83 @@ class LearnModel:
     def add_label(self, s):
         return 'ct_' + str(s)
 
+    # TODO
+    # 1) need to document this function
+    # 2) need to implement running mean in a way that overflows don't occur
+    # 3) need to implement burnin
+    # 4) remove unused parameters.
+    def MaximizeMI_memsaver1(self,
+                            seq_mat, df, emat_0, wtrow, db=None, burnin=1000, iteration=30000, thin=10,
+                            runnum=0, verbose=False):
+        '''Performs MCMC MI maximzation in the case where lm = memsaver'''
+
+        pcopy = df.copy()
+        emat_temp = emat_0.copy()
+        emat_temp_old = emat_0.copy()
+        sigma = 0.5 * 1
+        MI_old = 0
+        MI = 0
+        mc_steps = 0
+        accepted_states = 0
+        emat_mean = emat_temp_old.copy()
+
+        print('in new maximizeMI',seq_mat.shape[0])
+
+        n_seqs = seq_mat.shape[0]
+
+        while mc_steps <= iteration:
+
+            # emat update
+            j_p = sp.random.randint(emat_temp_old.shape[1])  # column to perturb
+
+            # make change to parameters
+            emat_temp_old[:, j_p] = emat_temp_old[:, j_p] + sigma * sp.randn(4)
+
+            # compute product with seq_mat using perturbed model
+            pcopy['val'] = numerics.eval_modelmatrix_on_mutarray(np.transpose(emat_temp_old), seq_mat, wtrow)
+
+            # compute new mutual information
+            MI = EstimateMutualInfoforMImax.alt4(pcopy)  # New and improved
+
+            # check if new mutual information is larger than older MI.
+            # if yes, accept move
+            if MI > MI_old:
+
+                emat_temp = emat_temp_old.copy()
+                emat_mean = np.add(emat_mean,emat_temp_old.copy())
+
+                MI_old = MI
+                if verbose:
+                    print(accepted_states, MI_old, mc_steps)
+                accepted_states+=1
+
+            else:
+
+                # generate random number between 0 and 1
+                # accept mc-step if r is less than monte-carlo condition
+                r = np.random.rand()
+                if r < np.exp(n_seqs*(MI-MI_old)):
+                    emat_temp = emat_temp_old.copy()
+                    emat_mean = np.add(emat_mean, emat_temp_old.copy())
+                    MI_old = MI
+                    if verbose:
+                        print(accepted_states, MI_old, mc_steps)
+                    accepted_states += 1
+
+
+            #print(mc_steps, MI_old)
+            mc_steps+=1
+
+            if(mc_steps%100==0):
+               print('Step %d of %d complete.' % (mc_steps, iteration))
+
+        emat_mean = emat_mean/mc_steps
+        print('total accepted moves: %d'%accepted_states)
+
+        return emat_mean
+        # need to take the mean of the last emat's over time
+        #emat_mean = np.mean(emat_temp
+
     def MaximizeMI_memsaver(self,
                             seq_mat, df, emat_0, wtrow, db=None, burnin=1000, iteration=30000, thin=10,
                             runnum=0, verbose=False):
@@ -551,9 +638,8 @@ class LearnModel:
 
         @pymc.stochastic(dtype=float)
         def emat(p=pymcdf, value=emat_0):
+
             p['val'] = numerics.eval_modelmatrix_on_mutarray(np.transpose(value), seq_mat, wtrow)
-            #print('hab in learn model in MaximizeMI_memsaver')
-            #print(p.copy())
             MI = EstimateMutualInfoforMImax.alt4(p.copy())  # New and improved
             return n_seqs * MI
 
@@ -562,6 +648,8 @@ class LearnModel:
             M = pymc.MCMC([pymcdf, emat], db='sqlite', dbname=dbname)
         else:
             M = pymc.MCMC([pymcdf, emat])
+
+        #M.use_step_method(stepper.MatColumnMetropolis, emat)
         M.use_step_method(stepper.GaugePreservingStepper, emat)
 
         if not verbose:
@@ -569,6 +657,7 @@ class LearnModel:
 
         M.sample(iteration, thin=thin)
         emat_mean = np.mean(M.trace('emat')[burnin:], axis=0)
+
         return emat_mean
 
     def robls(self, A, b, rho):
