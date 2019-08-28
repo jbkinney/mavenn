@@ -355,11 +355,11 @@ class LearnModel:
 
             print('learn model about to call maximizeMI_memsaver')
             #the following two are the original lines for maximizeMI_memsaver
-            emat = self.MaximizeMI_memsaver(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
-                                            burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
+            # emat = self.MaximizeMI_memsaver(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
+            #                                 burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
 
-            # emat = self.MaximizeMI_memsaver1(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
-            #                                  burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
+            emat = self.MaximizeMI_memsaver1(seq_mat, df.copy(), emat_0, wtrow, db=db, iteration=iteration,
+                                             burnin=burnin, thin=thin, runnum=runnum, verbose=verbose)
 
         # We have infered out matrix.
         # now format the energy matrices to get them ready to output
@@ -554,15 +554,26 @@ class LearnModel:
                             runnum=0, verbose=False):
         '''Performs MCMC MI maximzation in the case where lm = memsaver'''
 
+        '''
+        emat_temp -> emat
+        
+        emat_temp_old -> emat_temp
+        emat_temp = emat.copy()
+        emat_temp[:, j_p] = emat_temp[:, j_p] + sigma * sp.randn(4) (edited) 
+        if r < np.exp(n_seqs*(MI-MI_old)):
+        emat = emat_temp.copy()
+        
+        '''
+
         pcopy = df.copy()
-        emat_temp = emat_0.copy()
-        emat_temp_old = emat_0.copy()
+        emat = emat_0.copy()
+        #emat_temp = emat.copy()
         sigma = 0.5 * 1
         MI_old = 0
         MI = 0
         mc_steps = 0
         accepted_states = 0
-        emat_mean = emat_temp_old.copy()
+        emat_mean = emat.copy()
 
         print('in new maximizeMI',seq_mat.shape[0])
 
@@ -570,42 +581,53 @@ class LearnModel:
 
         while mc_steps <= iteration:
 
+            emat_temp = emat.copy()
+
             # emat update
-            j_p = sp.random.randint(emat_temp_old.shape[1])  # column to perturb
+            j_p = sp.random.randint(emat_temp.shape[1])  # column to perturb
 
             # make change to parameters
-            emat_temp_old[:, j_p] = emat_temp_old[:, j_p] + sigma * sp.randn(4)
+            emat_temp[:, j_p] = emat_temp[:, j_p] + sigma * sp.randn(4)
 
             # compute product with seq_mat using perturbed model
-            pcopy['val'] = numerics.eval_modelmatrix_on_mutarray(np.transpose(emat_temp_old), seq_mat, wtrow)
+            pcopy['val'] = numerics.eval_modelmatrix_on_mutarray(np.transpose(emat_temp), seq_mat, wtrow)
 
             # compute new mutual information
             MI = EstimateMutualInfoforMImax.alt4(pcopy)  # New and improved
 
-            # check if new mutual information is larger than older MI.
-            # if yes, accept move
-            if MI > MI_old:
-
-                emat_temp = emat_temp_old.copy()
-                emat_mean = np.add(emat_mean,emat_temp_old.copy())
-
+            r = np.random.rand()
+            if r < np.exp(n_seqs * (MI - MI_old)):
+                emat = emat_temp.copy()
+                emat_mean = np.add(emat_mean, emat)
+                #print(mc_steps,MI,MI_old)
                 MI_old = MI
-                if verbose:
-                    print(accepted_states, MI_old, mc_steps)
-                accepted_states+=1
+                accepted_states += 1
 
-            else:
 
-                # generate random number between 0 and 1
-                # accept mc-step if r is less than monte-carlo condition
-                r = np.random.rand()
-                if r < np.exp(n_seqs*(MI-MI_old)):
-                    emat_temp = emat_temp_old.copy()
-                    emat_mean = np.add(emat_mean, emat_temp_old.copy())
-                    MI_old = MI
-                    if verbose:
-                        print(accepted_states, MI_old, mc_steps)
-                    accepted_states += 1
+            # # check if new mutual information is larger than older MI.
+            # # if yes, accept move
+            # if MI > MI_old:
+            #
+            #     emat = emat_temp.copy()
+            #     emat_mean = np.add(emat_mean,emat)
+            #
+            #     MI_old = MI
+            #     if verbose:
+            #         print(accepted_states, MI_old, mc_steps)
+            #     accepted_states+=1
+            #
+            # else:
+            #
+            #     # generate random number between 0 and 1
+            #     # accept mc-step if r is less than monte-carlo condition
+            #     r = np.random.rand()
+            #     if r < np.exp(n_seqs*(MI-MI_old)):
+            #         emat = emat_temp.copy()
+            #         emat_mean = np.add(emat_mean, emat)
+            #         MI_old = MI
+            #         if verbose:
+            #             print(accepted_states, MI_old, mc_steps)
+            #         accepted_states += 1
 
 
             #print(mc_steps, MI_old)
