@@ -22,8 +22,8 @@ Optional tasks
 
 # TODO: implement error handling to decorate interface methods.
 
-
-class GlobalEpistasis:
+# JBK: GlobalEpistasisModel instead?
+class GlobalEpistasis:    
 
     """
     Class that implements global epistasis regression.
@@ -53,6 +53,8 @@ class GlobalEpistasis:
         Dictionary that specifies the number of layers and nodes in each subnetwork layer
 
     """
+    # JBK: Looks good, but should there be more optional attributes, e.g. to limit training time, specify # epochs, etc?  
+    # Also, monotonicity, activations, regularization?
 
     def __init__(self,
                  df,
@@ -127,6 +129,7 @@ class GlobalEpistasis:
 
         pass
 
+    # JBK: User should be able to set these parameters in the constructor
     def define_model(self,
                      monotonic=True,
                      regularization=None,
@@ -163,6 +166,7 @@ class GlobalEpistasis:
 
         pass
 
+    # JBK: I think this should be done as part of the "fit" command. 
     def compile_model(self,
                       model,
                       optimizer='Adam',
@@ -200,6 +204,7 @@ class GlobalEpistasis:
         """
         pass
 
+    # JBK: call "fit", to agree w/ scikit-learn
     def model_fit(self,
                   model,
                   sequences,
@@ -243,6 +248,7 @@ class GlobalEpistasis:
 
         """
 
+    # JBK: perhaps just call this "evaluate". Also, why pass "model" argument?
     def model_evaluate(self,
                        model,
                        data):
@@ -266,6 +272,7 @@ class GlobalEpistasis:
 
         pass
 
+    # JBK: How is this different from model_evaluate?
     def model_predict(self,
                        model,
                        data):
@@ -291,6 +298,7 @@ class GlobalEpistasis:
 
         pass
 
+    # JBK: we should discuss the suite of diagnostics we want to provide. 
     def plot_losses(self,
                     trained_model):
 
@@ -312,7 +320,10 @@ class GlobalEpistasis:
         """
 
         pass
-
+      
+    # JBK: we should discuss the suite of diagnostics we want to provide. 
+    # Also, the user might want a simple function object that represents the underlying nonlinearity,
+    # One they can evaluate on any inptut they provide. 
     def plot_GE_nonlinearity(self,
                     trained_model,
                     data):
@@ -337,7 +348,8 @@ class GlobalEpistasis:
 
         pass
 
-
+# JBK: NoiseAgnosticModel instead?
+# Similar comments apply as for GlobalEpistais. 
 class NoiseAgnosticRegression:
 
     """
