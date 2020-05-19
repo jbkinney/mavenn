@@ -1,7 +1,0 @@
-         Training/Test  DMS_Train   DMS_Test
-           BVH_on_dms1   0.120794   0.019027
- dms1_ratio_estimation   0.120793   0.019027
-              dms1_dms   0.120794   0.019028
-           BVH_on_dms2   0.113588   0.020795
- dms1_ratio_estimation   0.113588   0.020795
-              dms2_dms   0.113595   0.020795

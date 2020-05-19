@@ -1,9 +1,0 @@
-good: mpathic validate -t profile_info -i profile_info_good_err.txt
-good: mpathic validate -t profile_info -i profile_info_good_noerr.txt
-
-bad:  mpathic validate -t profile_info -i profile_mut_bad_invalidchar.txt
-bad:  mpathic validate -t profile_info -i profile_info_bad_nanval.txt
-bad:  mpathic validate -t profile_info -i profile_info_bad_negerr.txt
-bad:  mpathic validate -t profile_info -i profile_info_bad_nonconsecpos.txt
-bad:  mpathic validate -t profile_info -i profile_info_bad_noposheading.txt
-bad:  mpathic validate -t profile_info -i profile_info_bad_wongcol.txt

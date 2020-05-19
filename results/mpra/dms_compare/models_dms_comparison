@@ -1,7 +1,0 @@
-exp	file    Model_Type
-dms_Rep1	mpra_ds_dms_formatted	LinearEmat
-Rep1_ratio_estimation  ds_ratio_estimation_formatted LinearEmat
-BVH_Rep1	ds_bvh_jan2016    LinearEmat
-BVH_Rep2	test_bvh_jan2016   LinearEmat
-Rep2_ratio_estimation test_ratio_estimation_formatted LinearEmat
-dms_Rep2	mpra_test_dms_formatted	LinearEmat

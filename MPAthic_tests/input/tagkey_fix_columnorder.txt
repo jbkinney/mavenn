@@ -1,4 +1,0 @@
-seq             tag     
-ATTAGTCTAGATC   AACT    
-ATTAGTCTAGATC   AGCT    
-ATTAGTCTGGGTC   TCGA    

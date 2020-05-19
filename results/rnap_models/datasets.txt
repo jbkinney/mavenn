@@ -1,6 +1,0 @@
-exp	file
-full-wt	../crp_models/full-wt.txt
-rnap-wt	../crp_models/rnap-wt.txt
-full-0	../crp_models/full-0.txt
-full-150	../crp_models/full-150.txt
-full-500	../crp_models/full-500.txt
