@@ -20,7 +20,8 @@ import sys
 sys.path.append('../')
 # -- Project information -----------------------------------------------------
 
-import logomaker
+#import logomaker
+print('Test message for mavenn read the docs page ATATAT')
 
 project = 'mave-nn'
 copyright = '2020, Ammar Tareen and Justin B. Kinney'
