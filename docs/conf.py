@@ -22,7 +22,7 @@ sys.path.append('../')
 
 #import logomaker
 
-project = 'mave-nn'
+project = 'mavenn'
 copyright = '2020, Ammar Tareen and Justin B. Kinney'
 author = 'Ammar Tareen and Justin B. Kinney'
 
@@ -130,7 +130,7 @@ html_logo = '_static/logo.png'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'mave-nndoc'
+htmlhelp_basename = 'mavenndoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
