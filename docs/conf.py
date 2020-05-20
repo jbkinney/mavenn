@@ -21,7 +21,6 @@ sys.path.append('../')
 # -- Project information -----------------------------------------------------
 
 #import logomaker
-print('Test message for mavenn read the docs page ATATAT')
 
 project = 'mave-nn'
 copyright = '2020, Ammar Tareen and Justin B. Kinney'
@@ -89,7 +88,8 @@ html_theme = 'sphinx_rtd_theme'
 # html_theme_options = {}
 
 html_theme_options = {
-    'canonical_url': 'https://mave-nn.readthedocs.io',
+    #'canonical_url': 'https://mave-nn.readthedocs.io',
+    'canonical_url': 'https://mavenn.readthedocs.io',
     #'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
     'logo_only': True,
     'display_version': True,
