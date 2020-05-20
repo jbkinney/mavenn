@@ -7,5 +7,5 @@ Implementation
 Global Epistasis class
 ----------------------
 
-.. autoclass:: mave_nn.src.UI.GlobalEpistasisModel
+.. autoclass:: mavenn.src.UI.GlobalEpistasisModel
     :members:
