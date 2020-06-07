@@ -4,4 +4,3 @@ numpydoc
 matplotlib
 sphinx_rtd_theme
 tensorflow
-tensorflow.keras
