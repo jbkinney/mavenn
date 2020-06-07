@@ -1,11 +1,22 @@
+from mavenn.src.validate import validate_input
+from mavenn.src.error_handling import handle_errors
+from mavenn.src.utils import train_test_split, onehot_sequence
+import numpy as np
+import tensorflow as tf
+
+import tensorflow.keras
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, Dropout, Activation, Input, Lambda, Concatenate
+from tensorflow.keras.constraints import non_neg as nonneg
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import metrics
+from tensorflow.keras import regularizers
+from tensorflow.keras import callbacks
+import tensorflow.keras.backend as K
+
+
+
 """
-The following are imports that will go in the main __init__ file of the package.
-The interface definitions for imports are below
-
-from mpathic.src import GlobalEpistasis
-from mpathic.src import NoiseAgnosticRegression
-
-
 NOTE: could put methods that are common to both classes in
 in a utils.py module, e.g. _generate_all_pair_features_from_sequences()
 
@@ -20,9 +31,8 @@ Optional tasks
 
 """
 
-# TODO: implement error handling to decorate interface methods.
 
-# JBK: GlobalEpistasisModel instead?
+@handle_errors
 class GlobalEpistasisModel:    
 
     """
@@ -73,6 +83,35 @@ class GlobalEpistasisModel:
         # perform input checks to validate attributes
         self._input_checks()
 
+        # this is only true for the MPSA data
+
+        # split data into training and test sets
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.df['sequence'].values,
+                                                                                self.df['values'].values)
+
+        # TODO: need to optimize/vectorize the following snippet
+
+        print('One-hot encoding...')
+        # onehot-encode sequences
+        self.input_seqs_ohe = []
+        for _ in range(len(self.x_train)):
+            self.input_seqs_ohe.append(onehot_sequence(self.x_train[_]).ravel())
+
+            self.test_seqs_ohe = []
+        for _ in range(len(self.x_test)):
+            self.test_seqs_ohe.append(onehot_sequence(self.x_test[_]).ravel())
+
+        # turn lists into np arrays for consumption by tf
+        self.input_seqs_ohe = np.array(self.input_seqs_ohe)
+        self.test_seqs_ohe = np.array(self.test_seqs_ohe)
+
+        # check if this is strictly required by tf
+        self.y_train = np.array(self.y_train).reshape(self.y_train.shape[0], 1)
+
+        # self.model = self.define_model()
+        # self.compile_model()
+        # self.model.summary()
+
         pass
 
     def _input_checks(self):
@@ -80,7 +119,8 @@ class GlobalEpistasisModel:
         """
         Validate parameters passed to the GlobalEpistasis constructor
         """
-        pass
+        # validate input df
+        self.df = validate_input(self.df)
 
     def _generate_nbr_features_from_sequences(self,
                                               sequences):
@@ -164,13 +204,25 @@ class GlobalEpistasisModel:
 
         """
 
-        pass
+        number_input_layer_nodes = len(self.input_seqs_ohe[0])
+        inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-    # JBK: I think this should be done as part of the "fit" command. 
+        phi = Dense(1, use_bias=True)(inputTensor)
+
+        intermediateTensor = Dense(50, activation='sigmoid', kernel_constraint=nonneg())(phi)
+        # intermediateTensor = Dense(20,activation='sigmoid',kernel_constraint=nonneg())(intermediateTensor)
+        outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+
+        # create the model:
+
+        model = Model(inputTensor, outputTensor)
+        self.model = model
+        return model
+
+
     def compile_model(self,
-                      model,
                       optimizer='Adam',
-                      lr=0.0001,
+                      lr=0.00005,
                       metrics=None):
 
         """
@@ -179,10 +231,6 @@ class GlobalEpistasisModel:
 
         parameters
         ----------
-
-        model: (tf.model)
-            A tensorflow.keras model to be compiled
-
         optimizer: (str)
             Specifies which optimizers to use during training. Valid choices include
             ['Adam', 'SGD', 'RMSPROP', ... link to keras documentation']
@@ -202,15 +250,15 @@ class GlobalEpistasisModel:
 
 
         """
-        pass
+        self.model.compile(loss='mean_squared_error',
+                           optimizer=Adam(lr=lr),
+                           metrics=['mean_absolute_error'])
+
 
     # JBK: call "fit", to agree w/ scikit-learn
     def model_fit(self,
-                  model,
-                  sequences,
-                  phenotypes,
                   validation_split=0.2,
-                  epochs=100,
+                  epochs=50,
                   verbose=1):
 
         """
@@ -219,17 +267,6 @@ class GlobalEpistasisModel:
 
         parameters
         ----------
-
-        model: (tf.model)
-            A compiled tensorflow model ready to be fit to data.
-
-        sequences: (array-like)
-            Array of sequences that will be used in training.
-
-        phenotypes: (array-like)
-            Array of targets corresponding to sequences that will
-            be used during training.
-
         validation_split: (float in [0,1])
             Fraction of training data to be split into a validation set.
 
@@ -247,6 +284,16 @@ class GlobalEpistasisModel:
             and used for predictions.
 
         """
+
+        history = self.model.fit(self.input_seqs_ohe,
+                                 self.y_train,
+                                 validation_split=validation_split,
+                                 epochs=epochs,
+                                 verbose=1)
+
+        return history
+
+
 
     # JBK: perhaps just call this "evaluate". Also, why pass "model" argument?
     def model_evaluate(self,
@@ -349,8 +396,8 @@ class GlobalEpistasisModel:
         pass
 
 # JBK: NoiseAgnosticModel instead?
-# Similar comments apply as for GlobalEpistais. 
-class NoiseAgnosticRegression:
+# Similar comments apply as for GlobalEpistais.
+class NoiseAgnosticModel:
 
     """
     Class that implements Noise agnostic regression.
@@ -443,7 +490,6 @@ class NoiseAgnosticRegression:
 
         pass
 
-
     def compile_model(self,
                       model,
                       optimizer='Adam',
@@ -474,7 +520,6 @@ class NoiseAgnosticRegression:
 
         """
         pass
-
 
     def model_fit(self,
                   model,
@@ -541,3 +586,5 @@ class NoiseAgnosticRegression:
         """
 
         pass
+
+
