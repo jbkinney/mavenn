@@ -1,61 +1,68 @@
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.model_selection import train_test_split as sk_train_test_split
+import numpy as np
+
 from mavenn.src.error_handling import handle_errors
 
-
-@handle_errors
-def train_test_split(sequences, values, test_size=0.2, random_state=0):
-    """
-    Uses sklearns train_test_split method to split data in to training and
-    testing sets
-
-    parameters
-    ----------
-
-    sequences: (array-like)
-        List of biological sequences
-
-    values: (array-like)
-        Biological function values of sequences
-
-    test_size: (float in [0,1])
-        Specifies fraction of test set.
-
-    random_state: (integer)
-        Specifies seed to for sklearns train_test_split method
-
-    returns
-    -------
-    x_train, x_test, y_train, y_test: (array-like)
-        returns arrays of sequences and values split into training
-        and test sets
-
-    """
-
-    # TODO: is there a need to do input checks here?
-
-    x_train, x_test, y_train, y_test = sk_train_test_split(sequences,
-                                                           values,
-                                                           test_size=test_size,
-                                                           random_state=random_state)
-    return x_train, x_test, y_train, y_test
-
-
+# global variables needed for sklearns one-hot encoder
 # Fit a label encoder and a onehot encoder
 bases = ["A","C","G","U"]
 label_encoder = LabelEncoder()
 label_encoder.fit(bases)
 tmp = label_encoder.transform(bases)
 tmp = tmp.reshape(len(tmp), 1)
-onehot_encoder = OneHotEncoder(sparse = False)
+onehot_encoder = OneHotEncoder(sparse=False)
 onehot_encoder.fit(tmp)
 
 
-# Encode sequence into onehot
+@handle_errors
 def onehot_sequence(sequence, lab_encoder = label_encoder, one_encoder = onehot_encoder):
-    """Sequence as a string"""
+    """
+    Encodes a single sequence into onehot vector
+    """
     tmp = lab_encoder.transform(list(sequence))
     tmp = tmp.reshape(len(tmp),1)
     tmp = one_encoder.transform(tmp)
     return tmp
+
+
+@handle_errors
+def onehot_encode_array(data, bases_dict):
+
+    """
+    one-hot encode sequences in batches in a vectorized way
+
+    """
+
+    sequence_length = len(data[0])
+
+    ohe_single_batch_size = 10000
+    # container list for batches of oh-encoded sequences
+    input_seqs_ohe_batches = []
+
+    # partitions of batches
+    ohe_batches = np.arange(0, len(data), ohe_single_batch_size)
+    for ohe_batch_index in range(len(ohe_batches)):
+        if ohe_batch_index == len(ohe_batches) - 1:
+            # OHE remaining sequences (that are smaller than batch size)
+            input_seqs_ohe_batches.append(
+                onehot_sequence(''.join(data[ohe_batches[ohe_batch_index]:]))
+                    .reshape(-1, sequence_length, len(bases_dict)))
+        else:
+            # OHE sequences in batches
+            input_seqs_ohe_batches.append(onehot_sequence(
+                ''.join(data[ohe_batches[ohe_batch_index]:ohe_batches[ohe_batch_index + 1]]))
+                                          .reshape(-1, sequence_length, len(bases_dict)))
+
+    # this array will contain the one-hot encoded sequences
+    input_seqs_ohe = np.array([])
+
+    # concatenate all the oh-encoded batches
+    for batch_index in range(len(input_seqs_ohe_batches)):
+        input_seqs_ohe = np.concatenate([input_seqs_ohe, input_seqs_ohe_batches[batch_index]
+                                             .ravel()]).copy()
+
+    # reshape so that shape of oh-encoded array is [number samples, sequence_length*alphabet_dict]
+    input_seqs_ohe = input_seqs_ohe.reshape(len(data), sequence_length * len(bases_dict)).copy()
+
+    return input_seqs_ohe

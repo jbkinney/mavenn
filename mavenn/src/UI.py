@@ -1,6 +1,7 @@
 from mavenn.src.validate import validate_input
 from mavenn.src.error_handling import handle_errors
-from mavenn.src.utils import onehot_sequence
+from mavenn.src.utils import onehot_encode_array
+
 import numpy as np
 import tensorflow as tf
 
@@ -15,6 +16,7 @@ from tensorflow.keras import callbacks
 import tensorflow.keras.backend as K
 
 import matplotlib.pyplot as plt
+
 
 
 
@@ -96,17 +98,65 @@ class GlobalEpistasisModel:
 
         self.x_train, self.y_train = self.df['sequence'].values, self.df['values'].values
 
-
-        # TODO: need to optimize/vectorize the following snippet
-
         print('One-hot encoding...')
-        # onehot-encode sequences
-        self.input_seqs_ohe = []
-        for _ in range(len(self.x_train)):
-            self.input_seqs_ohe.append(onehot_sequence(self.x_train[_]).ravel())
+        # # onehot-encode sequences
+        # self.input_seqs_ohe = []
+        # for _ in range(len(self.x_train)):
+        #     self.input_seqs_ohe.append(onehot_sequence(self.x_train[_]).ravel())
+        #
+        # # turn lists into np arrays for consumption by tf
+        # self.input_seqs_ohe = np.array(self.input_seqs_ohe)
 
-        # turn lists into np arrays for consumption by tf
-        self.input_seqs_ohe = np.array(self.input_seqs_ohe)
+
+        # TODO: move the one-hot encoding to utils
+        sequence_length = len(self.x_train[0])
+
+        if self.alphabet_dict == 'dna':
+            self.bases = ['A', 'C', 'G', 'T']
+        elif self.alphabet_dict == 'rna':
+            self.bases = ['A', 'C', 'G', 'U']
+        elif self.self.alphabet_dict == 'protein':
+
+            # this should be called amino-acids
+            # need to figure out way to deal with
+            # naming without changing a bunch of
+            # unnecessary refactoring.
+            self.bases = ['A', 'C', 'D', 'E', 'F',
+                     'G', 'H', 'I', 'K', 'L',
+                     'M', 'N', 'P', 'Q', 'R',
+                     'S', 'T', 'V', 'W', 'Y']
+
+        # # one-hot encode sequences in batches in a vectorized way
+        # ohe_single_batch_size = 10000
+        # # container list for batches of oh-encoded sequences
+        # input_seqs_ohe_batches = []
+        #
+        # # partitions of batches
+        # ohe_batches = np.arange(0, len(self.x_train), ohe_single_batch_size)
+        # for ohe_batch_index in range(len(ohe_batches)):
+        #     if ohe_batch_index == len(ohe_batches) - 1:
+        #         # OHE remaining sequences (that are smaller than batch size)
+        #         input_seqs_ohe_batches.append(
+        #             onehot_sequence(''.join(self.x_train[ohe_batches[ohe_batch_index]:]))
+        #             .reshape(-1, sequence_length, len(self.bases)))
+        #     else:
+        #         # OHE sequences in batches
+        #         input_seqs_ohe_batches.append(onehot_sequence(
+        #             ''.join(self.x_train[ohe_batches[ohe_batch_index]:ohe_batches[ohe_batch_index + 1]]))
+        #               .reshape(-1, sequence_length, len(self.bases)))
+        #
+        # # this array will contain the one-hot encoded sequences
+        # self.input_seqs_ohe = np.array([])
+        #
+        # # concatenate all the oh-encoded batches
+        # for batch_index in range(len(input_seqs_ohe_batches)):
+        #     self.input_seqs_ohe = np.concatenate([self.input_seqs_ohe, input_seqs_ohe_batches[batch_index]
+        #                                          .ravel()]).copy()
+        #
+        # # reshape so that shape of oh-encoded array is [number samples, sequence_length*alphabet_dict]
+        # self.input_seqs_ohe = self.input_seqs_ohe.reshape(len(self.x_train), sequence_length * len(self.bases)).copy()
+
+        self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(self.y_train.shape[0], 1)
@@ -337,13 +387,14 @@ class GlobalEpistasisModel:
         # TODO need to do data validation here
         # check if data is already one-hot encoded
 
-        test_input_seqs_ohe = []
-        for _ in range(len(data)):
-            test_input_seqs_ohe.append(onehot_sequence(data[_]).ravel())
+        # test_input_seqs_ohe = []
+        # for _ in range(len(data)):
+        #     test_input_seqs_ohe.append(onehot_sequence(data[_]).ravel())
+        #
+        # # turn lists into np arrays for consumption by tf
+        # test_input_seqs_ohe = np.array(test_input_seqs_ohe)
 
-        # turn lists into np arrays for consumption by tf
-        test_input_seqs_ohe = np.array(test_input_seqs_ohe)
-
+        test_input_seqs_ohe = onehot_encode_array(data, self.bases)
         return self.model.predict(test_input_seqs_ohe)
 
     # JBK: we should discuss the suite of diagnostics we want to provide. 
