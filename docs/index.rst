@@ -1,8 +1,12 @@
 ========================================================================================
-MAVENN: Quantitative Modeling of Sequence-Function Relationships using Neural Networks
+MAVE-NN: Quantitative Modeling of Sequence-Function Relationships using Neural Networks
 ========================================================================================
 
-MAVENN description...
+MAVE-NN is a python package for inferring models of sequence-function relationships from 
+multiplexed assays of variant effects (MAVEs). MAVE-NN currently uses global epistasis 
+regression and noise agnostic regression. The :ref:`installation`, :ref:`quickstart`, 
+:ref:`examples`, and :ref:`tutorial` sections below are provided to help users 
+quickly get MAVE-NN working for their own research needs.
 
 .. toctree::
    :maxdepth: 2
@@ -14,8 +18,8 @@ MAVENN description...
 Installation
 --------------
 
-MAVENN has minimal dependencies and is compatible with both Python 2.7 and Python 3.6.
-The code for MAVENN is available on `GitHub <https://github.com/jbkinney/mavenn>`_ under an MIT open source license.
+MAVE-NN has minimal dependencies and is compatible with both Python 2.7 and Python 3.6.
+The code for MAVE-NN is available on `GitHub <https://github.com/jbkinney/mavenn>`_ under an MIT open source license.
 mavenn can be installed from `PyPI <https://pypi.org/project/logomaker/>`_ using the ``pip`` package manager by executing the following at the commandline: ::
 
     pip install mavenn
@@ -29,6 +33,13 @@ For a quick demonstration of mavenn, execute the following within Python::
 
    import mavenn
    mavenn.demo()
+
+Tutorial
+--------
+
+A tutorial is available via a series of Jupyter notebooks, each of which focuses on a 
+different aspect of MAVE-NN's functionality. To view the notebooks statically on GitHub,
+`click here <https://github.com/jbkinney/logomaker/tree/master/logomaker/tutorials>`_.
 
 
 Resources

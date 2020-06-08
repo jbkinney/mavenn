@@ -1,6 +1,6 @@
 from mavenn.src.validate import validate_input
 from mavenn.src.error_handling import handle_errors
-from mavenn.src.utils import train_test_split, onehot_sequence
+from mavenn.src.utils import onehot_sequence
 import numpy as np
 import tensorflow as tf
 
@@ -13,6 +13,8 @@ from tensorflow.keras import metrics
 from tensorflow.keras import regularizers
 from tensorflow.keras import callbacks
 import tensorflow.keras.backend as K
+
+import matplotlib.pyplot as plt
 
 
 
@@ -80,14 +82,20 @@ class GlobalEpistasisModel:
         self.alphabet_dict = alphabet_dict
         self.sub_network_layers_nodes_dict = sub_network_layers_nodes_dict
 
+        # class attributes that are not parameters
+        self.history = None
+
         # perform input checks to validate attributes
         self._input_checks()
 
-        # this is only true for the MPSA data
 
-        # split data into training and test sets
-        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.df['sequence'].values,
-                                                                                self.df['values'].values)
+
+        #
+        # self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.df['sequence'].values,
+        #                                                                         self.df['values'].values)
+
+        self.x_train, self.y_train = self.df['sequence'].values, self.df['values'].values
+
 
         # TODO: need to optimize/vectorize the following snippet
 
@@ -97,22 +105,11 @@ class GlobalEpistasisModel:
         for _ in range(len(self.x_train)):
             self.input_seqs_ohe.append(onehot_sequence(self.x_train[_]).ravel())
 
-            self.test_seqs_ohe = []
-        for _ in range(len(self.x_test)):
-            self.test_seqs_ohe.append(onehot_sequence(self.x_test[_]).ravel())
-
         # turn lists into np arrays for consumption by tf
         self.input_seqs_ohe = np.array(self.input_seqs_ohe)
-        self.test_seqs_ohe = np.array(self.test_seqs_ohe)
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(self.y_train.shape[0], 1)
-
-        # self.model = self.define_model()
-        # self.compile_model()
-        # self.model.summary()
-
-        pass
 
     def _input_checks(self):
 
@@ -255,8 +252,7 @@ class GlobalEpistasisModel:
                            metrics=['mean_absolute_error'])
 
 
-    # JBK: call "fit", to agree w/ scikit-learn
-    def model_fit(self,
+    def fit(self,
                   validation_split=0.2,
                   epochs=50,
                   verbose=1):
@@ -291,9 +287,8 @@ class GlobalEpistasisModel:
                                  epochs=epochs,
                                  verbose=1)
 
+        self.history = history
         return history
-
-
 
     # JBK: perhaps just call this "evaluate". Also, why pass "model" argument?
     def model_evaluate(self,
@@ -319,19 +314,14 @@ class GlobalEpistasisModel:
 
         pass
 
-    # JBK: How is this different from model_evaluate?
-    def model_predict(self,
-                       model,
-                       data):
+    def predict(self,
+                data):
 
         """
         Method to make predictions from trained model
 
         parameters
         ----------
-
-        model: (tf.model)
-            A trained tensorflow model.
 
         data: (array-like)
             Data on which to make predictions.
@@ -343,22 +333,24 @@ class GlobalEpistasisModel:
             An array of predictions
         """
 
-        pass
+
+        # TODO need to do data validation here
+        # check if data is already one-hot encoded
+
+        test_input_seqs_ohe = []
+        for _ in range(len(data)):
+            test_input_seqs_ohe.append(onehot_sequence(data[_]).ravel())
+
+        # turn lists into np arrays for consumption by tf
+        test_input_seqs_ohe = np.array(test_input_seqs_ohe)
+
+        return self.model.predict(test_input_seqs_ohe)
 
     # JBK: we should discuss the suite of diagnostics we want to provide. 
-    def plot_losses(self,
-                    trained_model):
+    def plot_losses(self):
 
         """
         Method used to display loss values.
-
-        parameters
-        ----------
-        trained_model: (tf.model)
-            trained_model from which loss values vs. epochs can be plotted
-
-        data: (array-like)
-            Data on which to make predictions.
 
         returns
         -------
@@ -366,7 +358,14 @@ class GlobalEpistasisModel:
 
         """
 
-        pass
+        plt.figure()
+        plt.plot(self.history.history['loss'], color='blue')
+        plt.plot(self.history.history['val_loss'], color='orange')
+        plt.title('Model loss', fontsize=12)
+        plt.ylabel('loss', fontsize=12)
+        plt.xlabel('epoch', fontsize=12)
+        plt.legend(['train', 'validation'])
+        plt.show()
       
     # JBK: we should discuss the suite of diagnostics we want to provide. 
     # Also, the user might want a simple function object that represents the underlying nonlinearity,
