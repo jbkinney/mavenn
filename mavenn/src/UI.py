@@ -67,8 +67,6 @@ class GlobalEpistasisModel:
         Dictionary that specifies the number of layers and nodes in each subnetwork layer
 
     """
-    # JBK: Looks good, but should there be more optional attributes, e.g. to limit training time, specify # epochs, etc?  
-    # Also, monotonicity, activations, regularization?
 
     def __init__(self,
                  df,
@@ -90,12 +88,6 @@ class GlobalEpistasisModel:
         # perform input checks to validate attributes
         self._input_checks()
 
-
-
-        #
-        # self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.df['sequence'].values,
-        #                                                                         self.df['values'].values)
-
         self.x_train, self.y_train = self.df['sequence'].values, self.df['values'].values
 
         print('One-hot encoding...')
@@ -106,10 +98,6 @@ class GlobalEpistasisModel:
         #
         # # turn lists into np arrays for consumption by tf
         # self.input_seqs_ohe = np.array(self.input_seqs_ohe)
-
-
-        # TODO: move the one-hot encoding to utils
-        sequence_length = len(self.x_train[0])
 
         if self.alphabet_dict == 'dna':
             self.bases = ['A', 'C', 'G', 'T']
@@ -122,40 +110,11 @@ class GlobalEpistasisModel:
             # naming without changing a bunch of
             # unnecessary refactoring.
             self.bases = ['A', 'C', 'D', 'E', 'F',
-                     'G', 'H', 'I', 'K', 'L',
-                     'M', 'N', 'P', 'Q', 'R',
-                     'S', 'T', 'V', 'W', 'Y']
+                          'G', 'H', 'I', 'K', 'L',
+                          'M', 'N', 'P', 'Q', 'R',
+                          'S', 'T', 'V', 'W', 'Y']
 
-        # # one-hot encode sequences in batches in a vectorized way
-        # ohe_single_batch_size = 10000
-        # # container list for batches of oh-encoded sequences
-        # input_seqs_ohe_batches = []
-        #
-        # # partitions of batches
-        # ohe_batches = np.arange(0, len(self.x_train), ohe_single_batch_size)
-        # for ohe_batch_index in range(len(ohe_batches)):
-        #     if ohe_batch_index == len(ohe_batches) - 1:
-        #         # OHE remaining sequences (that are smaller than batch size)
-        #         input_seqs_ohe_batches.append(
-        #             onehot_sequence(''.join(self.x_train[ohe_batches[ohe_batch_index]:]))
-        #             .reshape(-1, sequence_length, len(self.bases)))
-        #     else:
-        #         # OHE sequences in batches
-        #         input_seqs_ohe_batches.append(onehot_sequence(
-        #             ''.join(self.x_train[ohe_batches[ohe_batch_index]:ohe_batches[ohe_batch_index + 1]]))
-        #               .reshape(-1, sequence_length, len(self.bases)))
-        #
-        # # this array will contain the one-hot encoded sequences
-        # self.input_seqs_ohe = np.array([])
-        #
-        # # concatenate all the oh-encoded batches
-        # for batch_index in range(len(input_seqs_ohe_batches)):
-        #     self.input_seqs_ohe = np.concatenate([self.input_seqs_ohe, input_seqs_ohe_batches[batch_index]
-        #                                          .ravel()]).copy()
-        #
-        # # reshape so that shape of oh-encoded array is [number samples, sequence_length*alphabet_dict]
-        # self.input_seqs_ohe = self.input_seqs_ohe.reshape(len(self.x_train), sequence_length * len(self.bases)).copy()
-
+        # one-hot encode sequences in batches in a vectorized way
         self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
 
         # check if this is strictly required by tf
@@ -246,7 +205,7 @@ class GlobalEpistasisModel:
         -------
 
         model: (tf.model)
-            A tensorflow.keras model that can be compiled and subsequently fit to data.
+            A tensorflow model that can be compiled and subsequently fit to data.
 
 
         """
@@ -265,7 +224,6 @@ class GlobalEpistasisModel:
         model = Model(inputTensor, outputTensor)
         self.model = model
         return model
-
 
     def compile_model(self,
                       optimizer='Adam',
@@ -300,7 +258,6 @@ class GlobalEpistasisModel:
         self.model.compile(loss='mean_squared_error',
                            optimizer=Adam(lr=lr),
                            metrics=['mean_absolute_error'])
-
 
     def fit(self,
                   validation_split=0.2,
@@ -383,16 +340,8 @@ class GlobalEpistasisModel:
             An array of predictions
         """
 
-
         # TODO need to do data validation here
-        # check if data is already one-hot encoded
-
-        # test_input_seqs_ohe = []
-        # for _ in range(len(data)):
-        #     test_input_seqs_ohe.append(onehot_sequence(data[_]).ravel())
-        #
-        # # turn lists into np arrays for consumption by tf
-        # test_input_seqs_ohe = np.array(test_input_seqs_ohe)
+        # e.g. check if data is already one-hot encoded
 
         test_input_seqs_ohe = onehot_encode_array(data, self.bases)
         return self.model.predict(test_input_seqs_ohe)
@@ -417,36 +366,43 @@ class GlobalEpistasisModel:
         plt.xlabel('epoch', fontsize=12)
         plt.legend(['train', 'validation'])
         plt.show()
-      
-    # JBK: we should discuss the suite of diagnostics we want to provide. 
-    # Also, the user might want a simple function object that represents the underlying nonlinearity,
-    # One they can evaluate on any inptut they provide. 
-    def plot_GE_nonlinearity(self,
-                    trained_model,
-                    data):
+
+    def ge_nonlinearity(self,
+                    input_range):
 
         """
         Method used to plot GE non-linearity.
 
         parameters
         ----------
-        trained_model: (tf.model)
-            trained_model from which loss values vs. epochs can be plotted
 
-        data: (array-like)
-            Data which will be used to make latent model predictions, which
-            will then used to render the plot.
+        input_range: (array-like)
+            data which will be input to the GE nonlinearity
+
 
         returns
         -------
-        None
+        ge_nonlinearity: (array-like function)
+            the nonlinear GE function.
 
         """
 
-        pass
+        # TODO input checks on input_range
 
-# JBK: NoiseAgnosticModel instead?
-# Similar comments apply as for GlobalEpistais.
+        ge_model_input = Input((1,))
+        next_input = ge_model_input
+
+        # TODO need to fix this hardcoded 2 depending on model architecture
+        for layer in self.model.layers[-2:]:
+            next_input = layer(next_input)
+
+        ge_model = Model(inputs=ge_model_input, outputs=next_input)
+
+        ge_nonlinearity = ge_model.predict(input_range)
+
+        return ge_nonlinearity
+
+
 class NoiseAgnosticModel:
 
     """

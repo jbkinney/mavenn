@@ -1,29 +1,48 @@
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 import numpy as np
-
 from mavenn.src.error_handling import handle_errors
-
-# global variables needed for sklearns one-hot encoder
-# Fit a label encoder and a onehot encoder
-bases = ["A","C","G","U"]
-label_encoder = LabelEncoder()
-label_encoder.fit(bases)
-tmp = label_encoder.transform(bases)
-tmp = tmp.reshape(len(tmp), 1)
-onehot_encoder = OneHotEncoder(sparse=False)
-onehot_encoder.fit(tmp)
 
 
 @handle_errors
-def onehot_sequence(sequence, lab_encoder = label_encoder, one_encoder = onehot_encoder):
+def onehot_sequence(sequence, bases):
+
     """
-    Encodes a single sequence into onehot vector
+    Encodes a single sequence into a one-hot matrix
+
+    parameters
+    ----------
+
+    sequence: (str)
+        string that needs to be turned into a one-hot encoded matrix
+
+    bases: (list)
+        specifies unique characters in the sequence
+
+
+    returns
+    -------
+    oh_encoded_vector: (np.array)
+        one-hot encoded array for the input sequence.
+
+
     """
-    tmp = lab_encoder.transform(list(sequence))
-    tmp = tmp.reshape(len(tmp),1)
-    tmp = one_encoder.transform(tmp)
-    return tmp
+
+    # sklearn objects and operations need for one-hot encoding
+    label_encoder = LabelEncoder()
+    label_encoder.fit(bases)
+    tmp = label_encoder.transform(bases)
+    tmp = tmp.reshape(len(tmp), 1)
+    onehot_encoder = OneHotEncoder(sparse=False)
+    onehot_encoder.fit(tmp)
+
+    # perform one-hot encoding:
+    categorical_vector = label_encoder.transform(list(sequence))
+
+    # reshape so that array has correct dimensions for input into tf.
+    categorical_vector = categorical_vector.reshape(len(categorical_vector), 1)
+    oh_encoded_vector = onehot_encoder.transform(categorical_vector)
+    return oh_encoded_vector
 
 
 @handle_errors
@@ -46,12 +65,12 @@ def onehot_encode_array(data, bases_dict):
         if ohe_batch_index == len(ohe_batches) - 1:
             # OHE remaining sequences (that are smaller than batch size)
             input_seqs_ohe_batches.append(
-                onehot_sequence(''.join(data[ohe_batches[ohe_batch_index]:]))
+                onehot_sequence(''.join(data[ohe_batches[ohe_batch_index]:]), bases=bases_dict)
                     .reshape(-1, sequence_length, len(bases_dict)))
         else:
             # OHE sequences in batches
             input_seqs_ohe_batches.append(onehot_sequence(
-                ''.join(data[ohe_batches[ohe_batch_index]:ohe_batches[ohe_batch_index + 1]]))
+                ''.join(data[ohe_batches[ohe_batch_index]:ohe_batches[ohe_batch_index + 1]]), bases=bases_dict)
                                           .reshape(-1, sequence_length, len(bases_dict)))
 
     # this array will contain the one-hot encoded sequences
