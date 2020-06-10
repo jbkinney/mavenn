@@ -84,6 +84,7 @@ class GlobalEpistasisModel:
 
         # class attributes that are not parameters
         self.history = None
+        self.model = None
 
         # perform input checks to validate attributes
         self._input_checks()
@@ -216,7 +217,6 @@ class GlobalEpistasisModel:
         phi = Dense(1, use_bias=True)(inputTensor)
 
         intermediateTensor = Dense(50, activation='sigmoid', kernel_constraint=nonneg())(phi)
-        # intermediateTensor = Dense(20,activation='sigmoid',kernel_constraint=nonneg())(intermediateTensor)
         outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
 
         # create the model:
@@ -260,9 +260,12 @@ class GlobalEpistasisModel:
                            metrics=['mean_absolute_error'])
 
     def fit(self,
-                  validation_split=0.2,
-                  epochs=50,
-                  verbose=1):
+            validation_split=0.2,
+            epochs=50,
+            verbose=1,
+            use_early_stopping=True,
+            early_stopping_patience=50
+           ):
 
         """
 
@@ -280,6 +283,13 @@ class GlobalEpistasisModel:
             Boolean variable that will show training progress if 1 or True, nothing
             if 0 or False.
 
+        use_early_stopping: (bool)
+            specifies whether to use early stopping or not
+
+        early_stopping_patience: (int)
+            number of epochs to wait before executing early stopping.
+
+
         returns
         -------
         model: (tf.model)
@@ -288,11 +298,26 @@ class GlobalEpistasisModel:
 
         """
 
-        history = self.model.fit(self.input_seqs_ohe,
-                                 self.y_train,
-                                 validation_split=validation_split,
-                                 epochs=epochs,
-                                 verbose=1)
+        if use_early_stopping:
+            esCallBack = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                                  mode='auto',
+                                                                  patience=early_stopping_patience)
+
+            history = self.model.fit(self.input_seqs_ohe,
+                                     self.y_train,
+                                     validation_split=validation_split,
+                                     epochs=epochs,
+                                     verbose=verbose,
+                                     callbacks=[esCallBack]
+                                     )
+
+        else:
+            history = self.model.fit(self.input_seqs_ohe,
+                                     self.y_train,
+                                     validation_split=validation_split,
+                                     epochs=epochs,
+                                     verbose=verbose,
+                                     )
 
         self.history = history
         return history
@@ -346,26 +371,19 @@ class GlobalEpistasisModel:
         test_input_seqs_ohe = onehot_encode_array(data, self.bases)
         return self.model.predict(test_input_seqs_ohe)
 
-    # JBK: we should discuss the suite of diagnostics we want to provide. 
-    def plot_losses(self):
+    def return_loss(self):
 
         """
-        Method used to display loss values.
+        Method that returns loss values.
 
         returns
         -------
-        None
+        history: (object)
+            self.attribute/object that contains loss history
 
         """
 
-        plt.figure()
-        plt.plot(self.history.history['loss'], color='blue')
-        plt.plot(self.history.history['val_loss'], color='orange')
-        plt.title('Model loss', fontsize=12)
-        plt.ylabel('loss', fontsize=12)
-        plt.xlabel('epoch', fontsize=12)
-        plt.legend(['train', 'validation'])
-        plt.show()
+        return self.history
 
     def ge_nonlinearity(self,
                     input_range):
