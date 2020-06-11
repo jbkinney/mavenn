@@ -123,8 +123,8 @@ ax[0].set_xlabel('epoch', fontsize=12)
 ax[0].legend(['train', 'validation'])
 
 ax[1].scatter(predictions,y_test, s=0.05, alpha=0.05, color='black')
-ax[1].set_ylabel('log enrichment (test)')
-ax[1].set_xlabel('predictions (test)')
+ax[1].set_ylabel('observations')
+ax[1].set_xlabel('predictions')
 
 # get ge nonlinear function
 GE_nonlinearity = GE_model.ge_nonlinearity(x_test)
@@ -132,7 +132,7 @@ GE_nonlinearity = GE_model.ge_nonlinearity(x_test)
 ax[2].plot(GE_nonlinearity[1], GE_nonlinearity[0], color='black')
 ax[2].scatter(GE_nonlinearity[2], y_test, color='gray', s=2, alpha=0.1)
 
-ax[2].set_ylabel('log (enrichment) (test)')
+ax[2].set_ylabel('observations')
 ax[2].set_xlabel('latent trait ($\phi$)')
 
 plt.tight_layout()

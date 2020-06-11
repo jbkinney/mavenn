@@ -2,6 +2,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 from mavenn.src.error_handling import handle_errors, check
+import matplotlib.pyplot as plt
 
 
 @handle_errors
@@ -285,3 +286,63 @@ def _generate_all_pair_features_from_sequences(sequences,
         allpairs_seqs_OHE.append(OHE_dinucl_seq.ravel())
 
     return np.array(allpairs_seqs_OHE)
+
+
+@handle_errors
+def ge_plots_for_mavenn_demo(loss_history,
+                             predictions,
+                             true_labels,
+                             sequences,
+                             GE_model):
+    """
+
+    Helper function that plots predictions vs true labels,
+    losses and the GE nonlinearity for mavenn's demo functions
+
+    parameters
+    ----------
+    loss_history: (tf loss history/array-like)
+        arrays containing loss values
+
+    sequences: (array-like)
+        sequences which will be used to make predictions
+
+    predictions: (array-like)
+        model predictions for the sequences entered
+
+    true_labels: (array-like)
+        true labels for the model predictions
+
+    GE_model: (GlobalEpistasisModel object)
+        trained GE model from which the GE nonlinearity will be plotted
+
+
+    returns
+    -------
+    None
+
+    """
+
+    fig, ax = plt.subplots(1, 3, figsize=(10, 3))
+
+    ax[0].plot(loss_history.history['loss'], color='blue')
+    ax[0].plot(loss_history.history['val_loss'], color='orange')
+    ax[0].set_title('Model loss', fontsize=12)
+    ax[0].set_ylabel('loss', fontsize=12)
+    ax[0].set_xlabel('epoch', fontsize=12)
+    ax[0].legend(['train', 'validation'])
+
+    ax[1].scatter(predictions, true_labels, s=1, alpha=0.5, color='black')
+    ax[1].set_ylabel('observations')
+    ax[1].set_xlabel('predictions')
+
+    # get ge nonlinear function
+    GE_nonlinearity = GE_model.ge_nonlinearity(sequences)
+
+    ax[2].plot(GE_nonlinearity[1], GE_nonlinearity[0], color='black')
+    ax[2].scatter(GE_nonlinearity[2], true_labels, color='gray', s=1, alpha=0.5)
+
+    ax[2].set_ylabel('observations')
+    ax[2].set_xlabel('latent trait ($\phi$)')
+
+    plt.tight_layout()
