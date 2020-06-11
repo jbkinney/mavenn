@@ -1,6 +1,7 @@
 from mavenn.src.validate import validate_input
-from mavenn.src.error_handling import handle_errors
-from mavenn.src.utils import onehot_encode_array
+from mavenn.src.error_handling import handle_errors, check
+from mavenn.src.utils import onehot_encode_array, \
+    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 
 import numpy as np
 import tensorflow as tf
@@ -17,9 +18,6 @@ import tensorflow.keras.backend as K
 
 import matplotlib.pyplot as plt
 
-
-
-
 """
 NOTE: could put methods that are common to both classes in
 in a utils.py module, e.g. _generate_all_pair_features_from_sequences()
@@ -27,12 +25,6 @@ in a utils.py module, e.g. _generate_all_pair_features_from_sequences()
 Optional tasks
 1. Could add a method to display additive models as sequences logos.
 2. Could add mutual information approximator for trained NAR model.
-3  Could add utils function that converts floating targets to counts in bins
-   via rank ordering, thus allow real valued phenotype targets to be fit
-   to NAR models.
-4. Could add preprocessing step that scales the data before fitting and
-   rescales the data after fitting to original scale.
-
 """
 
 
@@ -70,7 +62,7 @@ class GlobalEpistasisModel:
 
     def __init__(self,
                  df,
-                 model_type,
+                 model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
                  sub_network_layers_nodes_dict=None):
@@ -104,7 +96,7 @@ class GlobalEpistasisModel:
             self.bases = ['A', 'C', 'G', 'T']
         elif self.alphabet_dict == 'rna':
             self.bases = ['A', 'C', 'G', 'U']
-        elif self.self.alphabet_dict == 'protein':
+        elif self.alphabet_dict == 'protein':
 
             # this should be called amino-acids
             # need to figure out way to deal with
@@ -115,8 +107,17 @@ class GlobalEpistasisModel:
                           'M', 'N', 'P', 'Q', 'R',
                           'S', 'T', 'V', 'W', 'Y']
 
-        # one-hot encode sequences in batches in a vectorized way
-        self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
+        if model_type=='additive':
+            # one-hot encode sequences in batches in a vectorized way
+            self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
+
+        elif model_type=='neighbor':
+            # one-hot encode sequences in batches in a vectorized way
+            self.input_seqs_ohe = _generate_nbr_features_from_sequences(self.x_train, self.alphabet_dict)
+
+        elif model_type=='pairwise':
+            # one-hot encode sequences in batches in a vectorized way
+            self.input_seqs_ohe = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet_dict)
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(self.y_train.shape[0], 1)
@@ -129,52 +130,10 @@ class GlobalEpistasisModel:
         # validate input df
         self.df = validate_input(self.df)
 
-    def _generate_nbr_features_from_sequences(self,
-                                              sequences):
-
-        """
-        Method that takes in sequences are generates sequences
-        with neighbor features
-
-        parameters
-        ----------
-
-        sequences: (array-like)
-            array contains raw input sequences
-
-        returns
-        -------
-        nbr_sequences: (array-like)
-            Data Frame of sequences where each row contains a sequence example
-            with neighbor features
-
-        """
-
-        pass
-
-    def _generate_all_pair_features_from_sequences(self,
-                                                   sequences):
-
-        """
-        Method that takes in sequences are generates sequences
-        with all pair features
-
-        parameters
-        ----------
-
-        sequences: (array-like)
-            array contains raw input sequences
-
-        returns
-        -------
-
-        all_pairs_sequences: (array-like)
-            Data Frame of sequences where each row contains a sequence example
-            with all-pair features
-
-        """
-
-        pass
+        # check that alphabet_dict is valid
+        check(self.model_type in {'additive', 'neighbor', 'pairwise'},
+              'model_type = %s; must be "additive", "neighbor", or "pairwise"' %
+              self.model_type)
 
     # JBK: User should be able to set these parameters in the constructor
     def define_model(self,
@@ -368,7 +327,18 @@ class GlobalEpistasisModel:
         # TODO need to do data validation here
         # e.g. check if data is already one-hot encoded
 
-        test_input_seqs_ohe = onehot_encode_array(data, self.bases)
+        if self.model_type=='additive':
+            # one-hot encode sequences in batches in a vectorized way
+            test_input_seqs_ohe = onehot_encode_array(data, self.bases)
+
+        elif self.model_type=='neighbor':
+            # one-hot encode sequences in batches in a vectorized way
+            test_input_seqs_ohe = _generate_nbr_features_from_sequences(data, self.alphabet_dict)
+
+        elif self.model_type=='pairwise':
+            # one-hot encode sequences in batches in a vectorized way
+            test_input_seqs_ohe = _generate_all_pair_features_from_sequences(data, self.alphabet_dict)
+
         return self.model.predict(test_input_seqs_ohe)
 
     def return_loss(self):
@@ -386,7 +356,9 @@ class GlobalEpistasisModel:
         return self.history
 
     def ge_nonlinearity(self,
-                    input_range):
+                        sequences,
+                        input_range=None,
+                        gauge_fix=True):
 
         """
         Method used to plot GE non-linearity.
@@ -394,9 +366,17 @@ class GlobalEpistasisModel:
         parameters
         ----------
 
-        input_range: (array-like)
-            data which will be input to the GE nonlinearity
+        sequences: (array-like)
+            sequences for which the additive trait will be computed.
 
+        input_range: (array-like)
+            data range which will be input to the GE nonlinearity.
+            If this is none than range will be determined from min
+            and max of the latent trait
+
+        gauge_fix: (bool)
+            if true parameters used to compute latent trait will be
+            gauge fixed
 
         returns
         -------
@@ -407,6 +387,27 @@ class GlobalEpistasisModel:
 
         # TODO input checks on input_range
 
+        # one hot encode sequences and then subsequently use them
+        # to compute latent trait
+
+        if self.model_type=='additive':
+            # one-hot encode sequences in batches in a vectorized way
+            sequences_ohe = onehot_encode_array(sequences, self.bases)
+
+        elif self.model_type=='neighbor':
+            # one-hot encode sequences in batches in a vectorized way
+            sequences_ohe = _generate_nbr_features_from_sequences(sequences, self.alphabet_dict)
+
+        elif self.model_type=='pairwise':
+            # one-hot encode sequences in batches in a vectorized way
+            sequences_ohe = _generate_all_pair_features_from_sequences(sequences, self.alphabet_dict)
+
+        get_1st_layer_output = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+        latent_trait = get_1st_layer_output([sequences_ohe])
+
+        # tf adds an extra dimensions, so we will remove it
+        latent_trait = latent_trait[0].ravel().copy()
+
         ge_model_input = Input((1,))
         next_input = ge_model_input
 
@@ -416,9 +417,16 @@ class GlobalEpistasisModel:
 
         ge_model = Model(inputs=ge_model_input, outputs=next_input)
 
-        ge_nonlinearity = ge_model.predict(input_range)
+        if input_range is None:
+            input_range = np.linspace(min(latent_trait), max(latent_trait), 1000)
+            ge_nonlinearity = ge_model.predict(input_range)
 
-        return ge_nonlinearity
+            # if input range not provided, return input range
+            # so ge nonliearity can be plotted against it.
+            return ge_nonlinearity, input_range, latent_trait
+        else:
+            ge_nonlinearity = ge_model.predict(input_range)
+            return ge_nonlinearity, latent_trait
 
 
 class NoiseAgnosticModel:
