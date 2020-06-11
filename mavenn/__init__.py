@@ -3,6 +3,13 @@ from mavenn.src.UI import GlobalEpistasisModel
 from mavenn.src.UI import NoiseAgnosticModel
 from mavenn.src.error_handling import handle_errors, check
 
+# imports required for running GB1 demo
+import pandas as pd
+import mavenn
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 import os
 import re
 
@@ -17,7 +24,7 @@ def demo(name='GEmpsa'):
     -----------
 
     name: (str)
-        Must be one of {'demo_GEmpsa'}.
+        Must be one of {'GEmpsa, GEGB1, GEmpsaPairwise'}.
 
     returns
     -------
@@ -51,12 +58,4 @@ def demo(name='GEmpsa'):
         print('Running %s:\n%s\n%s\n%s' % \
               (file_name, line, content, line))
     exec(open(file_name).read())
-
-    # # Find logo in name space and, if it exists, return
-    # logo_names = [name for name in dir() if name[-5:] == '_logo']
-    # if len(logo_names) == 1:
-    #
-    #     # returns logo if there is any
-    #     logo = eval(logo_names[0])
-    #     return logo
 

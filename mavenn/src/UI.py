@@ -75,6 +75,7 @@ class GlobalEpistasisModel:
         self.sub_network_layers_nodes_dict = sub_network_layers_nodes_dict
 
         # class attributes that are not parameters
+        # but are useful for using trained models
         self.history = None
         self.model = None
 
@@ -120,7 +121,7 @@ class GlobalEpistasisModel:
             self.input_seqs_ohe = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet_dict)
 
         # check if this is strictly required by tf
-        self.y_train = np.array(self.y_train).reshape(self.y_train.shape[0], 1)
+        self.y_train = np.array(self.y_train).reshape(np.shape(self.y_train)[0], 1)
 
     def _input_checks(self):
 
@@ -209,8 +210,7 @@ class GlobalEpistasisModel:
 
         returns
         -------
-        model: (tf.model)
-            A compiled tensorflow.keras model that can be fit to data.
+        None
 
 
         """
@@ -426,7 +426,7 @@ class GlobalEpistasisModel:
             return ge_nonlinearity, input_range, latent_trait
         else:
             ge_nonlinearity = ge_model.predict(input_range)
-            return ge_nonlinearity, latent_trait
+            return ge_nonlinearity, input_range
 
 
 class NoiseAgnosticModel:
@@ -438,14 +438,16 @@ class NoiseAgnosticModel:
     attributes
     ----------
 
-    df: (pd.DataFrame)
-        Input pandas DataFrame containing design matrix X and targets Y. X are
-        DNA, RNA, or protein sequences to be regressed over and Y are their
-        corresponding counts in bin values.
+    X: (array-like)
+        Input pandas DataFrame containing sequences. X are
+        DNA, RNA, or protein sequences to be regressed over
+
+    y: (array-like)
+        y represents counts in bins corresponding to the sequences X
 
     model_type: (str)
         Model type specifies the type of NAR model the user wants to run.
-        Three possible choices allowed: ['additive','neighbor','all-pairs']
+        Three possible choices allowed: ['additive','neighbor','pairwise']
 
     test_size: (float in (0,1))
         Fraction of data to be set aside as unseen test data for model evaluation
@@ -461,23 +463,69 @@ class NoiseAgnosticModel:
     """
 
     def __init__(self,
-                 df,
-                 model_type,
+                 X,
+                 y,
+                 model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
                  noise_model_layers_nodes_dict=None):
 
         # set class attributes
-        self.df = df
+        self.X = X
+        self.y = y
         self.model_type = model_type
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
         self.noise_model_layers_nodes_dict = noise_model_layers_nodes_dict
 
+        # class attributes that are not parameters
+        # but are useful for using trained models
+        self.history = None
+        self.model = None
+
         # perform input checks to validate attributes
         self._input_checks()
 
-        pass
+        self.x_train, self.y_train = self.X, self.y
+
+        print('One-hot encoding...')
+        # # onehot-encode sequences
+        # self.input_seqs_ohe = []
+        # for _ in range(len(self.x_train)):
+        #     self.input_seqs_ohe.append(onehot_sequence(self.x_train[_]).ravel())
+        #
+        # # turn lists into np arrays for consumption by tf
+        # self.input_seqs_ohe = np.array(self.input_seqs_ohe)
+
+        if self.alphabet_dict == 'dna':
+            self.bases = ['A', 'C', 'G', 'T']
+        elif self.alphabet_dict == 'rna':
+            self.bases = ['A', 'C', 'G', 'U']
+        elif self.alphabet_dict == 'protein':
+
+            # this should be called amino-acids
+            # need to figure out way to deal with
+            # naming without changing a bunch of
+            # unnecessary refactoring.
+            self.bases = ['A', 'C', 'D', 'E', 'F',
+                          'G', 'H', 'I', 'K', 'L',
+                          'M', 'N', 'P', 'Q', 'R',
+                          'S', 'T', 'V', 'W', 'Y']
+
+        if model_type=='additive':
+            # one-hot encode sequences in batches in a vectorized way
+            self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
+
+        elif model_type=='neighbor':
+            # one-hot encode sequences in batches in a vectorized way
+            self.input_seqs_ohe = _generate_nbr_features_from_sequences(self.x_train, self.alphabet_dict)
+
+        elif model_type=='pairwise':
+            # one-hot encode sequences in batches in a vectorized way
+            self.input_seqs_ohe = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet_dict)
+
+        # check if this is strictly required by tf
+        self.y_train = np.array(self.y_train)
 
     def _input_checks(self):
 
@@ -520,12 +568,22 @@ class NoiseAgnosticModel:
 
         """
 
-        pass
+        number_input_layer_nodes = len(self.input_seqs_ohe[0])
+        inputTensor = Input((number_input_layer_nodes,), name='Sequence')
+
+        phi = Dense(1, use_bias=True, name='additive_weights')(inputTensor)
+
+        intermediateTensor = Dense(10, activation='sigmoid', kernel_constraint=nonneg())(phi)
+        outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax', kernel_constraint=nonneg())(
+            intermediateTensor)
+
+        # #create the model:
+        model = Model(inputTensor, outputTensor)
+        self.model = model
+        return model
 
     def compile_model(self,
-                      model,
-                      optimizer='Adam',
-                      lr=0.0001):
+                      lr=0.005):
 
         """
         This method will compile the model created in the define_model method.
@@ -534,9 +592,6 @@ class NoiseAgnosticModel:
         parameters
         ----------
 
-        model: (tf.model)
-            A tensorflow.keras model to be compiled
-
         optimizer: (str)
             Specifies which optimizers to use during training. Valid choices include
             ['Adam', 'SGD', 'RMSPROP', ... link to keras documentation']
@@ -544,40 +599,35 @@ class NoiseAgnosticModel:
         lr: (float)
             Learning rate of the optimizer.
 
+        metrics: (str)
+            Optional metrics to track as MSE loss is minimized, e.g. mean absolute
+            error. Link to allowed metrics from keras documention...
+
+
         returns
         -------
-        model: (tf.model)
-            A compiled tensorflow.keras model that can be fit to data.
-
+        None
 
         """
-        pass
 
-    def model_fit(self,
-                  model,
-                  sequences,
-                  cts_in_bins,
+        self.model.compile(loss=tf.nn.log_poisson_loss,
+                           optimizer=Adam(lr=lr),
+                           metrics=['categorical_accuracy'])
+
+    def fit(self,
                   validation_split=0.2,
-                  epochs=100,
-                  verbose=1):
+                  epochs=50,
+                  verbose=1,
+                  use_early_stopping=True,
+                  early_stopping_patience=50
+                  ):
 
         """
 
-        Method that will fit the global epistasis model to data.
+        Method that will fit the noise agnostic model to data.
 
         parameters
         ----------
-
-        model: (tf.model)
-            A compiled tensorflow model ready to be fit to data.
-
-        sequences: (array-like)
-            Array of sequences that will be used in training.
-
-        cts_in_bins: (array-like)
-            Array of counts in bins corresponding to sequences that
-            will be used as targets during training.
-
         validation_split: (float in [0,1])
             Fraction of training data to be split into a validation set.
 
@@ -588,6 +638,13 @@ class NoiseAgnosticModel:
             Boolean variable that will show training progress if 1 or True, nothing
             if 0 or False.
 
+        use_early_stopping: (bool)
+            specifies whether to use early stopping or not
+
+        early_stopping_patience: (int)
+            number of epochs to wait before executing early stopping.
+
+
         returns
         -------
         model: (tf.model)
@@ -595,6 +652,32 @@ class NoiseAgnosticModel:
             and used for predictions.
 
         """
+
+        if use_early_stopping:
+            esCallBack = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                                  mode='auto',
+                                                                  patience=early_stopping_patience)
+
+            history = self.model.fit(self.input_seqs_ohe,
+                                     self.y_train,
+                                     validation_split=validation_split,
+                                     epochs=epochs,
+                                     verbose=verbose,
+                                     callbacks=[esCallBack]
+                                     )
+
+        else:
+            history = self.model.fit(self.input_seqs_ohe,
+                                     self.y_train,
+                                     validation_split=validation_split,
+                                     epochs=epochs,
+                                     verbose=verbose,
+                                     )
+
+        self.history = history
+        return history
+
+
 
     def model_evaluate(self,
                        model,
@@ -620,3 +703,78 @@ class NoiseAgnosticModel:
         pass
 
 
+    def noise_model(self,
+                    sequences=None,
+                    input_range=None,
+                    gauge_fix=True):
+
+        """
+        Method used to compute NA noise model.
+
+        parameters
+        ----------
+
+        sequences: (array-like)
+            sequences for which the additive trait will be computed.
+
+        input_range: (array-like)
+            data range which will be input to the noise model.
+            If this is none than range will be determined from min
+            and max of the latent trait
+
+        gauge_fix: (bool)
+            if true parameters used to compute latent trait will be
+            gauge fixed
+
+        returns
+        -------
+        noise_model: (array-like function)
+            the noise model mapping latent trait to bins.
+
+        """
+
+        # TODO input checks on input_range and sequences
+
+        # one hot encode sequences and then subsequently use them
+        # to compute latent trait
+
+        # compute latent trait if sequences given
+        if sequences is not None:
+
+            if self.model_type=='additive':
+                # one-hot encode sequences in batches in a vectorized way
+                sequences_ohe = onehot_encode_array(sequences, self.bases)
+
+            elif self.model_type=='neighbor':
+                # one-hot encode sequences in batches in a vectorized way
+                sequences_ohe = _generate_nbr_features_from_sequences(sequences, self.alphabet_dict)
+
+            elif self.model_type=='pairwise':
+                # one-hot encode sequences in batches in a vectorized way
+                sequences_ohe = _generate_all_pair_features_from_sequences(sequences, self.alphabet_dict)
+
+            get_1st_layer_output = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+            latent_trait = get_1st_layer_output([sequences_ohe])
+
+            # tf adds an extra dimensions, so we will remove it
+            latent_trait = latent_trait[0].ravel().copy()
+
+        noise_model_input = Input((1,))
+        next_input = noise_model_input
+
+        # TODO need to fix this hardcoded 2 depending on model architecture
+        for layer in self.model.layers[-2:]:
+            next_input = layer(next_input)
+
+        noise_model = Model(inputs=noise_model_input, outputs=next_input)
+
+        if input_range is None and sequences is not None:
+            input_range = np.linspace(min(latent_trait), max(latent_trait), 1000)
+            noise_function = noise_model.predict(input_range)
+
+            # if input range not provided, return input range
+            # so ge nonliearity can be plotted against it.
+            return noise_function, input_range, latent_trait
+        else:
+            noise_function = noise_model.predict(input_range)
+            return noise_function, input_range

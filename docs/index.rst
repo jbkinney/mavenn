@@ -5,9 +5,10 @@ MAVENN: Quantitative Modeling of Sequence-Function Relationships using Neural Ne
 MAVE-NN is a python package for inferring models of sequence-function relationships from 
 multiplexed assays of variant effects (MAVEs). MAVE-NN currently implements global epistasis 
 regression and noise agnostic regression. Both models are implemented as neural networks 
-using TensorFlow. The :ref:`installation`, :ref:`quickstart`,  :ref:`examples` 
-sections below are provided to help users  quickly get  MAVE-NN working for 
-their own research needs.
+using TensorFlow. The :ref:`installation`, :ref:`quickstart`,  :ref:`examples`, 
+and :ref:`tutorial` sections below are provided to help users  quickly get 
+MAVE-NN working for their own research needs.
+
 
 .. toctree::
    :maxdepth: 2
@@ -33,8 +34,13 @@ Quick Start
 For a quick demonstration of mavenn, execute the following within Python::
 
    import mavenn
-   mavenn.demo(name='GEmpsa')
+   mavenn.demo(name='GEmpsaPairwise')
 
+This command will train a pairwise global epistasis model on massively parallel
+splicing assay data from Wong et al. and return the loss history, predictions vs.
+true labels, and the global epistasis nonlinear function.
+
+.. image:: _static/examples_images/GE_pairwise_mpsa_demo.png
 
 Resources
 ---------
