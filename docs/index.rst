@@ -31,16 +31,27 @@ mavenn can be installed from `PyPI <https://pypi.org/project/logomaker/>`_ using
 Quick Start
 -----------
 
-For a quick demonstration of mavenn, execute the following within Python::
+For a quick demonstration of mavenn's global epistasis model, execute the following within Python::
 
    import mavenn
    mavenn.demo(name='GEmpsaPairwise')
 
 This command will train a pairwise global epistasis model on massively parallel
-splicing assay data from Wong et al. and return the loss history, predictions vs.
+splicing assay data from Wong et al. (Mol. Cell. 2018) and return the loss history, predictions vs.
 true labels, and the global epistasis nonlinear function.
 
 .. image:: _static/examples_images/GE_pairwise_mpsa_demo.png
+
+For a demonstration of mavenn's noise agnostic model, execute the following within Python::
+
+   import mavenn
+   mavenn.demo(name='NAsortseq')
+
+This command will train an additive noise agnostic model on Sort-Seq
+data from Kinney et al. (pnas 2010) and return the loss history, inferred additive
+parameters as a sequence logo, and the inferred noise model.
+
+.. image:: _static/examples_images/NA_additive_sort_seq_demo.png
 
 Resources
 ---------

@@ -351,7 +351,6 @@ def ge_plots_for_mavenn_demo(loss_history,
     plt.tight_layout()
 
 
-
 @handle_errors
 def na_plots_for_mavenn_demo(loss_history,
                              NA_model,
@@ -381,8 +380,6 @@ def na_plots_for_mavenn_demo(loss_history,
     None
     """
 
-
-
     # plot results
     fig, ax = plt.subplots(1, 3, figsize=(10, 3))
 
@@ -397,7 +394,10 @@ def na_plots_for_mavenn_demo(loss_history,
     ax[1].set_ylabel('additive parameters')
     ax[1].set_xlabel('position')
     theta_df = pd.DataFrame(NA_model.layers[1].get_weights()[0].reshape(39,4),columns=['A', 'C', 'G', 'T'])
-    additive_logo = logomaker.Logo(theta_df,center_values=True, ax=ax[1])
+
+    additive_logo = logomaker.Logo(theta_df/np.sqrt(np.sum(theta_df.values.ravel()**2)),
+                                   center_values=True,
+                                   ax=ax[1])
 
     # view the inferred noise model as a heatmap
     noise_model_heatmap = sns.heatmap(noise_model[0].T,cmap='Greens', ax=ax[2])
@@ -408,4 +408,3 @@ def na_plots_for_mavenn_demo(loss_history,
     ax[2].set_xlabel('latent trait ($\phi$)')
 
     plt.tight_layout()
-

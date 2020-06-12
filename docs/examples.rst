@@ -32,19 +32,20 @@ Example snippet for fitting additive GE model to MPSA data ::
     mpsa_df = mpsa_df.dropna()
     mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
 
+    # split data into training and testing sets
     x_train, x_test, y_train, y_test = train_test_split(mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values))
-    train_df = pd.DataFrame({'sequence': x_train, 'values': y_train}, columns=['sequence', 'values'])
 
     # load mavenn's GE model
-    GE_model = mavenn.GlobalEpistasisModel(df=train_df, model_type='additive', alphabet_dict='rna')
+    GE_model = mavenn.GlobalEpistasisModel(X=x_train, y=y_train, model_type='additive', alphabet_dict='rna')
     model = GE_model.define_model()
     GE_model.compile_model(lr=0.005)
     history = GE_model.fit(epochs=200, use_early_stopping=True, early_stopping_patience=20)
 
+    # make predictions on held out test set
     predictions = GE_model.predict(x_test)
-    loss_history =  GE_model.return_loss()
+    loss_history = GE_model.return_loss()
 
-    # make plots
+    # plot results using helper function
     ge_plots_for_mavenn_demo(loss_history, predictions, y_test, x_test, GE_model)
 	
 .. image:: _static/examples_images/GE_additive_mpsa_demo.png	
@@ -60,19 +61,45 @@ Example snippet for fitting pairwise GE model to MPSA data ::
     mpsa_df = mpsa_df.dropna()
     mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
 
+    # split data into training and testing sets
     x_train, x_test, y_train, y_test = train_test_split(mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values))
-    train_df = pd.DataFrame({'sequence': x_train, 'values': y_train}, columns=['sequence', 'values'])
 
     # load mavenn's GE model
-    GE_model = mavenn.GlobalEpistasisModel(df=train_df, model_type='pairwise',alphabet_dict='rna')
+    GE_model = mavenn.GlobalEpistasisModel(X=x_train, y=y_train, model_type='pairwise',alphabet_dict='rna')
     model = GE_model.define_model()
     GE_model.compile_model(lr=0.001)
     history = GE_model.fit(epochs=200, use_early_stopping=True, early_stopping_patience=20, verbose=1)
 
+    # make predictions on held out test set
     predictions = GE_model.predict(x_test)
-    loss_history =  GE_model.return_loss()
+    loss_history = GE_model.return_loss()
 
-    # make plots
+    # plot results using helper function
     ge_plots_for_mavenn_demo(loss_history, predictions, y_test, x_test, GE_model)
 
 .. image:: _static/examples_images/GE_pairwise_mpsa_demo.png
+
+
+Additive NA model: (Sort-Seq)
+-----------------------------
+
+Example snippet for inferring NA model from Sort-Seq data ::
+
+    # load data
+    sequences = np.loadtxt(mavenn.__path__[0]+'/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt', dtype='str')
+    bin_number = np.loadtxt(mavenn.__path__[0]+'/examples/datafiles/sort_seq/full-wt/bin_numbers.txt')
+
+    # load mavenn's NA model
+    NA_model = mavenn.NoiseAgnosticModel(X=sequences, y=bin_number)
+    model = NA_model.define_model()
+    NA_model.compile_model(lr=0.005)
+    history = NA_model.fit(epochs=50, use_early_stopping=True, early_stopping_patience=10, verbose=1)
+
+    # evaluate the inferred noise model for a given input range
+    phi_range = np.linspace(-20,20,1000)
+    noise_model = NA_model.noise_model(input_range=phi_range)
+
+    # plot results using helper function
+    na_plots_for_mavenn_demo(history, model, noise_model, phi_range)
+
+.. image:: _static/examples_images/NA_additive_sort_seq_demo.png
