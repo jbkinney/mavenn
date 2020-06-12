@@ -38,10 +38,12 @@ class GlobalEpistasisModel:
     attributes
     ----------
 
-    df: (pd.DataFrame)
-        Input pandas DataFrame containing design matrix X and targets Y. X are
-        DNA, RNA, or protein sequences to be regressed over and Y are their
-        corresponding targets/phenotype values.
+    X: (array-like)
+        Input pandas DataFrame containing sequences. X are
+        DNA, RNA, or protein sequences to be regressed over
+
+    y: (array-like)
+        y represents counts in bins corresponding to the sequences X
 
     model_type: (str)
         Model type specifies the type of GE model the user wants to run.
@@ -61,14 +63,15 @@ class GlobalEpistasisModel:
     """
 
     def __init__(self,
-                 df,
+                 X,
+                 y,
                  model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
                  sub_network_layers_nodes_dict=None):
 
         # set class attributes
-        self.df = df
+        self.X, self.y = X, y
         self.model_type = model_type
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
@@ -82,7 +85,7 @@ class GlobalEpistasisModel:
         # perform input checks to validate attributes
         self._input_checks()
 
-        self.x_train, self.y_train = self.df['sequence'].values, self.df['values'].values
+        self.x_train, self.y_train = self.X, self.y
 
         print('One-hot encoding...')
         # # onehot-encode sequences
@@ -108,15 +111,15 @@ class GlobalEpistasisModel:
                           'M', 'N', 'P', 'Q', 'R',
                           'S', 'T', 'V', 'W', 'Y']
 
-        if model_type=='additive':
+        if model_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
             self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
 
-        elif model_type=='neighbor':
+        elif model_type == 'neighbor':
             # one-hot encode sequences in batches in a vectorized way
             self.input_seqs_ohe = _generate_nbr_features_from_sequences(self.x_train, self.alphabet_dict)
 
-        elif model_type=='pairwise':
+        elif model_type == 'pairwise':
             # one-hot encode sequences in batches in a vectorized way
             self.input_seqs_ohe = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet_dict)
 
@@ -129,7 +132,13 @@ class GlobalEpistasisModel:
         Validate parameters passed to the GlobalEpistasis constructor
         """
         # validate input df
-        self.df = validate_input(self.df)
+        #self.df = validate_input(self.df)
+
+        check(isinstance(self.X, (list, np.ndarray)),
+              'type(X) = %s must be of type list or np.array' % type(self.X))
+
+        check(isinstance(self.y, (list, np.ndarray)),
+              'type(y) = %s must be of type list or np.array' % type(self.y))
 
         # check that alphabet_dict is valid
         check(self.model_type in {'additive', 'neighbor', 'pairwise'},

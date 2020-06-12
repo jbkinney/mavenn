@@ -3,6 +3,9 @@ from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 from mavenn.src.error_handling import handle_errors, check
 import matplotlib.pyplot as plt
+import logomaker
+import seaborn as sns
+import pandas as pd
 
 
 @handle_errors
@@ -346,3 +349,63 @@ def ge_plots_for_mavenn_demo(loss_history,
     ax[2].set_xlabel('latent trait ($\phi$)')
 
     plt.tight_layout()
+
+
+
+@handle_errors
+def na_plots_for_mavenn_demo(loss_history,
+                             NA_model,
+                             noise_model,
+                             phi_range):
+    """
+
+    Helper function that plots inferred additive parameters,
+    losses and the NA noise model for mavenn's demo functions
+
+    parameters
+    ----------
+    loss_history: (tf loss history/array-like)
+        arrays containing loss values
+
+    NA_model: (NoiseAgnosticModel object)
+        trained NA model from which additive parameters
+        will be extracted and plotted as a sequence logo
+
+    noise_model: (array-like)
+        the inferred noise model which will be plotted
+        as a heatmap
+
+
+    returns
+    -------
+    None
+    """
+
+
+
+    # plot results
+    fig, ax = plt.subplots(1, 3, figsize=(10, 3))
+
+    ax[0].plot(loss_history.history['loss'], color='blue')
+    ax[0].plot(loss_history.history['val_loss'], color='orange')
+    ax[0].set_title('Model loss')
+    ax[0].set_ylabel('loss')
+    ax[0].set_xlabel('epoch')
+    ax[0].legend(['train', 'validation'])
+
+    # make logo to visualize additive parameters
+    ax[1].set_ylabel('additive parameters')
+    ax[1].set_xlabel('position')
+    theta_df = pd.DataFrame(NA_model.layers[1].get_weights()[0].reshape(39,4),columns=['A', 'C', 'G', 'T'])
+    additive_logo = logomaker.Logo(theta_df,center_values=True, ax=ax[1])
+
+    # view the inferred noise model as a heatmap
+    noise_model_heatmap = sns.heatmap(noise_model[0].T,cmap='Greens', ax=ax[2])
+    ax[2].invert_yaxis()
+    ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
+    ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
+    ax[2].set_ylabel(' bin numbers')
+    ax[2].set_xlabel('latent trait ($\phi$)')
+
+    plt.tight_layout()
+

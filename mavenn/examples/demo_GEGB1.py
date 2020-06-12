@@ -101,10 +101,9 @@ gb1_df = load_olson_data_GB1()
 
 # split data into train and test
 x_train, x_test, y_train, y_test = train_test_split(gb1_df['sequence'].values, gb1_df['values'].values)
-train_df = pd.DataFrame({'sequence': x_train, 'values': y_train}, columns=['sequence', 'values'])
 
 # load mavenn's GE model
-GE_model = mavenn.GlobalEpistasisModel(df=train_df, model_type='additive', alphabet_dict='protein')
+GE_model = mavenn.GlobalEpistasisModel(X=x_train, y=y_train, model_type='additive', alphabet_dict='protein')
 model = GE_model.define_model()
 GE_model.compile_model(lr=0.001)
 history = GE_model.fit(epochs=30, use_early_stopping=True, early_stopping_patience=10)

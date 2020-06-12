@@ -3,11 +3,12 @@ from mavenn.src.UI import GlobalEpistasisModel
 from mavenn.src.UI import NoiseAgnosticModel
 from mavenn.src.error_handling import handle_errors, check
 
-# imports required for running GB1 demo
+# imports required for helper functions in demos
 import pandas as pd
 import mavenn
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 import os

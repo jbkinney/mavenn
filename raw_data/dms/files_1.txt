@@ -1,3 +1,0 @@
-bin	file
-0	library.txt
-1	bin_1.txt

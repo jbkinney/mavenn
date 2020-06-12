@@ -6,3 +6,5 @@ sphinx_rtd_theme
 tensorflow
 sklearn
 matplotlib
+logomaker
+seaborn
