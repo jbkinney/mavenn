@@ -1,5 +1,5 @@
 ========================================================================================
-MAVENN: Quantitative Modeling of Sequence-Function Relationships using Neural Networks
+MAVE-NN: Quantitative Modeling of Sequence-Function Relationships using Neural Networks
 ========================================================================================
 
 MAVE-NN is a python package for inferring models of sequence-function relationships from 
@@ -20,7 +20,7 @@ MAVE-NN working for their own research needs.
 Installation
 --------------
 
-MAVENN has minimal dependencies and is compatible with both Python 2.7 and Python 3.6.
+MAVE-NN has minimal dependencies and is compatible with both Python 2.7 and Python 3.6.
 The code for MAVENN is available on `GitHub <https://github.com/jbkinney/mavenn>`_ under an MIT open source license.
 mavenn can be installed from `PyPI <https://pypi.org/project/logomaker/>`_ using the ``pip`` package manager by executing the following at the commandline: ::
 

@@ -55,10 +55,11 @@ class GlobalEpistasisModel:
 
     alphabet_dict: (str)
         Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein']
+        allowed: ['dna','rna','protein'].
 
-    sub_network_layers_nodes_dict: (dict)
-        Dictionary that specifies the number of layers and nodes in each subnetwork layer
+    custom_architecture: (tf.model)
+        a custom neural network architecture that replaces the
+        default architecture implemented.
 
     """
 
@@ -68,14 +69,14 @@ class GlobalEpistasisModel:
                  model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
-                 sub_network_layers_nodes_dict=None):
+                 custom_architecture=None):
 
         # set class attributes
         self.X, self.y = X, y
         self.model_type = model_type
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
-        self.sub_network_layers_nodes_dict = sub_network_layers_nodes_dict
+        self.custom_architecture = custom_architecture
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -193,6 +194,17 @@ class GlobalEpistasisModel:
         model = Model(inputTensor, outputTensor)
         self.model = model
         return model
+
+    def return_model(self):
+        """
+
+        returns (GE model)
+            Helper method that returns the model attribute,
+            so that it may easily accessible from the mavenn
+            Model class
+        """
+
+        return self.model
 
     def compile_model(self,
                       optimizer='Adam',
@@ -435,7 +447,7 @@ class GlobalEpistasisModel:
             return ge_nonlinearity, input_range, latent_trait
         else:
             ge_nonlinearity = ge_model.predict(input_range)
-            return ge_nonlinearity, input_range
+            return ge_nonlinearity
 
 
 class NoiseAgnosticModel:
@@ -466,8 +478,9 @@ class NoiseAgnosticModel:
         Specifies the type of input sequences. Three possible choices
         allowed: ['dna','rna','protein']
 
-    noise_model_layers_nodes_dict: (dict)
-        Dictionary that specifies the number of layers and nodes in each noise model layer
+    custom_architecture: (tf.model)
+        a custom neural network architecture that replaces the
+        default architecture implemented.
 
     """
 
@@ -477,7 +490,7 @@ class NoiseAgnosticModel:
                  model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
-                 noise_model_layers_nodes_dict=None):
+                 custom_architecture=None):
 
         # set class attributes
         self.X = X
@@ -485,7 +498,7 @@ class NoiseAgnosticModel:
         self.model_type = model_type
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
-        self.noise_model_layers_nodes_dict = noise_model_layers_nodes_dict
+        self.custom_architecture = custom_architecture
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -624,12 +637,11 @@ class NoiseAgnosticModel:
                            metrics=['categorical_accuracy'])
 
     def fit(self,
-                  validation_split=0.2,
-                  epochs=50,
-                  verbose=1,
-                  use_early_stopping=True,
-                  early_stopping_patience=50
-                  ):
+            validation_split=0.2,
+            epochs=50,
+            verbose=1,
+            use_early_stopping=True,
+            early_stopping_patience=50):
 
         """
 
@@ -686,8 +698,6 @@ class NoiseAgnosticModel:
         self.history = history
         return history
 
-
-
     def model_evaluate(self,
                        model,
                        data):
@@ -711,6 +721,30 @@ class NoiseAgnosticModel:
 
         pass
 
+    def return_loss(self):
+
+        """
+        Method that returns loss values.
+
+        returns
+        -------
+        history: (object)
+            self.attribute/object that contains loss history
+
+        """
+
+        return self.history
+
+    def return_model(self):
+        """
+
+        returns (GE model)
+            Helper method that returns the model attribute,
+            so that it may easily accessible from the mavenn
+            Model class
+        """
+
+        return self.model
 
     def noise_model(self,
                     sequences=None,
@@ -786,4 +820,4 @@ class NoiseAgnosticModel:
             return noise_function, input_range, latent_trait
         else:
             noise_function = noise_model.predict(input_range)
-            return noise_function, input_range
+            return noise_function

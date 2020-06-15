@@ -1,4 +1,5 @@
 # Classes / functions imported with mavenn
+from mavenn.src.model import Model
 from mavenn.src.UI import GlobalEpistasisModel
 from mavenn.src.UI import NoiseAgnosticModel
 from mavenn.src.error_handling import handle_errors, check
@@ -9,7 +10,6 @@ import mavenn
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
 
 import os
 import re
@@ -25,7 +25,7 @@ def demo(name='GEmpsa'):
     -----------
 
     name: (str)
-        Must be one of {'GEmpsa, GEGB1, GEmpsaPairwise'}.
+        Must be one of {'GEmpsa, GEGB1, GEmpsaPairwise, NAsortseq'}.
 
     returns
     -------
