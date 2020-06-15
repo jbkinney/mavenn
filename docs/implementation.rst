@@ -1,6 +1,12 @@
 Implementation
 ==============
 
+MAVE-NN Model class
+-------------------
+
+.. autoclass:: mavenn.src.model.Model
+    :members:
+
 
 .. _GlobalEpistasisModel_class:
 
