@@ -22,7 +22,7 @@ Installation
 
 MAVE-NN has minimal dependencies and is compatible with both Python 2.7 and Python 3.6.
 The code for MAVENN is available on `GitHub <https://github.com/jbkinney/mavenn>`_ under an MIT open source license.
-mavenn can be installed from `PyPI <https://pypi.org/project/logomaker/>`_ using the ``pip`` package manager by executing the following at the commandline: ::
+mavenn can be installed from `PyPI <https://pypi.org/project/mavenn/>`_ using the ``pip`` package manager by executing the following at the commandline: ::
 
     pip install mavenn
 
@@ -60,7 +60,7 @@ Tutorial
 
 A tutorial is available via a series of Jupyter notebooks, each of which focuses on a different aspect of mavenn's
 functionality. To view the notebooks statically on GitHub,
-`click here <https://github.com/jbkinney/logomaker/tree/master/mavenn/tutorials>`_.
+`click here <https://github.com/jbkinney/mavenn/tree/master/mavenn/tutorials>`_.
 
 Resources
 ---------
