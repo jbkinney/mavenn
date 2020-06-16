@@ -35,6 +35,11 @@ class Model:
         Fraction of data to be set aside as unseen test data for model evaluation
         error.
 
+    monotonic: (boolean)
+        Indicates whether to use monotonicity constraint in GE nonlinear function
+        or NA noise model. If true then weights of GE nonlinear function, or NA
+        noise model, will be constraned to be non-negative.
+
     alphabet_dict: (str)
         Specifies the type of input sequences. Three possible choices
         allowed: ['dna','rna','protein']
@@ -59,6 +64,7 @@ class Model:
                  model_type,
                  learning_rate = 0.005,
                  test_size=0.2,
+                 monotonic=True,
                  alphabet_dict='dna',
                  custom_architecture=None,
                  ohe_single_batch_size=10000):
@@ -69,6 +75,7 @@ class Model:
         self.model_type = model_type
         self.learning_rate = learning_rate
         self.test_size = test_size
+        self.monotonic = monotonic
         self.alphabet_dict = alphabet_dict
         self.custom_architecture = custom_architecture
         self.ohe_single_batch_size = ohe_single_batch_size
@@ -93,7 +100,7 @@ class Model:
                                               self.custom_architecture,
                                               self.ohe_single_batch_size)
 
-            self.define_model = self.model.define_model()
+            self.define_model = self.model.define_model(monotonic=self.monotonic)
             self.model.compile_model(lr=learning_rate)
 
         elif regression_type == 'NA':
@@ -105,7 +112,7 @@ class Model:
                                             self.custom_architecture,
                                             self.ohe_single_batch_size)
 
-            self.define_model = self.model.define_model()
+            self.define_model = self.model.define_model(monotonic=self.monotonic)
             self.model.compile_model(lr=learning_rate)
 
     @handle_errors

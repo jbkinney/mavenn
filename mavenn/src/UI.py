@@ -163,14 +163,16 @@ class GlobalEpistasisModel:
         """
         Method that will define the architecture of the global epistasis model.
         using the tensorflow.keras functional api. If the subnetwork architecture
-        is not None, than archicture is constructed via the dict sub_network_layers_nodes_dict
+        is not None, than archicture is constructed via the self.custom_architecture
+        keyword
 
         parameters
         ----------
 
         monotonic: (boolean)
-            If True, than weights in subnetwork will be constrained to be non-negative.
-            Doing so will constrain the global epistasis non-linearity to be monotonic
+            Indicates whether to use monotonicity constraint in GE nonlinear function.
+            If true then weights of GE nonlinear function will be constraned to
+            be non-negative.
 
         regularization: (str)
             String that specifies type of regularization to use. Valid choices include
@@ -194,8 +196,13 @@ class GlobalEpistasisModel:
 
         phi = Dense(1, use_bias=True)(inputTensor)
 
-        intermediateTensor = Dense(50, activation='sigmoid', kernel_constraint=nonneg())(phi)
-        outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+        # implement monotonicity constraints
+        if monotonic:
+            intermediateTensor = Dense(50, activation='sigmoid', kernel_constraint=nonneg())(phi)
+            outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+        else:
+            intermediateTensor = Dense(50, activation='sigmoid')(phi)
+            outputTensor = Dense(1)(intermediateTensor)
 
         # create the model:
 
@@ -573,7 +580,7 @@ class NoiseAgnosticModel:
         pass
 
     def define_model(self,
-                     nonneg_weights=True,
+                     monotonic=True,
                      regularization=None,
                      activations='sigmoid'):
 
@@ -585,8 +592,8 @@ class NoiseAgnosticModel:
         parameters
         ----------
 
-        nonneg_weights: (boolean)
-            If True, than weights in output will be constrained to be non-negative.
+        monotonic: (boolean)
+            If True, than weights in noise model will be constrained to be non-negative.
 
         regularization: (str)
             String that specifies type of regularization to use. Valid choices include
@@ -611,9 +618,15 @@ class NoiseAgnosticModel:
 
         phi = Dense(1, use_bias=True, name='additive_weights')(inputTensor)
 
-        intermediateTensor = Dense(10, activation='sigmoid', kernel_constraint=nonneg())(phi)
-        outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax', kernel_constraint=nonneg())(
-            intermediateTensor)
+        # implement monotonicity constraints
+        if monotonic:
+            intermediateTensor = Dense(10, activation='sigmoid', kernel_constraint=nonneg())(phi)
+            outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax', kernel_constraint=nonneg())(
+                intermediateTensor)
+        else:
+            intermediateTensor = Dense(10, activation='sigmoid')(phi)
+            outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax')(intermediateTensor)
+
 
         # #create the model:
         model = Model(inputTensor, outputTensor)
