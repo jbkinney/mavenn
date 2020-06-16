@@ -53,6 +53,15 @@ parameters as a sequence logo, and the inferred noise model.
 
 .. image:: _static/examples_images/NA_additive_sort_seq_demo.png
 
+.. _tutorial:
+
+Tutorial
+--------
+
+A tutorial is available via a series of Jupyter notebooks, each of which focuses on a different aspect of mavenn's
+functionality. To view the notebooks statically on GitHub,
+`click here <https://github.com/jbkinney/logomaker/tree/master/mavenn/tutorials>`_.
+
 Resources
 ---------
 
