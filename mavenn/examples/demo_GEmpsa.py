@@ -2,15 +2,13 @@ import mavenn
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from mavenn.src.utils import ge_plots_for_mavenn_demo
+from mavenn.src.utils import ge_plots_for_mavenn_demo, get_example_dataset
 
 # load data
-mpsa_df = pd.read_csv(mavenn.__path__[0]+'/examples/datafiles/mpsa/psi_9nt_mavenn.csv')
-mpsa_df = mpsa_df.dropna()
-mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
+X, y = get_example_dataset(name='MPSA')
 
 # split data into training and testing sets
-x_train, x_test, y_train, y_test = train_test_split(mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values))
+x_train, x_test, y_train, y_test = train_test_split(X, y)
 
 # load mavenn's GE model
 GER = mavenn.Model(regression_type='GE',

@@ -61,6 +61,12 @@ class GlobalEpistasisModel:
         a custom neural network architecture that replaces the
         default architecture implemented.
 
+    ohe_single_batch_size: (int)
+        integer specifying how many sequences to one-hot encode at a time.
+        The larger this number number, the quicker the encoding will happen,
+        but this may also take up a lot of memory and throw an exception
+        if its too large. Currently for additive models only.
+
     """
 
     def __init__(self,
@@ -69,7 +75,8 @@ class GlobalEpistasisModel:
                  model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
-                 custom_architecture=None):
+                 custom_architecture=None,
+                 ohe_single_batch_size=10000):
 
         # set class attributes
         self.X, self.y = X, y
@@ -77,6 +84,7 @@ class GlobalEpistasisModel:
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
         self.custom_architecture = custom_architecture
+        self.ohe_single_batch_size = ohe_single_batch_size
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -114,7 +122,7 @@ class GlobalEpistasisModel:
 
         if model_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
-            self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
+            self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases, self.ohe_single_batch_size)
 
         elif model_type == 'neighbor':
             # one-hot encode sequences in batches in a vectorized way
@@ -141,7 +149,7 @@ class GlobalEpistasisModel:
         check(isinstance(self.y, (list, np.ndarray)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
 
-        # check that alphabet_dict is valid
+        # check that model type valid
         check(self.model_type in {'additive', 'neighbor', 'pairwise'},
               'model_type = %s; must be "additive", "neighbor", or "pairwise"' %
               self.model_type)
@@ -482,6 +490,12 @@ class NoiseAgnosticModel:
         a custom neural network architecture that replaces the
         default architecture implemented.
 
+    ohe_single_batch_size: (int)
+        integer specifying how many sequences to one-hot encode at a time.
+        The larger this number number, the quicker the encoding will happen,
+        but this may also take up a lot of memory and throw an exception
+        if its too large. Currently for additive models only.
+
     """
 
     def __init__(self,
@@ -490,7 +504,8 @@ class NoiseAgnosticModel:
                  model_type='additive',
                  test_size=0.2,
                  alphabet_dict='dna',
-                 custom_architecture=None):
+                 custom_architecture=None,
+                 ohe_single_batch_size=10000):
 
         # set class attributes
         self.X = X
@@ -499,6 +514,7 @@ class NoiseAgnosticModel:
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
         self.custom_architecture = custom_architecture
+        self.ohe_single_batch_size = ohe_single_batch_size
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -536,7 +552,7 @@ class NoiseAgnosticModel:
 
         if model_type=='additive':
             # one-hot encode sequences in batches in a vectorized way
-            self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases)
+            self.input_seqs_ohe = onehot_encode_array(self.x_train, self.bases, self.ohe_single_batch_size)
 
         elif model_type=='neighbor':
             # one-hot encode sequences in batches in a vectorized way

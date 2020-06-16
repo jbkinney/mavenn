@@ -43,6 +43,12 @@ class Model:
         a custom neural network architecture that replaces the
         default architecture implemented.
 
+    ohe_single_batch_size: (int)
+        integer specifying how many sequences to one-hot encode at a time.
+        The larger this number number, the quicker the encoding will happen,
+        but this may also take up a lot of memory and throw an exception
+        if its too large. Currently for additive models only.
+
 
     """
 
@@ -54,7 +60,8 @@ class Model:
                  learning_rate = 0.005,
                  test_size=0.2,
                  alphabet_dict='dna',
-                 custom_architecture=None):
+                 custom_architecture=None,
+                 ohe_single_batch_size=10000):
 
         # set class attributes
         self.regression_type = regression_type
@@ -64,6 +71,7 @@ class Model:
         self.test_size = test_size
         self.alphabet_dict = alphabet_dict
         self.custom_architecture = custom_architecture
+        self.ohe_single_batch_size = ohe_single_batch_size
 
         # class attributes that are not parameters
         # this attribute will instantiate either
@@ -82,7 +90,8 @@ class Model:
                                               self.model_type,
                                               self.test_size,
                                               self.alphabet_dict,
-                                              self.custom_architecture)
+                                              self.custom_architecture,
+                                              self.ohe_single_batch_size)
 
             self.define_model = self.model.define_model()
             self.model.compile_model(lr=learning_rate)
@@ -93,7 +102,8 @@ class Model:
                                             self.model_type,
                                             self.test_size,
                                             self.alphabet_dict,
-                                            self.custom_architecture)
+                                            self.custom_architecture,
+                                            self.ohe_single_batch_size)
 
             self.define_model = self.model.define_model()
             self.model.compile_model(lr=learning_rate)

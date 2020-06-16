@@ -354,7 +354,7 @@ def ge_plots_for_mavenn_demo(loss_history,
 
 @handle_errors
 def na_plots_for_mavenn_demo(loss_history,
-                             nn_model,
+                             NAR,
                              noise_model,
                              phi_range):
     """
@@ -367,7 +367,7 @@ def na_plots_for_mavenn_demo(loss_history,
     loss_history: (tf loss history/array-like)
         arrays containing loss values
 
-    nn_model: (NoiseAgnosticModel object)
+    NAR: (NoiseAgnosticModel object)
         trained NA model from which additive parameters
         will be extracted and plotted as a sequence logo
 
@@ -394,14 +394,15 @@ def na_plots_for_mavenn_demo(loss_history,
     # make logo to visualize additive parameters
     ax[1].set_ylabel('additive parameters')
     ax[1].set_xlabel('position')
-    theta_df = pd.DataFrame(NA_model.layers[1].get_weights()[0].reshape(39,4),columns=['A', 'C', 'G', 'T'])
+
+    theta_df = pd.DataFrame(NAR.nn_model().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
 
     additive_logo = logomaker.Logo(theta_df/np.sqrt(np.sum(theta_df.values.ravel()**2)),
                                    center_values=True,
                                    ax=ax[1])
 
     # view the inferred noise model as a heatmap
-    noise_model_heatmap = sns.heatmap(noise_model[0].T,cmap='Greens', ax=ax[2])
+    noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
     ax[2].invert_yaxis()
     ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
     ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
@@ -410,7 +411,6 @@ def na_plots_for_mavenn_demo(loss_history,
 
     plt.tight_layout()
     plt.show()
-
 
 @handle_errors
 def load_olson_data_GB1():
@@ -503,3 +503,46 @@ def load_olson_data_GB1():
 
     gb1_df = pd.DataFrame({'sequence': sequences, 'values': np.log(enrichment)}, columns=['sequence', 'values'])
     return gb1_df
+
+
+@handle_errors
+def get_example_dataset(name='MPSA'):
+    """
+
+    Parameters:
+    -----------
+
+    name: (str)
+        Name of example dataset. Must be one of
+        ('MPSA', 'Sort-Seq', 'GB1-DMS')
+
+    Returns:
+    X, y: (array-like)
+        An array containing sequences X and an
+        array containing their target values y
+    """
+
+    # check that parameter 'name' is valid
+    check(name in {'MPSA', 'Sort-Seq', 'GB1-DMS'},
+          'name = %s; must be "MPSA", "Sort-Seq", or "GB1-DMS"' %name)
+
+    if name == 'MPSA':
+
+        mpsa_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/mpsa/psi_9nt_mavenn.csv')
+        mpsa_df = mpsa_df.dropna()
+        mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
+
+        return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
+
+    elif name == 'Sort-Seq':
+
+        sequences = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt',
+                               dtype='str')
+        bin_counts = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/bin_counts.txt')
+
+        return sequences, bin_counts
+
+    elif name == 'GB1-DMS':
+
+        gb1_df = load_olson_data_GB1()
+        return gb1_df['sequence'].values, gb1_df['values'].values
