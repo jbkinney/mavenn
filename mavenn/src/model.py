@@ -62,7 +62,7 @@ class Model:
                  X,
                  y,
                  model_type,
-                 learning_rate = 0.005,
+                 learning_rate=0.005,
                  test_size=0.2,
                  monotonic=True,
                  alphabet_dict='dna',
@@ -97,11 +97,12 @@ class Model:
                                               self.model_type,
                                               self.test_size,
                                               self.alphabet_dict,
-                                              self.custom_architecture,
                                               self.ohe_single_batch_size)
 
-            self.define_model = self.model.define_model(monotonic=self.monotonic)
-            self.model.compile_model(lr=learning_rate)
+            self.define_model = self.model.define_model(monotonic=self.monotonic,
+                                                        custom_architecture=self.custom_architecture)
+
+            self.model.compile_model(lr=self.learning_rate)
 
         elif regression_type == 'NA':
             self.model = NoiseAgnosticModel(self.X,
@@ -112,8 +113,10 @@ class Model:
                                             self.custom_architecture,
                                             self.ohe_single_batch_size)
 
-            self.define_model = self.model.define_model(monotonic=self.monotonic)
-            self.model.compile_model(lr=learning_rate)
+            self.define_model = self.model.define_model(monotonic=self.monotonic,
+                                                        custom_architecture=self.custom_architecture)
+
+            self.model.compile_model(lr=self.learning_rate)
 
     @handle_errors
     def fit(self,

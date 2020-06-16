@@ -157,8 +157,7 @@ class GlobalEpistasisModel:
     # JBK: User should be able to set these parameters in the constructor
     def define_model(self,
                      monotonic=True,
-                     regularization=None,
-                     activations='sigmoid'):
+                     custom_architecture=None):
 
         """
         Method that will define the architecture of the global epistasis model.
@@ -174,13 +173,9 @@ class GlobalEpistasisModel:
             If true then weights of GE nonlinear function will be constraned to
             be non-negative.
 
-        regularization: (str)
-            String that specifies type of regularization to use. Valid choices include
-            ['l2','dropout', ... link to tf docs].
-
-        activations: (str)
-            Activation function used in the non-linear sub-network. Link to allowed
-            activation functions from TF docs...
+        custom_architecture: (tf.model)
+            a custom neural network architecture that replaces the
+            default architecture implemented.
 
         returns
         -------
@@ -191,24 +186,33 @@ class GlobalEpistasisModel:
 
         """
 
-        number_input_layer_nodes = len(self.input_seqs_ohe[0])
-        inputTensor = Input((number_input_layer_nodes,), name='Sequence')
+        # user has not provided custom architecture, implement a default architecture
+        if custom_architecture is None:
 
-        phi = Dense(1, use_bias=True)(inputTensor)
+            number_input_layer_nodes = len(self.input_seqs_ohe[0])
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-        # implement monotonicity constraints
-        if monotonic:
-            intermediateTensor = Dense(50, activation='sigmoid', kernel_constraint=nonneg())(phi)
-            outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+            phi = Dense(1, use_bias=True)(inputTensor)
+
+            # implement monotonicity constraints
+            if monotonic:
+                intermediateTensor = Dense(50, activation='sigmoid', kernel_constraint=nonneg())(phi)
+                outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+            else:
+                intermediateTensor = Dense(50, activation='sigmoid')(phi)
+                outputTensor = Dense(1)(intermediateTensor)
+
+            # create the model:
+
+            model = Model(inputTensor, outputTensor)
+            self.model = model
+
+            return model
+
+        # if user has provided custom architecture
         else:
-            intermediateTensor = Dense(50, activation='sigmoid')(phi)
-            outputTensor = Dense(1)(intermediateTensor)
-
-        # create the model:
-
-        model = Model(inputTensor, outputTensor)
-        self.model = model
-        return model
+            self.model = custom_architecture
+            return custom_architecture
 
     def return_model(self):
         """
@@ -581,8 +585,7 @@ class NoiseAgnosticModel:
 
     def define_model(self,
                      monotonic=True,
-                     regularization=None,
-                     activations='sigmoid'):
+                     custom_architecture=None):
 
         """
         Method that will define the architecture of the global epistasis model.
@@ -595,14 +598,9 @@ class NoiseAgnosticModel:
         monotonic: (boolean)
             If True, than weights in noise model will be constrained to be non-negative.
 
-        regularization: (str)
-            String that specifies type of regularization to use. Valid choices include
-            ['l2','dropout', ... link to tf docs].
-
-        activations: (str)
-            Activation function used in the non-linear sub-network. Link to allowed
-            activation functions from TF docs...
-
+        custom_architecture: (tf.model)
+            a custom neural network architecture that replaces the
+            default architecture implemented.
 
         returns
         -------
@@ -613,25 +611,29 @@ class NoiseAgnosticModel:
 
         """
 
-        number_input_layer_nodes = len(self.input_seqs_ohe[0])
-        inputTensor = Input((number_input_layer_nodes,), name='Sequence')
+        if custom_architecture is None:
+            number_input_layer_nodes = len(self.input_seqs_ohe[0])
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-        phi = Dense(1, use_bias=True, name='additive_weights')(inputTensor)
+            phi = Dense(1, use_bias=True, name='additive_weights')(inputTensor)
 
-        # implement monotonicity constraints
-        if monotonic:
-            intermediateTensor = Dense(10, activation='sigmoid', kernel_constraint=nonneg())(phi)
-            outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax', kernel_constraint=nonneg())(
-                intermediateTensor)
+            # implement monotonicity constraints
+            if monotonic:
+                intermediateTensor = Dense(10, activation='sigmoid', kernel_constraint=nonneg())(phi)
+                outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax', kernel_constraint=nonneg())(
+                    intermediateTensor)
+            else:
+                intermediateTensor = Dense(10, activation='sigmoid')(phi)
+                outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax')(intermediateTensor)
+
+
+            # #create the model:
+            model = Model(inputTensor, outputTensor)
+            self.model = model
+            return model
         else:
-            intermediateTensor = Dense(10, activation='sigmoid')(phi)
-            outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax')(intermediateTensor)
-
-
-        # #create the model:
-        model = Model(inputTensor, outputTensor)
-        self.model = model
-        return model
+            self.model = custom_architecture
+            return custom_architecture
 
     def compile_model(self,
                       lr=0.005):

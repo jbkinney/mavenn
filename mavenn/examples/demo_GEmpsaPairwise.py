@@ -5,7 +5,6 @@ from sklearn.model_selection import train_test_split
 from mavenn.src.utils import ge_plots_for_mavenn_demo, get_example_dataset
 
 # load data
-# load data
 X, y = get_example_dataset(name='MPSA')
 
 # split data into training and testing sets

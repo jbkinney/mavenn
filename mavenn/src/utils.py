@@ -278,7 +278,7 @@ def _generate_all_pair_features_from_sequences(sequences,
                 all_nucl_pairs.append(raw_sequence[i] + raw_sequence[j])
 
         # get indices of where pairs occur so that these indices could be used to one-hot encode.
-                list_of_allpair_indices = [allpair_dinucleotides.index(dn) for dn in all_nucl_pairs]
+        list_of_allpair_indices = [allpair_dinucleotides.index(dn) for dn in all_nucl_pairs]
 
         # do One-hot encoding. Every time a pair from list 'allpair_dinucleotides'
         # appears at a position, put 1 there, otherwise zeros.
