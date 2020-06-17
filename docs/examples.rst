@@ -182,7 +182,7 @@ neighbor interactions included ::
     noise_model = NAR.na_noisemodel(sequences,
                                     input_range=phi_range)
 
-    # results plot using custom logomaker script
+    # results plotted using custom logomaker script
 
 
 .. image:: _static/examples_images/sort_seq_nbr.png
