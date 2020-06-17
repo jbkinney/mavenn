@@ -34,7 +34,11 @@ Example snippet for fitting additive GE model to MPSA data ::
     x_train, x_test, y_train, y_test = train_test_split(X, y)
 
     # load mavenn's GE model
-    GER = mavenn.Model(regression_type='GE', X=x_train, y=y_train, model_type='additive', learning_rate=0.005,
+    GER = mavenn.Model(regression_type='GE',
+                       X=x_train,
+                       y=y_train,
+                       model_type='additive',
+                       learning_rate=0.005,
                        alphabet_dict='rna')
 
     GER.fit(epochs=200, use_early_stopping=True, early_stopping_patience=20, verbose=1)
@@ -62,7 +66,11 @@ Example snippet for fitting pairwise GE model to MPSA data ::
     x_train, x_test, y_train, y_test = train_test_split(X, y)
 
     # load mavenn's GE model
-    GER = mavenn.Model(regression_type='GE', X=x_train, y=y_train, model_type='pairwise', learning_rate=0.001,
+    GER = mavenn.Model(regression_type='GE',
+                       X=x_train,
+                       y=y_train,
+                       model_type='pairwise',
+                       learning_rate=0.001,
                        alphabet_dict='rna')
 
     # fit model to data
@@ -84,7 +92,8 @@ Example snippet for fitting pairwise GE model to MPSA data ::
 Additive GE model: (DMS)
 ------------------------
 
-Example snippet for fitting pairwise GE model to MPSA data ::
+Example snippet for fitting pairwise GE model to DMS data (note: this example
+may take over 10 minutes to complete) ::
 
     # load data
     X, y = get_example_dataset(name='GB1-DMS')
@@ -93,7 +102,11 @@ Example snippet for fitting pairwise GE model to MPSA data ::
     x_train, x_test, y_train, y_test = train_test_split(X, y)
 
     # load mavenn's GE model
-    GER = mavenn.Model(regression_type='GE', X=x_train, y=y_train, model_type='additive', learning_rate=0.001,
+    GER = mavenn.Model(regression_type='GE',
+                       X=x_train,
+                       y=y_train,
+                       model_type='additive',
+                       learning_rate=0.001,
                        alphabet_dict='protein',
                        ohe_single_batch_size=100000)
 
@@ -122,7 +135,11 @@ Example snippet for inferring NA model from Sort-Seq data ::
     sequences, bin_counts = get_example_dataset(name='Sort-Seq')
 
     # load mavenn's NA model
-    NAR = mavenn.Model(regression_type='NA', X=sequences, y=bin_counts, model_type='additive', alphabet_dict='dna',
+    NAR = mavenn.Model(regression_type='NA',
+                       X=sequences,
+                       y=bin_counts,
+                       model_type='additive',
+                       alphabet_dict='dna',
                        ohe_single_batch_size=50000)
 
     NAR.fit(epochs=200, use_early_stopping=True, early_stopping_patience=20, verbose=1)
@@ -138,3 +155,35 @@ Example snippet for inferring NA model from Sort-Seq data ::
     na_plots_for_mavenn_demo(loss_history, NAR, noise_model, phi_range)
 
 .. image:: _static/examples_images/NA_additive_sort_seq_demo.png
+
+Neighbor NA model: (Sort-Seq)
+-----------------------------
+
+Example snippet for inferring NA model from Sort-Seq data with nearest
+neighbor interactions included ::
+
+    # load data
+    sequences, bin_counts = get_example_dataset(name='Sort-Seq')
+
+    # load mavenn's NA model
+    NAR = mavenn.Model(regression_type='NA',
+                       X=sequences,
+                       y=bin_counts,
+                       model_type='neighbor',
+                       alphabet_dict='dna',
+                       ohe_single_batch_size=50000)
+
+    NAR.fit(epochs=200, use_early_stopping=True, early_stopping_patience=20, verbose=1)
+
+    loss_history =  NAR.model.return_loss()
+
+    # evaluate the inferred noise model for a given input range
+    phi_range = np.linspace(-20, 15,1000)
+    noise_model = NAR.na_noisemodel(sequences,
+                                    input_range=phi_range)
+
+    # results plot using custom logomaker script
+
+
+.. image:: _static/examples_images/sort_seq_nbr.png
+.. image:: _static/examples_images/nar_sort_seq_nbr_logo.png

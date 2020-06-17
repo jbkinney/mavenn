@@ -75,6 +75,8 @@ Resources
 Reference
 ----------
 
+Manuscript link.
+
 Contact
 -------
 

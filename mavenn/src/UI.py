@@ -427,6 +427,9 @@ class GlobalEpistasisModel:
 
         # TODO input checks on input_range
 
+        # need to do check if linear model, i.e. when no GE network,
+        check(len(self.model.layers) > 3, 'cannot make GE nonlinearity with network having < 3 layers')
+
         # one hot encode sequences and then subsequently use them
         # to compute latent trait
 
@@ -451,8 +454,18 @@ class GlobalEpistasisModel:
         ge_model_input = Input((1,))
         next_input = ge_model_input
 
-        # TODO need to fix this hardcoded 2 depending on model architecture
-        for layer in self.model.layers[-2:]:
+        # this variable will contain the index of the latent trait hidden layer
+        # and will determine which layers correspond to the GE non-linear subnetwork
+        latent_trait_layer_index = 0
+        for layer in self.model.layers[::-1]:
+
+            latent_trait_layer_index += 1
+            if len(layer.get_weights()[0]) == 1:
+                break
+
+
+        for layer in self.model.layers[-latent_trait_layer_index:]:
+        #for layer in self.model.layers[-2:]:
             next_input = layer(next_input)
 
         ge_model = Model(inputs=ge_model_input, outputs=next_input)
@@ -836,8 +849,17 @@ class NoiseAgnosticModel:
         noise_model_input = Input((1,))
         next_input = noise_model_input
 
-        # TODO need to fix this hardcoded 2 depending on model architecture
-        for layer in self.model.layers[-2:]:
+        # this variable will contain the index of the latent trait hidden layer
+        # and will determine which layers correspond to the GE non-linear subnetwork
+        latent_trait_layer_index = 0
+        for layer in self.model.layers[::-1]:
+
+            latent_trait_layer_index += 1
+            if len(layer.get_weights()[0]) == 1:
+                break
+
+        for layer in self.model.layers[-latent_trait_layer_index:]:
+        #for layer in self.model.layers[-2:]:
             next_input = layer(next_input)
 
         noise_model = Model(inputs=noise_model_input, outputs=next_input)
