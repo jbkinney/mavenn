@@ -1,0 +1,43 @@
+Testing Model() parameter X ...
+Test # 0: Expected error: type(X) = <class 'str'> must be of type list or np.array
+Test # 1: Expected success.
+Tests passed: 2. Tests failed: 0.
+
+Testing Model() parameter y ...
+Test # 2: Expected error: length of inputs (X, y) must be equal
+Test # 3: Expected success.
+Tests passed: 4. Tests failed: 0.
+
+Testing Model() parameter regression_type ...
+Test # 4: Expected error: regression_type = additive; must be "NA", or  "GE"
+Test # 5: Expected success.
+Tests passed: 6. Tests failed: 0.
+
+Testing Model() parameter model_type ...
+Test # 6: Expected error: model_type = standard; must be "additive", "neighbor", or "pairwise"
+Test # 7: Expected success.
+Test # 8: Expected success.
+Test # 9: Expected success.
+Tests passed: 10. Tests failed: 0.
+
+Testing Model() parameter X ...
+Test # 10: Expected error: type(X) = <class 'str'> must be of type list or np.array
+Test # 11: Expected success.
+Tests passed: 12. Tests failed: 0.
+
+Testing Model() parameter y ...
+Test # 12: Expected error: length of inputs (X, y) must be equal
+Test # 13: Expected success.
+Tests passed: 14. Tests failed: 0.
+
+Testing Model() parameter regression_type ...
+Test # 14: Expected error: regression_type = additive; must be "NA", or  "GE"
+Test # 15: Expected success.
+Tests passed: 16. Tests failed: 0.
+
+Testing Model() parameter model_type ...
+Test # 16: Expected error: model_type = standard; must be "additive", "neighbor", or "pairwise"
+Test # 17: Expected success.
+Test # 18: Expected success.
+Test # 19: Expected success.
+Tests passed: 20. Tests failed: 0.

@@ -512,6 +512,9 @@ def load_olson_data_GB1():
 def get_example_dataset(name='MPSA'):
     """
 
+    Load example sequence-function datasets that
+    come with the mavenn package.
+
     Parameters:
     -----------
 
@@ -520,6 +523,7 @@ def get_example_dataset(name='MPSA'):
         ('MPSA', 'Sort-Seq', 'GB1-DMS')
 
     Returns:
+    --------
     X, y: (array-like)
         An array containing sequences X and an
         array containing their target values y

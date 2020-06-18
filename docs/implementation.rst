@@ -24,7 +24,7 @@ Noise Agnostic class
     :members:    
     
     
-demo function
+Demo function
 -------------
 
 .. _demo:
@@ -33,8 +33,16 @@ demo function
 
 
 Example data function
---------------------------
+----------------------
 
 .. _load_example_dataset:
 
 .. autofunction:: mavenn.src.utils.get_example_dataset
+
+
+Functional tests
+----------------
+
+.. _functional_tests:
+
+.. autofunction:: mavenn.run_tests
