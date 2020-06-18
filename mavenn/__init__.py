@@ -3,6 +3,8 @@ from mavenn.src.model import Model
 from mavenn.src.UI import GlobalEpistasisModel
 from mavenn.src.UI import NoiseAgnosticModel
 from mavenn.src.error_handling import handle_errors, check
+from mavenn.tests.functional_tests_mavenn import run_tests
+from mavenn.src.utils import get_example_dataset
 
 # imports required for helper functions in demos
 import pandas as pd

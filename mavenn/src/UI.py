@@ -96,7 +96,7 @@ class GlobalEpistasisModel:
 
         self.x_train, self.y_train = self.X, self.y
 
-        print('One-hot encoding...')
+        #print('One-hot encoding...')
         # # onehot-encode sequences
         # self.input_seqs_ohe = []
         # for _ in range(len(self.x_train)):
@@ -148,6 +148,9 @@ class GlobalEpistasisModel:
 
         check(isinstance(self.y, (list, np.ndarray)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
+
+        check(len(self.X) == len(self.y),
+              'length of inputs (X, y) must be equal')
 
         # check that model type valid
         check(self.model_type in {'additive', 'neighbor', 'pairwise'},
@@ -425,6 +428,51 @@ class GlobalEpistasisModel:
 
         """
 
+        # TODO: need to ask JBK about gauge fixing code/implementation, which of the following needs to be implemented?
+        '''
+        # sample implementation for additive mpsa data
+        
+        # array of one-hot encoded sequences
+        x_cl = onehot_encode_array(x_test,bases_dict=['A','C','G','U'])
+
+        # manually compute the latent trait, only to keep things explicit. The latent trait
+        # obtained from the ge_nonlinearity function is much quicker.
+        latent_trait_manual = []
+        for _ in range(x_cl.shape[0]):
+            latent_trait_manual.append(list(np.sum(model.layers[1].get_weights()[0].ravel()*x_cl[_])+model.layers[1].get_weights()[1]))
+
+        # latent model parameters
+        theta_df = pd.DataFrame(model.layers[1].get_weights()[0].reshape(9,4),columns=['A','C','G','U'])
+
+        # array containing means of parameters at position l
+        theta_bar_l = theta_df.mean(axis=1)
+
+        # additive shift from equation S2 in supplement:
+        a = []
+
+        # phi_prime = phi + a
+        latent_trait_prime_manual = []
+
+        for _ in range(x_cl.shape[0]):
+            a.append(-np.sum(theta_bar_l[:, np.newaxis]*x_cl[_])-model.layers[1].get_weights()[1][0])
+            latent_trait_prime_manual.append(np.sum(theta_df.values.ravel()*x_cl[_])-np.sum(theta_bar_l[:, np.newaxis]*x_cl[_]))
+
+        # check that phi and phi_prime are only shifted by a constant
+        plt.scatter(np.array(latent_trait_prime_manual)-a,y_test)
+        plt.scatter(np.array(latent_trait_manual).ravel(),y_test)
+        
+        phi_range = np.linspace(min(latent_trait_manual),max(latent_trait_manual),1000)
+        phi_prime_range = np.linspace(min(np.array(latent_trait_prime_manual)-a),max(np.array(latent_trait_prime_manual)-a),1000)
+        
+        # these two give the same output, as they should.
+        gPrime = GER.ge_nonlinearity(x_test,input_range=phi_prime_range)
+        g = GER.ge_nonlinearity(x_test,input_range=phi_range)
+        
+        # check by plotting
+        plt.scatter(g,gPrime)
+        '''
+
+
         # TODO input checks on input_range
 
         # need to do check if linear model, i.e. when no GE network,
@@ -550,7 +598,7 @@ class NoiseAgnosticModel:
 
         self.x_train, self.y_train = self.X, self.y
 
-        print('One-hot encoding...')
+        #print('One-hot encoding...')
         # # onehot-encode sequences
         # self.input_seqs_ohe = []
         # for _ in range(len(self.x_train)):
@@ -594,7 +642,19 @@ class NoiseAgnosticModel:
         """
         Validate parameters passed to the NoiseAgnosticRegression constructor
         """
-        pass
+        check(isinstance(self.X, (list, np.ndarray)),
+              'type(X) = %s must be of type list or np.array' % type(self.X))
+
+        check(isinstance(self.y, (list, np.ndarray)),
+              'type(y) = %s must be of type list or np.array' % type(self.y))
+
+        check(len(self.X) == len(self.y),
+              'length of inputs (X, y) must be equal')
+
+        # check that model type valid
+        check(self.model_type in {'additive', 'neighbor', 'pairwise'},
+              'model_type = %s; must be "additive", "neighbor", or "pairwise"' %
+              self.model_type)
 
     def define_model(self,
                      monotonic=True,

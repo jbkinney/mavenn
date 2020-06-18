@@ -1,14 +1,15 @@
 Implementation
 ==============
 
+
 MAVE-NN Model class
 -------------------
 
 .. autoclass:: mavenn.src.model.Model
     :members:
 
-
 .. _GlobalEpistasisModel_class:
+
 
 Global Epistasis class
 ----------------------
@@ -28,4 +29,12 @@ demo function
 
 .. _demo:
 
-.. autofunction:: mavenn.demo    
+.. autofunction:: mavenn.demo
+
+
+Example data function
+--------------------------
+
+.. _load_example_dataset:
+
+.. autofunction:: mavenn.src.utils.get_example_dataset

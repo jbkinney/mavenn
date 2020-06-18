@@ -88,6 +88,9 @@ def onehot_encode_array(data, bases_dict, ohe_single_batch_size=10000):
     check(isinstance(ohe_single_batch_size, (int, np.int64)),
           'type(ohe_single_batch_size) = %s must be of type int or numpy.int64' % type(ohe_single_batch_size))
 
+    # check that data[0] passed has length, which will be used to get sequence length
+    check(hasattr(data[0], '__len__'), 'entered sequence data does not have length, needs to have length > 0')
+
     sequence_length = len(data[0])
 
     # container list for batches of oh-encoded sequences

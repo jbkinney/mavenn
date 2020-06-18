@@ -1,9 +1,10 @@
 from __future__ import print_function   # so that print behaves like python 3.x not a special lambda statement
 
 import sys
-sys.path.insert(0,'../../')
+sys.path.insert(0, '../../')
 import mavenn
-print(mavenn.__path__)
+
+from mavenn.src.utils import get_example_dataset
 
 
 import numpy as np
@@ -123,17 +124,86 @@ def test_parameter_values(func,
 
 def test_GlobalEpistasisModel():
 
-    # df inputs that successfully execute when entered into mavenn
-    good_input_df = pd.read_csv('../../raw_data/mpsa/psi_9nt_mavenn.csv')
-    # df inputs that fail when entered into mavenn.
-    bad_df1 = 'x'
-    bad_input_df2 = pd.read_csv('../../raw_data/mpsa/psi_9nt.csv')
+    # load MPSA dataset for testing
+    X, y = get_example_dataset()
 
-    print(dir(mavenn))
+    # sequences arrays that fail when entered into mavenn.
+    bad_X = 'x'
 
-    # test parameter df
-    test_parameter_values(func=mavenn.GlobalEpistasisModel, var_name='df',fail_list=[bool_fail_list,bad_df1
-        ,bad_input_df2], success_list=[good_input_df],model_type='additive')
+    # could possibly check if all elements are numeric
+    # but that could slow things down
+    bad_y = [1, 3, -2, 4.5]
+    # also could check for nan's like np.isnan(bad_y).all()
+
+    # test sequences parameter X
+    test_parameter_values(func=mavenn.Model, var_name='X', fail_list=[bad_X], success_list=[X],
+                          model_type='additive', y=y, regression_type='GE', alphabet_dict='rna')
+
+    # test labels parameter y
+    test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
+                          model_type='additive', X=X, regression_type='GE', alphabet_dict='rna')
+
+    # test labels parameter regression_type
+    test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['GE'],
+                          model_type='additive', X=X, y=y, alphabet_dict='rna')
+
+    # test labels parameter model_type
+    test_parameter_values(func=mavenn.Model, var_name='model_type', fail_list=['standard'],
+                          success_list=['additive', 'neighbor', 'pairwise'],
+                          regression_type='GE', X=X, y=y, alphabet_dict='rna')
+
+    # TODO: need to implement alphabet_dict checks in UI for GE and NA.
+    # the following needs to be fixed in UI
+    # # test labels parameter alphabet_dict
+    # test_parameter_values(func=mavenn.Model, var_name='alphabet_dict', fail_list=['dna, protein'],
+    #                       success_list=['rna'], model_type='additive',
+    #                       regression_type='GE', X=X, y=y)
 
 
-test_GlobalEpistasisModel()
+def test_NoiseAgnosticModel():
+
+    # load MPSA dataset for testing
+    X, y = get_example_dataset(name='Sort-Seq')
+
+    # sequences arrays that fail when entered into mavenn.
+    bad_X = 'x'
+
+    # could possibly check if all elements are numeric
+    # but that could slow things down
+    bad_y = [[1, 3, -2, 4.5]]
+    # also could check for nan's like np.isnan(bad_y).all()
+
+    # test sequences parameter X
+    test_parameter_values(func=mavenn.Model, var_name='X', fail_list=[bad_X], success_list=[X],
+                          model_type='additive', y=y, regression_type='NA', alphabet_dict='dna')
+
+    # test labels parameter y
+    test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
+                          model_type='additive', X=X, regression_type='NA', alphabet_dict='dna')
+
+    # test labels parameter regression_type
+    test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['NA'],
+                          model_type='additive', X=X, y=y, alphabet_dict='dna')
+
+    # test labels parameter model_type
+    test_parameter_values(func=mavenn.Model, var_name='model_type', fail_list=['standard'],
+                          success_list=['additive', 'neighbor', 'pairwise'],
+                          regression_type='NA', X=X, y=y, alphabet_dict='dna')
+
+
+
+def run_tests():
+    """
+    Run all mavenn functional tests.
+
+    parameters
+    ----------
+    None.
+
+    return
+    ------
+    None.
+    """
+
+    test_GlobalEpistasisModel()
+    test_NoiseAgnosticModel()
