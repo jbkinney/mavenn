@@ -37,7 +37,7 @@ For a quick demonstration of mavenn's global epistasis model, execute the follow
    mavenn.demo(name='GEmpsaPairwise')
 
 This command will train a pairwise global epistasis model on massively parallel
-splicing assay data from Wong et al. (Mol. Cell. 2018) and return the loss history, predictions vs.
+splicing assay data from Wong et al. 2018 [#Wong2018]_ and return the loss history, predictions vs.
 true labels, and the global epistasis nonlinear function.
 
 .. image:: _static/examples_images/GE_pairwise_mpsa_demo.png
@@ -48,7 +48,7 @@ For a demonstration of mavenn's noise agnostic model, execute the following with
    mavenn.demo(name='NAsortseq')
 
 This command will train an additive noise agnostic model on Sort-Seq
-data from Kinney et al. (pnas 2010) and return the loss history, inferred additive
+data from Kinney et. al. (2010) [#sortseq2010]_ and return the loss history, inferred additive
 parameters as a sequence logo, and the inferred noise model.
 
 .. image:: _static/examples_images/NA_additive_sort_seq_demo.png
@@ -76,6 +76,16 @@ Reference
 ----------
 
 Manuscript link.
+
+
+.. [#Wong2018] Wong MS, Kinney JB, Krainer AR. Quantitative Activity Profile and Context Dependence of All Human 5'
+    Splice Sites. Mol Cell. 2018;71(6):1012-1026.e3. `<https://doi.org/10.1016/j.molcel.2018.07.033>`_
+
+.. [#sortseq2010] Kinney JB, Murugan A, Callan CG, Cox EC (2010). Using deep sequencing to characterize the
+    biophysical mechanism of a transcriptional regulatory sequence. Proc Natl Acad Sci USA 107:9158-9163.
+    `PubMed. <https://www.ncbi.nlm.nih.gov/pubmed/20439748>`_
+
+
 
 Contact
 -------
