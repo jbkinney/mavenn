@@ -9,6 +9,7 @@ using TensorFlow. The :ref:`installation`, :ref:`quickstart`,  :ref:`examples`,
 and :ref:`tutorial` sections below are provided to help users  quickly get 
 MAVE-NN working for their own research needs.
 
+.. image:: _static/schematic.png
 
 .. toctree::
    :maxdepth: 2
