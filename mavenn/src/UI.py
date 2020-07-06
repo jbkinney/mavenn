@@ -3,8 +3,11 @@ from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.utils import onehot_encode_array, \
     _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 
+from mavenn.src.utils import _center_matrix, fix_gauge_neighbor_model, fix_gauge_pairwise_model
+
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 
 import tensorflow.keras
 from tensorflow.keras.models import Sequential, Model
@@ -401,7 +404,8 @@ class GlobalEpistasisModel:
     def ge_nonlinearity(self,
                         sequences,
                         input_range=None,
-                        gauge_fix=True):
+                        gauge_fix = True,
+                        ):
 
         """
         Method used to plot GE non-linearity.
@@ -417,9 +421,6 @@ class GlobalEpistasisModel:
             If this is none than range will be determined from min
             and max of the latent trait
 
-        gauge_fix: (bool)
-            if true parameters used to compute latent trait will be
-            gauge fixed
 
         returns
         -------
@@ -427,52 +428,6 @@ class GlobalEpistasisModel:
             the nonlinear GE function.
 
         """
-
-        # TODO: need to ask JBK about gauge fixing code/implementation, which of the following needs to be implemented?
-        '''
-        # sample implementation for additive mpsa data
-        
-        # array of one-hot encoded sequences
-        x_cl = onehot_encode_array(x_test,bases_dict=['A','C','G','U'])
-
-        # manually compute the latent trait, only to keep things explicit. The latent trait
-        # obtained from the ge_nonlinearity function is much quicker.
-        latent_trait_manual = []
-        for _ in range(x_cl.shape[0]):
-            latent_trait_manual.append(list(np.sum(model.layers[1].get_weights()[0].ravel()*x_cl[_])+model.layers[1].get_weights()[1]))
-
-        # latent model parameters
-        theta_df = pd.DataFrame(model.layers[1].get_weights()[0].reshape(9,4),columns=['A','C','G','U'])
-
-        # array containing means of parameters at position l
-        theta_bar_l = theta_df.mean(axis=1)
-
-        # additive shift from equation S2 in supplement:
-        a = []
-
-        # phi_prime = phi + a
-        latent_trait_prime_manual = []
-
-        for _ in range(x_cl.shape[0]):
-            a.append(-np.sum(theta_bar_l[:, np.newaxis]*x_cl[_])-model.layers[1].get_weights()[1][0])
-            latent_trait_prime_manual.append(np.sum(theta_df.values.ravel()*x_cl[_])-np.sum(theta_bar_l[:, np.newaxis]*x_cl[_]))
-
-        # check that phi and phi_prime are only shifted by a constant
-        plt.scatter(np.array(latent_trait_prime_manual)-a,y_test)
-        plt.scatter(np.array(latent_trait_manual).ravel(),y_test)
-        
-        phi_range = np.linspace(min(latent_trait_manual),max(latent_trait_manual),1000)
-        phi_prime_range = np.linspace(min(np.array(latent_trait_prime_manual)-a),max(np.array(latent_trait_prime_manual)-a),1000)
-        
-        # these two give the same output, as they should.
-        gPrime = GER.ge_nonlinearity(x_test,input_range=phi_prime_range)
-        g = GER.ge_nonlinearity(x_test,input_range=phi_range)
-        
-        # check by plotting
-        plt.scatter(g,gPrime)
-        '''
-
-
         # TODO input checks on input_range
 
         # need to do check if linear model, i.e. when no GE network,
@@ -480,7 +435,6 @@ class GlobalEpistasisModel:
 
         # one hot encode sequences and then subsequently use them
         # to compute latent trait
-
         if self.model_type=='additive':
             # one-hot encode sequences in batches in a vectorized way
             sequences_ohe = onehot_encode_array(sequences, self.bases)
@@ -511,23 +465,76 @@ class GlobalEpistasisModel:
             if len(layer.get_weights()[0]) == 1:
                 break
 
-
         for layer in self.model.layers[-latent_trait_layer_index:]:
-        #for layer in self.model.layers[-2:]:
+        # for layer in self.model.layers[-2:]:
             next_input = layer(next_input)
 
+        # the following model is not gauge fixed
         ge_model = Model(inputs=ge_model_input, outputs=next_input)
 
-        if input_range is None:
-            input_range = np.linspace(min(latent_trait), max(latent_trait), 1000)
-            ge_nonlinearity = ge_model.predict(input_range)
+        # variables required for gauge fixed latent trait parameters theta
+        sequence_length = len(self.x_train[0])
+        # non-gauge fixed theta
+        theta = self.model.layers[1].get_weights()[0]
+        bias = self.model.layers[1].get_weights()[1]
 
-            # if input range not provided, return input range
-            # so ge nonliearity can be plotted against it.
-            return ge_nonlinearity, input_range, latent_trait
-        else:
-            ge_nonlinearity = ge_model.predict(input_range)
-            return ge_nonlinearity
+        # use gauge-fixing method for the appropriate latent model type
+        if self.model_type == 'additive':
+            theta_df = pd.DataFrame(theta.reshape(sequence_length, len(self.bases)), columns=self.bases)
+            # compute mean centered, thus gauge-fixed, additive latent model
+            gf_theta, theta_bar = _center_matrix(theta_df)
+            gf_theta = gf_theta.values
+            # compute offset term which separates latent trait from gauge fixed latent trait
+            a = np.sum(sequences_ohe[0].reshape(sequence_length, len(self.bases)) * theta_bar)
+            a = -a
+
+        elif self.model_type == 'neighbor':
+
+            # compute gauge-fixed, neighbor latent model
+            gf_theta, a = fix_gauge_neighbor_model(sequence_length, len(self.bases), theta)
+
+        elif self.model_type == 'pairwise':
+
+            # compute gauge-fixed pairwise latent model
+            gf_theta, a = fix_gauge_pairwise_model(sequence_length, len(self.bases), theta)
+
+        # this conditional currently outputs the not gauge-fixed, original, GE nonlinearity
+        if gauge_fix is False:
+            if input_range is None:
+                input_range = np.linspace(min(latent_trait), max(latent_trait), 1000)
+                ge_nonlinearity = ge_model.predict(input_range)
+
+                # if input range not provided, return input range
+                # so ge nonliearity can be plotted against it.
+                return ge_nonlinearity, input_range, latent_trait
+            else:
+                ge_nonlinearity = ge_model.predict(input_range)
+                return ge_nonlinearity
+
+        # this part of the condition returns the gauge fixed latent trait
+        elif gauge_fix is True:
+
+            # first compute norm which will be used to rescale the parameters theta
+            # compute phi using training sequences
+            phi_for_computing_norm = get_1st_layer_output([self.input_seqs_ohe])
+
+            # compute the norm using phi_for_computing_norm as:
+            norm = np.sqrt(np.var(phi_for_computing_norm[0]))
+
+            # rescale the gf_theta
+            theta_gf_rescaled = gf_theta.ravel() / norm
+
+            # update the weights of the latent model with the gauge fixed parameters, and compute gauge fixed phi
+            self.model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
+                                              self.model.layers[1].get_weights()[1]])
+
+            get_gauge_fixed_phi = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+            phi_gauge_fixed = get_gauge_fixed_phi([sequences_ohe])
+
+            input_range_gf_phi = np.linspace(min(phi_gauge_fixed[0]), max(phi_gauge_fixed[0]), 1000)
+
+            ge_nonlinearity_gf = ge_model.predict([(input_range_gf_phi-bias)*norm+a+bias])
+            return ge_nonlinearity_gf, input_range_gf_phi, phi_gauge_fixed[0]
 
 
 class NoiseAgnosticModel:
@@ -924,13 +931,66 @@ class NoiseAgnosticModel:
 
         noise_model = Model(inputs=noise_model_input, outputs=next_input)
 
-        if input_range is None and sequences is not None:
-            input_range = np.linspace(min(latent_trait), max(latent_trait), 1000)
-            noise_function = noise_model.predict(input_range)
+        # variables required for gauge fixed latent trait parameters theta
+        sequence_length = len(self.x_train[0])
+        # non-gauge fixed theta
+        theta = self.model.layers[1].get_weights()[0]
+        bias = self.model.layers[1].get_weights()[1]
 
-            # if input range not provided, return input range
-            # so ge nonliearity can be plotted against it.
-            return noise_function, input_range, latent_trait
-        else:
-            noise_function = noise_model.predict(input_range)
-            return noise_function
+        # use gauge-fixing method for the appropriate latent model type
+        if self.model_type == 'additive':
+            theta_df = pd.DataFrame(theta.reshape(sequence_length, len(self.bases)), columns=self.bases)
+            # compute mean centered, thus gauge-fixed, additive latent model
+            gf_theta, theta_bar = _center_matrix(theta_df)
+            gf_theta = gf_theta.values
+            # compute offset term which separates latent trait from gauge fixed latent trait
+            a = np.sum(sequences_ohe[0].reshape(sequence_length, len(self.bases)) * theta_bar)
+            a = -a
+
+        elif self.model_type == 'neighbor':
+
+            # compute gauge-fixed, neighbor latent model
+            gf_theta, a = fix_gauge_neighbor_model(sequence_length, len(self.bases), theta)
+
+        elif self.model_type == 'pairwise':
+
+            # compute gauge-fixed pairwise latent model
+            gf_theta, a = fix_gauge_pairwise_model(sequence_length, len(self.bases), theta)
+
+        # this conditional currently outputs the not gauge-fixed, original, GE nonlinearity
+        if gauge_fix is False:
+            if input_range is None and sequences is not None:
+                input_range = np.linspace(min(latent_trait), max(latent_trait), 1000)
+                noise_function = noise_model.predict(input_range)
+
+                # if input range not provided, return input range
+                # so ge nonliearity can be plotted against it.
+                return noise_function, input_range, latent_trait
+            else:
+                noise_function = noise_model.predict(input_range)
+                return noise_function
+
+        # this part of the condition returns the gauge fixed latent trait
+        elif gauge_fix is True:
+
+            # first compute norm which will be used to rescale the parameters theta
+            # compute phi using training sequences
+            phi_for_computing_norm = get_1st_layer_output([self.input_seqs_ohe])
+
+            # compute the norm using phi_for_computing_norm as:
+            norm = np.sqrt(np.var(phi_for_computing_norm[0]))
+
+            # rescale the gf_theta
+            theta_gf_rescaled = gf_theta.ravel() / norm
+
+            # update the weights of the latent model with the gauge fixed parameters, and compute gauge fixed phi
+            self.model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
+                                              self.model.layers[1].get_weights()[1]])
+
+            get_gauge_fixed_phi = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+            phi_gauge_fixed = get_gauge_fixed_phi([sequences_ohe])
+
+            input_range_gf_phi = np.linspace(min(phi_gauge_fixed[0]), max(phi_gauge_fixed[0]), 1000)
+
+            noise_model = noise_model.predict([(input_range_gf_phi-bias)*norm+a+bias])
+            return noise_model, input_range_gf_phi, phi_gauge_fixed[0]

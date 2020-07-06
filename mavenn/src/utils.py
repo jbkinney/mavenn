@@ -553,3 +553,181 @@ def get_example_dataset(name='MPSA'):
 
         gb1_df = load_olson_data_GB1()
         return gb1_df['sequence'].values, gb1_df['values'].values
+
+
+@handle_errors
+def _center_matrix(df):
+    """
+    Centers each row of a matrix about zero by subtracting out the mean.
+    This method is used for gauge-fixing additive latent models
+
+    parameters
+    ----------
+
+    df: (pd.DataFrame)
+        a (L x C) pandas dataframe which contains additive latent model
+        parameters
+
+    returns
+    -------
+    out_df: (pd.DataFrame)
+        dataframe that is mean centered.
+
+    theta_bar: (array-like)
+        mean of parameters at position l
+
+    """
+
+    # Compute mean value of each row
+    means = df.mean(axis=1).values
+    theta_bar = -df.mean(axis=1).values[:, np.newaxis]
+
+    # Subtract out means
+    out_df = df.copy()
+    out_df.loc[:, :] = df.values - means[:, np.newaxis]
+
+    return out_df, theta_bar
+
+@handle_errors
+def fix_gauge_neighbor_model(sequenceLength,
+                             alphabetSize,
+                             theta):
+    """Calculates the hierarchical gauge that prioritizes the
+    constant feature over neighbor features and the neighbor
+    features' coefficients are in the canonical gauge.
+
+    parameters
+    ----------
+    sequenceLength: (int)
+        length of one input sequence
+
+    alphabetSize: (int)
+        number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
+
+    theta: (array-like)
+        the parameters of the latent neigbhor model
+
+    returns
+    -------
+    thetaGaugeFixed: (array-like)
+        the gauge fixed neighbor parameters
+
+    centeringConstant: (array-like)
+        the additive shift relating phi to phi''
+
+    """
+
+    theta = theta.reshape(sequenceLength - 1, alphabetSize, alphabetSize)
+
+    # center parameter values corresponding to a fixed first index, i.e. fixed neighboring position pair:
+    centeringConstant = sum(theta.mean(axis=(1, 2)))
+    thetaCentered = theta - theta.mean(axis=(1, 2), keepdims=True)
+
+    # calculate canonical gauge for neighbor features:
+    thetaGaugeFixed = thetaCentered
+    if sequenceLength > 2:
+        sRow = np.sum(thetaCentered, axis=2,
+                      keepdims=True)  # define array that broadcasts with theta and contains theta's row sums
+        sCol = np.sum(thetaCentered, axis=1,
+                      keepdims=True)  # define array that broadcasts with theta and contains theta's column sums
+        pos = 0
+        thetaGaugeFixed[pos] = thetaCentered[pos] + 1 / (2 * alphabetSize) * (-sCol[pos] + sRow[pos + 1].transpose())
+        for pos in range(1, sequenceLength - 2):
+            thetaGaugeFixed[pos] = thetaCentered[pos] + 1 / (2 * alphabetSize) * (
+            sCol[pos - 1].transpose() - sRow[pos] - sCol[pos] + sRow[pos + 1].transpose())
+        pos = sequenceLength - 2
+        thetaGaugeFixed[pos] = thetaCentered[pos] + 1 / (2 * alphabetSize) * (sCol[pos - 1].transpose() - sRow[pos])
+    thetaGaugeFixed = thetaGaugeFixed.ravel()
+
+    return thetaGaugeFixed, centeringConstant
+
+
+
+@handle_errors
+def kronecker_delta(n1, n2):
+    """
+
+    helper method implementing Kronecker delta,
+    used in fix_gauge_pairwise_model
+    """
+
+    if n1 == n2:
+        return 1
+    else:
+        return 0
+
+
+@handle_errors
+def fix_gauge_pairwise_model(sequenceLength,
+                             alphabetSize,
+                             theta):
+    """
+    Calculates the hierarchical gauge that prioritizes the
+    constant feature over pairwise features and the pairwise
+    features' coefficients are in the canonical gauge.
+
+     parameters
+    ----------
+    sequenceLength: (int)
+        length of one input sequence
+
+    alphabetSize: (int)
+        number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
+
+    theta: (array-like)
+        the parameters of the latent neigbhor model
+
+    returns
+    -------
+    thetaGaugeFixed: (array-like)
+        the gauge fixed pairwise parameters
+
+    centeringConstant: (array-like)
+        the additive shift relating phi to phi''
+
+     """
+
+    numPosPairs = int(sequenceLength * (sequenceLength - 1) / 2)
+    theta = theta.reshape(numPosPairs, alphabetSize, alphabetSize)
+
+    # center parameter values corresponding to a fixed first index, i.e. fixed position pair:
+    centeringConstant = sum(theta.mean(axis=(1, 2)))
+    thetaCentered = theta - theta.mean(axis=(1, 2), keepdims=True)
+
+    # calculate canonical gauge for pairwise features:
+    thetaGaugeFixed = thetaCentered
+    if sequenceLength > 2:
+        sRow = np.sum(thetaCentered, axis=2,
+                      keepdims=True)  # define array that broadcasts with theta and contains theta's row sums
+        sCol = np.sum(thetaCentered, axis=1,
+                      keepdims=True)  # define array that broadcasts with theta and contains theta's column sums
+
+        # reshape thetaGaugeFixed, sRow, and sCol so that they are inexed as [pos1][pos2,char1,char2] where pos1<pos2
+        l = [i for i in range(1, sequenceLength)]
+        splittingPoints = [sum(l[-k:]) for k in range(1,
+                                                      sequenceLength)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
+        thetaGaugeFixedReshaped = np.array(np.split(thetaGaugeFixed, splittingPoints, axis=0))
+        sRowReshaped = np.array(np.split(sRow, splittingPoints, axis=0))
+        sColReshaped = np.array(np.split(sCol, splittingPoints, axis=0))
+
+        c = 1 / (alphabetSize * (sequenceLength - 1))
+        for pos1 in range(sequenceLength - 1):
+            for pos2 in range(pos1 + 1, sequenceLength):
+                for pos in range(pos1):
+                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
+                        pos, pos2) * sColReshaped[pos][pos1 - (pos + 1)].transpose()
+                for pos in range(pos1 + 1, sequenceLength):
+                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
+                        pos, pos2) * sRowReshaped[pos1][pos - (pos1 + 1)]
+                for pos in range(pos2):
+                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
+                        pos, pos1) * sColReshaped[pos][pos2 - (pos + 1)]
+                for pos in range(pos2 + 1, sequenceLength):
+                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
+                        pos, pos1) * sRowReshaped[pos2][pos - (pos2 + 1)].transpose()
+    thetaGaugeFixed = thetaGaugeFixed.ravel()
+
+    return thetaGaugeFixed, centeringConstant
+
+
+

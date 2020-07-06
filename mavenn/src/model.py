@@ -92,12 +92,12 @@ class Model:
 
         # choose model based on regression_type
         if regression_type == 'GE':
-            self.model = GlobalEpistasisModel(self.X,
-                                              self.y,
-                                              self.model_type,
-                                              self.test_size,
-                                              self.alphabet_dict,
-                                              self.ohe_single_batch_size)
+            self.model = GlobalEpistasisModel(X=self.X,
+                                              y=self.y,
+                                              model_type=self.model_type,
+                                              test_size=self.test_size,
+                                              alphabet_dict=self.alphabet_dict,
+                                              ohe_single_batch_size=self.ohe_single_batch_size)
 
             self.define_model = self.model.define_model(monotonic=self.monotonic,
                                                         custom_architecture=self.custom_architecture)
@@ -199,13 +199,15 @@ class Model:
 
         if input_range is None:
             ge_nonlinearfunction, input_range, latent_trait = self.model.ge_nonlinearity(sequences,
-                                                                                         input_range=None)
+                                                                                         input_range=None,
+                                                                                         gauge_fix=gauge_fix)
             # if input range not provided, return input range
             # so ge nonliearity can be plotted against it.
             return ge_nonlinearfunction, input_range, latent_trait
         else:
             ge_nonlinearfunction = self.model.ge_nonlinearity(sequences,
-                                                              input_range=input_range)
+                                                              input_range=input_range,
+                                                              gauge_fix=gauge_fix)
             return ge_nonlinearfunction
 
 
@@ -245,13 +247,15 @@ class Model:
 
         if input_range is None:
             nanoisemodel, input_range, latent_trait = self.model.noise_model(sequences,
-                                                                             input_range=None)
+                                                                             input_range=None,
+                                                                             gauge_fix=gauge_fix)
             # if input range not provided, return input range
             # so noise model can be plotted against it.
             return nanoisemodel, input_range, latent_trait
         else:
             nanoisemodel = self.model.noise_model(sequences,
-                                                  input_range=input_range)
+                                                  input_range=input_range,
+                                                  gauge_fix=gauge_fix)
             return nanoisemodel
 
     @handle_errors
