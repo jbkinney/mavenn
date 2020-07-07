@@ -401,6 +401,53 @@ class GlobalEpistasisModel:
 
         return self.history
 
+    def latent_model_parameters(self):
+
+        """
+        method that returns a flattened list of gauge-fixed
+        GE latent trait model parameters.
+
+        returns
+        -------
+        theta_gf: (array-like)
+            gauge fixed latent trait models
+        """
+
+        # use training sequences to compute phi
+        get_1st_layer_output = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+
+        phi_for_computing_norm = get_1st_layer_output([self.input_seqs_ohe])
+
+        # compute the norm using phi_for_computing_norm as:
+        norm = np.sqrt(np.var(phi_for_computing_norm[0]))
+
+        # variables required for gauge fixed latent trait parameters theta
+        sequence_length = len(self.x_train[0])
+        # non-gauge fixed theta
+        theta = self.model.layers[1].get_weights()[0]
+
+        # use gauge-fixing method for the appropriate latent model type
+        if self.model_type == 'additive':
+            theta_df = pd.DataFrame(theta.reshape(sequence_length, len(self.bases)), columns=self.bases)
+            # compute mean centered, thus gauge-fixed, additive latent model
+            gf_theta, theta_bar = _center_matrix(theta_df)
+            gf_theta = gf_theta.values
+            # compute offset term which separates latent trait from gauge fixed latent trait
+            a = np.sum(self.input_seqs_ohe[0].reshape(sequence_length, len(self.bases)) * theta_bar)
+            a = -a
+
+        elif self.model_type == 'neighbor':
+
+            # compute gauge-fixed, neighbor latent model
+            gf_theta, a = fix_gauge_neighbor_model(sequence_length, len(self.bases), theta)
+
+        elif self.model_type == 'pairwise':
+
+            # compute gauge-fixed pairwise latent model
+            gf_theta, a = fix_gauge_pairwise_model(sequence_length, len(self.bases), theta)
+
+        return gf_theta.ravel() / norm
+
     def ge_nonlinearity(self,
                         sequences,
                         input_range=None,
@@ -524,11 +571,15 @@ class GlobalEpistasisModel:
             # rescale the gf_theta
             theta_gf_rescaled = gf_theta.ravel() / norm
 
+            # create a copy of the model which will gauge fixed, this
+            # way the user can retain non-gauge-fixed model if they want
+            gauge_fixed_model = tf.keras.models.clone_model(self.model)
+
             # update the weights of the latent model with the gauge fixed parameters, and compute gauge fixed phi
-            self.model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
+            gauge_fixed_model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
                                               self.model.layers[1].get_weights()[1]])
 
-            get_gauge_fixed_phi = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+            get_gauge_fixed_phi = K.function([gauge_fixed_model.layers[0].input], [gauge_fixed_model.layers[1].output])
             phi_gauge_fixed = get_gauge_fixed_phi([sequences_ohe])
 
             input_range_gf_phi = np.linspace(min(phi_gauge_fixed[0]), max(phi_gauge_fixed[0]), 1000)
@@ -857,6 +908,54 @@ class NoiseAgnosticModel:
 
         return self.model
 
+
+    def latent_model_parameters(self):
+
+        """
+        method that returns a flattened list of gauge-fixed
+        NA latent trait model parameters.
+
+        returns
+        -------
+        theta_gf: (array-like)
+            gauge fixed latent trait models
+        """
+
+        # use training sequences to compute phi
+        get_1st_layer_output = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+
+        phi_for_computing_norm = get_1st_layer_output([self.input_seqs_ohe])
+
+        # compute the norm using phi_for_computing_norm as:
+        norm = np.sqrt(np.var(phi_for_computing_norm[0]))
+
+        # variables required for gauge fixed latent trait parameters theta
+        sequence_length = len(self.x_train[0])
+        # non-gauge fixed theta
+        theta = self.model.layers[1].get_weights()[0]
+
+        # use gauge-fixing method for the appropriate latent model type
+        if self.model_type == 'additive':
+            theta_df = pd.DataFrame(theta.reshape(sequence_length, len(self.bases)), columns=self.bases)
+            # compute mean centered, thus gauge-fixed, additive latent model
+            gf_theta, theta_bar = _center_matrix(theta_df)
+            gf_theta = gf_theta.values
+            # compute offset term which separates latent trait from gauge fixed latent trait
+            a = np.sum(self.input_seqs_ohe[0].reshape(sequence_length, len(self.bases)) * theta_bar)
+            a = -a
+
+        elif self.model_type == 'neighbor':
+
+            # compute gauge-fixed, neighbor latent model
+            gf_theta, a = fix_gauge_neighbor_model(sequence_length, len(self.bases), theta)
+
+        elif self.model_type == 'pairwise':
+
+            # compute gauge-fixed pairwise latent model
+            gf_theta, a = fix_gauge_pairwise_model(sequence_length, len(self.bases), theta)
+
+        return gf_theta.ravel() / norm
+
     def noise_model(self,
                     sequences=None,
                     input_range=None,
@@ -983,11 +1082,19 @@ class NoiseAgnosticModel:
             # rescale the gf_theta
             theta_gf_rescaled = gf_theta.ravel() / norm
 
+            # create a copy of the model which will gauge fixed, this
+            # way the user can retain non-gauge-fixed model if they want
+            gauge_fixed_model = tf.keras.models.clone_model(self.model)
+
             # update the weights of the latent model with the gauge fixed parameters, and compute gauge fixed phi
-            self.model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
+            gauge_fixed_model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
                                               self.model.layers[1].get_weights()[1]])
 
-            get_gauge_fixed_phi = K.function([self.model.layers[0].input], [self.model.layers[1].output])
+            # update the weights of the latent model with the gauge fixed parameters, and compute gauge fixed phi
+            gauge_fixed_model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1),
+                                              self.model.layers[1].get_weights()[1]])
+
+            get_gauge_fixed_phi = K.function([gauge_fixed_model.layers[0].input], [gauge_fixed_model.layers[1].output])
             phi_gauge_fixed = get_gauge_fixed_phi([sequences_ohe])
 
             input_range_gf_phi = np.linspace(min(phi_gauge_fixed[0]), max(phi_gauge_fixed[0]), 1000)

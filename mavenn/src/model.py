@@ -213,6 +213,20 @@ class Model:
 
 
     @handle_errors
+    def return_theta(self):
+
+        """
+        method that returns a flattened list of gauge-fixed latent model parameters.
+
+        returns
+        -------
+        theta_gf: (array-like)
+            gauge fixed latent trait models
+        """
+
+        return self.model.latent_model_parameters()
+
+    @handle_errors
     def na_noisemodel(self,
                       sequences,
                       input_range=None,
