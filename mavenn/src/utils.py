@@ -398,19 +398,35 @@ def na_plots_for_mavenn_demo(loss_history,
     ax[1].set_ylabel('additive parameters')
     ax[1].set_xlabel('position')
 
-    theta_df = pd.DataFrame(NAR.nn_model().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
+    #theta_df = pd.DataFrame(NAR.nn_model().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
+    theta_df = pd.DataFrame(NAR.return_theta().reshape(39, 4), columns=['A', 'C', 'G', 'T'])
 
-    additive_logo = logomaker.Logo(theta_df/np.sqrt(np.sum(theta_df.values.ravel()**2)),
+
+    additive_logo = logomaker.Logo(theta_df,
                                    center_values=True,
                                    ax=ax[1])
 
     # view the inferred noise model as a heatmap
-    noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
+    # noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
+    # ax[2].invert_yaxis()
+    # ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
+    # ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
+    # ax[2].set_ylabel(' bin numbers')
+    # ax[2].set_xlabel('latent trait ($\phi$)')
+
+    if noise_model.T[noise_model.T.shape[0] - 1][0] > noise_model.T[noise_model.T.shape[0] - 1][
+                noise_model.T.shape[1] - 1]:
+        noise_model_heatmap = sns.heatmap(pd.DataFrame(noise_model.T).loc[::1, ::-1], cmap='Greens', ax=ax[2])
+    else:
+        noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
     ax[2].invert_yaxis()
-    ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
-    ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
+    ax[2].set_xticks(([0, int(len(phi_range) / 2), len(phi_range) - 2]), minor=False)
+    middle_tick = str(phi_range[int(len(phi_range) / 2)])
+    ax[2].set_xticklabels(([str(phi_range[0])[1:5], middle_tick[1:5], str(phi_range[len(phi_range) - 1])[1:5]]),
+                       minor=False)
     ax[2].set_ylabel(' bin numbers')
     ax[2].set_xlabel('latent trait ($\phi$)')
+
 
     plt.tight_layout()
     plt.show()
@@ -706,9 +722,9 @@ def fix_gauge_pairwise_model(sequenceLength,
         l = [i for i in range(1, sequenceLength)]
         splittingPoints = [sum(l[-k:]) for k in range(1,
                                                       sequenceLength)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
-        thetaGaugeFixedReshaped = np.array(np.split(thetaGaugeFixed, splittingPoints, axis=0))
-        sRowReshaped = np.array(np.split(sRow, splittingPoints, axis=0))
-        sColReshaped = np.array(np.split(sCol, splittingPoints, axis=0))
+        thetaGaugeFixedReshaped = np.array(np.split(thetaGaugeFixed, splittingPoints, axis=0), dtype=object)
+        sRowReshaped = np.array(np.split(sRow, splittingPoints, axis=0), dtype=object)
+        sColReshaped = np.array(np.split(sCol, splittingPoints, axis=0), dtype=object)
 
         c = 1 / (alphabetSize * (sequenceLength - 1))
         for pos1 in range(sequenceLength - 1):
@@ -728,6 +744,5 @@ def fix_gauge_pairwise_model(sequenceLength,
     thetaGaugeFixed = thetaGaugeFixed.ravel()
 
     return thetaGaugeFixed, centeringConstant
-
 
 
