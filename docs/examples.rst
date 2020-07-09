@@ -147,12 +147,10 @@ Example snippet for inferring NA model from Sort-Seq data ::
     loss_history =  NAR.model.return_loss()
 
     # evaluate the inferred noise model for a given input range
-    phi_range = np.linspace(-20, 20,1000)
-    noise_model = NAR.na_noisemodel(sequences,
-                                    input_range=phi_range)
+	noise_model, phi_range, latent_trait = NAR.na_noisemodel(sequences, gauge_fix=True)
 
-    # plot results using helper function
-    na_plots_for_mavenn_demo(loss_history, NAR, noise_model, phi_range)
+	# plot results using helper function
+	na_plots_for_mavenn_demo(loss_history, NAR, noise_model, phi_range)
 
 .. image:: _static/examples_images/NA_additive_sort_seq_demo.png
 
@@ -179,8 +177,7 @@ neighbor interactions included ::
 
     # evaluate the inferred noise model for a given input range
     phi_range = np.linspace(-20, 15,1000)
-    noise_model = NAR.na_noisemodel(sequences,
-                                    input_range=phi_range)
+	noise_model, phi_range, latent_trait = NAR.na_noisemodel(sequences)
 
     # results plotted using custom logomaker script
 
