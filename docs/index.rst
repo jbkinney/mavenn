@@ -1,6 +1,6 @@
-========================================================================================
-MAVE-NN: Quantitative Modeling of Sequence-Function Relationships using Neural Networks
-========================================================================================
+=====================================================================================
+MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Bottlenecks
+=====================================================================================
 
 MAVE-NN is a python package for inferring models of sequence-function relationships from 
 multiplexed assays of variant effects (MAVEs). MAVE-NN currently implements global epistasis 
