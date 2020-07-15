@@ -77,7 +77,8 @@ Reference
 ----------
 
 .. [#Tareen2020] Tareen A, Ireland WT, Posfai A, McCandlish DM, Kinney JB.
-    MAVE-NN: Quantitative Modeling of Sequence-Function Relationships using Neural Networks (2020)
+    MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Bottlenecks 
+    Biorxiv (2020). `<https://doi.org/10.1101/2020.07.14.201475>`_
 
 .. [#Wong2018] Wong MS, Kinney JB, Krainer AR. Quantitative Activity Profile and Context Dependence of All Human 5'
     Splice Sites. Mol Cell. 2018;71(6):1012-1026.e3. `<https://doi.org/10.1016/j.molcel.2018.07.033>`_
