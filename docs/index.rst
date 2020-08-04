@@ -57,7 +57,7 @@ parameters as a sequence logo, and the inferred noise model.
 Tutorial
 --------
 
-A tutorial is available via a series of Jupyter notebooks, each of which focuses on a different aspect of mavenn's
+A tutorial is available via a series of Jupyter notebooks, each of which focuses on a different aspect of MAVE-NN's
 functionality. To view the notebooks statically on GitHub,
 `click here <https://github.com/jbkinney/mavenn/tree/master/mavenn/tutorials>`_.
 
