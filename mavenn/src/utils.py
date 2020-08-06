@@ -398,7 +398,7 @@ def na_plots_for_mavenn_demo(loss_history,
     ax[1].set_ylabel('additive parameters')
     ax[1].set_xlabel('position')
 
-    #theta_df = pd.DataFrame(NAR.nn_model().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
+    #theta_df = pd.DataFrame(NAR.get_nn().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
     theta_df = pd.DataFrame(NAR.return_theta().reshape(39, 4), columns=['A', 'C', 'G', 'T'])
 
 
