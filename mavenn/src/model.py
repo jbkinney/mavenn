@@ -43,6 +43,10 @@ class Model:
         Specifies the type of G-P model the user wants to infer.
         Three possible choices allowed: ['additive','neighbor','pairwise']
 
+    noise_model: (str)
+        Specifies the type of noise model the user wants to infer.
+        The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
+
     learning_rate: (float)
         Learning rate of the optimizer.
 
@@ -80,6 +84,7 @@ class Model:
                  y,
                  alphabet,
                  gpmap_type='additive',
+                 noise_model='Gaussian',
                  monotonic=True,
                  learning_rate=0.005,
                  test_size=0.2,
@@ -91,6 +96,7 @@ class Model:
         self.regression_type = regression_type
         self.X, self.y = X, y
         self.gpmap_type = gpmap_type
+        self.noise_model = noise_model
         self.learning_rate = learning_rate
         self.test_size = test_size
         self.monotonic = monotonic
@@ -119,9 +125,8 @@ class Model:
                                               custom_architecture=self.custom_architecture,
                                               ohe_single_batch_size=self.ohe_single_batch_size)
 
-            # TODO: take out define_model and compile model out of if-else conditional.
-            # (check if this can break by doing that)
-            self.define_model = self.model.define_model(num_nodes_hidden_measurement_layer=
+            self.define_model = self.model.define_model(noise_model=self.noise_model,
+                                                        num_nodes_hidden_measurement_layer=
                                                         self.num_nodes_hidden_measurement_layer,
                                                         custom_architecture=self.custom_architecture)
 
@@ -295,7 +300,17 @@ class Model:
         else:
             callbacks = []
 
-        history = self.model.model.fit(self.model.input_seqs_ohe,
+        # OHE training sequences with y appended
+        train_sequences = []
+
+        for _ in range(len(self.model.input_seqs_ohe)):
+            temp = self.model.input_seqs_ohe[_].ravel()
+            temp = np.append(temp, self.model.y_train[_])
+            train_sequences.append(temp)
+
+        train_sequences = np.array(train_sequences)
+
+        history = self.model.model.fit(train_sequences,
                                        self.model.y_train,
                                        validation_split=validation_split,
                                        epochs=epochs,
@@ -306,7 +321,9 @@ class Model:
         # gauge fix model after fitting
         #self.model.gauge_fix_model()
         #self.gauge_fix_model()
-        self.gauge_fix_model()
+        #self.gauge_fix_model()
+
+        # TODO: NEED TO APPLY UPDATED GAUGE-FIXING
 
         # update history attribute
         self.model.history = history
@@ -483,7 +500,13 @@ class Model:
         """
 
         if self.regression_type == 'GE':
-            self.model.model.compile(loss='mean_squared_error',
+
+            # Note: this loss just returns the computed
+            # Likelihood in the custom likelihood layer
+            def likelihood_loss(y_true, y_pred):
+                return y_pred
+
+            self.model.model.compile(loss=likelihood_loss,
                                      optimizer=optimizer(lr=lr))
 
         elif self.regression_type == 'NA':
@@ -522,10 +545,13 @@ class Model:
             seqs_ohe = _generate_all_pair_features_from_sequences(sequence, self.alphabet)
 
         # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
-        gpmap_function = K.function([self.model.model.layers[0].input], [self.model.model.layers[1].output])
+        gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
 
         # Compute latent phenotype values
         phi = gpmap_function([seqs_ohe])
+
+        # Remove extra dimension tf adds
+        phi = phi[0].ravel().copy()
 
         # Return latent phenotype values
         return phi
@@ -566,4 +592,10 @@ class Model:
             # one-hot encode sequences in batches in a vectorized way
             test_input_seqs_ohe = _generate_all_pair_features_from_sequences(data, self.alphabet)
 
-        return self.model.model.predict(test_input_seqs_ohe)
+        get_yhat = K.function([self.model.model.layers[1].input], [self.model.model.layers[4].output])
+        yhat =  get_yhat([test_input_seqs_ohe])
+
+        # Remove extra dimension tf adds
+        yhat = yhat[0].ravel().copy()
+
+        return yhat

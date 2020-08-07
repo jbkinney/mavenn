@@ -6,8 +6,9 @@ from mavenn.src.utils import onehot_encode_array, \
 import numpy as np
 
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Activation, Input
+from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
+from mavenn.src.likelihood_layers import *
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -139,12 +140,13 @@ class GlobalEpistasisModel:
               'length of inputs (X, y) must be equal')
         self.num_measurements = len(self.X)
 
-        # check that model type valid
+        # check that gpmap_type valid
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
               'gpmap = %s; must be "additive", "neighbor", or "pairwise"' %
               self.gpmap_type)
 
     def define_model(self,
+                     noise_model,
                      num_nodes_hidden_measurement_layer=50,
                      custom_architecture=None):
 
@@ -155,6 +157,10 @@ class GlobalEpistasisModel:
 
         parameters
         ----------
+        noise_model: (str)
+            Specifies the type of noise model the user wants to infer.
+            The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
+
         num_nodes_hidden_measurement_layer: (int)
             Number of nodes to use in the hidden layer of the measurement network
             of the GE model architecture.
@@ -172,21 +178,45 @@ class GlobalEpistasisModel:
 
         """
 
+        # check that noise_model valid
+        check(noise_model in {'Gaussian', 'Cauchy', 'SkewedT'},
+              'noise_model = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
+              noise_model)
+
         # If user has not provided custom architecture, implement a default architecture
         if custom_architecture is None:
 
-            number_input_layer_nodes = len(self.input_seqs_ohe[0])
+            number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
             inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-            phi = Dense(1)(inputTensor)
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
+                                    output_shape=((len(self.input_seqs_ohe[0]),)))(inputTensor)
+            labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
+                                  output_shape=((1, )), trainable=False)(inputTensor)
+
+            phi = Dense(1)(sequence_input)
 
             # implement monotonicity constraints
             if self.monotonic:
-                intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid', kernel_constraint=nonneg())(phi)
-                outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+                intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid',
+                                           kernel_constraint=nonneg())(phi)
+                yhat = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+
+                concatenateLayer = Concatenate()([yhat, labels_input])
+
+                # dynamic likelihood class instantiation by the globals dictionary
+                # manual instantiation can be done as follows:
+                # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
+
+                likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
+                outputTensor = likelihoodClass()(concatenateLayer)
+
             else:
                 intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-                outputTensor = Dense(1)(intermediateTensor)
+                yhat = Dense(1)(intermediateTensor)
+
+                concatenateLayer = Concatenate()([yhat, labels_input])
+                likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
 
             # create the model:
             model = Model(inputTensor, outputTensor)
@@ -227,11 +257,12 @@ class GlobalEpistasisModel:
         next_input = ge_model_input
 
         # the following variable is the index of
-        default_phiPrime_layer_index = 2
+        phi_index = 3
+        yhat_index = 5
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
-        for layer in self.model.layers[default_phiPrime_layer_index:]:
+        for layer in self.model.layers[phi_index:yhat_index]:
             next_input = layer(next_input)
 
         # Form gauge fixed GE_nonlinearity model
