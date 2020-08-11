@@ -1,14 +1,16 @@
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, NoiseAgnosticModel
-from mavenn.src.utils import _center_matrix, fix_gauge_neighbor_model, fix_gauge_pairwise_model
+from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
 from mavenn.src.utils import onehot_encode_array, \
     _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
+from mavenn.src.likelihood_layers import *
+from mavenn.src.utils import fixDiffeomorphicMode
 
 import tensorflow as tf
 import tensorflow.keras
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model as kerasFunctionalModel # to distinguish from class name
-from tensorflow.keras.layers import Dense, Activation, Input
+from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
 import tensorflow.keras.backend as K
 
@@ -116,6 +118,7 @@ class Model:
 
         # choose model based on regression_type
         if regression_type == 'GE':
+
             self.model = GlobalEpistasisModel(X=self.X,
                                               y=self.y,
                                               gpmap_type=self.gpmap_type,
@@ -165,95 +168,120 @@ class Model:
 
         # Helper variables used for gauge fixing gpmap trait parameters theta below.
         sequence_length = len(self.model.x_train[0])
+        alphabetSize = len(self.model.characters)
 
         # Non-gauge fixed theta
-        theta = self.model.model.layers[1].get_weights()[0]
+        theta_all = self.model.model.layers[2].get_weights()[0]    # E.g., could be theta_additive + theta_pairwise
+        theta_nought = self.model.model.layers[2].get_weights()[1]
+        theta = np.hstack((theta_nought, theta_all.ravel()))
 
         # The following conditionals gauge fix the gpmap parameters depending of the value of gpmap
         if self.gpmap_type == 'additive':
 
-            # form pandas dataframe from theta_df so it can be used with the function _center_matrix
-            theta_df = pd.DataFrame(theta.reshape(sequence_length, len(self.model.characters)), columns=self.model.characters)
-
-            # compute mean centered, thus gauge-fixed, additive latent model
-            gf_theta, theta_bar = _center_matrix(theta_df)
-            gf_theta = gf_theta.values
-
-            # compute offset term which separates latent trait from gauge fixed latent trait
-            a = -np.sum(theta_bar)
+            # compute gauge-fixed, additive model theta
+            theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
 
         elif self.gpmap_type == 'neighbor':
 
-            # compute gauge-fixed, neighbor latent model, and offset term
-            gf_theta, a = fix_gauge_neighbor_model(sequence_length, len(self.model.characters), theta)
+            # compute gauge-fixed, neighbor model theta
+            theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
 
         elif self.gpmap_type == 'pairwise':
 
-            # compute gauge-fixed pairwise latent model and offset term
-            gf_theta, a = fix_gauge_pairwise_model(sequence_length, len(self.model.characters), theta)
-
-        # add bias of default (non gauge fixed) model into additive shift
-        bias = self.model.model.layers[1].get_weights()[1]
-        a += bias[0]
+            # compute gauge-fixed, pairwise model theta
+            theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
 
         # The following variable unfixed_gpmap is a tf.keras backend function
         # which computes the non-gauge fixed value of the hidden node phi for a given input
         # this is  used to compute diffeomorphic scaling factor.
-        unfixed_gpmap = K.function([self.model.model.layers[0].input], [self.model.model.layers[1].output])
+        unfixed_gpmap = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
 
         # compute unfixed phi using the function unfixed_gpmap with training sequences.
         unfixed_phi = unfixed_gpmap([self.model.input_seqs_ohe])
 
         # Compute diffeomorphic scaling factor which is used to rescale the parameters theta
-        diffeomorphic_scale = np.sqrt(np.var(unfixed_phi[0]))
-
-        # rescale the gf_theta
-        theta_gf_rescaled = gf_theta.ravel() / diffeomorphic_scale
+        diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
+        diffeomorphic_mean = np.mean(unfixed_phi[0])
 
         # Default neural network weights that are non gauge fixed.
         # This will be used for updating the weights of the measurement
         # network after the gauge fixed neural network is define below.
         temp_weights = [layer.get_weights() for layer in self.model.model.layers]
 
-        number_input_layer_nodes = len(self.model.input_seqs_ohe[0])
+        # define gauge fixed model
+        number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1
         inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-        phiPrime = Dense(1, name='phiPrime')(inputTensor)
-        phi = Dense(1, name='phi')(phiPrime)
+        sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
+
+        labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
+                              output_shape=((1,)), trainable=False)(inputTensor)
+
+        # same phi as before
+        phi = Dense(1, name='phiPrime')(sequence_input)
+        # fix diffeomorphic scale
+        phi_scaled = fixDiffeomorphicMode()(phi)
+        phiOld = Dense(1, name='phi')(phi_scaled)
 
         # implement monotonicity constraints if GE regression
-        if self.regression_type=='GE':
+        if self.regression_type == 'GE':
+
             if self.monotonic:
+
                 intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid',
-                                           kernel_constraint=nonneg())(phi)
-                outputTensor = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+                                           kernel_constraint=nonneg())(phiOld)
+                y_hat = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+
+                concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
+
+                # dynamic likelihood class instantiation by the globals dictionary
+                # manual instantiation can be done as follows:
+                # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
+
+                likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
+                outputTensor = likelihoodClass()(concatenateLayer)
+
             else:
-                intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-                outputTensor = Dense(1)(intermediateTensor)
+                intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
+                y_hat = Dense(1)(intermediateTensor)
+
+                concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
+
+                likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
+                outputTensor = likelihoodClass()(concatenateLayer)
+
         elif self.regression_type=='NA':
             intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
             outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
 
         # create the gauge-fixed model:
-        gf_model = kerasFunctionalModel(inputTensor, outputTensor)
+        model_gf = kerasFunctionalModel(inputTensor, outputTensor)
 
-        # set gpmap weights
-        gf_model.layers[1].set_weights([theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1), np.array([0])])
+        # set new model theta weights
+        theta_nought_gf = theta_gf[0]
+        model_gf.layers[2].set_weights([theta_gf[1:].reshape(-1, 1), np.array([theta_nought_gf])])
 
-        # weight connecting phi to phiPrime with weight unity
-        gf_model.layers[2].set_weights([np.array([diffeomorphic_scale]).reshape(1, 1), np.array([a])])
+        # update weights as sigma*phi+mean, which ensures predictions (y_hat) don't change from
+        # the diffeomorphic scaling.
+        model_gf.layers[4].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
 
-        # phiPrime to ge_model hidden
-        gf_model.layers[3].set_weights(temp_weights[2])
-        gf_model.layers[4].set_weights(temp_weights[3])
+        # set new model phi to hidden weights
+        model_gf.layers[5].set_weights(temp_weights[3])
+
+        # set new model hidden to yhat
+        model_gf.layers[6].set_weights(temp_weights[4])
+
+        # set weights in liklelihood layer
+        model_gf.layers[9].set_weights(temp_weights[7])
 
         # Update default neural network model with gauge-fixed model
-        self.model.model = gf_model
+        self.model.model = model_gf
 
         # The theta_gf attribute now contains gauge fixed parameters, and
         # can be obtained in raw form by accessing this attribute or can be
         # obtained a readable format by using the method return_theta
-        self.model.theta_gf = theta_gf_rescaled.reshape(len(theta_gf_rescaled), 1)
+        self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
 
     @handle_errors
     def fit(self,
@@ -319,9 +347,7 @@ class Model:
                                        )
 
         # gauge fix model after fitting
-        #self.model.gauge_fix_model()
-        #self.gauge_fix_model()
-        #self.gauge_fix_model()
+        self.gauge_fix_model()
 
         # TODO: NEED TO APPLY UPDATED GAUGE-FIXING
 
@@ -537,15 +563,27 @@ class Model:
             seqs_ohe = onehot_encode_array(sequence, self.model.characters)
 
         elif self.gpmap_type == 'neighbor':
-            # one-hot encode sequences in batches in a vectorized way
-            seqs_ohe = _generate_nbr_features_from_sequences(sequence, self.alphabet)
+            # Generate additive one-hot encoding.
+            X_test_additive = onehot_encode_array(sequence, self.model.characters, self.ohe_single_batch_size)
+
+            # Generate neighbor one-hot encoding.
+            X_test_neighbor = _generate_nbr_features_from_sequences(sequence, self.alphabet)
+
+            # Append additive and neighbor features together.
+            seqs_ohe = np.hstack((X_test_additive, X_test_neighbor))
 
         elif self.gpmap_type == 'pairwise':
-            # one-hot encode sequences in batches in a vectorized way
-            seqs_ohe = _generate_all_pair_features_from_sequences(sequence, self.alphabet)
+            # Generate additive one-hot encoding.
+            X_test_additive = onehot_encode_array(sequence, self.model.characters, self.ohe_single_batch_size)
+
+            # Generate pairwise one-hot encoding.
+            X_test_pairwise = _generate_all_pair_features_from_sequences(sequence, self.alphabet)
+
+            # Append additive and pairwise features together.
+            seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
 
         # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
-        gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
+        gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[3].output])
 
         # Compute latent phenotype values
         phi = gpmap_function([seqs_ohe])
@@ -585,15 +623,28 @@ class Model:
             test_input_seqs_ohe = onehot_encode_array(data, self.model.characters)
 
         elif self.gpmap_type == 'neighbor':
-            # one-hot encode sequences in batches in a vectorized way
-            test_input_seqs_ohe = _generate_nbr_features_from_sequences(data, self.alphabet)
+
+            # Generate additive one-hot encoding.
+            X_test_additive = onehot_encode_array(data, self.model.characters, self.ohe_single_batch_size)
+
+            # Generate neighbor one-hot encoding.
+            X_test_neighbor = _generate_nbr_features_from_sequences(data, self.alphabet)
+
+            # Append additive and neighbor features together.
+            test_input_seqs_ohe = np.hstack((X_test_additive, X_test_neighbor))
 
         elif self.gpmap_type == 'pairwise':
-            # one-hot encode sequences in batches in a vectorized way
-            test_input_seqs_ohe = _generate_all_pair_features_from_sequences(data, self.alphabet)
+            # Generate additive one-hot encoding.
+            X_test_additive = onehot_encode_array(data, self.model.characters, self.ohe_single_batch_size)
 
-        get_yhat = K.function([self.model.model.layers[1].input], [self.model.model.layers[4].output])
-        yhat =  get_yhat([test_input_seqs_ohe])
+            # Generate pairwise one-hot encoding.
+            X_test_pairwise = _generate_all_pair_features_from_sequences(data, self.alphabet)
+
+            # Append additive and pairwise features together.
+            test_input_seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
+
+        get_yhat = K.function([self.model.model.layers[1].input], [self.model.model.layers[6].output])
+        yhat = get_yhat([test_input_seqs_ohe])
 
         # Remove extra dimension tf adds
         yhat = yhat[0].ravel().copy()

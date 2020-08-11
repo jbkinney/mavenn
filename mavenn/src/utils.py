@@ -8,6 +8,9 @@ import seaborn as sns
 import pandas as pd
 import mavenn
 
+import tensorflow.keras.backend as K
+import tensorflow.keras
+
 @handle_errors
 def onehot_sequence(sequence, bases):
 
@@ -605,12 +608,13 @@ def _center_matrix(df):
     return out_df, theta_bar
 
 @handle_errors
-def fix_gauge_neighbor_model(sequenceLength,
+def fix_gauge_additive_model(sequenceLength,
                              alphabetSize,
                              theta):
-    """Calculates the hierarchical gauge that prioritizes the
-    constant feature over neighbor features and the neighbor
-    features' coefficients are in the canonical gauge.
+    """
+    Calculates the hierarchical gauge where constant feature > single-site features.
+    Model parameters are given in the 1d array theta. Order of coefficients in theta, e.g. ,
+    sequence length = 3 and alphabet = 'AB': theta0,theta1A,theta1B,theta2A,...
 
     parameters
     ----------
@@ -628,34 +632,77 @@ def fix_gauge_neighbor_model(sequenceLength,
     thetaGaugeFixed: (array-like)
         the gauge fixed neighbor parameters
 
-    centeringConstant: (array-like)
-        the additive shift relating phi to phi''
+    """
+
+    # copy/reshape input parameter vector:
+    thetaConstant = theta[0]
+    thetaSinglesite = np.copy(theta[1:]).reshape(sequenceLength, alphabetSize)
+
+    # mean center columns in position weight matrix
+    thetaConstant += sum(thetaSinglesite.mean(axis=1))
+    thetaSinglesite = thetaSinglesite - thetaSinglesite.mean(axis=1, keepdims=True)
+
+    thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel()])
+
+    return thetaGaugeFixed
+
+@handle_errors
+def fix_gauge_neighbor_model(sequenceLength,
+                             alphabetSize,
+                             theta):
+    """
+    Calculates the hierarchical gauge where constant feature > single-site features > neighbor features.
+    Model parameters are given in the 1d array theta. Order of coefficients in theta, e.g. sequence length = 3
+    and alphabet = 'AB':  theta0,theta1A,theta1B,...,theta12AA,theta12AB,theta12BA,theta12BB,
+    theta23AA,theta23AB,theta23BA,theta23BB
+
+    parameters
+    ----------
+    sequenceLength: (int)
+        length of one input sequence
+
+    alphabetSize: (int)
+        number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
+
+    theta: (array-like)
+        the parameters of the latent neigbhor model
+
+    returns
+    -------
+    thetaGaugeFixed: (array-like)
+        the gauge fixed neighbor parameters
 
     """
 
-    theta = theta.reshape(sequenceLength - 1, alphabetSize, alphabetSize)
+    # copy/reshape input parameter vector:
+    numSinglesiteFeatures = sequenceLength * alphabetSize
+    numPosPairs = sequenceLength - 1
+    thetaConstant = theta[0]
+    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(sequenceLength, alphabetSize)
+    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, alphabetSize, alphabetSize)
 
-    # center parameter values corresponding to a fixed first index, i.e. fixed neighboring position pair:
-    centeringConstant = sum(theta.mean(axis=(1, 2)))
-    thetaCentered = theta - theta.mean(axis=(1, 2), keepdims=True)
+    # apply g1 (given in SI):
+    thetaConstant += sum(thetaPairwise.mean(axis=(1, 2)))
+    thetaPairwise = thetaPairwise - thetaPairwise.mean(axis=(1, 2), keepdims=True)
 
-    # calculate canonical gauge for neighbor features:
-    thetaGaugeFixed = thetaCentered
-    if sequenceLength > 2:
-        sRow = np.sum(thetaCentered, axis=2,
-                      keepdims=True)  # define array that broadcasts with theta and contains theta's row sums
-        sCol = np.sum(thetaCentered, axis=1,
-                      keepdims=True)  # define array that broadcasts with theta and contains theta's column sums
-        pos = 0
-        thetaGaugeFixed[pos] = thetaCentered[pos] + 1 / (2 * alphabetSize) * (-sCol[pos] + sRow[pos + 1].transpose())
-        for pos in range(1, sequenceLength - 2):
-            thetaGaugeFixed[pos] = thetaCentered[pos] + 1 / (2 * alphabetSize) * (
-            sCol[pos - 1].transpose() - sRow[pos] - sCol[pos] + sRow[pos + 1].transpose())
-        pos = sequenceLength - 2
-        thetaGaugeFixed[pos] = thetaCentered[pos] + 1 / (2 * alphabetSize) * (sCol[pos - 1].transpose() - sRow[pos])
-    thetaGaugeFixed = thetaGaugeFixed.ravel()
+    # apply g2 and g3 (given in SI) to pairwise coefficients:
+    rowMeans = np.mean(thetaPairwise, axis=2, keepdims=True)
+    columnMeans = np.mean(thetaPairwise, axis=1, keepdims=True)
+    thetaPairwise = thetaPairwise - rowMeans - columnMeans
 
-    return thetaGaugeFixed, centeringConstant
+    # apply g2 and g3 (given in SI) to single-site coefficients:
+    for p in range(1, sequenceLength):
+        thetaSinglesite[p] = thetaSinglesite[p] + columnMeans[p - 1].ravel()
+    for p in range(sequenceLength - 1):
+        thetaSinglesite[p] = thetaSinglesite[p] + rowMeans[p].ravel()
+
+    # apply g4 (given in SI):
+    thetaConstant += sum(thetaSinglesite.mean(axis=1))
+    thetaSinglesite = thetaSinglesite - thetaSinglesite.mean(axis=1, keepdims=True)
+
+    thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel(), thetaPairwise.ravel()])
+
+    return thetaGaugeFixed
 
 
 
@@ -678,11 +725,9 @@ def fix_gauge_pairwise_model(sequenceLength,
                              alphabetSize,
                              theta):
     """
-    Calculates the hierarchical gauge that prioritizes the
-    constant feature over pairwise features and the pairwise
-    features' coefficients are in the canonical gauge.
+    Calculates the hierarchical gauge where constant feature > single-site features > pairwise features.
 
-     parameters
+    parameters
     ----------
     sequenceLength: (int)
         length of one input sequence
@@ -698,51 +743,63 @@ def fix_gauge_pairwise_model(sequenceLength,
     thetaGaugeFixed: (array-like)
         the gauge fixed pairwise parameters
 
-    centeringConstant: (array-like)
-        the additive shift relating phi to phi''
-
      """
 
+    """"""
+
+    # copy/reshape input parameter vector:
+    numSinglesiteFeatures = sequenceLength * alphabetSize
     numPosPairs = int(sequenceLength * (sequenceLength - 1) / 2)
-    theta = theta.reshape(numPosPairs, alphabetSize, alphabetSize)
+    thetaConstant = theta[0]
+    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(sequenceLength, alphabetSize)
+    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, alphabetSize, alphabetSize)
 
-    # center parameter values corresponding to a fixed first index, i.e. fixed position pair:
-    centeringConstant = sum(theta.mean(axis=(1, 2)))
-    thetaCentered = theta - theta.mean(axis=(1, 2), keepdims=True)
+    # apply g1 (given in SI):
+    thetaConstant += sum(thetaPairwise.mean(axis=(1, 2)))
+    thetaPairwise = thetaPairwise - thetaPairwise.mean(axis=(1, 2), keepdims=True)
 
-    # calculate canonical gauge for pairwise features:
-    thetaGaugeFixed = thetaCentered
-    if sequenceLength > 2:
-        sRow = np.sum(thetaCentered, axis=2,
-                      keepdims=True)  # define array that broadcasts with theta and contains theta's row sums
-        sCol = np.sum(thetaCentered, axis=1,
-                      keepdims=True)  # define array that broadcasts with theta and contains theta's column sums
+    # apply g2 and g3 (given in SI) to pairwise coefficients:
+    rowMeans = np.mean(thetaPairwise, axis=2, keepdims=True)
+    columnMeans = np.mean(thetaPairwise, axis=1, keepdims=True)
+    thetaPairwise = thetaPairwise - rowMeans - columnMeans
 
-        # reshape thetaGaugeFixed, sRow, and sCol so that they are inexed as [pos1][pos2,char1,char2] where pos1<pos2
-        l = [i for i in range(1, sequenceLength)]
-        splittingPoints = [sum(l[-k:]) for k in range(1,
-                                                      sequenceLength)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
-        thetaGaugeFixedReshaped = np.array(np.split(thetaGaugeFixed, splittingPoints, axis=0), dtype=object)
-        sRowReshaped = np.array(np.split(sRow, splittingPoints, axis=0), dtype=object)
-        sColReshaped = np.array(np.split(sCol, splittingPoints, axis=0), dtype=object)
+    # apply g2 and g3 (given in SI) to single-site coefficients:
+    l = [i for i in range(1, sequenceLength)]
+    splittingPoints = [sum(l[-k:]) for k in range(1,
+                                                  sequenceLength)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
+    rowMeans = np.array(np.split(rowMeans, splittingPoints, axis=0),
+                        dtype=object)  # reshape rowMeans so that it is indexed as [pos1][pos2-(pos1+1),char1,char2]
+    columnMeans = np.array(np.split(columnMeans, splittingPoints, axis=0),
+                           dtype=object)  # reshape columnMeans so that it is indexed as [pos1][pos2-(pos1+1),char1,char2]
+    for p in range(sequenceLength):
+        for pp in range(p):
+            thetaSinglesite[p] = thetaSinglesite[p] + columnMeans[pp][p - (pp + 1)].ravel()
+        for pp in range(p + 1, sequenceLength):
+            thetaSinglesite[p] = thetaSinglesite[p] + rowMeans[p][pp - (p + 1)].ravel()
 
-        c = 1 / (alphabetSize * (sequenceLength - 1))
-        for pos1 in range(sequenceLength - 1):
-            for pos2 in range(pos1 + 1, sequenceLength):
-                for pos in range(pos1):
-                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
-                        pos, pos2) * sColReshaped[pos][pos1 - (pos + 1)].transpose()
-                for pos in range(pos1 + 1, sequenceLength):
-                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
-                        pos, pos2) * sRowReshaped[pos1][pos - (pos1 + 1)]
-                for pos in range(pos2):
-                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
-                        pos, pos1) * sColReshaped[pos][pos2 - (pos + 1)]
-                for pos in range(pos2 + 1, sequenceLength):
-                    thetaGaugeFixedReshaped[pos1][pos2 - (pos1 + 1)] += c * (-(sequenceLength - 2)) ** kronecker_delta(
-                        pos, pos1) * sRowReshaped[pos2][pos - (pos2 + 1)].transpose()
-    thetaGaugeFixed = thetaGaugeFixed.ravel()
+    # apply g4 (given in SI):
+    thetaConstant += sum(thetaSinglesite.mean(axis=1))
+    thetaSinglesite = thetaSinglesite - thetaSinglesite.mean(axis=1, keepdims=True)
 
-    return thetaGaugeFixed, centeringConstant
+    thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel(), thetaPairwise.ravel()])
+
+    return thetaGaugeFixed
+
+
+class fixDiffeomorphicMode(tensorflow.keras.layers.Layer):
+
+    """
+    This layer fixes the diffeomorphic mode in the neural network
+    model after the model parameters theta have been gauge-fixed.
+    """
+
+    def __init__(self, **kwargs):
+        super(fixDiffeomorphicMode, self).__init__(**kwargs)
+
+    def call(self, inputs):
+        # inpus here are phi-hoc
+        phi_mean = K.mean(inputs)
+        phi_std = K.std(inputs)
+        return (inputs - phi_mean) / phi_std
 
 

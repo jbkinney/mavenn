@@ -108,12 +108,32 @@ class GlobalEpistasisModel:
         elif gpmap_type == 'neighbor':
             # one-hot encode sequences in batches in a vectorized way
             # TODO: vectorize neighbor feature creation
-            self.input_seqs_ohe = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
+            # Generate additive one-hot encoding.
+            X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
+
+            # Generate neighbor one-hot encoding.
+            X_train_neighbor = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
+
+            # Append additive and pairwise features together.
+            X_train_features = np.hstack((X_train_additive, X_train_neighbor))
+
+            # this is the input to the neighbor model
+            self.input_seqs_ohe = X_train_features
 
         elif gpmap_type == 'pairwise':
             # one-hot encode sequences in batches in a vectorized way
             # TODO: vectorize pairwise feature creation
-            self.input_seqs_ohe = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
+            # Generate additive one-hot encoding.
+            X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
+
+            # Generate pairwise one-hot encoding.
+            X_train_pairwise = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
+
+            # Append additive and pairwise features together.
+            X_train_features = np.hstack((X_train_additive, X_train_pairwise))
+
+            # this is the input to the pairwise model
+            self.input_seqs_ohe = X_train_features
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(np.shape(self.y_train)[0], 1)
@@ -187,22 +207,22 @@ class GlobalEpistasisModel:
         if custom_architecture is None:
 
             number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence')
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
 
             sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                    output_shape=((len(self.input_seqs_ohe[0]),)))(inputTensor)
+                                    output_shape=((len(self.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
             labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
-                                  output_shape=((1, )), trainable=False)(inputTensor)
+                                  output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
 
-            phi = Dense(1)(sequence_input)
+            phi = Dense(1,name='phi')(sequence_input)
 
             # implement monotonicity constraints
             if self.monotonic:
                 intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid',
                                            kernel_constraint=nonneg())(phi)
-                yhat = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+                yhat = Dense(1, kernel_constraint=nonneg(),name='y_hat')(intermediateTensor)
 
-                concatenateLayer = Concatenate()([yhat, labels_input])
+                concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
 
                 # dynamic likelihood class instantiation by the globals dictionary
                 # manual instantiation can be done as follows:
@@ -213,10 +233,11 @@ class GlobalEpistasisModel:
 
             else:
                 intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-                yhat = Dense(1)(intermediateTensor)
+                yhat = Dense(1, name='y_hat')(intermediateTensor)
 
-                concatenateLayer = Concatenate()([yhat, labels_input])
+                concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
                 likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
+                outputTensor = likelihoodClass()(concatenateLayer)
 
             # create the model:
             model = Model(inputTensor, outputTensor)
@@ -257,8 +278,8 @@ class GlobalEpistasisModel:
         next_input = ge_model_input
 
         # the following variable is the index of
-        phi_index = 3
-        yhat_index = 5
+        phi_index = 4
+        yhat_index = 7
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
@@ -359,17 +380,37 @@ class NoiseAgnosticModel:
                                'M', 'N', 'P', 'Q', 'R',
                                'S', 'T', 'V', 'W', 'Y']
 
-        if gpmap_type== 'additive':
+        if gpmap_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
             self.input_seqs_ohe = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
 
-        elif gpmap_type== 'neighbor':
-            # one-hot encode sequences in batches in a vectorized way
-            self.input_seqs_ohe = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
+        elif gpmap_type == 'neighbor':
 
-        elif gpmap_type== 'pairwise':
-            # one-hot encode sequences in batches in a vectorized way
-            self.input_seqs_ohe = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
+            # Generate additive one-hot encoding.
+            X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
+
+            # Generate pairwise one-hot encoding.
+            X_train_neighbor = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
+
+            # Append additive and pairwise features together.
+            X_train_features = np.hstack((X_train_additive, X_train_neighbor))
+
+            # this is the input to the neighbor model
+            self.input_seqs_ohe = X_train_features
+
+        elif gpmap_type == 'pairwise':
+
+            # Generate additive one-hot encoding.
+            X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
+
+            # Generate pairwise one-hot encoding.
+            X_train_pairwise = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
+
+            # Append additive and pairwise features together.
+            X_train_features = np.hstack((X_train_additive, X_train_pairwise))
+
+            # this is the input to the pairwise model
+            self.input_seqs_ohe = X_train_features
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train)
