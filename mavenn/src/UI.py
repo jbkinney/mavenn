@@ -214,7 +214,7 @@ class GlobalEpistasisModel:
             labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
                                   output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
 
-            phi = Dense(1,name='phi')(sequence_input)
+            phi = Dense(1, name='phi')(sequence_input)
 
             # implement monotonicity constraints
             if self.monotonic:
@@ -463,13 +463,23 @@ class NoiseAgnosticModel:
         """
 
         if custom_architecture is None:
-            number_input_layer_nodes = len(self.input_seqs_ohe[0])
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-            phi = Dense(1, use_bias=True, name='additive_weights')(inputTensor)
+            number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
+
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
+                                    output_shape=((len(self.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
+            labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + self.y.shape[1]],
+                                  output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
+
+            phi = Dense(1, use_bias=True, name='phi')(sequence_input)
 
             intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-            outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax')(intermediateTensor)
+            yhat = Dense(np.shape(self.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
+
+            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
+            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
 
             #create the model:
             model = Model(inputTensor, outputTensor)
@@ -505,11 +515,12 @@ class NoiseAgnosticModel:
         next_input = na_model_input
 
         # the following variable is the index of
-        default_phiPrime_layer_index = 2
+        phi_index = 4
+        yhat_index = 7
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
-        for layer in self.model.layers[default_phiPrime_layer_index:]:
+        for layer in self.model.layers[phi_index:yhat_index]:
             next_input = layer(next_input)
 
         # Form gauge fixed GE_nonlinearity model

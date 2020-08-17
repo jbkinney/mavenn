@@ -191,6 +191,8 @@ class Model:
             # compute gauge-fixed, pairwise model theta
             theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
 
+
+
         # The following variable unfixed_gpmap is a tf.keras backend function
         # which computes the non-gauge fixed value of the hidden node phi for a given input
         # this is  used to compute diffeomorphic scaling factor.
@@ -209,14 +211,30 @@ class Model:
         temp_weights = [layer.get_weights() for layer in self.model.model.layers]
 
         # define gauge fixed model
-        number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1
-        inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-        sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
-                                output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
+        if self.regression_type == 'GE':
 
-        labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
-                              output_shape=((1,)), trainable=False)(inputTensor)
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1     # the plus 1 indicates the node for y
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                    output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
+
+            labels_input = Lambda(
+                lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
+                output_shape=((1,)), trainable=False)(inputTensor)
+
+        elif self.regression_type == 'NA':
+
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                    output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
+            labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + self.model.y_train.shape[1]],
+                                  output_shape=((1,)), trainable=False, name='Labels_input')(inputTensor)
+
+
 
         # same phi as before
         phi = Dense(1, name='phiPrime')(sequence_input)
@@ -251,9 +269,17 @@ class Model:
                 likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
                 outputTensor = likelihoodClass()(concatenateLayer)
 
-        elif self.regression_type=='NA':
-            intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-            outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
+        elif self.regression_type == 'NA':
+
+            #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
+            #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
+
+            intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
+            yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
+
+            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
+            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
+
 
         # create the gauge-fixed model:
         model_gf = kerasFunctionalModel(inputTensor, outputTensor)
@@ -328,7 +354,7 @@ class Model:
         else:
             callbacks = []
 
-        # OHE training sequences with y appended
+        # OHE training sequences with y appended to facilitate the calculation of likelihood.
         train_sequences = []
 
         for _ in range(len(self.model.input_seqs_ohe)):
@@ -348,8 +374,6 @@ class Model:
 
         # gauge fix model after fitting
         self.gauge_fix_model()
-
-        # TODO: NEED TO APPLY UPDATED GAUGE-FIXING
 
         # update history attribute
         self.model.history = history
@@ -536,7 +560,13 @@ class Model:
                                      optimizer=optimizer(lr=lr))
 
         elif self.regression_type == 'NA':
-            self.model.model.compile(loss=tf.nn.log_poisson_loss,
+
+
+            def likelihood_loss(y_true, y_pred):
+                return y_pred
+
+            #self.model.model.compile(loss=tf.nn.log_poisson_loss,
+            self.model.model.compile(loss=likelihood_loss,
                                      optimizer=optimizer(lr=lr))
 
     def gpmap(self,

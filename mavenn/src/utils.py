@@ -558,6 +558,7 @@ def get_example_dataset(name='MPSA'):
         mpsa_df = mpsa_df.dropna()
         mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
 
+        #return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
         return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
 
     elif name == 'Sort-Seq':
