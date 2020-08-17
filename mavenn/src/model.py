@@ -77,6 +77,10 @@ class Model:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
+    polynomial_order_ll: (int)
+        Order of polynomial which specifies the dependence of the noise-model
+        distribution paramters, used in the computation of likelihood, on yhat.
+        (Only used for GE regression)
 
     """
 
@@ -92,7 +96,8 @@ class Model:
                  test_size=0.2,
                  custom_architecture=None,
                  num_nodes_hidden_measurement_layer=50,
-                 ohe_single_batch_size=10000):
+                 ohe_single_batch_size=50000,
+                 polynomial_order_ll=3):
 
         # set class attributes
         self.regression_type = regression_type
@@ -106,6 +111,7 @@ class Model:
         self.custom_architecture = custom_architecture
         self.num_nodes_hidden_measurement_layer = num_nodes_hidden_measurement_layer
         self.ohe_single_batch_size = ohe_single_batch_size
+        self.polynomial_order_ll = polynomial_order_ll
 
         # represents GE or NA model object, depending which is chosen.
         # attribute value is set below
@@ -126,7 +132,8 @@ class Model:
                                               monotonic=self.monotonic,
                                               alphabet=self.alphabet,
                                               custom_architecture=self.custom_architecture,
-                                              ohe_single_batch_size=self.ohe_single_batch_size)
+                                              ohe_single_batch_size=self.ohe_single_batch_size,
+                                              polynomial_order_ll=self.polynomial_order_ll)
 
             self.define_model = self.model.define_model(noise_model=self.noise_model,
                                                         num_nodes_hidden_measurement_layer=
@@ -190,8 +197,6 @@ class Model:
 
             # compute gauge-fixed, pairwise model theta
             theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
-
-
 
         # The following variable unfixed_gpmap is a tf.keras backend function
         # which computes the non-gauge fixed value of the hidden node phi for a given input
@@ -258,7 +263,7 @@ class Model:
                 # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
 
                 likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             else:
                 intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
@@ -267,7 +272,7 @@ class Model:
                 concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
 
                 likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
         elif self.regression_type == 'NA':
 

@@ -11,6 +11,11 @@ import mavenn
 import tensorflow.keras.backend as K
 import tensorflow.keras
 
+from scipy.special import betaincinv as BetaIncInv
+from scipy.special import gammaln as LogGamma
+from numpy import log as Log
+
+
 @handle_errors
 def onehot_sequence(sequence, bases):
 
@@ -802,5 +807,125 @@ class fixDiffeomorphicMode(tensorflow.keras.layers.Layer):
         phi_mean = K.mean(inputs)
         phi_std = K.std(inputs)
         return (inputs - phi_mean) / phi_std
+
+
+class ComputeSkewedTQuantiles:
+
+    """
+    Class used to compute quantiles for the Skewed T noise model for
+    GE regression. Usage example:
+
+    quantiles = ComputeSkewedTQuantiles(GER,yhat_GE)
+
+    The attributes gives +/- 1 sigma quantiles
+
+    quantiles.plus_sigma_quantile
+    quantiles.minus_sigma_quantile
+
+    parameters
+    ----------
+
+    model: (mavenn.Model object)
+
+         This is the mavenn model object instantiated as a GE model. The weights
+         of the polynomials for the computation of the spatial parameters of the
+         Skewed T noise models are extracted from this object.
+
+    yhat_GE: (array-like)
+        This is the array of points on which the quantiles will be computed.
+        This should be the output of the GE model.
+
+
+    user_quantile: (float between [0,1])
+        If not None, the attribute user_quantile_values will contain quantile values
+        for the user_quantile value specified
+    """
+
+    def __init__(self,
+                 model,
+                 yhat_GE,
+                 user_quantile=None):
+
+        self.model = model
+        self.yhat_GE = yhat_GE
+        self.user_quantile = user_quantile
+
+        polynomial_weights_a = self.model.get_nn().layers[9].get_weights()[0].copy()
+        polynomial_weights_b = self.model.get_nn().layers[9].get_weights()[1].copy()
+        polynomial_weights_s = self.model.get_nn().layers[9].get_weights()[2].copy()
+
+        log_a = 0
+        log_b = 0
+        log_scale = 0
+
+        for polynomial_index in range(len(polynomial_weights_a)):
+            log_a += polynomial_weights_a[polynomial_index][0] * np.power(yhat_GE, polynomial_index)
+            log_b += polynomial_weights_b[polynomial_index][0] * np.power(yhat_GE, polynomial_index)
+            log_scale += polynomial_weights_s[polynomial_index][0] * np.power(yhat_GE, polynomial_index)
+
+        self.plus_sigma_quantile = self.y_quantile(0.16, self.yhat_GE, np.exp(log_scale), np.exp(log_a), np.exp(log_b))
+        self.minus_sigma_quantile = self.y_quantile(0.84, self.yhat_GE, np.exp(log_scale), np.exp(log_a), np.exp(log_b))
+
+        if user_quantile is not None:
+            self.user_quantile_values = self.y_quantile(self.user_quantile,
+                                                        self.yhat_GE,
+                                                        np.exp(log_scale),
+                                                        np.exp(log_a),
+                                                        np.exp(log_b))
+
+    # First compute log PDF to avoid overflow problems
+    def log_f(self, t, a, b):
+        arg = t / np.sqrt(a + b + t ** 2)
+        return (1 - a - b) * Log(2) + \
+               -0.5 * Log(a + b) + \
+               LogGamma(a + b) + \
+               -LogGamma(a) + \
+               -LogGamma(b) + \
+               (a + 0.5) * Log(1 + arg) + \
+               (b + 0.5) * Log(1 - arg)
+
+    # Exponentiate to get true distribution
+    def f(self, t, a, b):
+        return np.exp(self.log_f(t, a, b))
+
+    # Compute the mode as a function of a and b
+    def t_mode(self, a, b):
+        return (a - b) * np.sqrt(a + b) / (np.sqrt(2 * a + 1) * np.sqrt(2 * b + 1))
+
+    # Compute mean
+    def t_mean(self, a, b):
+        if a <= 0.5 or b <= 0.5:
+            return np.nan
+        else:
+            return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
+                LogGamma(a - 0.5) + LogGamma(b - 0.5) - LogGamma(a) - LogGamma(b))
+
+    # Compute variance
+    def t_std(self, a, b):
+        if a <= 1 or b <= 1:
+            return np.nan
+        else:
+            t_expected = self.t_mean(a, b)
+            tsq_expected = 0.25 * (a + b) * ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
+            return np.sqrt(tsq_expected - t_expected ** 2)
+
+    def p(self, y, y_mode, y_scale, a, b):
+        t = self.t_mode(a, b) + (y - y_mode) / y_scale
+        return self.f(t, a, b) / y_scale
+
+    def p_mean_std(self, y_mode, y_scale, a, b):
+        y_mean = self.t_mean(a, b) * y_scale + y_mode
+        y_std = self.t_std(a, b) * y_scale
+        return y_mean, y_std
+
+    def t_quantile(self, q, a, b):
+        x_q = BetaIncInv(a, b, q)
+        t_q = (2 * x_q - 1) * np.sqrt(a + b) / np.sqrt(1 - (2 * x_q - 1) ** 2)
+        return t_q
+
+    def y_quantile(self, q, y_hat, s, a, b):
+        t_q = self.t_quantile(q, a, b)
+        y_q = (t_q - self.t_mode(a, b)) * s + y_hat
+        return y_q
 
 

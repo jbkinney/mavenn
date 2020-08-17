@@ -12,7 +12,10 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, polynomial_order=1, **kwargs):
+
+        # order of polynomial which defines log_sigma's dependence on y_hat
+        self.polynomial_order = polynomial_order
 
         super(GaussianLikelihoodLayer, self).__init__(**kwargs)
 
@@ -23,30 +26,16 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
     def build(self, input_shape):
 
-        # order of polynomial which defines log_sigma's dependence on y_hat
-        self.polynomial_order = 5
-
         self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
                                  initializer="random_normal", trainable=True)
 
-        # logsigma = w*sigmoid(a*y_hat + b) + c, where w, a, b, and c are trainable parameters.
-        #self.w = self.add_weight(name='w', shape=(1, 1), initializer="random_normal", trainable=True)
-        # self.a = self.add_weight(name='a', shape=(1, 1), initializer="random_normal", trainable=True)
-        # self.b = self.add_weight(name='b', shape=(1, 1), initializer="random_normal", trainable=True)
-        # self.c = self.add_weight(name='c', shape=(1, 1), initializer="random_normal", trainable=True)
-
     def call(self, inputs):
-
-        # compute per-datum ll here
 
         # this is yhat
         yhat = inputs[:, 0:1]
 
         # these are the labels
         ytrue = inputs[:, 1:]
-
-        #self.logsigma = self. w * K.sigmoid(self. a * yhat + self.b) + self.c
-        #self.logsigma = self.a * K.square(yhat) + self.b*yhat+self.c
 
         self.logsigma = 0
         for poly_coeff_index in range(self.polynomial_order+1):
@@ -106,7 +95,11 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes three trainable scalar weights: log_a, log_b, and log_scale.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, polynomial_order=3, **kwargs):
+
+        # order of polynomial which defines the spatial parameters' dependence on y_hat
+        self.polynomial_order = polynomial_order
+
         super(SkewedTLikelihoodLayer, self).__init__(**kwargs)
 
     # def get_config(self):
@@ -115,7 +108,6 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
 
     def build(self, batch_input_shape):
 
-        self.polynomial_order = 5
 
         self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
                                  initializer="random_normal", trainable=True)

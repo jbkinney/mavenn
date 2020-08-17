@@ -50,6 +50,12 @@ class GlobalEpistasisModel:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
+
+    polynomial_order_ll: (int)
+        Order of polynomial which specifies the dependence of the noise-model
+        distribution paramters, used in the computation of likelihood, on yhat.
+        (Only used for GE regression).
+
     """
 
     def __init__(self,
@@ -60,7 +66,8 @@ class GlobalEpistasisModel:
                  alphabet,
                  monotonic,
                  custom_architecture,
-                 ohe_single_batch_size):
+                 ohe_single_batch_size,
+                 polynomial_order_ll):
 
         # set class attributes
         self.X, self.y = X, y
@@ -70,6 +77,7 @@ class GlobalEpistasisModel:
         self.alphabet = alphabet
         self.custom_architecture = custom_architecture
         self.ohe_single_batch_size = ohe_single_batch_size
+        self.polynomial_order_ll = polynomial_order_ll
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -229,7 +237,7 @@ class GlobalEpistasisModel:
                 # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
 
                 likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             else:
                 intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
@@ -237,7 +245,7 @@ class GlobalEpistasisModel:
 
                 concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
                 likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             # create the model:
             model = Model(inputTensor, outputTensor)
@@ -332,7 +340,6 @@ class NoiseAgnosticModel:
         The larger this number number, the quicker the encoding will happen,
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
-
     """
 
     def __init__(self,
