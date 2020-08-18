@@ -50,6 +50,12 @@ class GlobalEpistasisModel:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
+
+    polynomial_order_ll: (int)
+        Order of polynomial which specifies the dependence of the noise-model
+        distribution paramters, used in the computation of likelihood, on yhat.
+        (Only used for GE regression).
+
     """
 
     def __init__(self,
@@ -60,7 +66,8 @@ class GlobalEpistasisModel:
                  alphabet,
                  monotonic,
                  custom_architecture,
-                 ohe_single_batch_size):
+                 ohe_single_batch_size,
+                 polynomial_order_ll):
 
         # set class attributes
         self.X, self.y = X, y
@@ -70,6 +77,7 @@ class GlobalEpistasisModel:
         self.alphabet = alphabet
         self.custom_architecture = custom_architecture
         self.ohe_single_batch_size = ohe_single_batch_size
+        self.polynomial_order_ll = polynomial_order_ll
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -214,7 +222,7 @@ class GlobalEpistasisModel:
             labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
                                   output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
 
-            phi = Dense(1,name='phi')(sequence_input)
+            phi = Dense(1, name='phi')(sequence_input)
 
             # implement monotonicity constraints
             if self.monotonic:
@@ -229,7 +237,7 @@ class GlobalEpistasisModel:
                 # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
 
                 likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             else:
                 intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
@@ -237,7 +245,7 @@ class GlobalEpistasisModel:
 
                 concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
                 likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             # create the model:
             model = Model(inputTensor, outputTensor)
@@ -332,7 +340,6 @@ class NoiseAgnosticModel:
         The larger this number number, the quicker the encoding will happen,
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
-
     """
 
     def __init__(self,
@@ -463,13 +470,23 @@ class NoiseAgnosticModel:
         """
 
         if custom_architecture is None:
-            number_input_layer_nodes = len(self.input_seqs_ohe[0])
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-            phi = Dense(1, use_bias=True, name='additive_weights')(inputTensor)
+            number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
+
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
+                                    output_shape=((len(self.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
+            labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + self.y.shape[1]],
+                                  output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
+
+            phi = Dense(1, use_bias=True, name='phi')(sequence_input)
 
             intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-            outputTensor = Dense(np.shape(self.y_train[0])[0], activation='softmax')(intermediateTensor)
+            yhat = Dense(np.shape(self.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
+
+            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
+            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
 
             #create the model:
             model = Model(inputTensor, outputTensor)
@@ -505,11 +522,12 @@ class NoiseAgnosticModel:
         next_input = na_model_input
 
         # the following variable is the index of
-        default_phiPrime_layer_index = 2
+        phi_index = 4
+        yhat_index = 7
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
-        for layer in self.model.layers[default_phiPrime_layer_index:]:
+        for layer in self.model.layers[phi_index:yhat_index]:
             next_input = layer(next_input)
 
         # Form gauge fixed GE_nonlinearity model

@@ -77,6 +77,10 @@ class Model:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
+    polynomial_order_ll: (int)
+        Order of polynomial which specifies the dependence of the noise-model
+        distribution paramters, used in the computation of likelihood, on yhat.
+        (Only used for GE regression)
 
     """
 
@@ -92,7 +96,8 @@ class Model:
                  test_size=0.2,
                  custom_architecture=None,
                  num_nodes_hidden_measurement_layer=50,
-                 ohe_single_batch_size=10000):
+                 ohe_single_batch_size=50000,
+                 polynomial_order_ll=3):
 
         # set class attributes
         self.regression_type = regression_type
@@ -106,6 +111,7 @@ class Model:
         self.custom_architecture = custom_architecture
         self.num_nodes_hidden_measurement_layer = num_nodes_hidden_measurement_layer
         self.ohe_single_batch_size = ohe_single_batch_size
+        self.polynomial_order_ll = polynomial_order_ll
 
         # represents GE or NA model object, depending which is chosen.
         # attribute value is set below
@@ -126,7 +132,8 @@ class Model:
                                               monotonic=self.monotonic,
                                               alphabet=self.alphabet,
                                               custom_architecture=self.custom_architecture,
-                                              ohe_single_batch_size=self.ohe_single_batch_size)
+                                              ohe_single_batch_size=self.ohe_single_batch_size,
+                                              polynomial_order_ll=self.polynomial_order_ll)
 
             self.define_model = self.model.define_model(noise_model=self.noise_model,
                                                         num_nodes_hidden_measurement_layer=
@@ -209,14 +216,30 @@ class Model:
         temp_weights = [layer.get_weights() for layer in self.model.model.layers]
 
         # define gauge fixed model
-        number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1
-        inputTensor = Input((number_input_layer_nodes,), name='Sequence')
 
-        sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
-                                output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
+        if self.regression_type == 'GE':
 
-        labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
-                              output_shape=((1,)), trainable=False)(inputTensor)
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1     # the plus 1 indicates the node for y
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                    output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
+
+            labels_input = Lambda(
+                lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
+                output_shape=((1,)), trainable=False)(inputTensor)
+
+        elif self.regression_type == 'NA':
+
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                    output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
+            labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + self.model.y_train.shape[1]],
+                                  output_shape=((1,)), trainable=False, name='Labels_input')(inputTensor)
+
+
 
         # same phi as before
         phi = Dense(1, name='phiPrime')(sequence_input)
@@ -240,7 +263,7 @@ class Model:
                 # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
 
                 likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             else:
                 intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
@@ -249,11 +272,19 @@ class Model:
                 concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
 
                 likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
-                outputTensor = likelihoodClass()(concatenateLayer)
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
-        elif self.regression_type=='NA':
-            intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-            outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
+        elif self.regression_type == 'NA':
+
+            #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
+            #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
+
+            intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
+            yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
+
+            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
+            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
+
 
         # create the gauge-fixed model:
         model_gf = kerasFunctionalModel(inputTensor, outputTensor)
@@ -328,7 +359,7 @@ class Model:
         else:
             callbacks = []
 
-        # OHE training sequences with y appended
+        # OHE training sequences with y appended to facilitate the calculation of likelihood.
         train_sequences = []
 
         for _ in range(len(self.model.input_seqs_ohe)):
@@ -348,8 +379,6 @@ class Model:
 
         # gauge fix model after fitting
         self.gauge_fix_model()
-
-        # TODO: NEED TO APPLY UPDATED GAUGE-FIXING
 
         # update history attribute
         self.model.history = history
@@ -536,7 +565,13 @@ class Model:
                                      optimizer=optimizer(lr=lr))
 
         elif self.regression_type == 'NA':
-            self.model.model.compile(loss=tf.nn.log_poisson_loss,
+
+
+            def likelihood_loss(y_true, y_pred):
+                return y_pred
+
+            #self.model.model.compile(loss=tf.nn.log_poisson_loss,
+            self.model.model.compile(loss=likelihood_loss,
                                      optimizer=optimizer(lr=lr))
 
     def gpmap(self,
