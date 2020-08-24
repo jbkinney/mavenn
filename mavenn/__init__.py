@@ -1,10 +1,13 @@
 # Classes / functions imported with mavenn
 from mavenn.src.model import Model
-from mavenn.src.UI import GlobalEpistasisModel
-from mavenn.src.UI import NoiseAgnosticModel
+
 from mavenn.src.error_handling import handle_errors, check
-from mavenn.tests.functional_tests_mavenn import run_tests
 from mavenn.src.utils import get_example_dataset
+from mavenn.tests.functional_tests_mavenn import run_tests
+
+from mavenn.src.utils import SkewedTNoiseModel
+from mavenn.src.utils import GaussianNoiseModel
+from mavenn.src.utils import CauchyNoiseModel
 
 # imports required for helper functions in demos
 import pandas as pd
