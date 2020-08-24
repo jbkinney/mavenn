@@ -97,7 +97,7 @@ class Model:
                  custom_architecture=None,
                  num_nodes_hidden_measurement_layer=50,
                  ohe_single_batch_size=50000,
-                 polynomial_order_ll=3):
+                 polynomial_order_ll=2):
 
         # set class attributes
         self.regression_type = regression_type
@@ -154,6 +154,232 @@ class Model:
                                                         custom_architecture=self.custom_architecture)
 
         self.compile_model(lr=self.learning_rate)
+
+    @handle_errors
+    def gauge_fix_model_multiple_replicates(self):
+
+        """
+        Method that gauge fixes the model (gpmap+measurement).
+
+
+        parameters
+        ----------
+        None
+
+        returns
+        -------
+        None
+
+        """
+
+        # TODO disable this method if user uses custom architecture
+
+        # Helper variables used for gauge fixing gpmap trait parameters theta below.
+        sequence_length = len(self.model.x_train[0])
+        alphabetSize = len(self.model.characters)
+
+        # Non-gauge fixed theta
+        theta_all = self.model.model.layers[2].get_weights()[0]    # E.g., could be theta_additive + theta_pairwise
+        theta_nought = self.model.model.layers[2].get_weights()[1]
+        theta = np.hstack((theta_nought, theta_all.ravel()))
+
+        # The following conditionals gauge fix the gpmap parameters depending of the value of gpmap
+        if self.gpmap_type == 'additive':
+
+            # compute gauge-fixed, additive model theta
+            theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
+
+        elif self.gpmap_type == 'neighbor':
+
+            # compute gauge-fixed, neighbor model theta
+            theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
+
+        elif self.gpmap_type == 'pairwise':
+
+            # compute gauge-fixed, pairwise model theta
+            theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
+
+        # The following variable unfixed_gpmap is a tf.keras backend function
+        # which computes the non-gauge fixed value of the hidden node phi for a given input
+        # this is  used to compute diffeomorphic scaling factor.
+        unfixed_gpmap = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
+
+        # compute unfixed phi using the function unfixed_gpmap with training sequences.
+        unfixed_phi = unfixed_gpmap([self.model.input_seqs_ohe])
+
+        # Compute diffeomorphic scaling factor which is used to rescale the parameters theta
+        diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
+        diffeomorphic_mean = np.mean(unfixed_phi[0])
+
+        # Default neural network weights that are non gauge fixed.
+        # This will be used for updating the weights of the measurement
+        # network after the gauge fixed neural network is define below.
+        temp_weights = [layer.get_weights() for layer in self.model.model.layers]
+
+        # define gauge fixed model
+
+        if self.regression_type == 'GE':
+
+            if len(self.model.y_train.shape) == 1:
+                number_of_replicate_targets = 1
+            else:
+                number_of_replicate_targets = min(self.model.y_train.shape)
+
+            print('number of y nodes to add: ', number_of_replicate_targets)
+            # create input layer with nodes allowing sequence to be input and also
+            # target labels to be input, together.
+            #number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y_train.shape[0]
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + number_of_replicate_targets
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                    output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
+
+            replicates_input = []
+
+            #number_of_replicate_targets = self.y_train.shape[0]
+
+            for replicate_layer_index in range(number_of_replicate_targets):
+
+                # build up lambda layers, on step at a time, which will be
+                # fed to each of the measurement blocks
+                print(replicate_layer_index, replicate_layer_index + 1)
+
+                temp_replicate_layer = Lambda(lambda x:
+                                              x[:, len(self.model.input_seqs_ohe[0])+replicate_layer_index:
+                                              len(self.model.input_seqs_ohe[0]) + replicate_layer_index + 1],
+                                              output_shape=((1,)), trainable=False,
+                                              name='Labels_input_'+str(replicate_layer_index))(inputTensor)
+
+                replicates_input.append(temp_replicate_layer)
+
+            # labels_input_rep1 = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
+            #                       output_shape=((1, )), trainable=False, name='Labels_input_1')(inputTensor)
+            #
+            # labels_input_rep2 = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0])+1:len(self.input_seqs_ohe[0]) + 2],
+            #                            output_shape=((1,)), trainable=False, name='Labels_input_2')(inputTensor)
+
+            # sequence to latent phenotype
+            #phi = Dense(1, name='phi')(sequence_input)
+
+        elif self.regression_type == 'NA':
+
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
+            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+
+            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
+                                    output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
+            labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + self.model.y_train.shape[1]],
+                                  output_shape=((1,)), trainable=False, name='Labels_input')(inputTensor)
+
+        # same phi as before
+        phi = Dense(1, name='phiPrime')(sequence_input)
+        # fix diffeomorphic scale
+        phi_scaled = fixDiffeomorphicMode()(phi)
+        phiOld = Dense(1, name='phi')(phi_scaled)
+
+        # implement monotonicity constraints if GE regression
+        if self.regression_type == 'GE':
+
+            if self.monotonic:
+
+                # phi feeds into each of the replicate intermediate layers
+                intermediate_layers = []
+                for intermediate_index in range(number_of_replicate_targets):
+
+                    temp_intermediate_layer = Dense(self.num_nodes_hidden_measurement_layer,
+                                                    activation='sigmoid',
+                                                    kernel_constraint=nonneg(),
+                                                    name='intermediate_bbox_'+str(intermediate_index))(phiOld)
+
+                    intermediate_layers.append(temp_intermediate_layer)
+
+                yhat_layers = []
+                for yhat_index in range(number_of_replicate_targets):
+
+                    temp_yhat_layer = Dense(1, kernel_constraint=nonneg(),
+                                            name='y_hat_rep_'+str(yhat_index))(intermediate_layers[yhat_index])
+                    yhat_layers.append(temp_yhat_layer)
+
+                # intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid',
+                #                            kernel_constraint=nonneg())(phiOld)
+
+                # y_hat = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
+
+                # concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
+
+                concatenateLayer_rep_input = []
+
+                for concat_index in range(number_of_replicate_targets):
+
+                    temp_concat = Concatenate(name='yhat_and_rep_'+str(concat_index))\
+                        ([yhat_layers[concat_index], replicates_input[concat_index]])
+
+                    concatenateLayer_rep_input.append(temp_concat)
+
+                likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
+
+                #ll_rep1 = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep1)
+                #ll_rep2 = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep2)
+
+                ll_rep_layers = []
+                for ll_index in range(number_of_replicate_targets):
+                    temp_ll_layer = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep_input[ll_index])
+                    ll_rep_layers.append(temp_ll_layer)
+
+
+                #outputTensor = [ll_rep1, ll_rep2]
+                outputTensor = ll_rep_layers
+
+                # dynamic likelihood class instantiation by the globals dictionary
+                # manual instantiation can be done as follows:
+                # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
+
+                # likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
+                # outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
+
+            else:
+                intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
+                y_hat = Dense(1)(intermediateTensor)
+
+                concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
+
+                likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
+                outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
+
+        elif self.regression_type == 'NA':
+
+            #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
+            #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
+
+            intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phiOld)
+            yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
+
+            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
+            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
+
+
+        # create the gauge-fixed model:
+        model_gf = kerasFunctionalModel(inputTensor, outputTensor)
+
+        # set new model theta weights
+        theta_nought_gf = theta_gf[0]
+        model_gf.layers[2].set_weights([theta_gf[1:].reshape(-1, 1), np.array([theta_nought_gf])])
+
+        # update weights as sigma*phi+mean, which ensures predictions (y_hat) don't change from
+        # the diffeomorphic scaling.
+        model_gf.layers[4].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
+
+        for layer_index in range(5, len(model_gf.layers)):
+            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-2])
+
+        # Update default neural network model with gauge-fixed model
+        self.model.model = model_gf
+
+        # The theta_gf attribute now contains gauge fixed parameters, and
+        # can be obtained in raw form by accessing this attribute or can be
+        # obtained a readable format by using the method return_theta
+        self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
 
     @handle_errors
     def gauge_fix_model(self):
@@ -297,14 +523,8 @@ class Model:
         # the diffeomorphic scaling.
         model_gf.layers[4].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
 
-        # set new model phi to hidden weights
-        model_gf.layers[5].set_weights(temp_weights[3])
-
-        # set new model hidden to yhat
-        model_gf.layers[6].set_weights(temp_weights[4])
-
-        # set weights in liklelihood layer
-        model_gf.layers[9].set_weights(temp_weights[7])
+        for layer_index in range(5, len(model_gf.layers)):
+            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-2])
 
         # Update default neural network model with gauge-fixed model
         self.model.model = model_gf
@@ -313,6 +533,7 @@ class Model:
         # can be obtained in raw form by accessing this attribute or can be
         # obtained a readable format by using the method return_theta
         self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
+
 
     @handle_errors
     def fit(self,
@@ -559,7 +780,9 @@ class Model:
             # Note: this loss just returns the computed
             # Likelihood in the custom likelihood layer
             def likelihood_loss(y_true, y_pred):
-                return y_pred
+
+                return K.sum(y_pred)
+
 
             self.model.model.compile(loss=likelihood_loss,
                                      optimizer=optimizer(lr=lr))
@@ -650,9 +873,6 @@ class Model:
             2D for NA regression.
         """
 
-        # TODO need to do data validation here
-        # e.g. check if data is already one-hot encoded
-
         if self.gpmap_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
             test_input_seqs_ohe = onehot_encode_array(data, self.model.characters)
@@ -685,3 +905,57 @@ class Model:
         yhat = yhat[0].ravel().copy()
 
         return yhat
+
+    def estimate_predictive_info(self,
+                                 sequences,
+                                 bin_counts):
+
+        """
+        Method used to estimate the predictive information, or the
+        mutual information I[y;yhat].
+
+        parameters
+        ----------
+
+        sequence: (array-like of str)
+            Sequence inputs representing DNA, RNA, or protein (whichever
+            type of sequence the model was trained on). Input can must be
+            an array of str, all the proper length.
+
+        bin_counts: (array-like)
+            y represents counts in bins corresponding to the sequences X
+
+        returns
+        -------
+
+        I_y_yhat: (float)
+            Mutual information between y and y_hat
+
+        """
+
+        # compute the latent trait
+        phi = self.gpmap(sequences)
+
+        p_of_b_given_phi = self.na_noisemodel(phi)
+
+        MI = 0
+
+        # M is total counts
+        M = np.sum(bin_counts)
+
+        # This is p(b), but need to double check
+        # i.e. fraciton of counts in bin i
+        p_of_b = np.sum(bin_counts, axis=0) / M
+
+        for sequence_index in range(len(sequences)):
+
+            # from manuscript "Additionally, we approximate p(y| phi) by the inferred noise model pi of y given phi"
+            # compute p_of_bin_given_phi
+            #  TODO: this doesn't seem correct to me, ask Justin.
+            p_of_b_given_phi_i = p_of_b_given_phi[sequence_index]
+
+
+            # MI summand summed over b
+            MI += np.sum(bin_counts[sequence_index] * np.log2((p_of_b_given_phi_i / p_of_b)))
+        print(MI / M)
+

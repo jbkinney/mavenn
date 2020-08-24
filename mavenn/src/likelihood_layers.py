@@ -12,10 +12,11 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, polynomial_order=1, **kwargs):
+    def __init__(self, polynomial_order=2, lmbda=0.1, **kwargs):
 
         # order of polynomial which defines log_sigma's dependence on y_hat
         self.polynomial_order = polynomial_order
+        self.lmbda = lmbda
 
         super(GaussianLikelihoodLayer, self).__init__(**kwargs)
 
@@ -27,7 +28,7 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
     def build(self, input_shape):
 
         self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
-                                 initializer="random_normal", trainable=True)
+                                 initializer="TruncatedNormal", trainable=True)
 
     def call(self, inputs):
 
@@ -37,11 +38,23 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
         # these are the labels
         ytrue = inputs[:, 1:]
 
+        # replace the tensors where nans in ytrue occur with zeros, so that likelihood for
+        # that yhat, ypred pair is also zero.
+        yhat = tf.where(tf.is_nan(ytrue), tf.zeros_like(yhat), yhat)
+        ytrue = tf.where(tf.is_nan(ytrue), tf.zeros_like(ytrue), ytrue)
+
         self.logsigma = 0
         for poly_coeff_index in range(self.polynomial_order+1):
             self.logsigma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
 
+        # TODO: ask Justin if this is the right way to regularize parameters of the nosie model
+        # regularize parameters of the polynomials
+        self.add_loss(self.lmbda*tf.norm(self.a)**2)
+
         negative_log_likelihood = 0.5 * K.sum(K.square((ytrue - yhat) / K.exp(self.logsigma)) + self.logsigma, axis=1)
+
+        #self.add_loss(negative_log_likelihood)
+
         return negative_log_likelihood
 
 
@@ -53,21 +66,20 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, polynomial_order=3, **kwargs):
 
+        self.polynomial_order = polynomial_order
         super(CauchyLikelihoodLayer, self).__init__(**kwargs)
 
-    def get_config(self):
-        base_config = super().get_config()
-        return {**base_config, "w": self.w, "a": self.a,
-                               "b": self.b, "c": self.c}
+    # def get_config(self):
+    #     base_config = super().get_config()
+    #     return {**base_config, "w": self.w, "a": self.a,
+    #                            "b": self.b, "c": self.c}
 
     def build(self, input_shape):
 
-        self.w = self.add_weight(name='w', shape=(1, 1), initializer="random_normal", trainable=True)
-        self.a = self.add_weight(name='a', shape=(1, 1), initializer="random_normal", trainable=True)
-        self.b = self.add_weight(name='b', shape=(1, 1), initializer="random_normal", trainable=True)
-        self.c = self.add_weight(name='c', shape=(1, 1), initializer="random_normal", trainable=True)
+        self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
+                                 initializer="TruncatedNormal", trainable=True)
 
     def call(self, inputs):
 
@@ -79,11 +91,13 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
         # these are the labels
         ytrue = inputs[:, 1:]
 
-        self.gamma = self.w * K.sigmoid(self.a * yhat + self.b) + self.c
+        self.log_gamma = 0
+        for poly_coeff_index in range(self.polynomial_order+1):
+            self.log_gamma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
 
         # Negative log Cauchy likelihood
         negative_log_likelihood = K.sum(K.log(K.square((ytrue - yhat)) +
-                                              K.square(K.exp(self.gamma))) - self.gamma, axis=1)
+                                              K.square(K.exp(self.log_gamma))) - self.log_gamma, axis=1)
         return negative_log_likelihood
 
 
@@ -95,7 +109,7 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes three trainable scalar weights: log_a, log_b, and log_scale.
     """
 
-    def __init__(self, polynomial_order=3, **kwargs):
+    def __init__(self, polynomial_order=2, **kwargs):
 
         # order of polynomial which defines the spatial parameters' dependence on y_hat
         self.polynomial_order = polynomial_order

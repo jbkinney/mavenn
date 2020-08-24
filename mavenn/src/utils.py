@@ -7,6 +7,7 @@ import logomaker
 import seaborn as sns
 import pandas as pd
 import mavenn
+import suftware
 
 import tensorflow.keras.backend as K
 import tensorflow.keras
@@ -15,6 +16,8 @@ from scipy.special import betaincinv as BetaIncInv
 from scipy.special import gammaln as LogGamma
 from numpy import log as Log
 
+from scipy.stats import cauchy
+import entropy_estimators as ee
 
 @handle_errors
 def onehot_sequence(sequence, bases):
@@ -792,6 +795,63 @@ def fix_gauge_pairwise_model(sequenceLength,
     return thetaGaugeFixed
 
 
+def estimate_instrinsic_information(y_values,
+                                    dy_values,
+                                    verbose=False):
+    """
+
+    Helper method used to compute instrinsic information.
+
+    parameters
+    ----------
+
+    y_values: (array-like of floats)
+        y values for which mutual information will be computed
+
+    dy_values: (array-like of floats)
+        Represents errors in the y-values.
+
+    returns
+    -------
+    I_y_x: (float)
+        Mutual information of y given x
+    dI_y_x: (float)
+        Error in the estimated ,mutual information I_y_x
+    """
+    # useful constants
+    e = np.exp(1)
+    pi = np.pi
+
+    # Compute y and dy values to do the estimation on
+    y = y_values
+    dy = dy_values / y_values
+
+    # Use DEFT to compute H[y]
+    p = suftware.DensityEstimator(y, num_grid_points=200)
+    stats_df = p.get_stats()
+    H_y = -stats_df.loc['posterior mean', 'entropy']
+    dH_y = stats_df.loc['posterior RMSD', 'entropy']
+    if verbose:
+        print(f'H[y]   = {H_y:+.4f} +- {dH_y:.4f} bits')
+
+    # Use the formula for Gaussian entropy to compute H[y|x]
+    Hs_bits = .5 * np.log2(2 * pi * e * dy ** 2)
+    N = len(Hs_bits)
+    H_ygx = np.mean(Hs_bits)
+    dH_ygx = np.std(Hs_bits, ddof=1) / np.sqrt(N)  # Note that need to specify 1 DOF, not that it matters much.
+
+    if verbose:
+        print(f'H[y|x] = {H_ygx:+.4f} +- {dH_ygx:.4f} bits')
+
+    # Finally, compute intrinsic information in experiment
+    I_y_x = H_y - H_ygx
+    dI_y_x = np.sqrt(dH_y ** 2 + dH_ygx ** 2)
+    if verbose:
+        print(f'I[y;x] = {I_y_x:+.4f} +- {dI_y_x:.4f} bits')
+
+    return I_y_x, dI_y_x
+
+
 class fixDiffeomorphicMode(tensorflow.keras.layers.Layer):
 
     """
@@ -807,9 +867,10 @@ class fixDiffeomorphicMode(tensorflow.keras.layers.Layer):
         phi_mean = K.mean(inputs)
         phi_std = K.std(inputs)
         return (inputs - phi_mean) / phi_std
+        return inputs
 
 
-class ComputeSkewedTQuantiles:
+class SkewedTNoiseModel:
 
     """
     Class used to compute quantiles for the Skewed T noise model for
@@ -866,6 +927,10 @@ class ComputeSkewedTQuantiles:
         self.plus_sigma_quantile = self.y_quantile(0.16, self.yhat_GE, np.exp(log_scale), np.exp(log_a), np.exp(log_b))
         self.minus_sigma_quantile = self.y_quantile(0.84, self.yhat_GE, np.exp(log_scale), np.exp(log_a), np.exp(log_b))
 
+        self.log_a = log_a
+        self.log_b = log_b
+        self.log_scale = log_scale
+
         if user_quantile is not None:
             self.user_quantile_values = self.y_quantile(self.user_quantile,
                                                         self.yhat_GE,
@@ -909,9 +974,30 @@ class ComputeSkewedTQuantiles:
             tsq_expected = 0.25 * (a + b) * ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
             return np.sqrt(tsq_expected - t_expected ** 2)
 
-    def p(self, y, y_mode, y_scale, a, b):
+    def p_of_y_given_yhat(self, y, y_mode, y_scale, a, b):
         t = self.t_mode(a, b) + (y - y_mode) / y_scale
         return self.f(t, a, b) / y_scale
+
+    def p_of_y_given_phi(self,
+                         y,
+                         phi,
+                         y_scale,
+                         a,
+                         b):
+        """
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        phi: (array-like of floats)
+            The latent phenotype values of which the probability
+            probability density will be conditioned.
+
+        """
+
+        y_hat_of_phi = self.model.ge_nonlinearity(phi)
+        return self.p_of_y_given_yhat(y, y_hat_of_phi, y_scale, a, b)
 
     def p_mean_std(self, y_mode, y_scale, a, b):
         y_mean = self.t_mean(a, b) * y_scale + y_mode
@@ -928,4 +1014,608 @@ class ComputeSkewedTQuantiles:
         y_q = (t_q - self.t_mode(a, b)) * s + y_hat
         return y_q
 
+    def estimate_predictive_information(self,
+                                        y,
+                                        yhat,
+                                        y_scale,
+                                        a,
+                                        b):
+        """
+        Method that estimates predictive information, i.e.
+        I[y;y_hat] = I[y;phi].
 
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        y_hat: (array-like of float)
+            The y-hat values on which the probability distribution
+            will be conditioned on.
+
+        returns
+        -------
+        I: (float)
+            Mutual information between I[y;y_hat], or equivalently
+            I[y;phi]
+
+        dI: (float)
+            Error in the estimated, mutual information I
+        """
+
+        # compute log_2 of p_y_given_yhat for all values and take mean:
+        mean_log_2_p_y_given_yhat = np.mean(np.log2(self.p_of_y_given_yhat(y, yhat, y_scale, a, b)))
+        N = len(np.log2(self.p_of_y_given_yhat(y, yhat, y_scale, a, b)))
+        std_log_2_p_y_given_yhat = np.std(np.log2(self.p_of_y_given_yhat(y, yhat, y_scale, a, b)))/np.sqrt(N)
+
+        p_y = []
+        for _ in range(len(y)):
+            '''
+            form p_y by averaging over y_hat for every value of y_test
+            i.e. 
+            # p(y_1|y_hat_1), p(y_1|y_hat_1), ... ,p(y_1|y_hat_N), the mean of this is p(y_1)
+            # p(y_2|y_hat_1), p(y_2|y_hat_1), ... ,p(y_2|y_hat_N), the mean of this is p(y_2), and so on.
+            '''
+            p_y.append(np.mean(self.p_of_y_given_yhat(y[_], yhat, y_scale, a, b).ravel()))
+
+        p_y = np.array(p_y)
+        mean_log_2_p_y = np.mean(np.log2(p_y))
+
+        std_log_2_p_y = np.std(np.log2(p_y))/np.sqrt(N)
+
+        dI = np.sqrt(std_log_2_p_y_given_yhat ** 2 + std_log_2_p_y ** 2)
+        I = mean_log_2_p_y_given_yhat-mean_log_2_p_y
+
+        return I, dI
+
+
+@handle_errors
+class GaussianNoiseModel:
+
+    """
+    Class used to obtain +/- sigma from the Gaussian noise model
+    in the GE model. The sigma, which is a function of y_hat, can
+    be used to plot confidence intervals around y_hat.
+
+
+    model: (mavenn.Model object)
+         This is the mavenn model object instantiated as a GE model. The weights
+         of the polynomials for the computation of the spatial parameters of the
+         Gaussian noise models are extracted from this object.
+
+    yhat_GE: (array-like)
+        This is the array of points on which the confidence intervals will be computed.
+        This should be the output of the GE model.
+
+    """
+
+    def __init__(self,
+                 model,
+                 yhat_GE):
+
+        self.model = model
+        self.yhat_GE = yhat_GE
+
+        self.polynomial_weights = self.model.get_nn().layers[9].get_weights()[0].copy()
+        logsigma = 0
+        for polynomial_index in range(len(self.polynomial_weights)):
+            logsigma += self.polynomial_weights[polynomial_index][0] * np.power(yhat_GE, polynomial_index)
+
+        # this is sigma(y)
+        self.sigma = np.exp(logsigma)
+
+    def p_of_y_given_yhat(self,
+                          y,
+                          yhat):
+        """
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        y_hat: (array-like of float)
+            The y-hat values on which the probability distribution
+            will be conditioned on.
+        """
+
+        # recompute logsimga here instead of using self.gamma since y,yhat input
+        # to this method could be different than init
+        logsigma = 0
+
+        for polynomial_index in range(len(self.polynomial_weights)):
+            logsigma += self.polynomial_weights[polynomial_index][0] * np.power(yhat, polynomial_index)
+
+        sigma = np.exp(logsigma)
+
+        return (1 / np.sqrt(2 * np.pi * sigma ** 2)) * np.exp(-((y - yhat) ** 2) / (2 * sigma ** 2))
+
+    def p_of_y_given_phi(self,
+                       y,
+                       phi):
+        """
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        phi: (array-like of floats)
+            The latent phenotype values of which the probability
+            probability density will be conditioned.
+
+        """
+
+        y_hat_of_phi = self.model.ge_nonlinearity(phi)
+        print(y_hat_of_phi.shape)
+        return self.p_of_y_given_yhat(y, y_hat_of_phi)
+
+    def estimate_predictive_information(self,
+                                        y,
+                                        yhat):
+        """
+        Method that estimates predictive information, i.e.
+        I[y;y_hat] = I[y;phi].
+
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        y_hat: (array-like of float)
+            The y-hat values on which the probability distribution
+            will be conditioned on.
+
+        returns
+        -------
+        I: (float)
+            Mutual information between I[y;y_hat], or equivalently
+            I[y;phi]
+
+        dI: (float)
+            Error in the estimated, mutual information I
+        """
+
+        # compute log_2 of p_y_given_yhat for all values and take mean:
+        mean_log_2_p_y_given_yhat = np.mean(np.log2(self.p_of_y_given_yhat(y, yhat)))
+        N = len(np.log2(self.p_of_y_given_yhat(y, yhat)))
+        std_log_2_p_y_given_yhat = np.std(np.log2(self.p_of_y_given_yhat(y, yhat)))/np.sqrt(N)
+
+        p_y = []
+        for _ in range(len(y)):
+            '''
+            form p_y by averaging over y_hat for every value of y_test
+            i.e. 
+            # p(y_1|y_hat_1), p(y_1|y_hat_1), ... ,p(y_1|y_hat_N), the mean of this is p(y_1)
+            # p(y_2|y_hat_1), p(y_2|y_hat_1), ... ,p(y_2|y_hat_N), the mean of this is p(y_2), and so on.
+            '''
+            p_y.append(np.mean(self.p_of_y_given_yhat(y[_], yhat).ravel()))
+
+        p_y = np.array(p_y)
+        mean_log_2_p_y = np.mean(np.log2(p_y))
+
+        std_log_2_p_y = np.std(np.log2(p_y))/np.sqrt(N)
+        dI = np.sqrt(std_log_2_p_y_given_yhat ** 2 + std_log_2_p_y ** 2)
+
+        I = mean_log_2_p_y_given_yhat-mean_log_2_p_y
+
+        return I, dI
+
+
+@handle_errors
+class CauchyNoiseModel:
+
+    """
+    Class used to obtain +/- sigma from the Cauchy noise model
+    in the GE model. The sigma, which is a function of y_hat, can
+    be used to plot confidence intervals around y_hat.
+
+
+    model: (mavenn.Model object)
+         This is the mavenn model object instantiated as a GE model. The weights
+         of the polynomials for the computation of the spatial parameters of the
+         Cauchy noise models are extracted from this object.
+
+    yhat_GE: (array-like)
+        This is the array of points on which the confidence intervals will be computed.
+        This should be the output of the GE model.
+
+    """
+
+    def __init__(self,
+                 model,
+                 yhat,
+                 user_quantile=None):
+
+        self.model = model
+        self.yhat = yhat
+
+        self.polynomial_weights = self.model.get_nn().layers[9].get_weights()[0].copy()
+
+        self.log_gamma = 0
+        for polynomial_index in range(len(self.polynomial_weights)):
+            self.log_gamma += self.polynomial_weights[polynomial_index][0] * np.power(yhat, polynomial_index)
+
+        self.plus_sigma_quantile = self.y_quantile(0.16, self.yhat)
+        self.minus_sigma_quantile = self.y_quantile(0.84, self.yhat)
+
+        if user_quantile is not None:
+            self.user_quantile_values = self.y_quantile(self.user_quantile,
+                                                        self.yhat)
+
+    def p_of_y_given_yhat(self,
+                          y,
+                          yhat):
+        """
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        y_hat: (array-like of float)
+            The y-hat values on which the probability distribution
+            will be conditioned on.
+        """
+
+        # recompute gamma here instead of using self.gamma since y,yhat input
+        # to this method could be different than init
+        log_gamma = 0
+        for polynomial_index in range(len(self.polynomial_weights)):
+            log_gamma += self.polynomial_weights[polynomial_index][0] * np.power(yhat, polynomial_index)
+
+        return cauchy(loc=yhat, scale=np.exp(log_gamma)).pdf(y)
+
+    def p_of_y_given_phi(self,
+                         y,
+                         phi):
+        """
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        phi: (array-like of floats)
+            The latent phenotype values of which the probability
+            probability density will be conditioned.
+
+        """
+
+        y_hat_of_phi = self.model.ge_nonlinearity(phi)
+        return self.p_of_y_given_yhat(y, y_hat_of_phi)
+
+    def y_quantile(self,
+                   user_quantile,
+                   yhat):
+
+        """
+        user_quantile: (float between [0,1])
+            The value representing the quantile which will be computed
+
+        y_hat: (array-like of float)
+            The y-hat values on which the probability distribution
+            will be conditioned on.
+        """
+
+        # compute gamma for the yhat entered
+        log_gamma = 0
+        for polynomial_index in range(len(self.polynomial_weights)):
+            log_gamma += self.polynomial_weights[polynomial_index][0] * np.power(yhat, polynomial_index)
+
+        return cauchy(loc=yhat, scale=np.exp(log_gamma)).ppf(user_quantile)
+
+    def estimate_predictive_information(self,
+                                        y,
+                                        yhat):
+        """
+        Method that estimates predictive information, i.e.
+        I[y;y_hat] = I[y;phi].
+
+        parameters
+        ----------
+        y: (array-like of floats)
+            y values for which the probability will be computed
+
+        y_hat: (array-like of float)
+            The y-hat values on which the probability distribution
+            will be conditioned on.
+
+        returns
+        -------
+        I: (float)
+            Mutual information between I[y;y_hat], or equivalently
+            I[y;phi]
+
+        dI: (float)
+            Error in the estimated, mutual information I
+        """
+
+        # compute log_2 of p_y_given_yhat for all values and take mean:
+        mean_log_2_p_y_given_yhat = np.mean(np.log2(self.p_of_y_given_yhat(y, yhat)))
+
+        N = len(np.log2(self.p_of_y_given_yhat(y, yhat)))
+        std_log_2_p_y_given_yhat = np.std(np.log2(self.p_of_y_given_yhat(y, yhat)))/np.sqrt(N)
+
+        p_y = []
+        for _ in range(len(y)):
+            '''
+            form p_y by averaging over y_hat for every value of y_test
+            i.e. 
+            # p(y_1|y_hat_1), p(y_1|y_hat_1), ... ,p(y_1|y_hat_N), the mean of this is p(y_1)
+            # p(y_2|y_hat_1), p(y_2|y_hat_1), ... ,p(y_2|y_hat_N), the mean of this is p(y_2), and so on.
+            '''
+            p_y.append(np.mean(self.p_of_y_given_yhat(y[_], yhat).ravel()))
+
+        p_y = np.array(p_y)
+        mean_log_2_p_y = np.mean(np.log2(p_y))
+        std_log_2_p_y = np.std(np.log2(p_y))/np.sqrt(N)
+
+        dI = np.sqrt(std_log_2_p_y_given_yhat ** 2 + std_log_2_p_y ** 2)
+
+        I = mean_log_2_p_y_given_yhat-mean_log_2_p_y
+
+        return I, dI
+
+
+def entropy_continuous(x,
+                       knn=5,
+                       uncertainty=True,
+                       num_subsamples=25,
+                       verbose=False):
+    """
+    Estimate the entropy of a continuous univariate variable
+    using the k'th nearest neighbor estimator.
+    Wrapper for methods in the NPEET package.
+
+    parameters
+    ----------
+
+    x: (array-like of floats)
+        Continuous x-values. Must be castable as a
+        Nx1 numpy array where N=len(x).
+
+    knn: (int>0)
+        Number of nearest neighbors to use in the KSG estimator.
+
+    uncertainty: (bool)
+        Whether to estimate the uncertainty of the MI estimate.
+        Substantially increases runtime if True.
+
+    num_subsamples: (int > 0)
+        Number of subsamples to use if estimating uncertainty.
+
+    verbose: (bool)
+        Whether to print results and execution time.
+
+    returns
+    -------
+
+    I: (float)
+        Mutual information estimate in bits
+
+    dI: (float >= 0)
+        Uncertainty estimate in bits. Zero if uncertainty=False is set.
+
+    """
+
+    # Get number of datapoints
+    N = len(x)
+
+    # Reshape to Nx1 array
+    x = np.array(x).reshape(N, 1)
+
+    # Get best H estimate
+    H = ee.entropy(x, k=knn)
+
+    # Do subsampling to get I_subs
+    H_subs = np.zeros(num_subsamples)
+    for k in range(num_subsamples):
+        N_half = int(np.floor(N / 2))
+        ix = np.random.choice(N, size=N_half, replace=False).astype(int)
+        x_k = x[ix, :]
+        H_subs[k] = ee.entropy(x_k, k=knn)
+
+    # Estimate dI
+    dH = np.std(H_subs, ddof=1) / np.sqrt(2)
+
+    # If verbose, print results:
+    if verbose:
+        print(f'Arguments: knn={knn}, num_subsamples={num_subsamples}')
+        print(f'Execution time: {t:.4f} sec')
+        print(f'Results: H={H:.4f} bits, dH={dH:.4f} bits')
+
+    # Return results
+    return H, dH
+
+
+def mi_mixed(x,
+             y,
+             knn=5,
+             discrete_var='y',
+             uncertainty=True,
+             num_subsamples=25,
+             verbose=False,
+             warning=False):
+    """
+    Estimate mutual information between one continuous
+    variable and one discrete variable using the k'th nearest neighbor estimator.
+    Wrapper for methods in the NPEET package.
+
+    parameters
+    ----------
+
+    x: (array-like)
+        Continuous or discrete x-values. Must be castable as a
+        Nx1 numpy array where N=len(x).
+
+    y: (array-like)
+        Continuous or discrete y-values. Must be the same length
+        as x and castable as a Nx1 numpy array.
+
+    knn: (int>0)
+        Number of nearest neighbors to use in the KSG estimator.
+
+    discrete_var: (str)
+        Which variable is discrete. Must be 'x' or 'y'.
+
+    uncertainty: (bool)
+        Whether to estimate the uncertainty of the MI estimate.
+        Substantially increases runtime if True.
+
+    num_subsamples: (int > 0)
+        Number of subsamples to use if estimating uncertainty.
+
+    verbose: (bool)
+        Whether to print results and execution time.
+
+    returns
+    -------
+
+    I: (float)
+        Mutual information estimate in bits
+
+    dI: (float >= 0)
+        Uncertainty estimate in bits. Zero if uncertainty=False is set.
+
+    """
+
+    # Deal with choice of discrete_var
+    assert discrete_var in ['x', 'y'], f'Invalid value for discrete_var={discrete_var}'
+    if discrete_var == 'x':
+        return mi_mixed(y, x, discrete_var='y', **kwargs)
+
+    N = len(x)
+    assert len(y) == N
+
+    # Make sure x and y are 1D arrays
+    x = np.array(x).reshape(N, 1)
+    y = np.array(y).reshape(N, 1)
+
+    # Get best I estimate
+    I = ee.micd(x, y, k=knn, warning=warning)
+
+    # Compute uncertainty if requested
+    if uncertainty:
+
+        # Do subsampling to get I_subs
+        I_subs = np.zeros(num_subsamples)
+        for k in range(num_subsamples):
+            N_half = int(np.floor(N / 2))
+            ix = np.random.choice(N, size=N_half, replace=False).astype(int)
+            x_k = x[ix, :]
+            y_k = y[ix, :]
+            I_subs[k] = ee.micd(x_k, y_k, k=knn, warning=False)
+
+        # Estimate dI
+        dI = np.std(I_subs, ddof=1) / np.sqrt(2)
+
+    # Otherwise, just set to zero
+    else:
+        dI = 0.0
+
+    # If verbose, print results:
+    if verbose:
+        print(f'Arguments: knn={knn}, num_subsamples={num_subsamples}')
+        print(f'Execution time: {t:.4f} sec')
+        print(f'Results: I={I:.4f} bits, dI={dI:.4f} bits')
+
+    # Return results
+    return I, dI
+
+
+def mi_continuous(x,
+                  y,
+                  knn=5,
+                  uncertainty=True,
+                  num_subsamples=25,
+                  use_LNC=False,
+                  alpha_LNC=.5,
+                  verbose=False):
+    """
+    Estimate mutual information between two continuous
+    variables using the KSG estimator, with optional LNC correction.
+    Wrapper for methods in the NPEET package.
+
+    parameters
+    ----------
+
+    x: (array-like of floats)
+        Continuous x-values. Must be castable as a
+        Nx1 numpy array where N=len(x).
+
+    y: (array-like of floats)
+        Continuous y-values. Must be the same length
+        as x and castable as a Nx1 numpy array.
+
+    knn: (int>0)
+        Number of nearest neighbors to use in the KSG estimator.
+
+    uncertainty: (bool)
+        Whether to estimate the uncertainty of the MI estimate.
+        Substantially increases runtime if True.
+
+    num_subsamples: (int > 0)
+        Number of subsamples to use if estimating uncertainty.
+
+    use_LNC: (bool)
+        Whether to compute the Local Nonuniform Correction
+        (LNC) using the method of Gao et al., 2015.
+        Substantially increases runtime if True.
+
+    alpha_LNC: (float in (0,1))
+        Value of alpha to use when computing LNC.
+        See Gao et al., 2015 for details.
+
+    verbose: (bool)
+        Whether to print results and execution time.
+
+    returns
+    -------
+
+    I: (float)
+        Mutual information estimate in bits
+
+    dI: (float >= 0)
+        Uncertainty estimate in bits. Zero if uncertainty=False is set.
+
+    """
+
+    N = len(x)
+    assert len(y) == N
+
+    # If not LNC_correction, set LNC_alpha=0
+    if not use_LNC:
+        alpha_LNC = 0
+
+    # Make sure x and y are 1D arrays
+    x = np.array(x).ravel()
+    y = np.array(y).ravel()
+
+    # Get best I estimate
+    I = ee.mi(x, y, k=knn, alpha=alpha_LNC)
+
+    # Compute uncertainty if requested
+    if uncertainty:
+
+        # Do subsampling to get I_subs
+        assert num_subsamples >= 2, f'Invalid value for num_subsamples={num_subsamples}'
+        I_subs = np.zeros(num_subsamples)
+        for k in range(num_subsamples):
+            N_half = int(np.floor(N / 2))
+            ix = np.random.choice(N, size=N_half, replace=False).astype(int)
+            x_k = x[ix]
+            y_k = y[ix]
+            I_subs[k] = ee.mi(x_k, y_k, k=knn, alpha=alpha_LNC)
+
+        # Estimate dI
+        dI = np.std(I_subs, ddof=1) / np.sqrt(2)
+
+    # Otherwise, just set to zero
+    else:
+        dI = 0.0
+
+    # If verbose, print results:
+    if verbose:
+        # print(f'Arguments: knn={knn}, num_subsamples={num_subsamples}')
+        print(f'Execution time: {t:.4f} sec')
+        print(f'Results: I={I:.4f} bits, dI={dI:.4f} bits')
+
+    # Return results
+    return I, dI
