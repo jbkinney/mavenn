@@ -1092,8 +1092,9 @@ class Model:
     #         MI += np.sum(bin_counts[sequence_index] * np.log2((p_of_b_given_phi_i / p_of_b)))
     #     print(MI / M)
 
-    def get_ge_noise_model(self,
-                           yhat):
+    def yhat_to_yq(self,
+                   yhat,
+                   q=[0.16,0.84]):
         """
         Method that returns the ge_noise_model, the ge probability distribution
         that models noise, from which the spatial parameter eta can be obtained.
@@ -1106,12 +1107,12 @@ class Model:
         return
 
         mavenn._NoiseModel: (GE noise mdoel object)
-            This can be Gaussian, Cauchy or SkewT. 
+            This can be Gaussian, Cauchy or SkewT.
         """
 
         check(self.regression_type=='GE', 'regression type must be GE for this methdd')
         # Get GE noise model based on the users input.
-        return globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat)
+        return globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,q=q).user_quantile_values
 
 
     def p_of_y_given_y_hat(self,
@@ -1140,7 +1141,7 @@ class Model:
 
         if self.regression_type=='GE':
             # Get GE noise model based on the users input.
-            ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat)
+            ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,None)
 
             return ge_noise_model.p_of_y_given_yhat(y, yhat)
 
@@ -1201,7 +1202,7 @@ class Model:
         """
 
         # save weights
-        self.get_nn().save_weights(filename)
+        self.get_nn().save_weights(filename+'.h5')
 
         # save model configuration
-        pd.DataFrame(self.__dict__).to_csv('filename.csv')
+        pd.DataFrame(self.__dict__).to_csv(filename+'.csv')

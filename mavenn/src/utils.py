@@ -18,7 +18,8 @@ from scipy.special import gammaln as LogGamma
 from numpy import log as Log
 
 from scipy.stats import cauchy
-import entropy_estimators as ee
+from mavenn.src import entropy_estimators as ee
+from scipy.special import erfinv
 
 @handle_errors
 def onehot_sequence(sequence, bases):
@@ -1092,7 +1093,8 @@ class GaussianNoiseModel:
 
     def __init__(self,
                  model,
-                 yhat_GE):
+                 yhat_GE,
+                 q=[0.16, 0.84]):
 
         self.model = model
         self.yhat_GE = yhat_GE
@@ -1104,6 +1106,15 @@ class GaussianNoiseModel:
 
         # this is sigma(y)
         self.sigma = np.exp(logsigma)
+
+        if q is not None:
+            self.user_quantile_values = []
+            for current_q in q:
+                self.user_quantile_values.append(yhat_GE+self.sigma*np.sqrt(2)*erfinv(2*current_q-1))
+
+            #self.user_quantile_values = np.array(self.user_quantile_values).reshape(len(yhat_GE), len(q))
+
+
 
     def p_of_y_given_yhat(self,
                           y,
@@ -1231,10 +1242,11 @@ class CauchyNoiseModel:
     def __init__(self,
                  model,
                  yhat,
-                 user_quantile=None):
+                 q=[0.16, 0.84]):
 
         self.model = model
         self.yhat = yhat
+        self.q = q
 
         self.polynomial_weights = self.model.get_nn().layers[9].get_weights()[0].copy()
 
@@ -1245,9 +1257,10 @@ class CauchyNoiseModel:
         self.plus_sigma_quantile = self.y_quantile(0.16, self.yhat)
         self.minus_sigma_quantile = self.y_quantile(0.84, self.yhat)
 
-        if user_quantile is not None:
-            self.user_quantile_values = self.y_quantile(self.user_quantile,
-                                                        self.yhat)
+        if q is not None:
+            self.user_quantile_values = []
+            for current_q in q:
+                self.user_quantile_values.append(self.y_quantile(current_q, self.yhat).ravel())
 
     def p_of_y_given_yhat(self,
                           y,
