@@ -40,8 +40,8 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
         # replace the tensors where nans in ytrue occur with zeros, so that likelihood for
         # that yhat, ypred pair is also zero.
-        yhat = tf.where(tf.is_nan(ytrue), tf.zeros_like(yhat), yhat)
-        ytrue = tf.where(tf.is_nan(ytrue), tf.zeros_like(ytrue), ytrue)
+        #yhat = tf.where(tf.is_nan(ytrue), tf.zeros_like(yhat), yhat)
+        #ytrue = tf.where(tf.is_nan(ytrue), tf.zeros_like(ytrue), ytrue)
 
         self.logsigma = 0
         for poly_coeff_index in range(self.polynomial_order+1):
