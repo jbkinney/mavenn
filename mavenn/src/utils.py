@@ -9,6 +9,7 @@ import pandas as pd
 import mavenn
 import suftware
 
+
 import tensorflow.keras.backend as K
 import tensorflow.keras
 
@@ -354,7 +355,7 @@ def ge_plots_for_mavenn_demo(loss_history,
     ax[1].set_xlabel('predictions')
 
     # get ge nonlinear function
-    GE_nonlinearity = GE_model.ge_nonlinearity(sequences)
+    GE_nonlinearity = GE_model.phi_to_yhat(sequences)
 
     ax[2].plot(GE_nonlinearity[1], GE_nonlinearity[0], color='black')
     ax[2].scatter(GE_nonlinearity[2], true_labels, color='gray', s=1, alpha=0.5)
@@ -996,7 +997,7 @@ class SkewedTNoiseModel:
 
         """
 
-        y_hat_of_phi = self.model.ge_nonlinearity(phi)
+        y_hat_of_phi = self.model.phi_to_yhat(phi)
         return self.p_of_y_given_yhat(y, y_hat_of_phi, y_scale, a, b)
 
     def p_mean_std(self, y_mode, y_scale, a, b):
@@ -1144,10 +1145,17 @@ class GaussianNoiseModel:
 
         """
 
-        y_hat_of_phi = self.model.ge_nonlinearity(phi)
+        y_hat_of_phi = self.model.phi_to_yhat(phi)
         print(y_hat_of_phi.shape)
         return self.p_of_y_given_yhat(y, y_hat_of_phi)
 
+    # TODO:
+    '''
+    arguments should be x, y. 
+    1) map x to phi
+    2) p_y_given_phi
+    2) then compute mutual information via 
+    '''
     def estimate_predictive_information(self,
                                         y,
                                         yhat):
@@ -1278,7 +1286,7 @@ class CauchyNoiseModel:
 
         """
 
-        y_hat_of_phi = self.model.ge_nonlinearity(phi)
+        y_hat_of_phi = self.model.phi_to_yhat(phi)
         return self.p_of_y_given_yhat(y, y_hat_of_phi)
 
     def y_quantile(self,
@@ -1619,3 +1627,50 @@ def mi_continuous(x,
 
     # Return results
     return I, dI
+
+
+def load(filename):
+
+        """
+        Method that will load a mave-nn model
+
+        parameters
+        ----------
+        filename: (str)
+            filename of saved model.
+
+        returns
+        -------
+        loaded_model (mavenn-Model object)
+            The model object that can be used to make predictions etc.
+
+        """
+
+        # load configuration file
+        load_config = pd.read_csv(filename+'.csv', index_col=[0])
+
+        # convert it to a dictionary
+        config_dict = load_config[load_config.columns[2:]].loc[0].to_dict()
+
+        x_train = load_config['x'].values
+        y_train = load_config['y'].values
+
+        # delete keys not required for model loading
+        config_dict.pop('model', None)
+        config_dict.pop('define_model', None)
+        config_dict.pop('learning_rate', None)
+
+        # create object for loaded model
+        loaded_model = mavenn.Model(x_train,
+                                    y_train,
+                                    **config_dict)
+
+        # this gauge fixing method merely sets up the correct
+        # architecture for the neural network, for which the
+        # weights can then be set using a trained model
+        loaded_model.gauge_fix_model()
+
+        # set weights using a trained model.
+        loaded_model.get_nn().load_weights(filename+'.h5')
+
+        return loaded_model
