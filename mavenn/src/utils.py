@@ -907,11 +907,11 @@ class SkewedTNoiseModel:
     def __init__(self,
                  model,
                  yhat_GE,
-                 user_quantile=None):
+                 q=[0.16,0.84]):
 
         self.model = model
         self.yhat_GE = yhat_GE
-        self.user_quantile = user_quantile
+        self.q = q
 
         polynomial_weights_a = self.model.get_nn().layers[9].get_weights()[0].copy()
         polynomial_weights_b = self.model.get_nn().layers[9].get_weights()[1].copy()
@@ -933,12 +933,21 @@ class SkewedTNoiseModel:
         self.log_b = log_b
         self.log_scale = log_scale
 
-        if user_quantile is not None:
-            self.user_quantile_values = self.y_quantile(self.user_quantile,
-                                                        self.yhat_GE,
-                                                        np.exp(log_scale),
-                                                        np.exp(log_a),
-                                                        np.exp(log_b))
+        if q is not None:
+
+            self.user_quantile_values = []
+            for current_q in q:
+                self.user_quantile_values.append(self.y_quantile(current_q,
+                                                                 self.yhat_GE,
+                                                                 np.exp(self.log_scale),
+                                                                 np.exp(self.log_a),
+                                                                 np.exp(self.log_b)).ravel())
+
+            # self.user_quantile_values = self.y_quantile(self.q,
+            #                                             self.yhat_GE,
+            #                                             np.exp(log_scale),
+            #                                             np.exp(log_a),
+            #                                             np.exp(log_b))
 
     # First compute log PDF to avoid overflow problems
     def log_f(self, t, a, b):
@@ -976,7 +985,20 @@ class SkewedTNoiseModel:
             tsq_expected = 0.25 * (a + b) * ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
             return np.sqrt(tsq_expected - t_expected ** 2)
 
-    def p_of_y_given_yhat(self, y, y_mode, y_scale, a, b):
+    def p_of_y_given_yhat(self,
+                          y,
+                          y_mode):
+                          # y_scale,
+                          # a,
+                          # b):
+
+        # t = self.t_mode(a, b) + (y - y_mode) / y_scale
+        # return self.f(t, a, b) / y_scale
+
+        y_scale = np.exp(self.log_scale)
+        a = np.exp(self.log_a)
+        b = np.exp(self.log_b)
+
         t = self.t_mode(a, b) + (y - y_mode) / y_scale
         return self.f(t, a, b) / y_scale
 
