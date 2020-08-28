@@ -907,7 +907,7 @@ class SkewedTNoiseModel:
     def __init__(self,
                  model,
                  yhat_GE,
-                 q=[0.16,0.84]):
+                 q=[0.16, 0.84]):
 
         self.model = model
         self.yhat_GE = yhat_GE

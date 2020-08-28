@@ -47,7 +47,6 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
         for poly_coeff_index in range(self.polynomial_order+1):
             self.logsigma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
 
-        # TODO: ask Justin if this is the right way to regularize parameters of the nosie model
         # regularize parameters of the polynomials
         self.add_loss(self.lmbda*tf.norm(self.a)**2)
 
@@ -66,7 +65,7 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, polynomial_order=3, **kwargs):
+    def __init__(self, polynomial_order=2, **kwargs):
 
         self.polynomial_order = polynomial_order
         super(CauchyLikelihoodLayer, self).__init__(**kwargs)
@@ -120,16 +119,16 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
     #     base_config = super().get_config()
     #     return {**base_config, "log_a": self.log_a, "log_b": self.log_b, "log_scale": self.log_scale}
 
-    def build(self, batch_input_shape):
+    def build(self, input_shape):
 
 
-        self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
+        self.w_a = self.add_weight(name='w_a', shape=(self.polynomial_order+1, 1),
                                  initializer="random_normal", trainable=True)
 
-        self.b = self.add_weight(name='b', shape=(self.polynomial_order+1, 1),
+        self.w_b = self.add_weight(name='w_b', shape=(self.polynomial_order+1, 1),
                                  initializer="random_normal", trainable=True)
 
-        self.c = self.add_weight(name='c', shape=(self.polynomial_order+1, 1),
+        self.w_s = self.add_weight(name='w_s', shape=(self.polynomial_order+1, 1),
                                  initializer="random_normal", trainable=True)
 
         # Continue building keras.laerys.Layer class
@@ -144,8 +143,11 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
         Sqrt = K.sqrt
         Square = K.square
 
-        # this is yhat
-        y_hat = inputs[:, 0:1]
+        # TODO: this is throwing a warning with tensorflow 2.1.0, but not with tf versions > 2.1.0
+        # disabling eager_execution tf.compat.v1.disable_eager_execution() may make it work in future
+        # versions as a hack, but may have to use tf.gather_nd() rather than sliciing manually to remove warning.
+
+        y_hat = inputs[:, 0:1] # this is yhat
 
         self.log_a = 0
         self.log_b = 0
@@ -153,9 +155,9 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
 
         for poly_coeff_index in range(self.polynomial_order+1):
 
-            self.log_a += self.a[poly_coeff_index]*K.pow(y_hat, poly_coeff_index)
-            self.log_b += self.b[poly_coeff_index] * K.pow(y_hat, poly_coeff_index)
-            self.log_scale += self.c[poly_coeff_index] * K.pow(y_hat, poly_coeff_index)
+            self.log_a += self.w_a[poly_coeff_index]*K.pow(y_hat, poly_coeff_index)
+            self.log_b += self.w_b[poly_coeff_index] * K.pow(y_hat, poly_coeff_index)
+            self.log_scale += self.w_s[poly_coeff_index] * K.pow(y_hat, poly_coeff_index)
 
         # Compute a, b, scale in terms of trainable parameters
         self.a = Exp(self.log_a)
