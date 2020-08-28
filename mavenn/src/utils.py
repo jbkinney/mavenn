@@ -1664,7 +1664,7 @@ def mi_continuous(x,
     return I, dI
 
 
-def load(filename):
+def load(filename, regression_type='GE'):
 
         """
         Method that will load a mave-nn model
@@ -1681,31 +1681,67 @@ def load(filename):
 
         """
 
-        # load configuration file
-        load_config = pd.read_csv(filename+'.csv', index_col=[0])
+        if regression_type=='GE':
+            # load configuration file
 
-        # convert it to a dictionary
-        config_dict = load_config[load_config.columns[2:]].loc[0].to_dict()
+            #check(regression_type == 'NA', 'please set regression type to GE')
 
-        x_train = load_config['x'].values
-        y_train = load_config['y'].values
+            load_config = pd.read_csv(filename+'.csv', index_col=[0])
 
-        # delete keys not required for model loading
-        config_dict.pop('model', None)
-        config_dict.pop('define_model', None)
-        config_dict.pop('learning_rate', None)
+            # convert it to a dictionary
+            config_dict = load_config[load_config.columns[2:]].loc[0].to_dict()
 
-        # create object for loaded model
-        loaded_model = mavenn.Model(x_train,
-                                    y_train,
-                                    **config_dict)
+            x_train = load_config['x'].values
+            y_train = load_config['y'].values
 
-        # this gauge fixing method merely sets up the correct
-        # architecture for the neural network, for which the
-        # weights can then be set using a trained model
-        loaded_model.gauge_fix_model()
+            # delete keys not required for model loading
+            config_dict.pop('model', None)
+            config_dict.pop('define_model', None)
+            config_dict.pop('learning_rate', None)
 
-        # set weights using a trained model.
-        loaded_model.get_nn().load_weights(filename+'.h5')
+            # create object for loaded model
+            loaded_model = mavenn.Model(x_train,
+                                        y_train,
+                                        **config_dict)
 
-        return loaded_model
+            # this gauge fixing method merely sets up the correct
+            # architecture for the neural network, for which the
+            # weights can then be set using a trained model
+            loaded_model.gauge_fix_model()
+
+            # set weights using a trained model.
+            loaded_model.get_nn().load_weights(filename+'.h5')
+
+            return loaded_model
+        else:
+            #heck(regression_type=='GE', 'please set regression type to NA')
+
+            load_config = pd.read_csv(filename + '.csv', index_col=[0], keep_default_na=False)
+
+            single_y = load_config['y'].values[0]
+            single_y = single_y[1:len(single_y)-2].split('.')
+            single_y = [int(i) for i in single_y]
+            single_y = np.array(single_y)
+
+            single_x = load_config['x'].values
+
+            config_dict = load_config.loc[0].to_dict()
+
+            config_dict.pop('x', None)
+            config_dict.pop('y', None)
+            config_dict.pop('model', None)
+            config_dict.pop('define_model', None)
+            config_dict.pop('learning_rate', None)
+
+            # create object for loaded model
+            loaded_model = mavenn.Model(single_x,
+                                        single_y.reshape(-1, len(single_y)),
+                                        **config_dict)
+
+            loaded_model.gauge_fix_model()
+
+
+            # set weights using a trained model.
+            loaded_model.get_nn().load_weights(filename + '.h5')
+
+            return loaded_model

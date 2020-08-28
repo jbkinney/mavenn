@@ -50,11 +50,11 @@ class GlobalEpistasisModel:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
-    lambda_theta: (float >= 0)
-        Regularization strength for G-P map parameters.
+    theta_regularization: (float >= 0)
+        Regularization strength for G-P map parameters $\theta$.
 
-    lambda_eta: (float >= 0)
-        Regularization strength for measurement process parameters.
+    eta_regularization: (float >= 0)
+        Regularization strength for measurement process parameters $\eta$.
 
     """
 
@@ -65,7 +65,9 @@ class GlobalEpistasisModel:
                  gpmap_type,
                  ge_nonlinearity_monotonic,
                  ohe_batch_size,
-                 ge_heteroskedasticity_order):
+                 ge_heteroskedasticity_order,
+                 theta_regularization,
+                 eta_regularization):
 
         # set class attributes
         self.X, self.y = X, y
@@ -74,6 +76,8 @@ class GlobalEpistasisModel:
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
         self.ge_heteroskedasticity_order = ge_heteroskedasticity_order
         self.ohe_batch_size = ohe_batch_size
+        self.theta_regularization = theta_regularization
+        self.eta_regularization = eta_regularization
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -209,7 +213,8 @@ class GlobalEpistasisModel:
         labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
                               output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
 
-        phi = Dense(1, name='phi')(sequence_input)
+        phi = Dense(1, name='phi',
+                    kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization))(sequence_input)
 
         # implement monotonicity constraints
         if self.ge_nonlinearity_monotonic:
@@ -232,7 +237,7 @@ class GlobalEpistasisModel:
 
             concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
             likelihoodClass = globals()[ge_noise_model_type + 'LikelihoodLayer']
-            outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
+            outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
 
         # create the model:
         model = Model(inputTensor, outputTensor)
@@ -693,8 +698,8 @@ class NoiseAgnosticModel:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
-    lambda_theta: (float >= 0)
-        Regularization strength for G-P map parameters.
+    theta_regularization: (float >= 0)
+        Regularization strength for G-P map parameters $\theta$.
     """
 
     def __init__(self,
@@ -702,6 +707,7 @@ class NoiseAgnosticModel:
                  y,
                  gpmap_type,
                  alphabet,
+                 theta_regularization,
                  ohe_batch_size):
 
         # set class attributes
@@ -709,6 +715,7 @@ class NoiseAgnosticModel:
         self.y = y
         self.gpmap_type = gpmap_type
         self.alphabet = alphabet
+        self.theta_regularization = theta_regularization
         self.ohe_batch_size = ohe_batch_size
 
         # class attributes that are not parameters
@@ -784,8 +791,8 @@ class NoiseAgnosticModel:
         check(isinstance(self.y, (list, np.ndarray)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
 
-        check(len(self.x) == len(self.y),
-              'length of inputs (X, y) must be equal')
+        #check(len(self.x) == len(self.y),
+        #      'length of inputs (X, y) must be equal')
 
         # check that model type valid
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
@@ -824,7 +831,9 @@ class NoiseAgnosticModel:
         labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + self.y.shape[1]],
                               output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
 
-        phi = Dense(1, use_bias=True, name='phi')(sequence_input)
+        phi = Dense(1,
+                    kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization),
+                    use_bias=True, name='phi')(sequence_input)
 
         intermediateTensor = Dense(na_hidden_nodes, activation='sigmoid')(phi)
         yhat = Dense(np.shape(self.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)

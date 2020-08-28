@@ -136,20 +136,25 @@ class Model:
                                               ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
                                               alphabet=self.alphabet,
                                               ohe_batch_size=self.ohe_batch_size,
-                                              ge_heteroskedasticity_order=self.ge_heteroskedasticity_order)
+                                              ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
+                                              theta_regularization=self.theta_regularization,
+                                              eta_regularization=self.eta_regularization)
 
             self.define_model = self.model.define_model(ge_noise_model_type=self.ge_noise_model_type,
                                                         ge_nonlinearity_hidden_nodes=
                                                         self.ge_nonlinearity_hidden_nodes)
 
         elif regression_type == 'NA':
+
+
             self.model = NoiseAgnosticModel(x=self.x,
                                             y=self.y,
                                             alphabet=self.alphabet,
                                             gpmap_type=self.gpmap_type,
+                                            theta_regularization=self.theta_regularization,
                                             ohe_batch_size=self.ohe_batch_size)
 
-            self.define_model = self.model.define_model(na_hidden_nodes = self.na_hidden_nodes)
+            self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
 
     @handle_errors
     def gauge_fix_model_multiple_replicates(self):
@@ -486,10 +491,13 @@ class Model:
 
 
         # same phi as before
-        phi = Dense(1, name='phiPrime')(sequence_input)
+        phi = Dense(1,
+                    kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization),
+                    name='phiPrime')(sequence_input)
         # fix diffeomorphic scale
         phi_scaled = fixDiffeomorphicMode()(phi)
-        phiOld = Dense(1, name='phi')(phi_scaled)
+        phiOld = Dense(1,
+                       kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization), name='phi')(phi_scaled)
 
         # implement monotonicity constraints if GE regression
         if self.regression_type == 'GE':
@@ -507,7 +515,7 @@ class Model:
                 # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
 
                 likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
-                outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
+                outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
 
             else:
                 intermediateTensor = Dense(self.ge_nonlinearity_hidden_nodes, activation='sigmoid')(phiOld)
@@ -516,7 +524,7 @@ class Model:
                 concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
 
                 likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
-                outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
+                outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
 
         elif self.regression_type == 'NA':
 
@@ -1250,7 +1258,25 @@ class Model:
         """
 
         # save weights
-        self.get_nn().save_weights(filename+'.h5')
+        self.get_nn().save_weights(filename + '.h5')
 
-        # save model configuration
-        pd.DataFrame(self.__dict__).to_csv(filename+'.csv')
+        if self.regression_type=='GE':
+
+            # save model configuration
+            pd.DataFrame(self.__dict__).to_csv(filename+'.csv')
+        else:
+            NAR_dict = self.__dict__.copy()
+
+            # store a single example
+            single_x = NAR_dict['x'][0]
+            single_y = NAR_dict['y'][0]
+
+            # remove training data ...
+            NAR_dict.pop('x', None)
+            NAR_dict.pop('y', None)
+
+            # and replace with single examples for quick loading
+            NAR_dict['x'] = single_x
+            NAR_dict['y'] = [single_y]
+
+            pd.DataFrame(NAR_dict, index=[0]).to_csv(filename + '.csv')

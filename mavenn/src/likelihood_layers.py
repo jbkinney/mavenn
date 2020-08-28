@@ -12,11 +12,11 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, polynomial_order=2, lmbda=0.1, **kwargs):
+    def __init__(self, polynomial_order=2, eta_regularization=0.01, **kwargs):
 
         # order of polynomial which defines log_sigma's dependence on y_hat
         self.polynomial_order = polynomial_order
-        self.lmbda = lmbda
+        self.eta_regularization = eta_regularization
 
         super(GaussianLikelihoodLayer, self).__init__(**kwargs)
 
@@ -48,7 +48,7 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
             self.logsigma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
 
         # regularize parameters of the polynomials
-        self.add_loss(self.lmbda*tf.norm(self.a)**2)
+        self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
 
         negative_log_likelihood = 0.5 * K.sum(K.square((ytrue - yhat) / K.exp(self.logsigma)) + self.logsigma, axis=1)
 
@@ -65,9 +65,11 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, polynomial_order=2, **kwargs):
+    def __init__(self, polynomial_order=2, eta_regularization=0.01, **kwargs):
 
         self.polynomial_order = polynomial_order
+        self.eta_regularization = eta_regularization
+
         super(CauchyLikelihoodLayer, self).__init__(**kwargs)
 
     # def get_config(self):
@@ -94,6 +96,9 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
         for poly_coeff_index in range(self.polynomial_order+1):
             self.log_gamma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
 
+        # regularize parameters of the polynomials
+        self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
+
         # Negative log Cauchy likelihood
         negative_log_likelihood = K.sum(K.log(K.square((ytrue - yhat)) +
                                               K.square(K.exp(self.log_gamma))) - self.log_gamma, axis=1)
@@ -108,10 +113,11 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
     Layer includes three trainable scalar weights: log_a, log_b, and log_scale.
     """
 
-    def __init__(self, polynomial_order=2, **kwargs):
+    def __init__(self, polynomial_order=2, eta_regularization=0.01, **kwargs):
 
         # order of polynomial which defines the spatial parameters' dependence on y_hat
         self.polynomial_order = polynomial_order
+        self.eta_regularization = eta_regularization
 
         super(SkewedTLikelihoodLayer, self).__init__(**kwargs)
 
@@ -176,6 +182,11 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
         # Compute useful argument
         arg = t / Sqrt(self.a + self.b + Square(t))
 
+        # regularize parameters of the polynomials
+        self.add_loss(self.eta_regularization * tf.norm(self.w_a) ** 2)
+        self.add_loss(self.eta_regularization * tf.norm(self.w_b) ** 2)
+        self.add_loss(self.eta_regularization * tf.norm(self.w_s) ** 2)
+
         # Compute the log likelihood of y given y_hat and return
         log_likelihood = (self.a + 0.5) * Log(1 + arg) + \
                          (self.b + 0.5) * Log(1 - arg) + \
@@ -185,6 +196,7 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
                          -LogGamma(self.a) + \
                          -LogGamma(self.b) + \
                          -self.log_scale
+
         return -log_likelihood
 
 
