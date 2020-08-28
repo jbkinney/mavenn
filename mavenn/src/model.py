@@ -560,6 +560,7 @@ class Model:
         # obtained a readable format by using the method return_theta
         self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
 
+
     @handle_errors
     def fit(self,
             epochs=50,
@@ -714,6 +715,12 @@ class Model:
         char_indices = list(range(len(chars)))
         pos_indices = list(range(len(self.model.x_train[0])))
 
+        # update theta_gf in case load model is called. 
+        theta_0 = self.get_nn().layers[2].get_weights()[1]
+        theta_gpmap = self.get_nn().layers[2].get_weights()[0]
+        self.model.theta_gf = np.insert(theta_gpmap, 0, theta_0)
+
+
         # list that will contain parameter names
         names = []
 
@@ -724,7 +731,8 @@ class Model:
         if self.gpmap_type == 'additive':
 
             # get constant term.
-            theta_0 = self.model.theta_gf[0][0]
+            #print(self.model.theta_gf.shape)
+            theta_0 = self.model.theta_gf[0]
 
             # add it to the lists that will get returned.
             names.append('theta_0')
@@ -743,7 +751,7 @@ class Model:
             num_possible_pairs = int((sequenceLength * (sequenceLength - 1)) / 2)
 
             # get constant term.
-            theta_0 = self.model.theta_gf[0][0]
+            theta_0 = self.model.theta_gf[0]
 
             # add it to the lists that will get returned.
             names.append('theta_0')
@@ -777,7 +785,7 @@ class Model:
             num_possible_pairs = int((sequenceLength * (sequenceLength - 1)) / 2)
 
             # get constant term.
-            theta_0 = self.model.theta_gf[0][0]
+            theta_0 = self.model.theta_gf[0]
 
             # add it to the lists that will get returned.
             names.append('theta_0')
