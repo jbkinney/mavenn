@@ -714,7 +714,15 @@ class Model:
 
         # These parameters are gauge fixed are the model has been fit.
         if self.gpmap_type == 'additive':
-            reshaped_theta = self.model.theta_gf.reshape(len(self.model.x_train[0]), len(chars))
+
+            # get constant term.
+            theta_0 = self.model.theta_gf[0][0]
+
+            # add it to the lists that will get returned.
+            names.append('theta_0')
+            values.append(theta_0)
+
+            reshaped_theta = self.model.theta_gf[1:].reshape(len(self.model.x_train[0]), len(chars))
             for position in pos_indices:
                 for char in char_indices:
                     names.append('theta_' + str(position) + ':' + chars[char])
@@ -722,7 +730,28 @@ class Model:
 
         elif self.gpmap_type == 'neighbor':
 
-            reshaped_theta = self.model.theta_gf.reshape(len(self.model.x_train[0]) - 1, len(chars), len(chars))
+            # define helper variables
+            sequenceLength = len(self.model.x_train[0])
+            num_possible_pairs = int((sequenceLength * (sequenceLength - 1)) / 2)
+
+            # get constant term.
+            theta_0 = self.model.theta_gf[0][0]
+
+            # add it to the lists that will get returned.
+            names.append('theta_0')
+            values.append(theta_0)
+
+            # get additive terms, starting from 1 because 0 represents constant term
+            reshaped_theta = self.model.theta_gf[1:sequenceLength*len(self.model.characters)+1].\
+                reshape(len(self.model.x_train[0]), len(chars))
+
+            for position in pos_indices:
+                for char in char_indices:
+                    names.append('theta_' + str(position) + ':' + chars[char])
+                    values.append(reshaped_theta[position][char])
+
+            reshaped_theta = self.model.theta_gf[sequenceLength*len(self.model.characters)+1:]\
+                .reshape(len(self.model.x_train[0]) - 1, len(chars), len(chars))
 
             # get parameters in tidy format
             for pos1 in pos_indices[:-1]:
@@ -739,8 +768,27 @@ class Model:
             sequenceLength = len(self.model.x_train[0])
             num_possible_pairs = int((sequenceLength * (sequenceLength - 1)) / 2)
 
+            # get constant term.
+            theta_0 = self.model.theta_gf[0][0]
+
+            # add it to the lists that will get returned.
+            names.append('theta_0')
+            values.append(theta_0)
+
+            # get additive terms, starting from 1 because 0 represents constant term
+            reshaped_theta = self.model.theta_gf[1:sequenceLength*len(self.model.characters)+1].\
+                reshape(len(self.model.x_train[0]), len(chars))
+
+            for position in pos_indices:
+                for char in char_indices:
+                    names.append('theta_' + str(position) + ':' + chars[char])
+                    values.append(reshaped_theta[position][char])
+
+
+            # get pairwise terms
             # reshape to num_possible_pairs by len(chars) by len(chars) array
-            reshaped_theta = self.model.theta_gf.reshape(num_possible_pairs, len(chars), len(chars))
+            reshaped_theta = self.model.theta_gf[sequenceLength*len(self.model.characters)+1:].\
+                reshape(num_possible_pairs, len(chars), len(chars))
 
             pos_pair_num = 0
             for pos1 in pos_indices:

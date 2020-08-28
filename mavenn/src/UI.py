@@ -874,6 +874,6 @@ class NoiseAgnosticModel:
         na_model = Model(inputs=na_model_input, outputs=next_input)
 
         # compute the value of the nonlinearity for a given phi
-        y_hat = na_model.x_to_yhat([phi])
+        y_hat = na_model.predict([phi])
 
         return y_hat
