@@ -205,7 +205,6 @@ class NALikelihoodLayer(tensorflow.keras.layers.Layer):
     Inputs consit of y and y_hat -> they are contained in a single array called inputs
     Outputs consist of negative log likelihood values.
     Computes likelihood for NAR.
-    Need to explicitly implement loss formula from manuscript.
     """
 
     def __init__(self, number_bins, **kwargs):

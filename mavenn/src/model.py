@@ -941,14 +941,6 @@ class Model:
         # Return latent phenotype values
         return phi
 
-    # TODO: rename these functions
-    # self.x_to_phi -> self.x_to_phi
-    # self.measurement_process -> self.p_y_given_phi  # Implement this
-    # self.likelihood -> self.p_y_given_x             # Write this
-    # self.x_to_yhat -> self.x_to_yhat
-    # self.phi_to_yhat -> self.phi_to_yhat
-    # self.ge_noise_model -> self.p_y_given_yhat
-
     @handle_errors
     def x_to_yhat(self,
                   x):
@@ -1154,6 +1146,23 @@ class Model:
                          y,
                          phi):
 
+        """
+        Method that computes the p(y|phi) for both GE and NA regression.
+
+        y: (float (GE) or int (NA))
+            Specifies continuous target value for GE regression or an integer
+            specifying bin number for NA regression.
+
+        phi: (float)
+            Latent phenotype on which probability is conditioned.
+
+        returns
+        -------
+        p_of_y_given_phi: (float)
+            Probaility of y given phi.
+
+        """
+
         if self.regression_type == 'NA':
 
             # check that entered y (specifying bin number) is an integer
@@ -1164,12 +1173,14 @@ class Model:
             check(y< self.model.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
 
             # Give the probability of bin y given phi, note phi can be an array.
-            return self.na_p_of_all_y_given_phi(phi)[:,y]
+            p_of_y_given_phi = self.na_p_of_all_y_given_phi(phi)[:,y]
+            return p_of_y_given_phi
 
         elif self.regression_type=='GE':
 
             yhat = self.phi_to_yhat(phi)
-            return self.p_of_y_given_y_hat(y,yhat)
+            p_of_y_given_phi =  self.p_of_y_given_y_hat(y,yhat)
+            return p_of_y_given_phi
 
     def p_of_y_given_y_hat(self,
                            y,
@@ -1251,18 +1262,28 @@ class Model:
 
         """
 
-        yhat = self.x_to_yhat(x)
 
         if self.regression_type=='GE':
+            yhat = self.x_to_yhat(x)
             # Get GE noise model based on the users input.
             ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat)
 
-            return ge_noise_model.p_of_y_given_yhat(y, yhat)
+            p_of_y_given_x = ge_noise_model.p_of_y_given_yhat(y, yhat)
+            return p_of_y_given_x
 
         elif self.regression_type=='NA':
-            # TODO: need to implement
-            pass
 
+            # check that entered y (specifying bin number) is an integer
+            check(isinstance(y, int),
+                  'type(y), specifying bin number, must be of type int')
+
+            # check that entered bin nnumber doesn't exceed max bins
+            check(y< self.model.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
+
+
+            phi = self.x_to_phi(x)
+            p_of_y_given_x = self.p_of_y_given_phi(y, phi)
+            return p_of_y_given_x
 
     def save(self,
              filename):
