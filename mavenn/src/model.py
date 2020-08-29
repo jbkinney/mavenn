@@ -336,7 +336,7 @@ class Model:
                 # manual instantiation can be done as follows:
                 # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
 
-                # likelihoodClass = globals()[self.noise_model + 'LikelihoodLayer']
+                # likelihoodClass = globals()[self.p_of_all_y_given_phi + 'LikelihoodLayer']
                 # outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             else:
@@ -715,7 +715,7 @@ class Model:
         char_indices = list(range(len(chars)))
         pos_indices = list(range(len(self.model.x_train[0])))
 
-        # update theta_gf in case load model is called. 
+        # update theta_gf in case load model is called.
         theta_0 = self.get_nn().layers[2].get_weights()[1]
         theta_gpmap = self.get_nn().layers[2].get_weights()[0]
         self.model.theta_gf = np.insert(theta_gpmap, 0, theta_0)
@@ -823,34 +823,6 @@ class Model:
              })
 
         return theta_df
-
-    # TODO: Rename to na_p_of_ally_given_phi
-    @handle_errors
-    def na_noisemodel(self,
-                      phi):
-
-        """
-        Evaluate the NA measurement process at specified values of phi (the latent phenotype).
-
-        parameters
-        ----------
-
-        phi: (array-like)
-            Latent phenotype values at which to evaluate the measurement process.
-
-        returns
-        -------
-        p_y_given_phi: (array-like)
-            Measurement process p(y|phi) for all possible values of y. Is of size
-            MxY where M=len(phi) and Y is the number of possible y values.
-
-        """
-
-        check(self.regression_type == 'NA', 'regression type must be "NA" for this function ')
-
-        pi = self.model.noise_model(phi)
-
-        return pi
 
     @handle_errors
     def get_nn(self):
@@ -1178,6 +1150,26 @@ class Model:
         # Get GE noise model based on the users input.
         return globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,q=q).user_quantile_values
 
+    def p_of_y_given_phi(self,
+                         y,
+                         phi):
+
+        if self.regression_type == 'NA':
+
+            # check that entered y (specifying bin number) is an integer
+            check(isinstance(y, int),
+                  'type(y), specifying bin number, must be of type int')
+
+            # check that entered bin nnumber doesn't exceed max bins
+            check(y< self.model.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
+
+            # Give the probability of bin y given phi, note phi can be an array.
+            return self.na_p_of_all_y_given_phi(phi)[:,y]
+
+        elif self.regression_type=='GE':
+
+            yhat = self.phi_to_yhat(phi)
+            return self.p_of_y_given_y_hat(y,yhat)
 
     def p_of_y_given_y_hat(self,
                            y,
@@ -1203,15 +1195,39 @@ class Model:
 
         """
 
-        if self.regression_type=='GE':
-            # Get GE noise model based on the users input.
-            ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,None)
+        check(self.regression_type=='GE', "This method works on with GE regression.")
+        # Get GE noise model based on the users input.
+        ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,None)
 
-            return ge_noise_model.p_of_y_given_yhat(y, yhat)
+        return ge_noise_model.p_of_y_given_yhat(y, yhat)
 
-        elif self.regression_type=='NA':
-            # TODO: need to implement
-            pass
+
+    def na_p_of_all_y_given_phi(self,
+                             phi):
+
+        """
+        Evaluate the NA measurement process at specified values of phi (the latent phenotype).
+
+        parameters
+        ----------
+
+        phi: (array-like)
+            Latent phenotype values at which to evaluate the measurement process.
+
+        returns
+        -------
+        p_of_dot_given_phi: (array-like)
+            Measurement process p(y|phi) for all possible values of y. Is of size
+            MxY where M=len(phi) and Y is the number of possible y values.
+
+        """
+
+        check(self.regression_type == 'NA', 'regression type must be "NA" for this function ')
+
+        p_of_dot_given_phi = self.model.p_of_all_y_given_phi(phi)
+
+        return p_of_dot_given_phi
+
 
     # TODO: this function is possibly experiencing a tensorflow backend bug with a single example x, need to check.
     def p_of_y_given_x(self, y, x):

@@ -200,9 +200,9 @@ class GlobalEpistasisModel:
 
         """
 
-        # check that noise_model valid
+        # check that p_of_all_y_given_phi valid
         check(ge_noise_model_type in {'Gaussian', 'Cauchy', 'SkewedT'},
-              'noise_model = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
+              'p_of_all_y_given_phi = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
               ge_noise_model_type)
 
         number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
@@ -484,9 +484,9 @@ class GlobalEpistasisModelMultipleReplicates:
 
         """
 
-        # check that noise_model valid
+        # check that p_of_all_y_given_phi valid
         check(noise_model in {'Gaussian', 'Cauchy', 'SkewedT'},
-              'noise_model = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
+              'p_of_all_y_given_phi = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
               noise_model)
 
         # If user has not provided custom architecture, implement a default architecture
@@ -609,7 +609,7 @@ class GlobalEpistasisModelMultipleReplicates:
                 # yhat = Dense(1, name='y_hat')(intermediateTensor)
                 #
                 # concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-                # likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
+                # likelihoodClass = globals()[p_of_all_y_given_phi + 'LikelihoodLayer']
                 # outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
 
             # create the model:
@@ -726,7 +726,7 @@ class NoiseAgnosticModel:
         # the following set of attributes are used for
         # gauge fixing the neural network model (x_to_phi and measurement)
         # and are set after the model has been fit to data.
-        self.num_nodes_hidden_measurement_layer = None
+        self.na_hidden_nodes = None
         self.theta_gf = None
         self.na_model = None
 
@@ -844,11 +844,11 @@ class NoiseAgnosticModel:
         #create the model:
         model = Model(inputTensor, outputTensor)
         self.model = model
-        self.num_nodes_hidden_measurement_layer = na_hidden_nodes
+        self.na_hidden_nodes = na_hidden_nodes
         return model
 
-    def noise_model(self,
-                    phi):
+    def p_of_all_y_given_phi(self,
+                             phi):
 
         """
         Method used to evaluate NA noise model.
@@ -883,6 +883,6 @@ class NoiseAgnosticModel:
         na_model = Model(inputs=na_model_input, outputs=next_input)
 
         # compute the value of the nonlinearity for a given phi
-        y_hat = na_model.predict([phi])
+        p_of_dot_given_phi = na_model.predict([phi])
 
-        return y_hat
+        return p_of_dot_given_phi

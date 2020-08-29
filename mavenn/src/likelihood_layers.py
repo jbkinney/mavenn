@@ -223,13 +223,14 @@ class NALikelihoodLayer(tensorflow.keras.layers.Layer):
 
     def call(self, inputs):
 
-        # compute negative ll here
-
         # this is yhat
-        yhat = inputs[:, 0:self.number_bins]
+        p_y_given_phi = inputs[:, 0:self.number_bins]
 
         # these are the labels
-        ytrue = inputs[:, self.number_bins:]
+        c_my = inputs[:, self.number_bins:]
 
-        return tf.nn.log_poisson_loss(ytrue, yhat)
+        # one sum over y, other sum over m
+        return -K.sum(K.sum(c_my * K.log(p_y_given_phi), axis=1), axis=0)
+        #return -K.sum(c_my * K.log(p_y_given_phi))
+
 

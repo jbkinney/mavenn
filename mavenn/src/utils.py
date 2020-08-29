@@ -420,7 +420,7 @@ def na_plots_for_mavenn_demo(loss_history,
                                    ax=ax[1])
 
     # view the inferred noise model as a heatmap
-    # noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
+    # noise_model_heatmap = sns.heatmap(p_of_all_y_given_phi.T, cmap='Greens', ax=ax[2])
     # ax[2].invert_yaxis()
     # ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
     # ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
