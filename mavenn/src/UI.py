@@ -1,14 +1,17 @@
 from mavenn.src.validate import validate_input
 from mavenn.src.error_handling import handle_errors, check
+from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.utils import onehot_encode_array, \
     _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 
 import numpy as np
+import pandas as pd
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
 from mavenn.src.likelihood_layers import *
+
 
 
 @handle_errors
@@ -684,6 +687,10 @@ class NoiseAgnosticModel:
     y: (array-like)
         y represents counts in bins corresponding to the sequences X
 
+    ct_n: (array-like of ints)
+        List N counts, one for each (sequence,bin) pair.
+        If None, a value of 1 will be assumed for all observations
+
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
         allowed: ['dna','rna','protein'].
@@ -705,6 +712,7 @@ class NoiseAgnosticModel:
     def __init__(self,
                  x,
                  y,
+                 ct_n,
                  gpmap_type,
                  alphabet,
                  theta_regularization,
@@ -713,6 +721,7 @@ class NoiseAgnosticModel:
         # set class attributes
         self.x = x
         self.y = y
+        self.ct_n = ct_n
         self.gpmap_type = gpmap_type
         self.alphabet = alphabet
         self.theta_regularization = theta_regularization
@@ -732,6 +741,10 @@ class NoiseAgnosticModel:
 
         # perform input checks to validate attributes
         self._input_checks()
+
+        self.y, self.x = vec_data_to_mat_data(x_n=x,
+                                              y_n=y,
+                                              ct_n=ct_n)
 
         self.x_train, self.y_train = self.x, self.y
 
@@ -785,10 +798,10 @@ class NoiseAgnosticModel:
         """
         Validate parameters passed to the NoiseAgnosticRegression constructor
         """
-        check(isinstance(self.x, (list, np.ndarray)),
+        check(isinstance(self.x, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(X) = %s must be of type list or np.array' % type(self.x))
 
-        check(isinstance(self.y, (list, np.ndarray)),
+        check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
 
         #check(len(self.x) == len(self.y),

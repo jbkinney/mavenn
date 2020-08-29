@@ -87,6 +87,10 @@ class Model:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
+    ct_n: (array-like of ints)
+        For NA regression only. List N counts, one for each (sequence,bin) pair.
+        If None, a value of 1 will be assumed for all observations
+
     """
 
     def __init__(self,
@@ -102,7 +106,8 @@ class Model:
                  na_hidden_nodes=50,
                  theta_regularization=0.01,
                  eta_regularization=0.01,
-                 ohe_batch_size=50000):
+                 ohe_batch_size=50000,
+                 ct_n=None):
 
         # set class attributes
         self.x, self.y = x, y
@@ -117,6 +122,7 @@ class Model:
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
+        self.ct_n = ct_n
 
         # represents GE or NA model object, depending which is chosen.
         # attribute value is set below
@@ -149,6 +155,7 @@ class Model:
 
             self.model = NoiseAgnosticModel(x=self.x,
                                             y=self.y,
+                                            ct_n = self.ct_n,
                                             alphabet=self.alphabet,
                                             gpmap_type=self.gpmap_type,
                                             theta_regularization=self.theta_regularization,
