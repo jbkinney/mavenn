@@ -1745,3 +1745,76 @@ def load(filename, regression_type='GE'):
             loaded_model.get_nn().load_weights(filename + '.h5')
 
             return loaded_model
+
+@handle_errors
+def vec_data_to_mat_data(y_n,
+                         ct_n=None,
+                         x_n=None):
+    """
+
+    Function to transform from vector to matrix format for NA
+    regression and NA model evaluation.
+
+    parameters
+    ----------
+
+    y_n: (array-like of ints)
+        List of N bin numbers y. Must be set by user.
+
+    ct_n: (array-like of ints)
+        List N counts, one for each (sequence,bin) pair.
+        If None, a value of 1 will be assumed for all observations
+
+    x_n: (array-like)
+        List of N sequences. If None, each y_n will be
+        assumed to come from a unique sequence.
+
+    returs
+    ------
+
+    ct_my: (2D array of ints)
+        Matrix of counts.
+
+    x_m: (array)
+        Corresponding list of x-values.
+    """
+
+    # Cast y as array of ints
+    y_n = np.array(y_n).astype(int)
+    N = len(y_n)
+
+    # Cast x as array and get length
+    if x_n is None:
+        x_n = np.arange(N)
+    else:
+        x_n = np.array(x_n)
+        assert len(x_n) == N, f'len(y_n)={len(y_n)} and len(x_n)={N} do not match.'
+
+    # Get ct
+    if ct_n is None:
+        ct_n = np.ones(N).astype(int)
+    else:
+        assert len(ct_n) == N, f'len(ct_n)={len(ct_n)} and len(x_n)={N} do not match.'
+
+    # Create dataframe
+    data_df = pd.DataFrame()
+    data_df['x'] = x_n
+    data_df['y'] = y_n
+    data_df['ct'] = ct_n
+
+    # Pivot dataframe
+    data_df = data_df.pivot(index='x', columns='y', values='ct')
+    data_df = data_df.fillna(0).astype(int)
+
+    # Clean dataframe
+    data_df.reset_index(inplace=True)
+    data_df.columns.name = None
+
+    # Get ct_my values
+    cols = [c for c in data_df.columns if not c in ['x']]
+    ct_my = data_df[cols].values.astype(int)
+
+    # Get x_m values
+    x_m = data_df['x'].values
+
+    return ct_my, x_m
