@@ -1718,28 +1718,37 @@ def load(filename, regression_type='GE'):
 
             load_config = pd.read_csv(filename + '.csv', index_col=[0], keep_default_na=False)
 
+            # single_y = load_config['y'].values[0]
+            # single_y = single_y[1:len(single_y)-2].split('.')
+            # single_y = [int(i) for i in single_y]
+            # single_y = np.array(single_y)
+
             single_y = load_config['y'].values[0]
-            single_y = single_y[1:len(single_y)-2].split('.')
+            single_y = single_y[1:len(single_y) - 1].split(' ')
             single_y = [int(i) for i in single_y]
             single_y = np.array(single_y)
 
             single_x = load_config['x'].values
 
+            single_ct_n = load_config['ct_n'][0]
+            single_ct_n = [int(single_ct_n[1:len(single_ct_n) - 1])]
+
             config_dict = load_config.loc[0].to_dict()
 
             config_dict.pop('x', None)
             config_dict.pop('y', None)
+            config_dict.pop('ct_n', None)
             config_dict.pop('model', None)
             config_dict.pop('define_model', None)
             config_dict.pop('learning_rate', None)
 
             # create object for loaded model
-            loaded_model = mavenn.Model(single_x,
-                                        single_y.reshape(-1, len(single_y)),
+            loaded_model = mavenn.Model(x=single_x,
+                                        y=single_y,
+                                        ct_n=single_ct_n,
                                         **config_dict)
 
             loaded_model.gauge_fix_model()
-
 
             # set weights using a trained model.
             loaded_model.get_nn().load_weights(filename + '.h5')
@@ -1781,20 +1790,26 @@ def vec_data_to_mat_data(y_n,
 
     # Cast y as array of ints
     y_n = np.array(y_n).astype(int)
-    N = len(y_n)
+    N = len(x_n)
 
     # Cast x as array and get length
     if x_n is None:
         x_n = np.arange(N)
     else:
-        x_n = np.array(x_n)
-        assert len(x_n) == N, f'len(y_n)={len(y_n)} and len(x_n)={N} do not match.'
+       x_n = np.array(x_n)
+       #assert len(x_n) == N, f'len(y_n)={len(y_n)} and len(x_n)={N} do not match.'
 
     # Get ct
     if ct_n is None:
         ct_n = np.ones(N).astype(int)
-    else:
-        assert len(ct_n) == N, f'len(ct_n)={len(ct_n)} and len(x_n)={N} do not match.'
+    #else:
+        #assert len(ct_n) == N, f'len(ct_n)={len(ct_n)} and len(x_n)={N} do not match.'
+
+    # This case is only for loading data. Should be tested/made more robust
+    if N == 1:
+        # should do check like check(mavenn.load_model==True,...
+
+        return y_n.reshape(-1, y_n.shape[0]), x_n
 
     # Create dataframe
     data_df = pd.DataFrame()
@@ -1810,8 +1825,11 @@ def vec_data_to_mat_data(y_n,
     data_df.reset_index(inplace=True)
     data_df.columns.name = None
 
+
+
     # Get ct_my values
     cols = [c for c in data_df.columns if not c in ['x']]
+
     ct_my = data_df[cols].values.astype(int)
 
     # Get x_m values

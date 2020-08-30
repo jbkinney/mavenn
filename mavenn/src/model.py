@@ -152,7 +152,6 @@ class Model:
 
         elif regression_type == 'NA':
 
-
             self.model = NoiseAgnosticModel(x=self.x,
                                             y=self.y,
                                             ct_n = self.ct_n,
@@ -1321,14 +1320,19 @@ class Model:
 
             # store a single example
             single_x = NAR_dict['x'][0]
-            single_y = NAR_dict['y'][0]
+            #single_y = [NAR_dict['y'][0]]
+            single_y = self.model.y_train[0]
+
+            single_ct = [NAR_dict['ct_n'][0]]
 
             # remove training data ...
             NAR_dict.pop('x', None)
             NAR_dict.pop('y', None)
+            NAR_dict.pop('ct_n', None)
 
             # and replace with single examples for quick loading
             NAR_dict['x'] = single_x
             NAR_dict['y'] = [single_y]
+            NAR_dict['ct_n'] = [single_ct]
 
             pd.DataFrame(NAR_dict, index=[0]).to_csv(filename + '.csv')
