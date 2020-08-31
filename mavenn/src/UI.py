@@ -40,7 +40,7 @@ class GlobalEpistasisModel:
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to use a monotonicity constraint in GE regression.
-        This variable has no effect for NA regression.
+        This variable has no effect for MPA regression.
 
     ge_heteroskedasticity_order: (int)
         Order of the exponentiated polynomials used to make noise model parameters
@@ -671,10 +671,10 @@ class GlobalEpistasisModelMultipleReplicates:
         return y_hat
 
 
-class NoiseAgnosticModel:
+class MeasurementProcessAgnosticModel:
 
     """
-    Class that implements Noise agnostic regression.
+    Class that implements Measurement process agnostic regression.
 
 
     attributes
@@ -852,7 +852,7 @@ class NoiseAgnosticModel:
         yhat = Dense(np.shape(self.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
 
         concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-        outputTensor = NALikelihoodLayer(number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
+        outputTensor = MPALikelihoodLayer(number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
 
         #create the model:
         model = Model(inputTensor, outputTensor)
@@ -864,19 +864,19 @@ class NoiseAgnosticModel:
                              phi):
 
         """
-        Method used to evaluate NA noise model.
+        Method used to evaluate MPA noise model.
 
         parameters
         ----------
 
         phi: (float)
-            Latent phenotype value(s) on which the NA noise model
+            Latent phenotype value(s) on which the MPA noise model
             wil be evaluated.
 
         returns
         -------
         pi: (array-like)
-            The nonlinear NA function evaluated for input phi.
+            The nonlinear MPA function evaluated for input phi.
 
         """
 

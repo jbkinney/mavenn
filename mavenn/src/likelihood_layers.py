@@ -200,7 +200,7 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
         return -log_likelihood
 
 
-class NALikelihoodLayer(tensorflow.keras.layers.Layer):
+class MPALikelihoodLayer(tensorflow.keras.layers.Layer):
     """
     Inputs consit of y and y_hat -> they are contained in a single array called inputs
     Outputs consist of negative log likelihood values.
@@ -210,7 +210,7 @@ class NALikelihoodLayer(tensorflow.keras.layers.Layer):
     def __init__(self, number_bins, **kwargs):
 
         self.number_bins = number_bins
-        super(NALikelihoodLayer, self).__init__(**kwargs)
+        super(MPALikelihoodLayer, self).__init__(**kwargs)
 
     def get_config(self):
 
