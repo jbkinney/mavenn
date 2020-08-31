@@ -662,7 +662,7 @@ class Model:
                                        epochs=epochs,
                                        verbose=verbose,
                                        callbacks=callbacks,
-                                       **fit_kwargs,
+                                       #**fit_kwargs,
                                        )
 
         # gauge fix model after fitting
