@@ -632,10 +632,12 @@ class Model:
         """
 
         self.learning_rate = learning_rate
+
+        # removing compiler kwargs temporarily to debug RTD issues.
         self._compile_model(optimizer=optimizer,
                            lr=self.learning_rate,
-                           **optimizer_kwargs,
-                           **compile_kwargs)
+                           **optimizer_kwargs)
+                           #**compile_kwargs)
 
         if early_stopping:
             callbacks += [tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
