@@ -6,7 +6,7 @@ from mavenn.src.utils import onehot_encode_array, \
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
-from mavenn.src.utils import mi_continuous
+from mavenn.src.utils import mi_continuous, mi_mixed
 
 import tensorflow as tf
 import tensorflow.keras
@@ -976,9 +976,8 @@ class Model:
     def I_predictive(self,
                      x,
                      y,
-                     y_format=None,
                      knn=5,
-                     uncertainty=False,
+                     uncertainty=True,
                      num_subsamples=25,
                      use_LNC=False,
                      alpha_LNC=.5,
@@ -1000,11 +999,6 @@ class Model:
             one for each x. If y_format="matrix", y should be a
             MxY matrix, where M=len(x) and Y is the number of possible
             values for Y.
-
-        y_format: (string)
-            Must be either "list" or "matrix": "list" represents a list
-            of discrete y values, while "matrix" represents a matrix of
-            counts in bins
 
         knn: (int>0)
             Number of nearest neighbors to use in the KSG estimator.
@@ -1033,98 +1027,35 @@ class Model:
         returns
         -------
 
-        I: (float)
-            Mutual information estimate in bits
-
-        dI: (float >= 0)
-            Uncertainty estimate in bits. Zero if uncertainty=False is set.
+        (I, dI): (float, float)
+            I = Mutual information estimate in bits.
+            dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
             Not returned if uncertainty=False is set.
 
         """
 
-        '''
-        phi = x_to_phi(x)
-        if regression_type is GE:
-             return mi_continuous(phi,y, knn)
-        elif regression_type is NA:
-            y (a matrix) -> y_list
-            
-            E.g. 
-            x = [seq_1, seq_2]  
-            y = [
-                 [2,0],
-                 [1,1]
-                 ]         
-            
-            1. x_to_phi(x) -> phi=[phi_1, phi_2]
-            2. phi->phi_list = [phi_1, phi_1, phi_2, phi_2]
-            
-            3. y -> y_list = [0, 0, 0, 1]
-            
-            return mi_mixed(phi_list,y_list, knn)
-        '''
         if self.regression_type=='GE':
-            return mi_continuous(self.x_to_phi(x), y, knn=5)
+            return mi_continuous(self.x_to_phi(x),
+                                 y,
+                                 knn=knn,
+                                 uncertainty=uncertainty,
+                                 use_LNC=use_LNC,
+                                 alpha_LNC=alpha_LNC,
+                                 verbose=verbose)
 
         elif self.regression_type=='NA':
 
-            # TODO: needs to be implemented with correct y_format
-            pass
+            phi = self.x_to_phi(x)
 
+            # The format of y needs to be integer bin numbers, like the input to mavenn
+            # for NA regression
 
-    ## 20.08.24 CONTINUE HERE TOMORROW ##
-
-    # def estimate_predictive_info(self,
-    #                              sequences,
-    #                              bin_counts):
-    #
-    #     """
-    #     Method used to estimate the predictive information, or the
-    #     mutual information I[y;yhat].
-    #
-    #     parameters
-    #     ----------
-    #
-    #     sequences: (array-like of str)
-    #         Sequence inputs representing DNA, RNA, or protein (whichever
-    #         type of sequence the model was trained on). Input can must be
-    #         an array of str, all the proper length.
-    #
-    #     bin_counts: (array-like)
-    #         y represents counts in bins corresponding to the sequences X
-    #
-    #     returns
-    #     -------
-    #
-    #     I_y_yhat: (float)
-    #         Mutual information between y and y_hat
-    #
-    #     """
-    #
-    #     # compute the latent trait
-    #     phi = self.x_to_phi(sequences)
-    #
-    #     p_of_b_given_phi = self.na_noisemodel(phi) # TODO: this is renamed na_p_of_ally_given_phi()
-    #
-    #     MI = 0
-    #
-    #     # M is total counts
-    #     M = np.sum(bin_counts)
-    #
-    #     # This is p(b), but need to double check
-    #     # i.e. fraciton of counts in bin i
-    #     p_of_b = np.sum(bin_counts, axis=0) / M
-    #
-    #     for sequence_index in range(len(sequences)):
-    #
-    #         # from manuscript "Additionally, we approximate p(y| phi) by the inferred noise model pi of y given phi"
-    #         # compute p_of_bin_given_phi
-    #         p_of_b_given_phi_i = p_of_b_given_phi[sequence_index]
-    #
-    #
-    #         # MI summand summed over b
-    #         MI += np.sum(bin_counts[sequence_index] * np.log2((p_of_b_given_phi_i / p_of_b)))
-    #     print(MI / M)
+            return mi_mixed(phi,
+                            y,
+                            knn=knn,
+                            uncertainty=uncertainty,
+                            num_subsamples=num_subsamples,
+                            verbose=verbose)
 
     def yhat_to_yq(self,
                    yhat,
