@@ -1,0 +1,2 @@
+,x,y,alphabet,regression_type,gpmap_type,ge_nonlinearity_monotonic,ge_nonlinearity_hidden_nodes,ge_noise_model_type,ge_heteroskedasticity_order,na_hidden_nodes,theta_regularization,eta_regularization,ohe_batch_size,model,define_model,learning_rate
+0,QYKLILNGKFLKGETTTIAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE,-0.404259245,protein,GE,additive,TRUE,20,Gaussian,2,50,0.01,0.01,200000,<mavenn.src.UI.GlobalEpistasisModel object at 0x10647f198>,<tensorflow.python.keras.engine.training.Model object at 0x12a29ecc0>,0.005
