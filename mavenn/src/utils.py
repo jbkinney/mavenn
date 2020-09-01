@@ -376,7 +376,7 @@ def na_plots_for_mavenn_demo(loss_history,
     """
 
     Helper function that plots inferred additive parameters,
-    losses and the NA noise model for mavenn's demo functions
+    losses and the MPA noise model for mavenn's demo functions
 
     parameters
     ----------
@@ -384,7 +384,7 @@ def na_plots_for_mavenn_demo(loss_history,
         arrays containing loss values
 
     NAR: (NoiseAgnosticModel object)
-        trained NA model from which additive parameters
+        trained MPA model from which additive parameters
         will be extracted and plotted as a sequence logo
 
     noise_model: (array-like)
@@ -1664,7 +1664,7 @@ def mi_continuous(x,
     return I, dI
 
 
-def load(filename, regression_type='GE'):
+def load(filename):
 
         """
         Method that will load a mave-nn model
@@ -1681,10 +1681,13 @@ def load(filename, regression_type='GE'):
 
         """
 
+        load_config = pd.read_csv(filename + '.csv', index_col=[0])
+        regression_type = load_config['regression_type'].values[0]
+
         if regression_type=='GE':
             # load configuration file
 
-            #check(regression_type == 'NA', 'please set regression type to GE')
+            #check(regression_type == 'MPA', 'please set regression type to GE')
 
             load_config = pd.read_csv(filename+'.csv', index_col=[0])
 
@@ -1714,7 +1717,7 @@ def load(filename, regression_type='GE'):
 
             return loaded_model
         else:
-            #heck(regression_type=='GE', 'please set regression type to NA')
+            #heck(regression_type=='GE', 'please set regression type to MPA')
 
             load_config = pd.read_csv(filename + '.csv', index_col=[0], keep_default_na=False)
 
@@ -1761,8 +1764,8 @@ def vec_data_to_mat_data(y_n,
                          x_n=None):
     """
 
-    Function to transform from vector to matrix format for NA
-    regression and NA model evaluation.
+    Function to transform from vector to matrix format for MPA
+    regression and MPA model evaluation.
 
     parameters
     ----------

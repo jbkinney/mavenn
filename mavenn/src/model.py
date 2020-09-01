@@ -1,5 +1,5 @@
 from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.UI import GlobalEpistasisModel, NoiseAgnosticModel
+from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
 from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
 from mavenn.src.utils import onehot_encode_array, \
     _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
@@ -28,7 +28,7 @@ class Model:
     Mavenn's model class that lets the user choose either
     global epistasis regression or noise agnostic regression
 
-    If regerssion_type == 'NA', than ge_* parameters are not used.
+    If regerssion_type == 'MPA', than ge_* parameters are not used.
 
 
     attributes
@@ -48,7 +48,7 @@ class Model:
 
     regression_type: (str)
         variable that choose type of regression, valid options
-        include 'GE', 'NA'
+        include 'GE', 'MPA'
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
@@ -56,7 +56,7 @@ class Model:
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to use a monotonicity constraint in GE regression.
-        This variable has no effect for NA regression.
+        This variable has no effect for MPA regression.
 
     ge_nonlinearity_hidden_nodes:
         Number of hidden nodes (i.e. sigmoidal contributions) to use in the
@@ -73,7 +73,7 @@ class Model:
 
     na_hidden_nodes:
         Number of hidden nodes (i.e. sigmoidal contributions) to use in the
-        definition of the NA measurement process.
+        definition of the MPA measurement process.
 
     theta_regularization: (float >= 0)
         Regularization strength for G-P map parameters $\theta$.
@@ -88,7 +88,7 @@ class Model:
         if its too large. Currently for additive models only.
 
     ct_n: (array-like of ints)
-        For NA regression only. List N counts, one for each (sequence,bin) pair.
+        For MPA regression only. List N counts, one for each (sequence,bin) pair.
         If None, a value of 1 will be assumed for all observations
 
     """
@@ -124,13 +124,13 @@ class Model:
         self.ohe_batch_size = ohe_batch_size
         self.ct_n = ct_n
 
-        # represents GE or NA model object, depending which is chosen.
+        # represents GE or MPA model object, depending which is chosen.
         # attribute value is set below
         self.model = None
 
         # check that regression_type is valid
-        check(self.regression_type in {'NA', 'GE'},
-              'regression_type = %s; must be "NA", or  "GE"' %
+        check(self.regression_type in {'MPA', 'GE'},
+              'regression_type = %s; must be "MPA", or  "GE"' %
               self.gpmap_type)
 
         # choose model based on regression_type
@@ -150,15 +150,15 @@ class Model:
                                                         ge_nonlinearity_hidden_nodes=
                                                         self.ge_nonlinearity_hidden_nodes)
 
-        elif regression_type == 'NA':
+        elif regression_type == 'MPA':
 
-            self.model = NoiseAgnosticModel(x=self.x,
-                                            y=self.y,
-                                            ct_n = self.ct_n,
-                                            alphabet=self.alphabet,
-                                            gpmap_type=self.gpmap_type,
-                                            theta_regularization=self.theta_regularization,
-                                            ohe_batch_size=self.ohe_batch_size)
+            self.model = MeasurementProcessAgnosticModel(x=self.x,
+                                                         y=self.y,
+                                                         ct_n = self.ct_n,
+                                                         alphabet=self.alphabet,
+                                                         gpmap_type=self.gpmap_type,
+                                                         theta_regularization=self.theta_regularization,
+                                                         ohe_batch_size=self.ohe_batch_size)
 
             self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
 
@@ -269,7 +269,7 @@ class Model:
             # sequence to latent phenotype
             #phi = Dense(1, name='phi')(sequence_input)
 
-        elif self.regression_type == 'NA':
+        elif self.regression_type == 'MPA':
 
             number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
             inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
@@ -354,7 +354,7 @@ class Model:
                 likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
                 outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
 
-        elif self.regression_type == 'NA':
+        elif self.regression_type == 'MPA':
 
             #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
             #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
@@ -363,7 +363,7 @@ class Model:
             yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
 
             concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
+            outputTensor = MPALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
 
 
         # create the gauge-fixed model:
@@ -484,7 +484,7 @@ class Model:
                 lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
                 output_shape=((1,)), trainable=False)(inputTensor)
 
-        elif self.regression_type == 'NA':
+        elif self.regression_type == 'MPA':
 
             number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
             inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
@@ -532,7 +532,7 @@ class Model:
                 likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
                 outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
 
-        elif self.regression_type == 'NA':
+        elif self.regression_type == 'MPA':
 
             #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
             #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
@@ -541,7 +541,7 @@ class Model:
             yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
 
             concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-            outputTensor = NALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
+            outputTensor = MPALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
 
 
         # create the gauge-fixed model:
@@ -850,7 +850,7 @@ class Model:
                       compile_kwargs={}):
         """
         This method will compile the model created in the constructor. The loss used will be
-        log_poisson_loss for NA regression, or mean_squared_error for GE regression
+        log_poisson_loss for MPA regression, or mean_squared_error for GE regression
 
         parameters
         ----------
@@ -882,7 +882,7 @@ class Model:
                                      optimizer=optimizer(lr=lr, **optimizer_kwargs),
                                      **compile_kwargs)
 
-        elif self.regression_type == 'NA':
+        elif self.regression_type == 'MPA':
 
 
             def likelihood_loss(y_true, y_pred):
@@ -1045,12 +1045,12 @@ class Model:
                                  alpha_LNC=alpha_LNC,
                                  verbose=verbose)
 
-        elif self.regression_type=='NA':
+        elif self.regression_type=='MPA':
 
             phi = self.x_to_phi(x)
 
             # The format of y needs to be integer bin numbers, like the input to mavenn
-            # for NA regression
+            # for MPA regression
 
             return mi_mixed(phi,
                             y,
@@ -1086,11 +1086,11 @@ class Model:
                          phi):
 
         """
-        Method that computes the p(y|phi) for both GE and NA regression.
+        Method that computes the p(y|phi) for both GE and MPA regression.
 
-        y: (float (GE) or int (NA))
+        y: (float (GE) or int (MPA))
             Specifies continuous target value for GE regression or an integer
-            specifying bin number for NA regression.
+            specifying bin number for MPA regression.
 
         phi: (float)
             Latent phenotype on which probability is conditioned.
@@ -1102,7 +1102,7 @@ class Model:
 
         """
 
-        if self.regression_type == 'NA':
+        if self.regression_type == 'MPA':
 
             # check that entered y (specifying bin number) is an integer
             check(isinstance(y, int),
@@ -1156,7 +1156,7 @@ class Model:
                              phi):
 
         """
-        Evaluate the NA measurement process at specified values of phi (the latent phenotype).
+        Evaluate the MPA measurement process at specified values of phi (the latent phenotype).
 
         parameters
         ----------
@@ -1172,7 +1172,7 @@ class Model:
 
         """
 
-        check(self.regression_type == 'NA', 'regression type must be "NA" for this function ')
+        check(self.regression_type == 'MPA', 'regression type must be "MPA" for this function ')
 
         p_of_dot_given_phi = self.model.p_of_all_y_given_phi(phi)
 
@@ -1210,7 +1210,7 @@ class Model:
             p_of_y_given_x = ge_noise_model.p_of_y_given_yhat(y, yhat)
             return p_of_y_given_x
 
-        elif self.regression_type=='NA':
+        elif self.regression_type=='MPA':
 
             # check that entered y (specifying bin number) is an integer
             check(isinstance(y, int),
