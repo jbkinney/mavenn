@@ -5,7 +5,8 @@ sys.path.insert(0, '../../')
 import mavenn
 
 from mavenn.src.utils import get_example_dataset
-
+from mavenn.src.validate import validate_alphabet
+from mavenn.src.utils import get_1pt_variants
 
 import numpy as np
 import pandas as pd
@@ -122,6 +123,84 @@ def test_parameter_values(func,
     plt.close('all')
 
 
+def test_validate_alphabet():
+    """ 20.09.10 JBK """
+
+    # Tests that should pass
+    success_list = [
+        'dna',
+        'rna',
+        'protein',
+        'protein*',
+        np.array(['A', 'B', 'C']),
+        {'A', 'B', 'C'},
+        ['A', 'B', 'C'],
+        pd.Series(['A', 'B', 'C'])
+    ]
+
+    # Tests that should fail
+    fail_list = [
+        'xna',
+        'protein-',
+        ['A','B','A'],
+        [],
+        {'A':5},
+        np.array([['A','B'],['C','D']]),
+        np.arange(5),
+        pd.Series([])
+    ]
+
+    # Run tests of validate_alphabet
+    test_parameter_values(func=validate_alphabet,
+                          var_name='alphabet',
+                          fail_list=fail_list,
+                          success_list=success_list)
+
+def test_get_1pt_variants():
+    """20.09.01 JBK"""
+
+    # Tests with alphabet='protein'
+    test_parameter_values(func=get_1pt_variants,
+                          var_name='wt_seq',
+                          success_list=['QYKL'],
+                          fail_list=['ACGU', 'QYKL*', '',
+                                     0, ['A', 'C', 'G', 'T']],
+                          alphabet='protein')
+
+    # Tests with wt_seq='QYKL'
+    test_parameter_values(func=get_1pt_variants,
+                          var_name='alphabet',
+                          success_list=['protein','protein*',
+                                        ['Q', 'Y', 'K', 'L']],
+                          fail_list=['dna','rna','ACGU','',0,
+                                     ['Q', 'Y', 'K'], ['A', 'C', 'G', 'T']],
+                          wt_seq='QYKL')
+
+    # Test include_wt
+    test_parameter_values(func=get_1pt_variants,
+                          var_name='include_wt',
+                          success_list=[True, False],
+                          fail_list=[0, None],
+                          wt_seq='QYKL', alphabet='protein')
+
+    # Singleton tests
+    test_parameter_values(func=get_1pt_variants,
+                          var_name='wt_seq',
+                          success_list=['ACGT'],
+                          fail_list=['ACGU'],
+                          alphabet='dna')
+    test_parameter_values(func=get_1pt_variants,
+                          var_name='wt_seq',
+                          success_list=['ACGU'],
+                          fail_list=['ACGT'],
+                          alphabet='rna')
+    test_parameter_values(func=get_1pt_variants,
+                          var_name='wt_seq',
+                          success_list=['QYKL*', 'QYKL'],
+                          fail_list=['ACGU'],
+                          alphabet='protein*')
+
+
 def test_GlobalEpistasisModel():
 
     # load MPSA dataset for testing
@@ -207,3 +286,6 @@ def run_tests():
 
     test_GlobalEpistasisModel()
     test_NoiseAgnosticModel()
+
+    # Tests mavenn.src.validate.validate_alphabet()
+    test_validate_alphabet()

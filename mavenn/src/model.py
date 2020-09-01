@@ -20,6 +20,7 @@ import tensorflow.keras.backend as K
 import pandas as pd
 import numpy as np
 
+from mavenn.src.utils import get_1pt_variants
 
 @handle_errors
 class Model:
@@ -1269,3 +1270,59 @@ class Model:
             NAR_dict['ct_n'] = [single_ct]
 
             pd.DataFrame(NAR_dict, index=[0]).to_csv(filename + '.csv')
+
+    @handle_errors
+    def get_1pt_effects(self, wt_seq, out_format="matrix"):
+        """
+
+        parameters
+        ----------
+
+        model: (mavenn.Model)
+            A MAVE-NN model.
+
+        wt_seq: (str)
+            The wild-type sequence.
+
+        out_format: ("matrix" or "tidy")
+            If matrix, a 2D matrix of dphi values is
+            returned, with characters across columns and
+            positions across rows. If "tidy", a tidy
+            dataframe is returned that additionally lists
+            all variant sequences, phi values, etc.
+
+        returns
+        -------
+
+        out_df: (pd.DataFrame)
+            Dataframe containing dphi values and other
+            information.
+        """
+
+        # Get all 1pt variant sequences
+        df = get_1pt_variants(wt_seq=wt_seq, alphabet=self.alphabet,
+                              include_wt=True)
+        x = df['seq'].values
+
+        # Compute dphi values
+        df['phi'] = self.x_to_phi(x)
+        df['dphi'] = df['phi'] - df['phi']['WT']
+
+        if out_format == "tidy":
+            mut_df = df
+        elif out_format == "matrix":
+            # Keep only non-wt rows
+            ix = (df.index != 'WT')
+            tmp_df = df[ix]
+
+            # Pivot matrix and return
+            mut_df = tmp_df.pivot(index='pos', columns='mut_char',
+                                  values='dphi')
+            mut_df.fillna(0, inplace=True)
+            mut_df.columns.name = None
+        else:
+            mut_df = None
+            check(out_format in ["tidy", "matrix"],
+                  f"out_format={out_format}; must be 'tidy' or 'matrix'.")
+
+        return mut_df
