@@ -21,6 +21,268 @@ from scipy.stats import cauchy
 from mavenn.src import entropy_estimators as ee
 from scipy.special import erfinv
 
+# Needed for get_1p_variants
+from mavenn.src.validate import validate_alphabet
+
+# Special import needed for heatmap
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.colors import DivergingNorm, Normalize
+
+
+@handle_errors
+def heatmap(df,
+            wt_seq=None,
+            wt_at_zero=True,
+            ax=None,
+            cbar=True,
+            cax=None,
+            clim=None,
+            clim_quantile=.95,
+            ccenter=0,
+            cmap='coolwarm',
+            cmap_size="5%",
+            cmap_pad=0.1):
+    """
+    Draws a heatmap illustrating a matrix of parameters.
+
+    parameters
+    ----------
+
+    df: (pd.DataFrame)
+        A matrix specifying additive parameter values.
+        Rows correspond to positions while columns correspond
+        to characters. Column names must be single
+        characters and row indices must be integers.
+
+    wt_seq: (str)
+        The wild-type sequence. Must have length len(df)
+        and be comprised of characters in df.columns.
+
+    wt_at_zero: (bool)
+        Whether to subtract values from each row in df so that
+        the wild-type character at each position has
+        effect zero. This is common in heatmap representations
+        of DMS experiments.
+
+    ax: (matplotlib.axes.Axes)
+        The Axes object on which the heatmap will be drawn.
+        If None, one will be created. If specified, cbar=True,
+        and cax=None, ax will be split in two to make room for
+        colorbar.
+
+    cbar: (bool)
+        Whether to draw a colorbar.
+
+    cax: (matplotlib.axes.Axes)
+        The Axes object on which the colorbar will be drawn
+        if requested. If None, one will be created by splitting
+        ax in two according to cmap_size and cmpa_pad.
+
+    clim: (array of form [cmin, cmax])
+        Optional specification of the maximum and minimum effect
+        values spanned by the colormap. Overrides clim_quantile.
+
+    clim_quantile: (float in [0,1])
+        If set, clim will automatically chosen to include the specified
+        fraction of effect sizes.
+
+    ccenter: (float)
+        The effect value at which to position the center of a diverging
+        colormap. A value of ccenter=0 often makes sense, especially if
+        using wt_at_zero=True.
+
+    cmap: (str or matplotlib.colors.Colormap)
+        Colormap to use.
+
+    cmap_size: (str)
+        Specifies the fraction of ax width used for colorbar.
+        See documentation for
+            mpl_toolkits.axes_grid1.make_axes_locatable().
+
+    cmap_pad: (float)
+        Specifies space between colorbar and shrunken ax.
+        See documentation for
+            mpl_toolkits.axes_grid1.make_axes_locatable().
+
+    returns
+    -------
+
+    ax: (matplotlib.axes.Axes)
+        Axes containing the heatmap.
+
+    cb: (matplotlib.colorbar.Colorbar)
+        Colorbar object linked to Axes.
+    """
+
+    # Flip
+    df = df.loc[:, ::-1]
+
+    # If wt_seq is set
+    if wt_seq:
+
+        # Verify wt_seq is valid
+        assert isinstance(wt_seq,
+                          str), f'type(wt_seq)={type(wt_seq)} is not str.'
+
+        # Verify wt_seq is composed of valid characters
+        wt_seq_set = set(wt_seq)
+        char_set = set(df.columns)
+        assert wt_seq_set <= char_set, f'wt_seq contains the following invalid characters: {wt_seq_set - char_set}'
+
+        # If using the wt gauge
+        if wt_at_zero:
+            for i, c_i in enumerate(wt_seq):
+                df.loc[i, :] = df.loc[i, :] - df.loc[i, c_i]
+            if ccenter is None:
+                ccenter = 0
+
+    # Set color lims to central 95% quantile
+    if clim is None:
+        vals = df.values.ravel()
+        clim = np.quantile(vals, q=[(1 - clim_quantile) / 2,
+                                    1 - (1 - clim_quantile) / 2])
+
+    # Create axis if none already exists
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
+
+    # Set extent
+    Y = df.shape[1]
+    L = df.shape[0]
+    xlim = [-.5, L - .5]
+    ylim = [-.5, Y - .5]
+
+    # Needed to center colorbar at zero
+    if ccenter is not None:
+        norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
+    else:
+        norm = Normalize(vmin=clim[0], vmax=clim[1])
+
+    # Plot GB1 heatmap
+    x_edges = np.arange(L + 1) - .5
+    y_edges = np.arange(Y + 1) - .5
+    im = ax.pcolormesh(x_edges,
+                       y_edges,
+                       df.T,
+                       shading='flat',
+                       cmap=cmap,
+                       clim=clim,
+                       norm=norm)
+
+    # Mark wt sequence
+    if wt_seq:
+        aas = list(df.columns)
+        for x, aa in enumerate(wt_seq):
+            y = aas.index(aa)
+            ax.plot(x, y, '.k', markersize=2)
+
+    # Style plot
+    ax.set_ylim(ylim)
+    ax.set_xlim(xlim)
+    ax.set_yticks(range(Y))
+    ax.set_yticklabels(df.columns, ha='center')
+
+    # Create colorbar if requested, make one
+    if cbar:
+        if cax is None:
+            cax = make_axes_locatable(ax).new_horizontal(size=cmap_size,
+                                                         pad=cmap_pad)
+            fig.add_axes(cax)
+        cb = plt.colorbar(im, cax=cax)
+
+        # Otherwise, return None for cb
+    else:
+        cb = None
+
+    return ax, cb
+
+
+@handle_errors
+def get_1pt_variants(wt_seq, alphabet, include_wt=True):
+    """
+    Returns a list of all single-point mutants of a given wilde-type sequence.
+
+    parameters
+    ----------
+        wt_seq: (str)
+            The wild-type sequence. Must comprise characters from alphabet.
+
+        alphabet: (str, array-like)
+            The alphabet (name or list of characters) to use for mutations.
+
+        include_wt: (bool)
+            Whether to include the wild-type sequence in the output.
+
+    returns
+    -------
+
+        out_df: (pd.DataFrame)
+            A dataframe listing each variant sequence along with its name,
+            the position mutated, the wild-type character at that position,
+            and the mutant character at that position. Characters ' ' and
+            a position of -1 is used for the wild-type sequence if
+            include_wt is True.
+    """
+
+    # Check that wt_seq is a string
+    check(isinstance(wt_seq, str),
+          f'wt_seq must be a string; is of type {type(wt_seq)}')
+    L = len(wt_seq)
+
+    # Check that include_wt is bool
+    check(isinstance(include_wt, bool),
+          f'type(include_wt)={type(include_wt)}; must be bool.')
+
+    # Check length
+    check(L >= 1,
+          f'len(wt_seq)={L}; must be >= 1.')
+
+    # Create a list of all single-point variants of wt sequence
+    alphabet = validate_alphabet(alphabet)
+    C = len(alphabet)
+
+    # Make sure wt_seq comprises alphabet
+    seq_set = set(list(wt_seq))
+    alphabet_set = set(alphabet)
+    check(seq_set <= alphabet_set,
+          f"wt_seq={wt_seq} contains the invalid characters {seq_set-alphabet_set}")
+
+    # Create a list of seqs with all single amino acid changes at all positions
+    pos = np.arange(L).astype(int)
+    cs = list(np.tile(np.reshape(alphabet, [1, C]), [L, 1]).ravel())
+    ls = list(np.tile(np.reshape(pos, [L, 1]), [1, C]).ravel())
+    cs_wt = [wt_seq[l] for c, l in zip(cs, ls)]
+    seqs = [wt_seq[:l] + c + wt_seq[l + 1:] for c, l in zip(cs, ls)]
+    names = [wt_seq[l] + str(l) + c for c, l in zip(cs, ls)]
+    ix = [wt_seq[l] != c for c, l in zip(cs, ls)]
+
+    # Include wt if requested
+    if include_wt:
+        names = ['WT'] + names
+        cs_wt = [' '] + cs_wt
+        cs = [' '] + cs
+        ls = [-1] + ls
+        seqs = [wt_seq] + seqs
+        ix = [True] + ix
+
+    # Report results in the form of a dataframe
+    out_df = pd.DataFrame()
+    out_df['name'] = names
+    out_df['pos'] = ls
+    out_df['wt_char'] = cs_wt
+    out_df['mut_char'] = cs
+    out_df['seq'] = seqs
+
+    # Remove sequences identical to wt
+    out_df = out_df[ix]
+    out_df.set_index('name', inplace=True)
+
+    # Return seqs
+    return out_df
+
+
 @handle_errors
 def onehot_sequence(sequence, bases):
 

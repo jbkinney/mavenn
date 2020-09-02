@@ -289,3 +289,6 @@ def run_tests():
 
     # Tests mavenn.src.validate.validate_alphabet()
     test_validate_alphabet()
+
+    # Tests mavenn.src.utils.get_1pt_variants()
+    test_get_1pt_variants()
