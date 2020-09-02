@@ -1004,10 +1004,7 @@ class SkewedTNoiseModel:
 
     def p_of_y_given_phi(self,
                          y,
-                         phi,
-                         y_scale,
-                         a,
-                         b):
+                         phi):
         """
         parameters
         ----------
@@ -1021,7 +1018,7 @@ class SkewedTNoiseModel:
         """
 
         y_hat_of_phi = self.model.phi_to_yhat(phi)
-        return self.p_of_y_given_yhat(y, y_hat_of_phi, y_scale, a, b)
+        return self.p_of_y_given_yhat(y, y_hat_of_phi)
 
     def p_mean_std(self, y_mode, y_scale, a, b):
         y_mean = self.t_mean(a, b) * y_scale + y_mode
@@ -1734,7 +1731,7 @@ def load(filename):
             single_x = load_config['x'].values
 
             single_ct_n = load_config['ct_n'][0]
-            single_ct_n = [int(single_ct_n[1:len(single_ct_n) - 1])]
+            single_ct_n = [int(float(single_ct_n[1:len(single_ct_n) - 1]))]
 
             config_dict = load_config.loc[0].to_dict()
 
