@@ -201,13 +201,14 @@ def test_get_1pt_variants():
                           alphabet='protein*')
 
 
+
 def test_GlobalEpistasisModel():
 
     # load MPSA dataset for testing
-    X, y = get_example_dataset()
+    x, y = get_example_dataset()
 
     # sequences arrays that fail when entered into mavenn.
-    bad_X = 'x'
+    bad_x = 'x'
 
     # could possibly check if all elements are numeric
     # but that could slow things down
@@ -215,29 +216,61 @@ def test_GlobalEpistasisModel():
     # also could check for nan's like np.isnan(bad_y).all()
 
     # test sequences parameter X
-    test_parameter_values(func=mavenn.Model, var_name='X', fail_list=[bad_X], success_list=[X],
-                          model_type='additive', y=y, regression_type='GE', alphabet_dict='rna')
+    test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_x], success_list=[x],
+                          gpmap_type='additive', y=y, regression_type='GE', alphabet='rna')
 
     # test labels parameter y
     test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-                          model_type='additive', X=X, regression_type='GE', alphabet_dict='rna')
+                          gpmap_type='additive', x=x, regression_type='GE', alphabet='rna')
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['GE'],
-                          model_type='additive', X=X, y=y, alphabet_dict='rna')
+                          gpmap_type='additive', x=x, y=y, alphabet='rna')
 
-    # test labels parameter model_type
-    test_parameter_values(func=mavenn.Model, var_name='model_type', fail_list=['standard'],
+    # test labels parameter ge_nonlinearity_monotonic
+    test_parameter_values(func=mavenn.Model, var_name='ge_nonlinearity_monotonic', fail_list=['True', -1],
+                          success_list=[True,False], regression_type='GE',
+                          gpmap_type='additive', x=x, y=y, alphabet='rna')
+
+    # test labels parameter ge_nonlinearity_hidden_nodes
+    test_parameter_values(func=mavenn.Model, var_name='ge_nonlinearity_hidden_nodes', fail_list=[0.6,-1,0],
+                          success_list=[1,10,100],  regression_type='GE',
+                          gpmap_type='additive', x=x, y=y, alphabet='rna')
+
+    # test labels parameter gpmap_type
+    test_parameter_values(func=mavenn.Model, var_name='gpmap_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
-                          regression_type='GE', X=X, y=y, alphabet_dict='rna')
+                          regression_type='GE', x=x, y=y, alphabet='rna')
 
+    # test labels parameter ge_heteroskedasticity_order
+    test_parameter_values(func=mavenn.Model, var_name='ge_heteroskedasticity_order', fail_list=['0', 0.1, -1],
+                          success_list=[0, 1, 10], gpmap_type='additive',
+                          regression_type='GE', x=x, y=y, alphabet='rna')
+
+    # test labels parameter theta_regularization
+    test_parameter_values(func=mavenn.Model, var_name='theta_regularization', fail_list=['0', -1, -0.1],
+                          success_list=[0, 0.1, 10], gpmap_type='additive',
+                          regression_type='GE', x=x, y=y, alphabet='rna')
+
+    # test labels parameter eta_regularization
+    test_parameter_values(func=mavenn.Model, var_name='eta_regularization', fail_list=['0', -1, -0.1],
+                          success_list=[0, 0.1, 10], gpmap_type='additive',
+                          regression_type='GE', x=x, y=y, alphabet='rna')
+
+    # test labels parameter ohe_batch_size
+    test_parameter_values(func=mavenn.Model, var_name='ohe_batch_size', fail_list=['0', -1, -0.1, 0],
+                          success_list=[20000], gpmap_type='additive',
+                          regression_type='GE', x=x, y=y, alphabet='rna')
+
+
+    '''
     # TODO: need to implement alphabet_dict checks in UI for GE and NA.
     # the following needs to be fixed in UI
-    # # test labels parameter alphabet_dict
-    # test_parameter_values(func=mavenn.Model, var_name='alphabet_dict', fail_list=['dna, protein'],
-    #                       success_list=['rna'], model_type='additive',
-    #                       regression_type='GE', X=X, y=y)
-
+    # test labels parameter alphabet
+    test_parameter_values(func=mavenn.Model, var_name='alphabet', fail_list=['dna, protein'],
+                          success_list=['rna'], model_type='additive',
+                          regression_type='GE', x=x, y=y)
+    '''
 
 def test_NoiseAgnosticModel():
 
@@ -258,16 +291,16 @@ def test_NoiseAgnosticModel():
 
     # test labels parameter y
     test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-                          model_type='additive', X=X, regression_type='NA', alphabet_dict='dna')
+                          model_type='additive', x=x, regression_type='NA', alphabet_dict='dna')
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['NA'],
-                          model_type='additive', X=X, y=y, alphabet_dict='dna')
+                          model_type='additive', x=x, y=y, alphabet_dict='dna')
 
     # test labels parameter model_type
     test_parameter_values(func=mavenn.Model, var_name='model_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
-                          regression_type='NA', X=X, y=y, alphabet_dict='dna')
+                          regression_type='NA', x=x, y=y, alphabet_dict='dna')
 
 
 
@@ -285,10 +318,5 @@ def run_tests():
     """
 
     test_GlobalEpistasisModel()
-    test_NoiseAgnosticModel()
-
-    # Tests mavenn.src.validate.validate_alphabet()
-    test_validate_alphabet()
-
-    # Tests mavenn.src.utils.get_1pt_variants()
-    test_get_1pt_variants()
+    #test_validate_alphabet()
+    #test_NoiseAgnosticModel()

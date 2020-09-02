@@ -1,4 +1,4 @@
-Testing Model() parameter X ...
+Testing Model() parameter x ...
 Test # 0: Expected error: type(X) = <class 'str'> must be of type list or np.array
 Test # 1: Expected success.
 Tests passed: 2. Tests failed: 0.
@@ -9,35 +9,66 @@ Test # 3: Expected success.
 Tests passed: 4. Tests failed: 0.
 
 Testing Model() parameter regression_type ...
-Test # 4: Expected error: regression_type = additive; must be "NA", or  "GE"
+Test # 4: Expected error: regression_type = additive; must be "MPA", or  "GE"
 Test # 5: Expected success.
 Tests passed: 6. Tests failed: 0.
 
-Testing Model() parameter model_type ...
-Test # 6: Expected error: model_type = standard; must be "additive", "neighbor", or "pairwise"
-Test # 7: Expected success.
+Testing Model() parameter ge_nonlinearity_monotonic ...
+Test # 6: Expected error: ge_nonlinearity_monotonic must be a boolean
+Test # 7: Expected error: ge_nonlinearity_monotonic must be a boolean
 Test # 8: Expected success.
 Test # 9: Expected success.
 Tests passed: 10. Tests failed: 0.
 
-Testing Model() parameter X ...
-Test # 10: Expected error: type(X) = <class 'str'> must be of type list or np.array
-Test # 11: Expected success.
-Tests passed: 12. Tests failed: 0.
-
-Testing Model() parameter y ...
-Test # 12: Expected error: length of inputs (X, y) must be equal
+Testing Model() parameter ge_nonlinearity_hidden_nodes ...
+Test # 10: Expected error: ge_nonlinearity_hidden_nodes must be an integer.
+Test # 11: Expected error: ge_nonlinearity_hidden_nodes must be greater than 0.
+Test # 12: Expected error: ge_nonlinearity_hidden_nodes must be greater than 0.
 Test # 13: Expected success.
-Tests passed: 14. Tests failed: 0.
-
-Testing Model() parameter regression_type ...
-Test # 14: Expected error: regression_type = additive; must be "NA", or  "GE"
+Test # 14: Expected success.
 Test # 15: Expected success.
 Tests passed: 16. Tests failed: 0.
 
-Testing Model() parameter model_type ...
-Test # 16: Expected error: model_type = standard; must be "additive", "neighbor", or "pairwise"
+Testing Model() parameter gpmap_type ...
+Test # 16: Expected error: gpmap_type = standard; must be "additive", "neighbor", or "pairwise"
 Test # 17: Expected success.
 Test # 18: Expected success.
 Test # 19: Expected success.
 Tests passed: 20. Tests failed: 0.
+
+Testing Model() parameter ge_heteroskedasticity_order ...
+Test # 20: Expected error: ge_heteroskedasticity_order must be an integer
+Test # 21: Expected error: ge_heteroskedasticity_order must be an integer
+Test # 22: Expected error: ge_heteroskedasticity_order must be >= 0
+Test # 23: Expected success.
+Test # 24: Expected success.
+Test # 25: Expected success.
+Tests passed: 26. Tests failed: 0.
+
+Testing Model() parameter theta_regularization ...
+Test # 26: Expected error: theta_regularization must be a number
+Test # 27: Expected error: theta_regularization must be >= 0
+Test # 28: Expected error: theta_regularization must be >= 0
+Test # 29: Expected success.
+Test # 30: Expected success.
+Test # 31: Expected success.
+Tests passed: 32. Tests failed: 0.
+
+Testing Model() parameter eta_regularization ...
+Test # 32: Expected error: eta_regularization must be a number
+Test # 33: Expected error: eta_regularization must be >= 0
+Test # 34: Expected error: eta_regularization must be >= 0
+Test # 35: Expected success.
+Test # 36: Expected success.
+Test # 37: Expected success.
+Tests passed: 38. Tests failed: 0.
+
+Testing Model() parameter ohe_batch_size ...
+Test # 38: Expected error: ohe_batch_size must be an integer
+Test # 39: Expected error: ohe_batch_size must be > 0
+Test # 40: Expected error: ohe_batch_size must be an integer
+Test # 41: Expected error: ohe_batch_size must be > 0
+Test # 42: Expected success.
+Tests passed: 43. Tests failed: 0.
+
+5.891945838928223 seconds
