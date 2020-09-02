@@ -14,6 +14,9 @@ from mavenn.src.utils import CauchyNoiseModel
 
 from mavenn.src import entropy_estimators as ee
 
+from mavenn.src.utils import heatmap
+from mavenn.src.utils import get_1pt_variants
+
 # imports required for helper functions in demos
 import pandas as pd
 import mavenn
