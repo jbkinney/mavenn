@@ -150,7 +150,6 @@ class GlobalEpistasisModel:
         self.y_train = np.array(self.y_train).reshape(np.shape(self.y_train)[0], 1)
 
     # CONTINE CODE REVIEW BELOW (date: 20.07.20)
-
     def _input_checks(self):
 
         """
@@ -171,11 +170,38 @@ class GlobalEpistasisModel:
               'length of inputs (X, y) must be equal')
         self.num_measurements = len(self.X)
 
+        # check that ge_nonlinearity_monotonic is a boolean.
+        check(isinstance(self.ge_nonlinearity_monotonic, bool), 'ge_nonlinearity_monotonic must be a boolean')
+
+        # check that ge_heteroskedasticity_order is an integer
+        check(isinstance(self.ge_heteroskedasticity_order, int), 'ge_heteroskedasticity_order must be an integer')
+
+        check(self.ge_heteroskedasticity_order >= 0, 'ge_heteroskedasticity_order must be >= 0')
+
         # check that gpmap_type valid
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
-              'x_to_phi = %s; must be "additive", "neighbor", or "pairwise"' %
+              'gpmap_type = %s; must be "additive", "neighbor", or "pairwise"' %
               self.gpmap_type)
 
+        # check that theta regularization is a number
+        check(isinstance(self.theta_regularization, (int, float, np.float)), 'theta_regularization must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.theta_regularization >= 0, 'theta_regularization must be >= 0')
+
+        # check that eta regularization is a number
+        check(isinstance(self.eta_regularization, (int, float, np.float)), 'eta_regularization must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.eta_regularization >= 0, 'eta_regularization must be >= 0')
+
+        # check that ohe_batch_size is an integer
+        check(isinstance(self.ohe_batch_size, int), 'ohe_batch_size must be an integer')
+
+        # check that ohe_batch_size is > 0
+        check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
+
+    @handle_errors
     def define_model(self,
                      ge_noise_model_type,
                      ge_nonlinearity_hidden_nodes=50):
@@ -208,6 +234,10 @@ class GlobalEpistasisModel:
               'p_of_all_y_given_phi = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
               ge_noise_model_type)
 
+        check(isinstance(ge_nonlinearity_hidden_nodes, int), 'ge_nonlinearity_hidden_nodes must be an integer.')
+
+        check(ge_nonlinearity_hidden_nodes > 0, 'ge_nonlinearity_hidden_nodes must be greater than 0.')
+
         number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
         inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
 
@@ -220,7 +250,8 @@ class GlobalEpistasisModel:
                     kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization))(sequence_input)
 
         # implement monotonicity constraints
-        if self.ge_nonlinearity_monotonic:
+        if self.ge_nonlinearity_monotonic==True:
+
             intermediateTensor = Dense(ge_nonlinearity_hidden_nodes, activation='sigmoid',
                                        kernel_constraint=nonneg())(phi)
             yhat = Dense(1, kernel_constraint=nonneg(),name='y_hat')(intermediateTensor)
@@ -235,6 +266,7 @@ class GlobalEpistasisModel:
             outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
 
         else:
+
             intermediateTensor = Dense(ge_nonlinearity_hidden_nodes, activation='sigmoid')(phi)
             yhat = Dense(1, name='y_hat')(intermediateTensor)
 

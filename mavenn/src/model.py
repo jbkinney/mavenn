@@ -290,7 +290,7 @@ class Model:
         # implement monotonicity constraints if GE regression
         if self.regression_type == 'GE':
 
-            if self.ge_nonlinearity_monotonic:
+            if self.ge_nonlinearity_monotonic==True:
 
                 # phi feeds into each of the replicate intermediate layers
                 intermediate_layers = []
@@ -510,7 +510,7 @@ class Model:
         # implement monotonicity constraints if GE regression
         if self.regression_type == 'GE':
 
-            if self.ge_nonlinearity_monotonic:
+            if self.ge_nonlinearity_monotonic==True:
 
                 intermediateTensor = Dense(self.ge_nonlinearity_hidden_nodes, activation='sigmoid',
                                            kernel_constraint=nonneg())(phiOld)

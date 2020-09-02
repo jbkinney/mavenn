@@ -540,7 +540,6 @@ def _generate_all_pair_features_from_sequences(sequences,
     for i in range(len(bases)):
         for j in range(len(bases)):
             allpair_dinucleotides.append(bases[i] + bases[j])
-
     # one-hot encode di-nucleotide training set
     allpairs_seqs_OHE = []
     for _ in range(len(sequences)):
@@ -558,6 +557,7 @@ def _generate_all_pair_features_from_sequences(sequences,
         # get indices of where pairs occur so that these indices could be used to one-hot encode.
         list_of_allpair_indices = [allpair_dinucleotides.index(dn) for dn in all_nucl_pairs]
 
+        #print(all_nucl_pairs)
         # do One-hot encoding. Every time a pair from list 'allpair_dinucleotides'
         # appears at a position, put 1 there, otherwise zeros.
         tmp_seq = np.array(list_of_allpair_indices)
