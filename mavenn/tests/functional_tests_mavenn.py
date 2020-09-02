@@ -123,6 +123,7 @@ def test_parameter_values(func,
     plt.close('all')
 
 
+# Need to incorporate into model before testing.
 def test_validate_alphabet():
     """ 20.09.10 JBK """
 
@@ -201,11 +202,14 @@ def test_get_1pt_variants():
                           alphabet='protein*')
 
 
-
 def test_GlobalEpistasisModel():
 
     # load MPSA dataset for testing
     x, y = get_example_dataset()
+
+    # test on subset of sequences
+    x = x[0:1000].copy()
+    y = y[0:1000].copy()
 
     # sequences arrays that fail when entered into mavenn.
     bad_x = 'x'
@@ -237,27 +241,27 @@ def test_GlobalEpistasisModel():
                           success_list=[1,10,100],  regression_type='GE',
                           gpmap_type='additive', x=x, y=y, alphabet='rna')
 
-    # test labels parameter gpmap_type
+    # test parameter gpmap_type
     test_parameter_values(func=mavenn.Model, var_name='gpmap_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
                           regression_type='GE', x=x, y=y, alphabet='rna')
 
-    # test labels parameter ge_heteroskedasticity_order
+    # test parameter ge_heteroskedasticity_order
     test_parameter_values(func=mavenn.Model, var_name='ge_heteroskedasticity_order', fail_list=['0', 0.1, -1],
                           success_list=[0, 1, 10], gpmap_type='additive',
                           regression_type='GE', x=x, y=y, alphabet='rna')
 
-    # test labels parameter theta_regularization
+    # test parameter theta_regularization
     test_parameter_values(func=mavenn.Model, var_name='theta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
                           regression_type='GE', x=x, y=y, alphabet='rna')
 
-    # test labels parameter eta_regularization
+    # test parameter eta_regularization
     test_parameter_values(func=mavenn.Model, var_name='eta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
                           regression_type='GE', x=x, y=y, alphabet='rna')
 
-    # test labels parameter ohe_batch_size
+    # test parameter ohe_batch_size
     test_parameter_values(func=mavenn.Model, var_name='ohe_batch_size', fail_list=['0', -1, -0.1, 0],
                           success_list=[20000], gpmap_type='additive',
                           regression_type='GE', x=x, y=y, alphabet='rna')
@@ -275,7 +279,12 @@ def test_GlobalEpistasisModel():
 def test_NoiseAgnosticModel():
 
     # load MPSA dataset for testing
-    X, y = get_example_dataset(name='Sort-Seq')
+    x, y, ct_n = get_example_dataset(name='Sort-Seq')
+
+    # test on subset of sequences
+    x = x[0:1000].copy()
+    y = y[0:1000].copy()
+    ct_n = ct_n[0:1000].copy()
 
     # sequences arrays that fail when entered into mavenn.
     bad_X = 'x'
@@ -283,24 +292,40 @@ def test_NoiseAgnosticModel():
     # could possibly check if all elements are numeric
     # but that could slow things down
     bad_y = [[1, 3, -2, 4.5]]
-    # also could check for nan's like np.isnan(bad_y).all()
+    # Need to check for nans in y
 
     # test sequences parameter X
-    test_parameter_values(func=mavenn.Model, var_name='X', fail_list=[bad_X], success_list=[X],
-                          model_type='additive', y=y, regression_type='NA', alphabet_dict='dna')
+    test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_X], success_list=[x],
+                          gpmap_type='additive', y=y, regression_type='MPA', alphabet='dna', ct_n=ct_n)
 
-    # test labels parameter y
-    test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-                          model_type='additive', x=x, regression_type='NA', alphabet_dict='dna')
+    # TODO: need to fix vec_data_to_mat_data to work with one example before using this test.
+    # # test labels parameter y
+    # test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
+    #                       gpmap_type='additive', x=x, regression_type='MPA', alphabet='dna', ct_n=ct_n)
 
     # test labels parameter regression_type
-    test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['NA'],
-                          model_type='additive', x=x, y=y, alphabet_dict='dna')
+    test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['MPA'],
+                          gpmap_type='additive', x=x, y=y, alphabet='dna', ct_n=ct_n)
 
-    # test labels parameter model_type
-    test_parameter_values(func=mavenn.Model, var_name='model_type', fail_list=['standard'],
+    # test labels parameter gpmap_type
+    test_parameter_values(func=mavenn.Model, var_name='gpmap_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
-                          regression_type='NA', x=x, y=y, alphabet_dict='dna')
+                          regression_type='MPA', x=x, y=y, alphabet='dna', ct_n=ct_n)
+
+    # test parameter na_hidden_nodes
+    test_parameter_values(func=mavenn.Model, var_name='na_hidden_nodes', fail_list=['0', 0.1, -1, 0],
+                          success_list=[1, 10], gpmap_type='additive', ct_n=ct_n,
+                          regression_type='MPA', x=x, y=y, alphabet='dna')
+
+    # test parameter theta_regularization
+    test_parameter_values(func=mavenn.Model, var_name='theta_regularization', fail_list=['0', -1, -0.1],
+                          success_list=[0, 0.1, 10], gpmap_type='additive', ct_n=ct_n,
+                          regression_type='MPA', x=x, y=y, alphabet='dna')
+
+    # test parameter ohe_batch_size
+    test_parameter_values(func=mavenn.Model, var_name='ohe_batch_size', fail_list=['0', -1, -0.1, 0],
+                          success_list=[20000], gpmap_type='additive', ct_n=ct_n,
+                          regression_type='MPA', x=x, y=y, alphabet='dna')
 
 
 
@@ -318,5 +343,6 @@ def run_tests():
     """
 
     test_GlobalEpistasisModel()
-    #test_validate_alphabet()
-    #test_NoiseAgnosticModel()
+    test_NoiseAgnosticModel()
+    test_get_1pt_variants()
+

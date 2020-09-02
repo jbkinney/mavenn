@@ -71,4 +71,92 @@ Test # 41: Expected error: ohe_batch_size must be > 0
 Test # 42: Expected success.
 Tests passed: 43. Tests failed: 0.
 
-5.891945838928223 seconds
+Testing Model() parameter x ...
+Test # 43: Expected error: type(X) = <class 'str'> must be of type list or np.array
+Test # 44: Expected success.
+Tests passed: 45. Tests failed: 0.
+
+Testing Model() parameter regression_type ...
+Test # 45: Expected error: regression_type = additive; must be "MPA", or  "GE"
+Test # 46: Expected success.
+Tests passed: 47. Tests failed: 0.
+
+Testing Model() parameter gpmap_type ...
+Test # 47: Expected error: model_type = standard; must be "additive", "neighbor", or "pairwise"
+Test # 48: Expected success.
+Test # 49: Expected success.
+Test # 50: Expected success.
+Tests passed: 51. Tests failed: 0.
+
+Testing Model() parameter na_hidden_nodes ...
+Test # 51: Expected error: na_hidden_nodes must be an integer.
+Test # 52: Expected error: na_hidden_nodes must be an integer.
+Test # 53: Expected error: na_hidden_nodes must be greater than 0.
+Test # 54: Expected error: na_hidden_nodes must be greater than 0.
+Test # 55: Expected success.
+Test # 56: Expected success.
+Tests passed: 57. Tests failed: 0.
+
+Testing Model() parameter theta_regularization ...
+Test # 57: Expected error: theta_regularization must be a number
+Test # 58: Expected error: theta_regularization must be >= 0
+Test # 59: Expected error: theta_regularization must be >= 0
+Test # 60: Expected success.
+Test # 61: Expected success.
+Test # 62: Expected success.
+Tests passed: 63. Tests failed: 0.
+
+Testing Model() parameter ohe_batch_size ...
+Test # 63: Expected error: ohe_batch_size must be an integer
+Test # 64: Expected error: ohe_batch_size must be > 0
+Test # 65: Expected error: ohe_batch_size must be an integer
+Test # 66: Expected error: ohe_batch_size must be > 0
+Test # 67: Expected success.
+Tests passed: 68. Tests failed: 0.
+
+Testing get_1pt_variants() parameter wt_seq ...
+Test # 68: Expected error: wt_seq=ACGU contains the invalid characters {'U'}
+Test # 69: Expected error: wt_seq=QYKL* contains the invalid characters {'*'}
+Test # 70: Expected error: len(wt_seq)=0; must be >= 1.
+Test # 71: Expected error: wt_seq must be a string; is of type <class 'int'>
+Test # 72: Expected error: wt_seq must be a string; is of type <class 'list'>
+Test # 73: Expected success.
+Tests passed: 74. Tests failed: 0.
+
+Testing get_1pt_variants() parameter alphabet ...
+Test # 74: Expected error: wt_seq=QYKL contains the invalid characters {'Y', 'Q', 'K', 'L'}
+Test # 75: Expected error: wt_seq=QYKL contains the invalid characters {'Y', 'Q', 'K', 'L'}
+Test # 76: Expected error: Unknown alphabet=ACGU. Must be one of [dict_keys(['dna', 'rna', 'protein', 'protein*'])].
+Test # 77: Expected error: Unknown alphabet=. Must be one of [dict_keys(['dna', 'rna', 'protein', 'protein*'])].
+Test # 78: Expected error: type(alphabet)=<class 'int'> is invalid. Must be one of (<class 'str'>, <class 'list'>, <class 'set'>, <class 'numpy.ndarray'>, <class 'pandas.core.series.Series'>).
+Test # 79: Expected error: wt_seq=QYKL contains the invalid characters {'L'}
+Test # 80: Expected error: wt_seq=QYKL contains the invalid characters {'Y', 'Q', 'K', 'L'}
+Test # 81: Expected success.
+Test # 82: Expected success.
+Test # 83: Expected success.
+Tests passed: 84. Tests failed: 0.
+
+Testing get_1pt_variants() parameter include_wt ...
+Test # 84: Expected error: type(include_wt)=<class 'int'>; must be bool.
+Test # 85: Expected error: type(include_wt)=<class 'NoneType'>; must be bool.
+Test # 86: Expected success.
+Test # 87: Expected success.
+Tests passed: 88. Tests failed: 0.
+
+Testing get_1pt_variants() parameter wt_seq ...
+Test # 88: Expected error: wt_seq=ACGU contains the invalid characters {'U'}
+Test # 89: Expected success.
+Tests passed: 90. Tests failed: 0.
+
+Testing get_1pt_variants() parameter wt_seq ...
+Test # 90: Expected error: wt_seq=ACGT contains the invalid characters {'T'}
+Test # 91: Expected success.
+Tests passed: 92. Tests failed: 0.
+
+Testing get_1pt_variants() parameter wt_seq ...
+Test # 92: Expected error: wt_seq=ACGU contains the invalid characters {'U'}
+Test # 93: Expected success.
+Test # 94: Expected success.
+Tests passed: 95. Tests failed: 0.
+
+4.291826009750366 seconds

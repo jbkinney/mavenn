@@ -835,11 +835,19 @@ def get_example_dataset(name='MPSA'):
 
     elif name == 'Sort-Seq':
 
-        sequences = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt',
-                               dtype='str')
-        bin_counts = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/bin_counts.txt')
+        # sequences = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt',
+        #                        dtype='str')
+        # bin_counts = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/bin_counts.txt')
+        #
+        # return sequences, bin_counts
 
-        return sequences, bin_counts
+        data_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/full-wt-sort_seq.csv', index_col=[0])
+
+        sequences = data_df['seq'].values
+        bin_counts = data_df['bin'].values
+        ct_n = data_df['ct'].values
+
+        return sequences, bin_counts, ct_n
 
     elif name == 'GB1-DMS':
 

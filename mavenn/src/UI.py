@@ -836,13 +836,28 @@ class MeasurementProcessAgnosticModel:
         check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
 
-        #check(len(self.x) == len(self.y),
+        check(isinstance(self.ct_n, (list, np.ndarray, pd.DataFrame, pd.Series)),
+              'type(ct_n) = %s must be of type list or np.array' % type(self.ct_n))
+
+        # check(len(self.x) == len(self.y),
         #      'length of inputs (X, y) must be equal')
 
         # check that model type valid
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
               'model_type = %s; must be "additive", "neighbor", or "pairwise"' %
               self.gpmap_type)
+
+        # check that theta regularization is a number
+        check(isinstance(self.theta_regularization, (int, float, np.float)), 'theta_regularization must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.theta_regularization >= 0, 'theta_regularization must be >= 0')
+
+        # check that ohe_batch_size is an integer
+        check(isinstance(self.ohe_batch_size, int), 'ohe_batch_size must be an integer')
+
+        # check that ohe_batch_size is > 0
+        check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
 
     def define_model(self,
                      na_hidden_nodes=10):
@@ -866,6 +881,10 @@ class MeasurementProcessAgnosticModel:
 
 
         """
+
+        check(isinstance(na_hidden_nodes, int), 'na_hidden_nodes must be an integer.')
+
+        check(na_hidden_nodes > 0, 'na_hidden_nodes must be greater than 0.')
 
         number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
 
