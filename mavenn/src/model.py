@@ -952,11 +952,21 @@ class Model:
             # Append additive and pairwise features together.
             seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
 
-        # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
-        gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[3].output])
+        # TODO: This doesn't work and we don't know why.
+        # #
+        # # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
+        # gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[3].output])
+        #
+        # # Compute latent phenotype values
+        # seqs_ohe_tensor = tf.convert_to_tensor(seqs_ohe)
+        # print(f"seqs_ohe_tensor: {seqs_ohe_tensor}")
+        # phi = gpmap_function(seqs_ohe_tensor)
 
-        # Compute latent phenotype values
-        phi = gpmap_function([seqs_ohe])
+        # THIS IS THE FIX
+        theta = self.get_gpmap_parameters()['value'].values
+        theta_0 = theta[0]
+        theta_vec = theta[1:]
+        phi = theta_0 + seqs_ohe @ theta_vec
 
         # Remove extra dimension tf adds
         #phi = phi[0].ravel().copy()
