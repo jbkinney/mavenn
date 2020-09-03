@@ -168,6 +168,9 @@ class GlobalEpistasisModel:
               'type(X) = %s must be of type list or np.array' % type(self.X))
         self.X = np.array(self.X)
 
+        check(isinstance(self.X[0], str),
+              'type(x_train) = %s must be of type str' % type(self.X))
+
         check(isinstance(self.y, (list, np.ndarray)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
         self.y = np.array(self.y)
@@ -850,6 +853,9 @@ class MeasurementProcessAgnosticModel:
 
         check(isinstance(self.x, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(X) = %s must be of type list or np.array' % type(self.x))
+
+        #check(isinstance(self.x[0], str),
+        #      'type(x_train) = %s must be of type str' % type(self.x))
 
         check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
