@@ -1088,18 +1088,23 @@ class Model:
                    yhat,
                    q=[0.16,0.84]):
         """
-        Method that returns the ge_noise_model, the ge probability distribution
-        that models noise, from which the spatial parameter eta can be obtained.
+        Returns quantile values of p(y|yhat) given yhat and the quantiles q.
+        Reserved only for GE models
 
         parameters
         ----------
-        yhat: (array-like of floats)
-            This is the values on which the spatial parameter will depend on.
 
-        return
+        yhat: (array of floats)
+            Values from which p(y|yhat) is computed.
 
-        mavenn._NoiseModel: (GE noise mdoel object)
-            This can be Gaussian, Cauchy or SkewT.
+        q: (array of floats in [0,1])
+            Quantile specifications
+
+        returns
+        -------
+
+        yq: (array of floats)
+            Array of quantile values.
         """
 
         # Shape yhat for processing
@@ -1110,7 +1115,11 @@ class Model:
 
         check(self.regression_type=='GE', 'regression type must be GE for this methdd')
         # Get GE noise model based on the users input.
+        # 20.09.03 JBK: I don't understand this line.
         yqs = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,q=q).user_quantile_values
+
+        # This seems to be needed
+        yqs = np.array(yqs).T
 
         # Shape yqs for output
         yqs_shape = yhat_shape + q_shape
@@ -1207,17 +1216,46 @@ class Model:
 
         if self.regression_type == 'MPA':
 
-            # check that entered y (specifying bin number) is an integer
-            check(isinstance(y, int),
-                  'type(y), specifying bin number, must be of type int')
+            # # check that entered y (specifying bin number) is an integer
+            # check(isinstance(y, int),
+            #       'type(y), specifying bin number, must be of type int')
+            #
+            # # check that entered bin nnumber doesn't exceed max bins
+            # check(y< self.model.y_train[0].shape[0],
+            #       "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
+            #
+            # # Give the probability of bin y given phi, note phi can be an array.
+            # p_of_y_given_phi = self.na_p_of_all_y_given_phi(phi)[:,y]
+            # #return p_of_y_given_phi
 
-            # check that entered bin nnumber doesn't exceed max bins
-            check(y< self.model.y_train[0].shape[0],
-                  "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
+            in_shape = y.shape
 
-            # Give the probability of bin y given phi, note phi can be an array.
-            p_of_y_given_phi = self.na_p_of_all_y_given_phi(phi)[:,y]
-            #return p_of_y_given_phi
+            # Cast y as integers
+            y = y.astype(int)
+
+            # Make sure all y values are valid
+            Y = self.model.y_train[0].shape[0]
+            check(np.all(y >= 0),
+                  f"Negative values for y are invalid for MAP regression")
+
+            check(np.all(y < Y),
+                  f"Some y values exceed the number of bins {Y}")
+
+            # Have to ravel
+            y = y.ravel()
+            phi = phi.ravel()
+
+            # Get values for all bins
+            p_of_all_y_given_phi = self.na_p_of_all_y_given_phi(phi)
+
+            # There has to be a better way to do this
+            p_of_y_given_phi = np.zeros(len(y))
+            for i, _y in enumerate(y):
+                p_of_y_given_phi[i] = p_of_all_y_given_phi[i, _y]
+
+            # Reshape
+            p_of_y_given_phi = np.reshape(p_of_y_given_phi, in_shape)
+
 
         else:
             check(self.regression_type=='GE',
@@ -1231,13 +1269,13 @@ class Model:
 
                 shape = np.array(y).shape
 
-                p_of_y_given_phi = self.p_of_y_given_y_hat(y.ravel(), yhat.ravel()).reshape(shape)
+                p_of_y_given_phi = self._p_of_y_given_y_hat(y.ravel(), yhat.ravel()).reshape(shape)
 
                 #return p_of_y_given_phi
 
             else:
 
-                p_of_y_given_phi = self.p_of_y_given_y_hat(y, yhat)
+                p_of_y_given_phi = self._p_of_y_given_y_hat(y, yhat)
 
                 #return p_of_y_given_phi
 
@@ -1247,9 +1285,64 @@ class Model:
         #return p
         return p_of_y_given_phi
 
-    def p_of_y_given_y_hat(self,
-                           y,
-                           yhat):
+
+    def p_of_y_given_yhat(self, y, yhat, paired=False):
+        """
+        Computes the p(y|yhat) for GE only.
+
+        y: (float or array-like of floats)
+            Measurement values.
+
+        yhat: (float or array-like of floats)
+            Latent phenotype values.
+
+        paired: (bool)
+            Whether y,yhat values should be treated as pairs.
+            If so, y and yhat must have the same number of elements.
+            The shape of y will be used as output.
+
+        returns
+        -------
+            p: (float or array-like of floats)
+                Probability of y given yhat.
+        """
+
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == yhat_shape,
+                  f"y shape={y_shape} does not match yhat shape={yhat_shape}")
+
+            # Do computation
+            p = self._p_of_y_given_y_hat(y, yhat)
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and yhat
+            y, yhat = _broadcast_arrays(y, yhat)
+
+            # Do computation
+            p = self._p_of_y_given_y_hat(y, yhat)
+
+            # Set output shape
+            p_shape = y_shape + yhat_shape
+
+        # Shape for output
+        p = _shape_for_output(p, p_shape)
+        return p
+
+
+
+    def _p_of_y_given_y_hat(self,
+                            y,
+                            yhat):
 
         """
         Method that returns computes.
@@ -1277,9 +1370,9 @@ class Model:
 
         return ge_noise_model.p_of_y_given_yhat(y, yhat)
 
-    def _p_of_y_given_y_hat(self,
-                           y,
-                           yhat):
+    def __p_of_y_given_y_hat(self,
+                             y,
+                             yhat):
 
         """
         y: np.ndarray, shape=(n1,n2,...,nK)

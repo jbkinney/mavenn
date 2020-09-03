@@ -327,6 +327,22 @@ def test_NoiseAgnosticModel():
                           success_list=[20000], gpmap_type='additive', ct_n=ct_n,
                           regression_type='MPA', x=x, y=y, alphabet='dna')
 
+def test_p_of_y_given_yhat():
+
+    # Load GE model
+    model_file = mavenn.__path__[0] + '/examples/models/ge_gaussian_GB1_model'
+    model = mavenn.load(model_file)
+
+def test_p_of_y_given_yhat():
+
+    # Load GE model
+    model_file = mavenn.__path__[0] + '/examples/models/ge_gaussian_GB1_model'
+    model = mavenn.load(model_file)
+
+
+
+
+    print('Model loaded!', model)
 
 
 def run_tests():
