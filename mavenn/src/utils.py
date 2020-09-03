@@ -30,6 +30,7 @@ from mavenn.src.validate import validate_alphabet
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import DivergingNorm, Normalize
 
+
 @handle_errors
 def _broadcast_arrays(x, y):
     # Cast inputs as numpy arrays
@@ -52,6 +53,7 @@ def _broadcast_arrays(x, y):
     # Return broadcast arrays
     return x, y
 
+
 @handle_errors
 def _get_shape_and_return_1d_array(x):
     if not isinstance(x, Iterable):
@@ -61,6 +63,7 @@ def _get_shape_and_return_1d_array(x):
         shape = list(x.shape)
     x = np.atleast_1d(x).ravel()
     return x, shape
+
 
 @handle_errors
 def _shape_for_output(x, shape=None):
@@ -2131,6 +2134,9 @@ def vec_data_to_mat_data(y_n,
     data_df['x'] = x_n
     data_df['y'] = y_n
     data_df['ct'] = ct_n
+
+    # Sum over repeats
+    data_df = data_df.groupby(['x',' y']).sum().reset_index()
 
     # Pivot dataframe
     data_df = data_df.pivot(index='x', columns='y', values='ct')

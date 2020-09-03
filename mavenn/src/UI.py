@@ -781,6 +781,10 @@ class MeasurementProcessAgnosticModel:
                                               y_n=y,
                                               ct_n=ct_n)
 
+        # Record number of bins
+        self.Y = self.y.shape[1]
+        self.all_y = np.arange(self.Y).astype(int)
+
         self.x_train, self.y_train = self.x, self.y
 
         if self.alphabet == 'dna':
