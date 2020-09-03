@@ -342,7 +342,11 @@ def run_tests():
     None.
     """
 
-    test_GlobalEpistasisModel()
-    test_NoiseAgnosticModel()
+    test_validate_alphabet()
+
     test_get_1pt_variants()
+
+    test_GlobalEpistasisModel()
+
+    test_NoiseAgnosticModel()
 
