@@ -37,8 +37,8 @@ Test # 19: Expected success.
 Tests passed: 20. Tests failed: 0.
 
 Testing Model() parameter ge_heteroskedasticity_order ...
-Test # 20: Expected error: ge_heteroskedasticity_order must be an integer
-Test # 21: Expected error: ge_heteroskedasticity_order must be an integer
+Test # 20: Expected error: ge_heteroskedasticity_order must be an integers
+Test # 21: Expected error: ge_heteroskedasticity_order must be an integers
 Test # 22: Expected error: ge_heteroskedasticity_order must be >= 0
 Test # 23: Expected success.
 Test # 24: Expected success.
@@ -89,8 +89,8 @@ Test # 50: Expected success.
 Tests passed: 51. Tests failed: 0.
 
 Testing Model() parameter na_hidden_nodes ...
-Test # 51: Expected error: na_hidden_nodes must be an integer.
-Test # 52: Expected error: na_hidden_nodes must be an integer.
+Test # 51: Expected error: na_hidden_nodes must be a number.
+Test # 52: Expected error: na_hidden_nodes must be a number.
 Test # 53: Expected error: na_hidden_nodes must be greater than 0.
 Test # 54: Expected error: na_hidden_nodes must be greater than 0.
 Test # 55: Expected success.
@@ -124,13 +124,13 @@ Test # 73: Expected success.
 Tests passed: 74. Tests failed: 0.
 
 Testing get_1pt_variants() parameter alphabet ...
-Test # 74: Expected error: wt_seq=QYKL contains the invalid characters {'Y', 'Q', 'K', 'L'}
-Test # 75: Expected error: wt_seq=QYKL contains the invalid characters {'Y', 'Q', 'K', 'L'}
+Test # 74: Expected error: wt_seq=QYKL contains the invalid characters {'L', 'Q', 'Y', 'K'}
+Test # 75: Expected error: wt_seq=QYKL contains the invalid characters {'L', 'Q', 'Y', 'K'}
 Test # 76: Expected error: Unknown alphabet=ACGU. Must be one of [dict_keys(['dna', 'rna', 'protein', 'protein*'])].
 Test # 77: Expected error: Unknown alphabet=. Must be one of [dict_keys(['dna', 'rna', 'protein', 'protein*'])].
 Test # 78: Expected error: type(alphabet)=<class 'int'> is invalid. Must be one of (<class 'str'>, <class 'list'>, <class 'set'>, <class 'numpy.ndarray'>, <class 'pandas.core.series.Series'>).
 Test # 79: Expected error: wt_seq=QYKL contains the invalid characters {'L'}
-Test # 80: Expected error: wt_seq=QYKL contains the invalid characters {'Y', 'Q', 'K', 'L'}
+Test # 80: Expected error: wt_seq=QYKL contains the invalid characters {'L', 'Q', 'Y', 'K'}
 Test # 81: Expected success.
 Test # 82: Expected success.
 Test # 83: Expected success.
@@ -159,4 +159,29 @@ Test # 93: Expected success.
 Test # 94: Expected success.
 Tests passed: 95. Tests failed: 0.
 
-4.291826009750366 seconds
+Testing validate_alphabet() parameter alphabet ...
+Test # 95: Expected error: Unknown alphabet=xna. Must be one of [dict_keys(['dna', 'rna', 'protein', 'protein*'])].
+Test # 96: Expected error: Unknown alphabet=protein-. Must be one of [dict_keys(['dna', 'rna', 'protein', 'protein*'])].
+Test # 97: Expected error: Entries of alphabet are not unique.
+Test # 98: Expected error: len(alphabet)=0; must be >= 1.
+Test # 99: Expected error: type(alphabet)=<class 'dict'> is invalid. Must be one of (<class 'str'>, <class 'list'>, <class 'set'>, <class 'numpy.ndarray'>, <class 'pandas.core.series.Series'>).
+Test # 100: Expected error: Alphabet must be 1D. alphabet.shape=(2, 2)
+Test # 101: Expected error: Alphabet contains non-string characters.
+Test # 102: Expected error: len(alphabet)=0; must be >= 1.
+Test # 103: Expected success.
+Test # 104: Expected success.
+Test # 105: Expected success.
+Test # 106: Expected success.
+Test # 107: Expected success.
+Test # 108: Expected success.
+Test # 109: Expected success.
+Test # 110: Expected success.
+Tests passed: 111. Tests failed: 0.
+
+Testing load() parameter filename ...
+Test # 111: Expected error: Length of loaded model file must be at least 1.
+Test # 112: Expected error: type(x_train) = <class 'numpy.ndarray'> must be of type str
+Test # 113: Expected success.
+Tests passed: 114. Tests failed: 0.
+
+5.996780633926392 seconds

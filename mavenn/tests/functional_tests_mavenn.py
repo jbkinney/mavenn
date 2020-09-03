@@ -369,5 +369,6 @@ def run_tests():
     test_GlobalEpistasisModel()
     test_NoiseAgnosticModel()
     test_get_1pt_variants()
+    test_validate_alphabet()
     test_load()
 
