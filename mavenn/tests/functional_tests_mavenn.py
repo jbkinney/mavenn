@@ -7,6 +7,7 @@ import mavenn
 from mavenn.src.utils import get_example_dataset
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.utils import get_1pt_variants
+from mavenn.src.utils import load
 
 import numpy as np
 import pandas as pd
@@ -327,22 +328,29 @@ def test_NoiseAgnosticModel():
                           success_list=[20000], gpmap_type='additive', ct_n=ct_n,
                           regression_type='MPA', x=x, y=y, alphabet='dna')
 
-def test_p_of_y_given_yhat():
 
-    # Load GE model
-    model_file = mavenn.__path__[0] + '/examples/models/ge_gaussian_GB1_model'
-    model = mavenn.load(model_file)
+def test_load():
 
-def test_p_of_y_given_yhat():
-
-    # Load GE model
-    model_file = mavenn.__path__[0] + '/examples/models/ge_gaussian_GB1_model'
-    model = mavenn.load(model_file)
+    """
+    Method that tests the load method.
+    """
 
 
 
+    # this model is missing all the values
+    bad_GE_model_1 = mavenn.__path__[0] +'/tests/model_files/test_GE_model_bad1'
 
-    print('Model loaded!', model)
+    # this file is missing the value for sequence.
+    bad_GE_model_2 = mavenn.__path__[0] +'/tests/model_files/test_GE_model_bad2'
+
+    # Good GE model file
+    good_GE_model = mavenn.__path__[0] +'/tests/model_files/test_GE_model_good'
+
+    test_parameter_values(func=load,
+                          var_name='filename',
+                          fail_list=[bad_GE_model_1, bad_GE_model_2],
+                          success_list=[good_GE_model])
+
 
 
 def run_tests():
@@ -358,11 +366,8 @@ def run_tests():
     None.
     """
 
-    test_validate_alphabet()
-
-    test_get_1pt_variants()
-
     test_GlobalEpistasisModel()
-
     test_NoiseAgnosticModel()
+    test_get_1pt_variants()
+    test_load()
 

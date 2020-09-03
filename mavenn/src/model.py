@@ -223,13 +223,16 @@ class Model:
         diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
         diffeomorphic_mean = np.mean(unfixed_phi[0])
 
+        # diffeomorphic_mode fix thetas
+        theta_nought_gf = theta_gf[0]-diffeomorphic_mean
+        thet_gf_vec = theta_gf[1:]/diffeomorphic_std
+
         # Default neural network weights that are non gauge fixed.
         # This will be used for updating the weights of the measurement
         # network after the gauge fixed neural network is define below.
         temp_weights = [layer.get_weights() for layer in self.model.model.layers]
 
         # define gauge fixed model
-
         if self.regression_type == 'GE':
 
             if len(self.model.y_train.shape) == 1:
@@ -287,8 +290,8 @@ class Model:
         # same phi as before
         phi = Dense(1, name='phiPrime')(sequence_input)
         # fix diffeomorphic scale
-        phi_scaled = fixDiffeomorphicMode()(phi)
-        phiOld = Dense(1, name='phi')(phi_scaled)
+        #phi_scaled = fixDiffeomorphicMode()(phi)
+        phiOld = Dense(1, name='phi')(phi)
 
         # implement monotonicity constraints if GE regression
         if self.regression_type == 'GE':
@@ -375,15 +378,15 @@ class Model:
         model_gf = kerasFunctionalModel(inputTensor, outputTensor)
 
         # set new model theta weights
-        theta_nought_gf = theta_gf[0]
-        model_gf.layers[2].set_weights([theta_gf[1:].reshape(-1, 1), np.array([theta_nought_gf])])
+        theta_nought_gf = theta_nought_gf
+        model_gf.layers[2].set_weights([thet_gf_vec.reshape(-1, 1), np.array([theta_nought_gf])])
 
         # update weights as sigma*phi+mean, which ensures predictions (y_hat) don't change from
         # the diffeomorphic scaling.
-        model_gf.layers[4].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
+        model_gf.layers[3].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
 
-        for layer_index in range(5, len(model_gf.layers)):
-            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-2])
+        for layer_index in range(4, len(model_gf.layers)):
+            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-1])
 
         # Update default neural network model with gauge-fixed model
         self.model.model = model_gf
@@ -418,14 +421,21 @@ class Model:
 
     # TODO: put underscore in front on function name
     @handle_errors
-    def gauge_fix_model(self):
+    def gauge_fix_model(self,
+                        load_model=False,
+                        diffeomorphic_mean=None,
+                        diffeomorphic_std=None):
 
         """
         Method that gauge fixes the entire model (x_to_phi+measurement).
 
         parameters
         ----------
-        None
+        load_model: (bool)
+            If true, then this variable specifies that this method was used while calling load(),
+            else, this method is called during fit. The purpose of calling this model during load
+            is to ensure that it has the appropriate model architecture. However this variable
+            ensures that the theta parameters aren't rescaled again.
 
         returns
         -------
@@ -466,9 +476,27 @@ class Model:
         # compute unfixed phi using the function unfixed_gpmap with training sequences.
         unfixed_phi = unfixed_gpmap([self.model.input_seqs_ohe])
 
-        # Compute diffeomorphic scaling factor which is used to rescale the parameters theta
-        diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
-        diffeomorphic_mean = np.mean(unfixed_phi[0])
+        # if load model is false, record the following attributes which will be used when loading model
+        if load_model==False:
+
+            # Compute diffeomorphic scaling factor which is used to rescale the parameters theta
+            diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
+            diffeomorphic_mean = np.mean(unfixed_phi[0])
+
+            # these attributes will also be saved in the saved model config file.
+            self.diffeomorphic_mean = diffeomorphic_mean
+            self.diffeomorphic_std = diffeomorphic_std
+
+        # if this method is called after fit, scale the parameters to fix diffeomorphic mode.
+        if load_model==False:
+            # diffeomorphic_mode fix thetas
+            theta_nought_gf = theta_gf[0]-diffeomorphic_mean
+            theta_nought_gf/=diffeomorphic_std
+            thet_gf_vec = theta_gf[1:]/diffeomorphic_std
+        # if model is called during model load, then parameters were already scaled.
+        else:
+            theta_nought_gf = theta_gf[0]
+            thet_gf_vec = theta_gf[1:]
 
         # Default neural network weights that are non gauge fixed.
         # This will be used for updating the weights of the measurement
@@ -506,9 +534,8 @@ class Model:
                     kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization),
                     name='phiPrime')(sequence_input)
         # fix diffeomorphic scale
-        phi_scaled = fixDiffeomorphicMode()(phi)
-        phiOld = Dense(1,
-                       kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization), name='phi')(phi_scaled)
+        #phi_scaled = fixDiffeomorphicMode()(phi)
+        phiOld = Dense(1, kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization), name='phi')(phi)
 
         # implement monotonicity constraints if GE regression
         if self.regression_type == 'GE':
@@ -553,15 +580,15 @@ class Model:
         model_gf = kerasFunctionalModel(inputTensor, outputTensor)
 
         # set new model theta weights
-        theta_nought_gf = theta_gf[0]
-        model_gf.layers[2].set_weights([theta_gf[1:].reshape(-1, 1), np.array([theta_nought_gf])])
+        theta_nought_gf = theta_nought_gf
+        model_gf.layers[2].set_weights([thet_gf_vec.reshape(-1, 1), np.array([theta_nought_gf])])
 
         # update weights as sigma*phi+mean, which ensures predictions (y_hat) don't change from
         # the diffeomorphic scaling.
-        model_gf.layers[4].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
+        model_gf.layers[3].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
 
-        for layer_index in range(5, len(model_gf.layers)):
-            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-2])
+        for layer_index in range(4, len(model_gf.layers)):
+            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-1])
 
         # Update default neural network model with gauge-fixed model
         self.model.model = model_gf
@@ -952,21 +979,11 @@ class Model:
             # Append additive and pairwise features together.
             seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
 
-        # TODO: This doesn't work and we don't know why.
-        # #
-        # # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
-        # gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[3].output])
-        #
-        # # Compute latent phenotype values
-        # seqs_ohe_tensor = tf.convert_to_tensor(seqs_ohe)
-        # print(f"seqs_ohe_tensor: {seqs_ohe_tensor}")
-        # phi = gpmap_function(seqs_ohe_tensor)
+        # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
+        gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
 
-        # THIS IS THE FIX
-        theta = self.get_gpmap_parameters()['value'].values
-        theta_0 = theta[0]
-        theta_vec = theta[1:]
-        phi = theta_0 + seqs_ohe @ theta_vec
+        # Compute latent phenotype values
+        phi = gpmap_function([seqs_ohe])
 
         # Remove extra dimension tf adds
         #phi = phi[0].ravel().copy()
@@ -1002,6 +1019,7 @@ class Model:
         check(self.regression_type == 'GE', 'Regression type must be GE for this function.')
 
         yhat = self.phi_to_yhat(self.x_to_phi(x))
+
         #yhat = yhat[0].ravel().copy()
 
         # Shape yhat for output
@@ -1512,8 +1530,27 @@ class Model:
 
         if self.regression_type=='GE':
 
+            # get GE model configuration which will be used to reload the model
+            GE_dict = self.__dict__.copy()
+
+            # keep a single instance of training data, used for initalizing model.Model
+            single_x = GE_dict['x'][0]
+            single_y = GE_dict['y'][0]
+
+            # remove all training data ...
+            GE_dict.pop('x', None)
+            GE_dict.pop('y', None)
+
+            # retain a single training instance for quick loading
+            GE_dict['x'] = single_x
+            GE_dict['y'] = single_y
+
+            # save these parameters to ensure
+            GE_dict['diffeomorphic_mean'] = self.diffeomorphic_mean
+            GE_dict['diffeomorphic_std'] = self.diffeomorphic_std
+
             # save model configuration
-            pd.DataFrame(self.__dict__).to_csv(filename+'.csv')
+            pd.DataFrame(GE_dict, index=[0]).to_csv(filename+'.csv')
         else:
             NAR_dict = self.__dict__.copy()
 
@@ -1528,6 +1565,9 @@ class Model:
             NAR_dict.pop('x', None)
             NAR_dict.pop('y', None)
             NAR_dict.pop('ct_n', None)
+
+            NAR_dict['diffeomorphic_mean'] = self.diffeomorphic_mean
+            NAR_dict['diffeomorphic_std'] = self.diffeomorphic_std
 
             # and replace with single examples for quick loading
             NAR_dict['x'] = single_x

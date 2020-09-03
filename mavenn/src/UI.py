@@ -100,6 +100,9 @@ class GlobalEpistasisModel:
         # clarify that X and y are the training datasets (including validation sets)
         self.x_train, self.y_train = self.X, self.y
 
+        # record sequence length for convenience
+        self.L = len(self.x_train[0])
+
         # set characters
         if self.alphabet == 'dna':
             self.characters = ['A', 'C', 'G', 'T']
@@ -309,8 +312,10 @@ class GlobalEpistasisModel:
         next_input = ge_model_input
 
         # the following variable is the index of
-        phi_index = 4
-        yhat_index = 7
+        # phi_index = 4
+        # yhat_index = 7
+        phi_index = 3
+        yhat_index = 6
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
@@ -781,6 +786,9 @@ class MeasurementProcessAgnosticModel:
                                               y_n=y,
                                               ct_n=ct_n)
 
+        # record sequence length for convenience
+        self.L = len(self.x[0])
+
         # Record number of bins
         self.Y = self.y.shape[1]
         self.all_y = np.arange(self.Y).astype(int)
@@ -947,8 +955,8 @@ class MeasurementProcessAgnosticModel:
         next_input = na_model_input
 
         # the following variable is the index of
-        phi_index = 4
-        yhat_index = 7
+        phi_index = 3
+        yhat_index = 6
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output

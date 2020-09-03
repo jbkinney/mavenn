@@ -1231,9 +1231,9 @@ class SkewedTNoiseModel:
         self.yhat_GE = yhat_GE
         self.q = q
 
-        polynomial_weights_a = self.model.get_nn().layers[9].get_weights()[0].copy()
-        polynomial_weights_b = self.model.get_nn().layers[9].get_weights()[1].copy()
-        polynomial_weights_s = self.model.get_nn().layers[9].get_weights()[2].copy()
+        polynomial_weights_a = self.model.get_nn().layers[8].get_weights()[0].copy()
+        polynomial_weights_b = self.model.get_nn().layers[8].get_weights()[1].copy()
+        polynomial_weights_s = self.model.get_nn().layers[8].get_weights()[2].copy()
 
         log_a = 0
         log_b = 0
@@ -1436,7 +1436,7 @@ class GaussianNoiseModel:
         self.model = model
         self.yhat_GE = yhat_GE
 
-        self.polynomial_weights = self.model.get_nn().layers[9].get_weights()[0].copy()
+        self.polynomial_weights = self.model.get_nn().layers[8].get_weights()[0].copy()
         logsigma = 0
         for polynomial_index in range(len(self.polynomial_weights)):
             logsigma += self.polynomial_weights[polynomial_index][0] * np.power(yhat_GE, polynomial_index)
@@ -1585,7 +1585,7 @@ class CauchyNoiseModel:
         self.yhat = yhat
         self.q = q
 
-        self.polynomial_weights = self.model.get_nn().layers[9].get_weights()[0].copy()
+        self.polynomial_weights = self.model.get_nn().layers[8].get_weights()[0].copy()
 
         self.log_gamma = 0
         for polynomial_index in range(len(self.polynomial_weights)):
@@ -1979,6 +1979,7 @@ def mi_continuous(x,
     return I, dI
 
 
+@handle_errors
 def load(filename):
 
         """
@@ -1997,42 +1998,55 @@ def load(filename):
         """
 
         load_config = pd.read_csv(filename + '.csv', index_col=[0])
+
+        # validate load config...
+        check(len(load_config) >= 1, 'Length of loaded model file must be at least 1.')
+
+        # get regression_type variable to determine whether GE or MPA regression.
         regression_type = load_config['regression_type'].values[0]
 
         if regression_type=='GE':
+
             # load configuration file
-
-            #check(regression_type == 'MPA', 'please set regression type to GE')
-
             load_config = pd.read_csv(filename+'.csv', index_col=[0])
 
             # convert it to a dictionary
-            config_dict = load_config[load_config.columns[2:]].loc[0].to_dict()
+            #config_dict = load_config[load_config.columns[2:]].loc[0].to_dict()
+            config_dict = load_config.loc[0].to_dict()
 
             x_train = load_config['x'].values
             y_train = load_config['y'].values
 
+            diffeomorphic_mean = load_config['diffeomorphic_mean'].values
+            diffeomorphic_std = load_config['diffeomorphic_std'].values
+
             # delete keys not required for model loading
+            config_dict.pop('x', None)
+            config_dict.pop('y', None)
+            config_dict.pop('L', None)
             config_dict.pop('model', None)
+            config_dict.pop('diffeomorphic_mean', None)
+            config_dict.pop('diffeomorphic_std', None)
             config_dict.pop('define_model', None)
             config_dict.pop('learning_rate', None)
 
             # create object for loaded model
-            loaded_model = mavenn.Model(x_train,
-                                        y_train,
+            loaded_model = mavenn.Model(x=x_train,
+                                        y=y_train,
                                         **config_dict)
 
             # this gauge fixing method merely sets up the correct
             # architecture for the neural network, for which the
             # weights can then be set using a trained model
-            loaded_model.gauge_fix_model()
+            loaded_model.gauge_fix_model(load_model=True,
+                                         diffeomorphic_mean=diffeomorphic_mean[0],
+                                         diffeomorphic_std=diffeomorphic_std[0])
 
             # set weights using a trained model.
             loaded_model.get_nn().load_weights(filename+'.h5')
 
             return loaded_model
         else:
-            #heck(regression_type=='GE', 'please set regression type to MPA')
 
             load_config = pd.read_csv(filename + '.csv', index_col=[0], keep_default_na=False)
 
@@ -2051,12 +2065,18 @@ def load(filename):
             single_ct_n = load_config['ct_n'][0]
             single_ct_n = [int(float(single_ct_n[1:len(single_ct_n) - 1]))]
 
+            diffeomorphic_mean = load_config['diffeomorphic_mean'].values
+            diffeomorphic_std = load_config['diffeomorphic_std'].values
+
             config_dict = load_config.loc[0].to_dict()
 
             config_dict.pop('x', None)
             config_dict.pop('y', None)
             config_dict.pop('ct_n', None)
             config_dict.pop('model', None)
+            config_dict.pop('L', None)
+            config_dict.pop('diffeomorphic_mean', None)
+            config_dict.pop('diffeomorphic_std', None)
             config_dict.pop('define_model', None)
             config_dict.pop('learning_rate', None)
 
@@ -2066,7 +2086,12 @@ def load(filename):
                                         ct_n=single_ct_n,
                                         **config_dict)
 
-            loaded_model.gauge_fix_model()
+            # this gauge fixing method merely sets up the correct
+            # architecture for the neural network, for which the
+            # weights can then be set using a trained model
+            loaded_model.gauge_fix_model(load_model=True,
+                                         diffeomorphic_mean=diffeomorphic_mean[0],
+                                         diffeomorphic_std=diffeomorphic_std[0])
 
             # set weights using a trained model.
             loaded_model.get_nn().load_weights(filename + '.h5')
@@ -2136,7 +2161,7 @@ def vec_data_to_mat_data(y_n,
     data_df['ct'] = ct_n
 
     # Sum over repeats
-    data_df = data_df.groupby(['x',' y']).sum().reset_index()
+    data_df = data_df.groupby(['x','y']).sum().reset_index()
 
     # Pivot dataframe
     data_df = data_df.pivot(index='x', columns='y', values='ct')
