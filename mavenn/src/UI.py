@@ -12,7 +12,7 @@ from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenat
 from tensorflow.keras.constraints import non_neg as nonneg
 from mavenn.src.likelihood_layers import *
 
-
+import numbers
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -95,7 +95,7 @@ class GlobalEpistasisModel:
         self.ge_model = None
 
         # perform input checks to validate attributes
-        #self._input_checks()
+        self._input_checks()
 
         # clarify that X and y are the training datasets (including validation sets)
         self.x_train, self.y_train = self.X, self.y
@@ -157,7 +157,6 @@ class GlobalEpistasisModel:
         """
 
         # useful tuple to check if some value is a number
-        number_tuple = (int, float, np.int64, np.int32, np.float32, np.float32, np.float64)
 
         # validate input df
         #self.df = validate_input(self.df)
@@ -175,10 +174,10 @@ class GlobalEpistasisModel:
         self.num_measurements = len(self.X)
 
         # check that ge_nonlinearity_monotonic is a boolean.
-        check(isinstance(self.ge_nonlinearity_monotonic, bool), 'ge_nonlinearity_monotonic must be a boolean')
+        check(isinstance(self.ge_nonlinearity_monotonic, (bool, np.bool, np.bool_)), 'ge_nonlinearity_monotonic must be a boolean')
 
         # check that ge_heteroskedasticity_order is an number
-        check(isinstance(self.ge_heteroskedasticity_order, number_tuple), 'ge_heteroskedasticity_order must be a number')
+        check(isinstance(self.ge_heteroskedasticity_order, numbers.Integral), 'ge_heteroskedasticity_order must be an integers')
 
         check(self.ge_heteroskedasticity_order >= 0, 'ge_heteroskedasticity_order must be >= 0')
 
@@ -188,19 +187,19 @@ class GlobalEpistasisModel:
               self.gpmap_type)
 
         # check that theta regularization is a number
-        check(isinstance(self.theta_regularization, number_tuple), 'theta_regularization must be a number')
+        check(isinstance(self.theta_regularization, numbers.Real), 'theta_regularization must be a number')
 
         # check that theta regularization is greater than 0
         check(self.theta_regularization >= 0, 'theta_regularization must be >= 0')
 
         # check that eta regularization is a number
-        check(isinstance(self.eta_regularization, number_tuple), 'eta_regularization must be a number')
+        check(isinstance(self.eta_regularization, numbers.Real), 'eta_regularization must be a number')
 
         # check that theta regularization is greater than 0
         check(self.eta_regularization >= 0, 'eta_regularization must be >= 0')
 
         # check that ohe_batch_size is an number
-        check(isinstance(self.ohe_batch_size, number_tuple), 'ohe_batch_size must be an number')
+        check(isinstance(self.ohe_batch_size, numbers.Integral), 'ohe_batch_size must be an integer')
 
         # check that ohe_batch_size is > 0
         check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
@@ -238,7 +237,7 @@ class GlobalEpistasisModel:
               'p_of_all_y_given_phi = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
               ge_noise_model_type)
 
-        #check(isinstance(ge_nonlinearity_hidden_nodes, int), 'ge_nonlinearity_hidden_nodes must be an integer.')
+        check(isinstance(ge_nonlinearity_hidden_nodes, numbers.Integral), 'ge_nonlinearity_hidden_nodes must be an integer.')
 
         check(ge_nonlinearity_hidden_nodes > 0, 'ge_nonlinearity_hidden_nodes must be greater than 0.')
 
@@ -776,7 +775,7 @@ class MeasurementProcessAgnosticModel:
         self.na_model = None
 
         # perform input checks to validate attributes
-        #self._input_checks()
+        self._input_checks()
 
         self.y, self.x = vec_data_to_mat_data(x_n=x,
                                               y_n=y,
@@ -836,7 +835,6 @@ class MeasurementProcessAgnosticModel:
         """
 
         # useful tuple to check if some value is a number
-        number_tuple = (int, float, np.int64, np.int32, np.float32, np.float64)
 
         check(isinstance(self.x, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(X) = %s must be of type list or np.array' % type(self.x))
@@ -856,13 +854,13 @@ class MeasurementProcessAgnosticModel:
               self.gpmap_type)
 
         # check that theta regularization is a number
-        check(isinstance(self.theta_regularization, number_tuple), 'theta_regularization must be a number')
+        check(isinstance(self.theta_regularization, numbers.Real), 'theta_regularization must be a number')
 
         # check that theta regularization is greater than 0
         check(self.theta_regularization >= 0, 'theta_regularization must be >= 0')
 
         # check that ohe_batch_size is an number
-        check(isinstance(self.ohe_batch_size, number_tuple), 'ohe_batch_size must be an number')
+        check(isinstance(self.ohe_batch_size, numbers.Integral), 'ohe_batch_size must be an integer')
 
         # check that ohe_batch_size is > 0
         check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
@@ -891,11 +889,10 @@ class MeasurementProcessAgnosticModel:
         """
 
         # useful tuple to check if some value is a number
-        number_tuple = (int, float, np.int64, np.int32, np.float32, np.float32, np.float64)
 
-        #check(isinstance(na_hidden_nodes, number_tuple), 'na_hidden_nodes must be a number.')
+        check(isinstance(na_hidden_nodes, numbers.Integral), 'na_hidden_nodes must be a number.')
 
-        #check(na_hidden_nodes > 0, 'na_hidden_nodes must be greater than 0.')
+        check(na_hidden_nodes > 0, 'na_hidden_nodes must be greater than 0.')
 
         number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
 

@@ -120,4 +120,3 @@ def validate_input(df):
     # return cleaned-up out_df
     out_df = out_df.dropna().copy()
     return out_df
-
