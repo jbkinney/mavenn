@@ -9,6 +9,9 @@ from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseM
 from mavenn.src.utils import mi_continuous, mi_mixed
 from mavenn.src.utils import get_1pt_variants
 
+# Needed for properly shaping outputs
+from mavenn.src.utils import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
+
 import tensorflow as tf
 import tensorflow.keras
 from tensorflow.keras.optimizers import Adam
@@ -694,11 +697,17 @@ class Model:
 
         """
 
+        # Shape phi for processing
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
         check(self.regression_type == 'GE', 'regression type must be "GE" for this function ')
 
-        y_hat = self.model.phi_to_yhat(phi)
+        yhat = self.model.phi_to_yhat(phi)
 
-        return y_hat
+        # Shape yhat for output
+        yhat = _shape_for_output(yhat, phi_shape)
+
+        return yhat
 
     @handle_errors
     def get_gpmap_parameters(self):
@@ -915,6 +924,10 @@ class Model:
             Array of latent phenotype values.
 
         """
+
+        # Shape x for processing
+        x, x_shape = _get_shape_and_return_1d_array(x)
+
         if self.gpmap_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
             seqs_ohe = onehot_encode_array(x, self.model.characters)
@@ -946,7 +959,10 @@ class Model:
         phi = gpmap_function([seqs_ohe])
 
         # Remove extra dimension tf adds
-        phi = phi[0].ravel().copy()
+        #phi = phi[0].ravel().copy()
+
+        # Shape phi for output
+        phi = _shape_for_output(phi, x_shape)
 
         # Return latent phenotype values
         return phi
@@ -970,10 +986,17 @@ class Model:
             An array of predictions for GE regression.
         """
 
+        # Shape x for processing
+        x, x_shape = _get_shape_and_return_1d_array(x)
+
         check(self.regression_type == 'GE', 'Regression type must be GE for this function.')
 
         yhat = self.phi_to_yhat(self.x_to_phi(x))
         #yhat = yhat[0].ravel().copy()
+
+        # Shape yhat for output
+        yhat = _shape_for_output(yhat, x_shape)
+
         return yhat
 
 
@@ -1079,18 +1102,87 @@ class Model:
             This can be Gaussian, Cauchy or SkewT.
         """
 
+        # Shape yhat for processing
+        yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
+
+        # Shape x for processing
+        q, q_shape = _get_shape_and_return_1d_array(q)
+
         check(self.regression_type=='GE', 'regression type must be GE for this methdd')
         # Get GE noise model based on the users input.
-        return globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,q=q).user_quantile_values
+        yqs = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,q=q).user_quantile_values
 
-    def p_of_y_given_phi(self,
+        # Shape yqs for output
+        yqs_shape = yhat_shape + q_shape
+        yqs = _shape_for_output(yqs, yqs_shape)
+
+        return yqs
+
+
+
+    def p_of_y_given_phi(self, y, phi, paired=False):
+        """
+        Computes the p(y|phi) for both GE and MPA regression.
+
+        y: (number or array-like of numbers)
+            Measurement values. Note that these are cast as integers for
+            MPA regression.
+
+        phi: (float or array-like of floats)
+            Latent phenotype values.
+
+        paired: (bool)
+            Whether y,phi values should be treated as pairs.
+            If so, y and phi must have the same number of elements.
+            The shape of y will be used as output.
+
+        returns
+        -------
+            p: (float or array-like of floats)
+                Probability of y given phi.
+        """
+
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == phi_shape,
+                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+
+            # Do computation
+            p = self._p_of_y_given_phi(y, phi)
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            y, phi = _broadcast_arrays(y, phi)
+
+            # Do computation
+            p = self._p_of_y_given_phi(y, phi)
+
+            # Set output shape
+            p_shape = y_shape + phi_shape
+
+        # Shape for output
+        p = _shape_for_output(p, p_shape)
+        return p
+
+
+    # TODO: Stated behavior won't work for MPA regression, only GE
+    def _p_of_y_given_phi(self,
                          y,
                          phi):
 
         """
         Method that computes the p(y|phi) for both GE and MPA regression.
 
-        Note that if  y is and np.ndarray with shape=(n1,n2,...,nK) and
+        Note that if y is and np.ndarray with shape=(n1,n2,...,nK) and
         phi is an np.ndarray with shape=(n1,n2,...,nK), the returned value
         p_of_y_given_phi will also have shape=(n1,n2,...,nK). In other
         cases, the appropriate broadcasting will occur.
@@ -1109,6 +1201,10 @@ class Model:
 
         """
 
+        # Reshape inputs for processing
+        #y, y_shape = _get_shape_and_return_1d_array(y)
+        #phi, phi_shape = _get_shape_and_return_1d_array(y)
+
         if self.regression_type == 'MPA':
 
             # check that entered y (specifying bin number) is an integer
@@ -1116,13 +1212,16 @@ class Model:
                   'type(y), specifying bin number, must be of type int')
 
             # check that entered bin nnumber doesn't exceed max bins
-            check(y< self.model.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
+            check(y< self.model.y_train[0].shape[0],
+                  "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
 
             # Give the probability of bin y given phi, note phi can be an array.
             p_of_y_given_phi = self.na_p_of_all_y_given_phi(phi)[:,y]
-            return p_of_y_given_phi
+            #return p_of_y_given_phi
 
-        elif self.regression_type=='GE':
+        else:
+            check(self.regression_type=='GE',
+                  f'Invalid regression type {self.regression_type}.')
 
             # variable to store the shape of the returned object
 
@@ -1134,11 +1233,19 @@ class Model:
 
                 p_of_y_given_phi = self.p_of_y_given_y_hat(y.ravel(), yhat.ravel()).reshape(shape)
 
-                return p_of_y_given_phi
+                #return p_of_y_given_phi
 
-            p_of_y_given_phi = self.p_of_y_given_y_hat(y, yhat)
+            else:
 
-            return p_of_y_given_phi
+                p_of_y_given_phi = self.p_of_y_given_y_hat(y, yhat)
+
+                #return p_of_y_given_phi
+
+        # Reshape for output
+        #p_shape = y_shape + phi_shape
+        #p = _shape_for_output(p_of_y_given_phi, p_shape)
+        #return p
+        return p_of_y_given_phi
 
     def p_of_y_given_y_hat(self,
                            y,

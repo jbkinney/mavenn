@@ -3,11 +3,13 @@ from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 from mavenn.src.error_handling import handle_errors, check
 import matplotlib.pyplot as plt
-import logomaker
-import seaborn as sns
+import logomaker      #TODO: Remove logomaker dependency
+import seaborn as sns #TODO: Remove seaborn dependency
 import pandas as pd
 import mavenn
-import suftware
+import suftware #TODO: Remove suftware dependency
+import numbers
+from collections.abc import Iterable
 
 
 import tensorflow.keras.backend as K
@@ -27,6 +29,49 @@ from mavenn.src.validate import validate_alphabet
 # Special import needed for heatmap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import DivergingNorm, Normalize
+
+@handle_errors
+def _broadcast_arrays(x, y):
+    # Cast inputs as numpy arrays
+    # with nonzero dimension
+    x = np.atleast_1d(x)
+    y = np.atleast_1d(y)
+
+    # Get shapes
+    xshape = list(x.shape)
+    yshape = list(y.shape)
+
+    # Get singltons that mimic shapes
+    xones = [1] * x.ndim
+    yones = [1] * y.ndim
+
+    # Broadcast
+    x = np.tile(np.reshape(x, xshape + yones), xones + yshape)
+    y = np.tile(np.reshape(y, xones + yshape), xshape + yones)
+
+    # Return broadcast arrays
+    return x, y
+
+@handle_errors
+def _get_shape_and_return_1d_array(x):
+    if not isinstance(x, Iterable):
+        shape = []
+    else:
+        x = np.array(x)
+        shape = list(x.shape)
+    x = np.atleast_1d(x).ravel()
+    return x, shape
+
+@handle_errors
+def _shape_for_output(x, shape=None):
+    if shape is not None:
+        x = np.array(x)
+        x = np.reshape(x, shape)
+    else:
+        x = np.squeeze(x)
+    if x.ndim == 0:
+        x = x.tolist()
+    return x
 
 
 @handle_errors
