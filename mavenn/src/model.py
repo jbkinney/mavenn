@@ -870,6 +870,63 @@ class Model:
 
         return theta_df
 
+
+    @handle_errors
+    def get_additive_parameters(self, out_format="matrix"):
+        """
+        Returns the additive parameters of a model
+        in convenient formats.
+
+        parameters
+        ----------
+
+        out_format: ("matrix" or "tidy")
+            If matrix, a 2D matrix of theta values is
+            returned, with characters across columns and
+            positions across rows. If "tidy", a tidy
+            dataframe is returned that additionally lists
+            all variant sequences, phi values, etc.
+
+        returns
+        -------
+
+        theta_df: (pd.DataFrame)
+            Dataframe containing theta values and other
+            information.
+        """
+
+        # get all parameters
+        theta_df = self.get_gpmap_parameters()
+
+        # Set pattern for matching and parsing additive params
+        pattern = re.compile('^theta_([0-9]+):([A-Za-z])$')
+
+        # Set pos and char cols, and remove non-additive params
+        matches = [pattern.match(name) for name in theta_df['name']]
+        ix = [bool(m) for m in matches]
+        theta_df['pos'] = [int(m.group(1) if m else '-1') for m in matches]
+        theta_df['char'] = [(m.group(2) if m else ' ') for m in matches]
+        theta_df = theta_df[ix]
+
+        # If matrix format is requested, pivot theta_df and erase columns name
+        if out_format == "matrix":
+            theta_df = theta_df.pivot(index='pos', columns='char',
+                                      values='value')
+            theta_df.columns.name = None
+
+        # If tidy format requested, just return a copy of theta_df
+        elif out_format == "tidy":
+            pass
+
+        # Otherwise, throw error regarding out_format
+        else:
+            check(out_format in ["matrix", "tidy"],
+                  f'invalid out_format: "{out_format}"')
+
+        # Return dataframe
+        return theta_df
+
+
     @handle_errors
     def get_nn(self):
 
@@ -878,6 +935,7 @@ class Model:
         """
 
         return self.model.model
+
 
     # TODO: Make internal
     @handle_errors
@@ -1648,7 +1706,7 @@ class Model:
             check(out_format in ["tidy", "matrix"],
                   f"out_format={out_format}; must be 'tidy' or 'matrix'.")
 
-        return mut_df
+        return mut_df.copy()
 
 
     def get_additive_parameters(self, out_format="matrix"):
