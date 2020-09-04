@@ -7,7 +7,6 @@ import logomaker      #TODO: Remove logomaker dependency
 import seaborn as sns #TODO: Remove seaborn dependency
 import pandas as pd
 import mavenn
-import suftware #TODO: Remove suftware dependency
 import numbers
 from collections.abc import Iterable
 
