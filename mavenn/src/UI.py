@@ -973,6 +973,7 @@ class MeasurementProcessAgnosticModel:
         na_model = Model(inputs=na_model_input, outputs=next_input)
 
         # compute the value of the nonlinearity for a given phi
+
         p_of_dot_given_phi = na_model.predict([phi])
 
         return p_of_dot_given_phi
