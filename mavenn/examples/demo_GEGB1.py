@@ -58,6 +58,7 @@ ax2.set_ylabel('Observations')
 ax2.set_xlabel('Predictions ($\hat{y}$)')
 
 ax3 = fig.add_subplot(gs[1, :])
+
 # display heatmap
 theta = pd.DataFrame(GER.get_gpmap_parameters()['value'][1:].values.reshape(55,20), columns=GER.model.characters)
 WT_sequence_GB1 = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
