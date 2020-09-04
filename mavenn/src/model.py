@@ -483,9 +483,46 @@ class Model:
             diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
             diffeomorphic_mean = np.mean(unfixed_phi[0])
 
+            # ensure ymean is an increasing function of phi (change made on 09/04/2020)
+            if self.regression_type == 'MPA':
+                # compute for training phi
+
+                # Note, can't use function self.na_p_of_all_y_given_phi since model isn't gauge fixed yet.
+                na_model_input = Input((1,))
+                next_input = na_model_input
+
+                # the following variable is the index of
+                phi_index = 3
+                yhat_index = 5
+
+                # Form model using functional API in a loop, starting from
+                # phi input, and ending on network output
+                for layer in self.model.model.layers[phi_index:yhat_index]:
+                    next_input = layer(next_input)
+
+                # Form gauge fixed GE_nonlinearity model
+                temp_na_model = kerasFunctionalModel(inputs=na_model_input, outputs=next_input)
+
+                # compute the value of the nonlinearity for a given phi
+
+                p_of_all_y_given_phi = temp_na_model.predict([unfixed_phi[0]])
+                bin_numbers = np.arange(p_of_all_y_given_phi.shape[1])
+
+                ymean = p_of_all_y_given_phi @ bin_numbers
+                r = np.corrcoef(unfixed_phi[0].ravel(), ymean)[0, 1]
+
+            elif self.regression_type == 'GE':
+
+                r = np.corrcoef(unfixed_phi[0].ravel(), self.model.y_train.ravel())[0, 1]
+
+            # this ensures phi is positively correlated with y_mean or y_train (MPA, GE respectively).
+            if r < 0:
+                diffeomorphic_std = -diffeomorphic_std
+
             # these attributes will also be saved in the saved model config file.
             self.diffeomorphic_mean = diffeomorphic_mean
             self.diffeomorphic_std = diffeomorphic_std
+
 
         # if this method is called after fit, scale the parameters to fix diffeomorphic mode.
         if load_model==False:
