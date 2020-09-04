@@ -612,4 +612,5 @@ def run_tests():
     test_validate_alphabet()
     test_load()
     test_x_to_phi_or_yhat()
+    test_phi_calculations()
 
