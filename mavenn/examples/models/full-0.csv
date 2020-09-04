@@ -1,0 +1,2 @@
+,alphabet,regression_type,gpmap_type,ge_nonlinearity_monotonic,ge_nonlinearity_hidden_nodes,ge_noise_model_type,ge_heteroskedasticity_order,na_hidden_nodes,theta_regularization,eta_regularization,ohe_batch_size,model,L,define_model,learning_rate,diffeomorphic_mean,diffeomorphic_std,x,y,ct_n
+0,dna,MPA,additive,True,50,Gaussian,2,50,0.001,0.01,50000,<mavenn.src.UI.MeasurementProcessAgnosticModel object at 0x124f4c3c8>,39,<tensorflow.python.keras.engine.training.Model object at 0x10b6e7d30>,0.0005,-1.5515172,1.375926,GCCTTTACACTTTCTGCTTTCGGCTCGTATGTTGTGTGG,[0 1 0 0 0],[23.0]

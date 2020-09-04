@@ -352,6 +352,156 @@ def test_load():
                           success_list=[good_GE_model])
 
 
+from mavenn.src.validate import check, handle_errors
+
+
+@handle_errors
+def test_x_to_phi(model, seq):
+    x = seq
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, float), f'phi is {type(phi)}, not a float')
+    check(np.isfinite(phi), f'phi={phi} is not finite.')
+
+    x = np.array(seq)
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, float), f'phi is {type(phi)}, not a float')
+
+    x = [seq,
+         seq,
+         seq]
+    shape = (3,)
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, np.ndarray), f'phi is {type(phi)}, not a np.ndarray')
+    check(phi.shape == shape,
+          f'phi={phi} does not have the expected shape={shape}')
+
+    x = [[seq, seq, seq]]
+    shape = (1, 3)
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, np.ndarray), f'phi is {type(phi)}, not a np.ndarray')
+    check(phi.shape == shape,
+          f'phi={phi} does not have the expected shape={shape}')
+
+    x = [[seq],
+         [seq],
+         [seq]]
+    shape = (3, 1)
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, np.ndarray), f'phi is {type(phi)}, not a np.ndarray')
+    check(phi.shape == shape,
+          f'phi={phi} does not have the expected shape={shape}')
+
+    x = [[[seq],
+          [seq],
+          [seq]]]
+    shape = (1, 3, 1)
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, np.ndarray), f'phi is {type(phi)}, not a np.ndarray')
+    check(phi.shape == shape,
+          f'phi={phi} does not have the expected shape={shape}')
+
+    x = np.array([seq, seq, seq])
+    shape = (3,)
+    phi = model.x_to_phi(x)
+    check(isinstance(phi, np.ndarray), f'phi is {type(phi)}, not a np.ndarray')
+    check(phi.shape == shape,
+          f'phi={phi} does not have the expected shape={shape}')
+
+
+@handle_errors
+def test_x_to_yhat(model, seq):
+    x = seq
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, float), f'yhat is {type(yhat)}, not a float')
+    check(np.isfinite(yhat), f'yhat={yhat} is not finite.')
+
+    x = np.array(seq)
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, float), f'yhat is {type(yhat)}, not a float')
+
+    x = [seq,
+         seq,
+         seq]
+    shape = (3,)
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, np.ndarray),
+          f'yhat is {type(yhat)}, not a np.ndarray')
+    check(yhat.shape == shape,
+          f'yhat={yhat} does not have the expected shape={shape}')
+
+    x = [[seq, seq, seq]]
+    shape = (1, 3)
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, np.ndarray),
+          f'yhat is {type(yhat)}, not a np.ndarray')
+    check(yhat.shape == shape,
+          f'yhat={yhat} does not have the expected shape={shape}')
+
+    x = [[seq],
+         [seq],
+         [seq]]
+    shape = (3, 1)
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, np.ndarray),
+          f'yhat is {type(yhat)}, not a np.ndarray')
+    check(yhat.shape == shape,
+          f'yhat={yhat} does not have the expected shape={shape}')
+
+    x = [[[seq],
+          [seq],
+          [seq]]]
+    shape = (1, 3, 1)
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, np.ndarray),
+          f'yhat is {type(yhat)}, not a np.ndarray')
+    check(yhat.shape == shape,
+          f'yhat={yhat} does not have the expected shape={shape}')
+
+    x = np.array([seq, seq, seq])
+    shape = (3,)
+    yhat = model.x_to_yhat(x)
+    check(isinstance(yhat, np.ndarray),
+          f'yhat is {type(yhat)}, not a np.ndarray')
+    check(yhat.shape == shape,
+          f'yhat={yhat} does not have the expected shape={shape}')
+
+
+def test_x_to_phi_or_yhat():
+    mavenn_dir = mavenn.__path__[0]
+    model_dir = f'{mavenn_dir}/examples/models/'
+
+    mpa_model = mavenn.load(model_dir + 'full-wt')
+    mpa_seq = 'GGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG'
+    mpa_seq_gap = 'GGCTTTACAC-TTATGCTTCCGGCTCGTATGTTGTGTGG'
+    ge_model = mavenn.load(model_dir + 'gaussian_GB1_model')
+    ge_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
+    ge_seq_gap = 'QYKLILNGKTLK-ETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
+
+    test_parameter_values(test_x_to_phi,
+                          var_name='seq',
+                          success_list=[ge_seq],
+                          fail_list=[mpa_seq, ge_seq_gap],
+                          model=ge_model)
+
+    test_parameter_values(test_x_to_phi,
+                          var_name='seq',
+                          success_list=[mpa_seq],
+                          fail_list=[ge_seq, mpa_seq_gap],
+                          model=mpa_model)
+
+    test_parameter_values(test_x_to_yhat,
+                          var_name='seq',
+                          success_list=[ge_seq],
+                          fail_list=[mpa_seq, ge_seq_gap],
+                          model=ge_model)
+
+    test_parameter_values(test_x_to_yhat,
+                          var_name='seq',
+                          success_list=[],
+                          fail_list=[mpa_seq],
+                          model=mpa_model)
+
+
 
 def run_tests():
     """
@@ -371,4 +521,5 @@ def run_tests():
     test_get_1pt_variants()
     test_validate_alphabet()
     test_load()
+    test_x_to_phi_or_yhat()
 

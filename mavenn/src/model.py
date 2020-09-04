@@ -955,6 +955,20 @@ class Model:
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
+        # Make sure all sequences have the proper length
+        L = self.model.L
+        lengths = np.unique([len(seq) for seq in x])
+        check(len(lengths) == 1,
+              f'Input sequences have multiple lengths: {lengths}')
+        check(lengths[0] == L,
+              f'Input sequence length {lengths[0]} does not match L={L}')
+
+        # Make sure sequences in x have only valid characters
+        model_chars = set(self.model.characters)
+        x_chars = set(''.join(x))
+        check(x_chars <= model_chars,
+              f'Input sequences contain the following invalid characters: {x_chars-model_chars}')
+
         if self.gpmap_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
             seqs_ohe = onehot_encode_array(x, self.model.characters)
