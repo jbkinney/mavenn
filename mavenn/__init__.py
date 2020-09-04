@@ -38,7 +38,7 @@ def demo(name='GEmpsa'):
     -----------
 
     name: (str)
-        Must be one of {'GEmpsa, GEGB1, GEmpsaPairwise, NAsortseq'}.
+        Must be one of {'GEmpsa, GEGB1, NAsortseq'}.
 
     returns
     -------
