@@ -7,6 +7,7 @@ import logomaker      #TODO: Remove logomaker dependency
 import seaborn as sns #TODO: Remove seaborn dependency
 import pandas as pd
 import mavenn
+import re
 import numbers
 from collections.abc import Iterable
 
@@ -28,6 +29,332 @@ from mavenn.src.validate import validate_alphabet
 # Special import needed for heatmap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import DivergingNorm, Normalize
+
+from mavenn.src.error_handling import handle_errors, check
+from matplotlib.colors import DivergingNorm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+def get_45deg_mesh(mat):
+    # Define rotation matrix
+    theta = -np.pi / 4
+    R = np.array([[np.cos(theta), -np.sin(theta)],
+                  [np.sin(theta), np.cos(theta)]])
+
+    # Define unrotated coordinates on
+    K = len(mat) + 1
+    grid1d = np.arange(0, K) - .5
+    X = np.tile(np.reshape(grid1d, [K, 1]), [1, K])
+    Y = np.tile(np.reshape(grid1d, [1, K]), [K, 1])
+    xy = np.array([X.ravel(), Y.ravel()])
+
+    # Rotate coordinates
+    xy_rot = R @ xy
+    X_rot = xy_rot[0, :].reshape(K, K)
+    Y_rot = xy_rot[1, :].reshape(K, K).T
+
+    return X_rot, Y_rot
+
+
+@handle_errors
+def pairwise_heatmap(theta_df,
+                     ax=None,
+                     gpmap_type="auto",
+                     show_alphabet=True,
+                     alphabet_size=8,
+                     c1_alphabet_pad=0,
+                     c2_alphabet_pad=0,
+                     show_seplines=True,
+                     sepline_kwargs=None,
+                     xlim_pad=1,
+                     ylim_pad=1,
+                     cbar=True,
+                     cax=None,
+                     clim=None,
+                     clim_quantile=.95,
+                     ccenter=0,
+                     cmap='coolwarm',
+                     cmap_size="5%",
+                     cmap_pad=0.1):
+    """
+    Draws a triangular heatmap illustrating the pairwise
+    parameters of a model. Can be used for pairwise or
+    neighbor models.
+
+    Note: The resulting plot has aspect ratio of 1 and
+    is scaled so that pixels have widths and heights of
+    pixel_size=1/(C*np.sqrt(2)). This is done so that the
+    horizontal distance between positions (as indicated by x ticks) is 1.
+
+    parameters
+    ----------
+
+    theta_df: (pd.DataFrame)
+        A dataframe listing model parameters. This can be
+        obtained using Model.get_gpmap_parameters().
+
+    ax: (matplotlib.axes.Axes)
+        The Axes object on which the heatmap will be drawn.
+        If None, one will be created. If specified, cbar=True,
+        and cax=None, ax will be split in two to make room for
+        colorbar.
+
+    gpmap_type: (str)
+        Determines how many pairwise parameters are plotted.
+        Must be "pairwise", "neighbor", or "auto". If
+        "pairwise", a B2-shape will be plotted. If "neighbor",
+        a string of diamonds will be plotted. If "auto", this
+        will be set automatically depending on the contents of
+        theta_df.
+
+    show_alphabet: (bool)
+        Whether to draw alphabet on the plot.
+
+    alphabet_size: (float >= 0)
+        Font size to use for alphabet.
+
+    c1_alphabet_pad: (float)
+        Additional padding, in units of pixel_size, used to space
+        the character c1 alphabet from the heatmap.
+
+    c2_alphabet_pad: (float)
+        Additional padding, in units of pixel_size, used to space
+        the character c2 alphabet from the heatmap.
+
+    show_seplines: (bool)
+        Whether to draw seplines, i.e. lines separating character blocks
+        for different position pairs.
+
+    sepline_kwargs: (dict)
+        Keywords to pass to ax.plot() when drawing seplines.
+
+    xlim_pad: (float)
+        Additional padding to add to both xlims, in absolute units.
+
+    ylim_pad: (float)
+        Additional padding to add to both ylims, in aboslute units.
+
+    cbar: (bool)
+        Whether to draw a colorbar.
+
+    cax: (matplotlib.axes.Axes)
+        The Axes object on which the colorbar will be drawn
+        if requested. If None, one will be created by splitting
+        ax in two according to cmap_size and cmpa_pad.
+
+    clim: (array of form [cmin, cmax])
+        Optional specification of the maximum and minimum effect
+        values spanned by the colormap. Overrides clim_quantile.
+
+    clim_quantile: (float in [0,1])
+        If set, clim will automatically be chosen to include the specified
+        fraction of pixel values.
+
+    ccenter: (float)
+        The pixel value at which to position the center of a diverging
+        colormap. A value of ccenter=0 most often makes sense.
+
+    cmap: (str or matplotlib.colors.Colormap)
+        Colormap to use.
+
+    cmap_size: (str)
+        Specifies the fraction of ax width used for colorbar.
+        See documentation for
+            mpl_toolkits.axes_grid1.make_axes_locatable().
+
+    cmap_pad: (float)
+        Specifies space between colorbar and shrunken ax.
+        See documentation for
+            mpl_toolkits.axes_grid1.make_axes_locatable().
+
+    returns
+    -------
+
+    ax: (matplotlib.axes.Axes)
+        Axes containing the heatmap.
+
+    cb: (matplotlib.colorbar.Colorbar)
+        Colorbar object linked to Axes.
+    """
+
+    # Set regular expression for parsing pariwise parameters
+    pattern = re.compile("theta_([0-9]+):([A-Z]),([0-9]+):([A-Z])")
+
+    # Remove rows of theta_df that do not match the pattern
+    ix = [bool(pattern.match(name)) for name in theta_df['name']]
+    theta_df = theta_df[ix].copy()
+
+    # Parse remaining parameter names
+    matches = [pattern.match(name) for name in theta_df['name']]
+    theta_df['l1'] = [int(m.group(1)) for m in matches]
+    theta_df['c1'] = [m.group(2) for m in matches]
+    theta_df['l2'] = [int(m.group(3)) for m in matches]
+    theta_df['c2'] = [m.group(4) for m in matches]
+    theta_df['sub1'] = theta_df['l1'].astype(str) + ':' + theta_df['c1']
+    theta_df['sub2'] = theta_df['l2'].astype(str) + ':' + theta_df['c2']
+
+    # Sort rows
+    theta_df.sort_values(by=['l1', 'c1', 'l2', 'c2'], inplace=True)
+
+    # Get dims
+    L = len(set(list(theta_df['l1']) + list(theta_df['l2'])))
+    chars = list(set(list(theta_df['c1']) + list(theta_df['c2'])))
+    chars.sort()
+    C = len(chars)
+    K = (L - 1) * C
+
+    # Determine if neighbor or pairwise if gpmap_type is not set.
+    l1 = theta_df['l1'].values
+    l2 = theta_df['l2'].values
+    assert np.all(l2 > l1), 'Strange; l2 <= l1 sometimes. Shouldnt happen'
+
+    # If user specifies gpmap_type="auto", automatically determine which
+    # type of plot to make
+    if gpmap_type == "auto":
+        if any(l2 - l1 > 1):
+            gpmap_type = "pairwise"
+        else:
+            gpmap_type = "neighbor"
+
+    # If user specifies gpmap_type="neighbor", remove non-neighbor entries
+    # from theta_df
+    elif gpmap_type == "neighbor":
+        theta_df = theta_df[l2-l1 == 1].copy()
+
+    # Don't do anything if gpmap_type="pairwise"
+    elif gpmap_type == "pairwise":
+        pass
+
+    # Otherwise, throw an error
+    else:
+        check(False, f"Invalid gpmap_type={gpmap_type}")
+
+    # Pivot to matrix LCxLC in size
+    mat_df = theta_df.pivot(index="sub1", columns="sub2", values="value")
+    mat = mat_df.values
+
+    # Verify that mat is the right size
+    assert mat.shape == (K, K), f'mat.shape={mat.shape}; expected{(K,K)}'
+
+    # Get indices of finite elements of mat
+    ix = np.isfinite(mat)
+
+    # Set color lims to central 95% quantile
+    if clim is None:
+        vals = mat[ix]
+        clim = np.quantile(vals, q=[(1 - clim_quantile) / 2,
+                                    1 - (1 - clim_quantile) / 2])
+
+    # Create axis if none already exists
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
+
+    # Needed to center colorbar at zero
+    if ccenter is not None:
+        norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
+    else:
+        norm = Normalize(vmin=clim[0], vmax=clim[1])
+
+    # Get rotated mesh
+    X_rot, Y_rot = get_45deg_mesh(mat)
+
+    # Normalize
+    X_rot = (X_rot+1)/(C * np.sqrt(2))
+    Y_rot = Y_rot/(C * np.sqrt(2))
+    scale = 1 / (C * 2)
+
+    # Set parameters that depend on gpmap_type
+    ysep_min = -1 / 2 - .001 * scale
+    xlim = [-xlim_pad * scale, L - 1 + xlim_pad * scale]
+    if gpmap_type == "pairwise":
+        ysep_max = L / 2 + .001 * scale
+        ylim = [-1 / 2 - ylim_pad * scale, (L - 1) / 2 + ylim_pad * scale]
+    else:
+        ysep_max = 1 / 2 + .001 * scale
+        ylim = [-1 / 2 - ylim_pad * scale, 1 / 2 + ylim_pad * scale]
+
+    # Not sure why I have to do this
+    Y_rot = -Y_rot
+
+    # Draw rotated heatmap
+    im = ax.pcolormesh(X_rot,
+                       Y_rot,
+                       mat,
+                       cmap=cmap,
+                       norm=norm)
+
+    # Remove spines
+    for loc, spine in ax.spines.items():
+        spine.set_visible(False)
+
+    # Set sepline kwargs
+    if show_seplines:
+        if sepline_kwargs is None:
+            sepline_kwargs = {'color': 'white',
+                              'linestyle': '-',
+                              'linewidth': 2}
+
+        # Draw white lines to separate position pairs
+        for n in range(0, K+1, C):
+
+            # TODO: Change extent so these are the right length
+            x = X_rot[n, :]
+            y = Y_rot[n, :]
+            ks = (y >= ysep_min) & (y <= ysep_max)
+            ax.plot(x[ks], y[ks], **sepline_kwargs)
+
+            x = X_rot[:, n]
+            y = Y_rot[:, n]
+            ks = (y >= ysep_min) & (y <= ysep_max)
+            ax.plot(x[ks], y[ks], **sepline_kwargs)
+
+    # Set lims
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+
+    # Set aspect
+    ax.set_aspect("equal")
+
+    # Remove yticks
+    ax.set_yticks([])
+
+    # Set xticks
+    xticks = np.arange(L).astype(int)
+    ax.set_xticks(xticks)
+
+    # If drawing characters
+    if show_alphabet:
+
+        # Draw lower characters
+        for i, c in enumerate(chars):
+            x_lo = (i - 0 - c1_alphabet_pad) * scale
+            y_lo = (-i - 1 - c1_alphabet_pad) * scale
+            ax.text(x_lo, y_lo, c, va='center',
+                    ha='center', rotation=-45, fontsize=alphabet_size)
+
+        # Draw higher characters
+        for i, c in enumerate(chars):
+            x_hi = (i + 0 - c2_alphabet_pad) * scale
+            y_hi = (i + 1 + c2_alphabet_pad) * scale
+            ax.text(x_hi, y_hi, c, va='center',
+                    ha='center', rotation=45, fontsize=alphabet_size)
+
+    # Create colorbar if requested, make one
+    if cbar:
+        if cax is None:
+            cax = make_axes_locatable(ax).new_horizontal(size=cmap_size,
+                                                         pad=cmap_pad)
+            fig.add_axes(cax)
+        cb = plt.colorbar(im, cax=cax)
+
+        # Otherwise, return None for cb
+    else:
+        cb = None
+
+    return ax, cb
+
 
 
 @handle_errors
@@ -77,18 +404,18 @@ def _shape_for_output(x, shape=None):
 
 
 @handle_errors
-def heatmap(df,
-            wt_seq=None,
-            wt_at_zero=True,
-            ax=None,
-            cbar=True,
-            cax=None,
-            clim=None,
-            clim_quantile=.95,
-            ccenter=0,
-            cmap='coolwarm',
-            cmap_size="5%",
-            cmap_pad=0.1):
+def additive_heatmap(df,
+                     wt_seq=None,
+                     wt_at_zero=True,
+                     ax=None,
+                     cbar=True,
+                     cax=None,
+                     clim=None,
+                     clim_quantile=.95,
+                     ccenter=0,
+                     cmap='coolwarm',
+                     cmap_size="5%",
+                     cmap_pad=0.1):
     """
     Draws a heatmap illustrating a matrix of parameters.
 
@@ -96,9 +423,9 @@ def heatmap(df,
     ----------
 
     df: (pd.DataFrame)
-        A matrix specifying additive parameter values.
-        Rows correspond to positions while columns correspond
-        to characters. Column names must be single
+        A matrix specifying additive values, eg 1pt effects
+        or additive parameters. Rows correspond to positions while
+        columns correspond to characters. Column names must be single
         characters and row indices must be integers.
 
     wt_seq: (str)
@@ -207,7 +534,7 @@ def heatmap(df,
     else:
         norm = Normalize(vmin=clim[0], vmax=clim[1])
 
-    # Plot GB1 heatmap
+    # Plot heatmap
     x_edges = np.arange(L + 1) - .5
     y_edges = np.arange(Y + 1) - .5
     im = ax.pcolormesh(x_edges,

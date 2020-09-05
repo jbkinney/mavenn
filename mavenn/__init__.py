@@ -14,7 +14,8 @@ from mavenn.src.utils import CauchyNoiseModel
 
 from mavenn.src import entropy_estimators as ee
 
-from mavenn.src.utils import heatmap
+from mavenn.src.utils import additive_heatmap
+from mavenn.src.utils import pairwise_heatmap
 from mavenn.src.utils import get_1pt_variants
 
 # imports required for helper functions in demos
