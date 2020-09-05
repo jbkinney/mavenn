@@ -907,7 +907,6 @@ class Model:
 
         return theta_df
 
-
     @handle_errors
     def get_additive_parameters(self, out_format="matrix"):
         """
@@ -1745,54 +1744,4 @@ class Model:
 
         return mut_df.copy()
 
-
-    def get_additive_parameters(self, out_format="matrix"):
-        """
-        Returns additive parameters of to model in
-        convenient formats.
-
-        parameters
-        ----------
-
-        out_format: ("matrix" or "tidy")
-            If matrix, a 2D matrix of dphi values is
-            returned, with characters across columns and
-            positions across rows. If "tidy", a tidy
-            dataframe is returned that additionally lists
-            all variant sequences, phi values, etc.
-
-        returns
-        -------
-
-        out_df: (pd.DataFrame)
-            Dataframe containing dphi values and other
-            information.
-        """
-        param_df = self.get_gpmap_parameters()
-
-        # Compile regular expression pattern
-        pattern = re.compile('^theta_([0-9]+):([A-Z])$')
-
-        # Remove non-additive parameters
-        matches = [pattern.match(name) for name in param_df['name']]
-        ix = [bool(m) for m in matches]
-        param_df = param_df[ix]
-
-        # Parse pos and char from parameter names
-        matches = [pattern.match(name) for name in param_df['name']]
-        param_df['pos'] = [int(m.group(1)) for m in matches]
-        param_df['char'] = [m.group(2) for m in matches]
-
-        if out_format == "tidy":
-            out_df = param_df
-        elif out_format == "matrix":
-            out_df = param_df.pivot(index='pos', columns='char', values='value')
-            out_df.columns.name = None
-        else:
-            out_df = None
-            check(out_format in ["tidy", "matrix"],
-                  f"out_format={out_format}; must be 'tidy' or 'matrix'.")
-
-        # Return to user
-        return out_df
 

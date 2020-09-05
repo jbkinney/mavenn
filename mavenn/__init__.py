@@ -26,50 +26,69 @@ import pandas as pd
 
 import os
 import re
-
+import glob
 
 @handle_errors
-def demo(name='GEmpsa'):
+def demo(name=None, print_code=True):
 
     """
     Performs a demonstration of the mavenn software.
 
     parameters
     -----------
+    name: (str, None)
+        Name of demo to run. If None, a list of valid demo names
+        will be printed.
 
-    name: (str)
-        Must be one of {'GEmpsa, GEGB1, GEmpsaTrain, NAsortseq'}.
+    print_code: (bool)
+        If True, text of the demo file will be printed along with
+        the output of the demo file. If False, only the demo output
+        will be shown.
 
     returns
     -------
-    None.
+    None
 
     """
 
-    # build list of demo names and corresponding file names
-    example_dir = '%s/examples' % os.path.dirname(__file__)
-    all_base_file_names = os.listdir(example_dir)
+    demos_dir = mavenn.__path__[0] +'/examples/demos'
+    demo_file_names = glob.glob(f'{demos_dir}/*.py')
+    demos_dict = {}
+    for file_name in demo_file_names:
+        base_name = file_name.split('/')[-1]
+        pattern = '^(.*)\.py$'
+        key = re.match(pattern, base_name).group(1)
+        demos_dict[key] = file_name
+    demo_names = list(demos_dict.keys())
+    demo_names.sort()
 
-    example_file_names = ['%s/%s' % (example_dir, temp_name)
-                     for temp_name in all_base_file_names
-                     if re.match('demo_.*\.py', temp_name)]
+    # If no input, list valid names
+    if name is None:
+        print("Please enter a demo name. Valid are:")
+        print("\n".join([f'"{name}"' for name in demo_names]))
 
-    examples_dict = {}
-    for file_name in example_file_names:
-        key = file_name.split('_')[-1][:-3]
-        examples_dict[key] = file_name
+    # If input is valid, run demo
+    elif name in demo_names:
 
-    # check that name is valid
-    check(name in examples_dict.keys(),
-          'name = %s is not valid. Must be one of %s'
-          % (repr(name), examples_dict.keys()))
+        # Get demo file name
+        file_name = demos_dict[name]
 
-    # open and run example file
-    file_name = examples_dict[name]
-    with open(file_name, 'r') as f:
-        content = f.read()
-        line = '-------------------------------------------------------------'
-        print('Running %s:\n%s\n%s\n%s' % \
-              (file_name, line, content, line))
-    exec(open(file_name).read())
+        # Print code if requested
+        if print_code:
+            with open(file_name, 'r') as f:
+                content = f.read()
+                line = '-------------------------------------------------------'
+                print('Running %s:\n%s\n%s\n%s' % \
+                      (file_name, line, content, line))
+        else:
+            pass
+
+        # Run demo
+        exec(open(file_name).read())
+
+    # If input is invalid, raise error
+    else:
+        # raise error
+        check(False,
+              f'name = {name} is invalid. Must be one of {demo_names}')
 

@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import glob
+
 global_success_counter = 0
 global_fail_counter = 0
 
@@ -585,13 +587,24 @@ def test_phi_calculations():
     model_dir = f'{mavenn_dir}/examples/models/'
 
     # Get list of models in directory
-    import glob
     model_files = glob.glob(model_dir + '*.h5')
 
     test_parameter_values(func=_test_phi_calculation,
                           var_name='model_file',
                           success_list=model_files,
                           fail_list=[])
+
+def test_get_additive_parameters():
+    mavenn_dir = mavenn.__path__[0]
+    model_dir = f'{mavenn_dir}/examples/models/'
+    model_files = glob.glob(model_dir + '*.h5')
+    for model_file in model_files:
+        print(f'Loading model {model_file[:-3]}...')
+        model = mavenn.load(model_file[:-3])
+        test_parameter_values(func=model.get_additive_parameters,
+                              var_name="out_format",
+                              success_list=["matrix", "tidy"],
+                              fail_list=[None, "xxx"])
 
 def run_tests():
     """
@@ -613,4 +626,5 @@ def run_tests():
     test_load()
     test_x_to_phi_or_yhat()
     test_phi_calculations()
+    test_get_additive_parameters()
 
