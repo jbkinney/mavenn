@@ -857,7 +857,7 @@ class Model:
                 for char1 in char_indices:
                     for char2 in char_indices:
                         value = reshaped_theta[pos1][char1][char2]
-                        name = f'theta_{pos1}:{chars[char1]}{chars[char2]}'
+                        name = f'theta_{pos1}:{chars[char1]},{pos1+1}:{chars[char2]}'
                         names.append(name)
                         values.append(value)
 

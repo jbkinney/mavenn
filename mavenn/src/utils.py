@@ -3,11 +3,10 @@ from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 from mavenn.src.error_handling import handle_errors, check
 import matplotlib.pyplot as plt
-import logomaker      #TODO: Remove logomaker dependency
-import seaborn as sns #TODO: Remove seaborn dependency
 import pandas as pd
 import mavenn
 import re
+import pdb
 import numbers
 from collections.abc import Iterable
 
@@ -58,16 +57,21 @@ def get_45deg_mesh(mat):
 
 @handle_errors
 def pairwise_heatmap(theta_df,
+                     mask_dict=None,
                      ax=None,
                      gpmap_type="auto",
+                     show_positions=True,
+                     position_size=8,
+                     l1_positions_pad=0,
+                     l2_positions_pad=0,
                      show_alphabet=True,
                      alphabet_size=8,
                      c1_alphabet_pad=0,
                      c2_alphabet_pad=0,
                      show_seplines=True,
                      sepline_kwargs=None,
-                     xlim_pad=1,
-                     ylim_pad=1,
+                     xlim_pad=.1,
+                     ylim_pad=.1,
                      cbar=True,
                      cax=None,
                      clim=None,
@@ -82,9 +86,16 @@ def pairwise_heatmap(theta_df,
     neighbor models.
 
     Note: The resulting plot has aspect ratio of 1 and
-    is scaled so that pixels have widths and heights of
-    pixel_size=1/(C*np.sqrt(2)). This is done so that the
-    horizontal distance between positions (as indicated by x ticks) is 1.
+    is scaled so that pixels have half-diagonal lengths given by
+
+        half_pixel_diag = 1/(C*2),
+
+    and blocks of characters have half-diagonal lengths given by
+
+        half_block_diag = 1/2
+
+    This is done so that the horizontal distance between positions
+    (as indicated by x ticks) is 1.
 
     parameters
     ----------
@@ -107,6 +118,20 @@ def pairwise_heatmap(theta_df,
         will be set automatically depending on the contents of
         theta_df.
 
+    show_positions: (bool)
+        Whether to draw position labels on the plot.
+
+    position_size: (float >= 0)
+        Font size to use for position labels.
+
+    l1_position_pad: (float)
+        Additional padding, in units of half_block_diag, used to space
+        the l1 position labels further from the heatmap.
+
+    l2_position_pad: (float)
+        Additional padding, in units of half_block_diag, used to space
+        the l2 position labels further from the heatmap.
+
     show_alphabet: (bool)
         Whether to draw alphabet on the plot.
 
@@ -114,12 +139,12 @@ def pairwise_heatmap(theta_df,
         Font size to use for alphabet.
 
     c1_alphabet_pad: (float)
-        Additional padding, in units of pixel_size, used to space
-        the character c1 alphabet from the heatmap.
+        Additional padding, in units of half_pixel_diag, used to space
+        the c1 alphabet labels from the heatmap.
 
     c2_alphabet_pad: (float)
-        Additional padding, in units of pixel_size, used to space
-        the character c2 alphabet from the heatmap.
+        Additional padding, in units of half_pixel_diag, used to space
+        the c2 alphabet labels from the heatmap.
 
     show_seplines: (bool)
         Whether to draw seplines, i.e. lines separating character blocks
@@ -206,7 +231,35 @@ def pairwise_heatmap(theta_df,
     # Determine if neighbor or pairwise if gpmap_type is not set.
     l1 = theta_df['l1'].values
     l2 = theta_df['l2'].values
+    c1 = theta_df['c1'].values
+    c2 = theta_df['c2'].values
     assert np.all(l2 > l1), 'Strange; l2 <= l1 sometimes. Shouldnt happen'
+
+    # If there is a mask, set corresponding values to nan
+    if mask_dict is not None:
+
+        # Make sure mask_dict is a dictionary
+        check(isinstance(mask_dict, dict),
+              f'type(mask_dict)={type(mask_dict)}; must be dict')
+
+        # Check that mask_dict has valid positions
+        mask_ls = mask_dict.keys()
+        positions = list(range(L))
+        check(set(mask_ls) <= set(positions),
+              f'mask_dict={mask_dict} contains positions not compatible with length L={L}.')
+
+        # Check that mask_dict has valid characters
+        mask_cs = ''.join(mask_dict.values())
+        check(set(mask_cs) <= set(chars),
+              f'mask_dict={mask_dict} contains characters not compatible with alphabet={chars}.')
+
+        # Set masked values of dataframe to np.nan
+        for l, cs in mask_dict.items():
+            for c in cs:
+                ix1 = (l1 == l) & (c1 == c)
+                ix2 = (l2 == l) & (c2 == c)
+                ix1or2 = ix1 | ix2
+                theta_df.loc[ix1or2, 'value'] = np.nan
 
     # If user specifies gpmap_type="auto", automatically determine which
     # type of plot to make
@@ -261,19 +314,21 @@ def pairwise_heatmap(theta_df,
     X_rot, Y_rot = get_45deg_mesh(mat)
 
     # Normalize
-    X_rot = (X_rot+1)/(C * np.sqrt(2))
-    Y_rot = Y_rot/(C * np.sqrt(2))
-    scale = 1 / (C * 2)
+    half_pixel_diag = 1 / (2*C)
+    pixel_side = 1 / (C * np.sqrt(2))
+    X_rot = X_rot * pixel_side + half_pixel_diag
+    Y_rot = Y_rot * pixel_side
+
 
     # Set parameters that depend on gpmap_type
-    ysep_min = -1 / 2 - .001 * scale
-    xlim = [-xlim_pad * scale, L - 1 + xlim_pad * scale]
+    ysep_min = -0.5 - .001 * half_pixel_diag
+    xlim = [-xlim_pad, L - 1 + xlim_pad]
     if gpmap_type == "pairwise":
-        ysep_max = L / 2 + .001 * scale
-        ylim = [-1 / 2 - ylim_pad * scale, (L - 1) / 2 + ylim_pad * scale]
+        ysep_max = L / 2 + .001 * half_pixel_diag
+        ylim = [-0.5 - ylim_pad, (L - 1) / 2 + ylim_pad]
     else:
-        ysep_max = 1 / 2 + .001 * scale
-        ylim = [-1 / 2 - ylim_pad * scale, 1 / 2 + ylim_pad * scale]
+        ysep_max = 0.5 + .001 * half_pixel_diag
+        ylim = [-0.5 - ylim_pad, 0.5 + ylim_pad]
 
     # Not sure why I have to do this
     Y_rot = -Y_rot
@@ -292,9 +347,9 @@ def pairwise_heatmap(theta_df,
     # Set sepline kwargs
     if show_seplines:
         if sepline_kwargs is None:
-            sepline_kwargs = {'color': 'white',
+            sepline_kwargs = {'color': 'gray',
                               'linestyle': '-',
-                              'linewidth': 2}
+                              'linewidth': .5}
 
         # Draw white lines to separate position pairs
         for n in range(0, K+1, C):
@@ -327,19 +382,55 @@ def pairwise_heatmap(theta_df,
     # If drawing characters
     if show_alphabet:
 
-        # Draw lower characters
+        # Draw c1 alphabet
         for i, c in enumerate(chars):
-            x_lo = (i - 0 - c1_alphabet_pad) * scale
-            y_lo = (-i - 1 - c1_alphabet_pad) * scale
-            ax.text(x_lo, y_lo, c, va='center',
+            x1 = 0 \
+                + i * half_pixel_diag \
+                - c1_alphabet_pad * half_pixel_diag
+            y1 = - half_pixel_diag \
+                 - i * half_pixel_diag \
+                 - c1_alphabet_pad * half_pixel_diag
+            ax.text(x1, y1, c, va='center',
                     ha='center', rotation=-45, fontsize=alphabet_size)
 
-        # Draw higher characters
+        # Draw c2 alphabet
         for i, c in enumerate(chars):
-            x_hi = (i + 0 - c2_alphabet_pad) * scale
-            y_hi = (i + 1 + c2_alphabet_pad) * scale
-            ax.text(x_hi, y_hi, c, va='center',
+            x2 = (.5 + half_pixel_diag) \
+                 + i * half_pixel_diag \
+                 + c2_alphabet_pad * half_pixel_diag
+            y2 = - .5 \
+                 + i * half_pixel_diag \
+                 - c2_alphabet_pad * half_pixel_diag
+            ax.text(x2, y2, c, va='center',
                     ha='center', rotation=45, fontsize=alphabet_size)
+
+    # Display positions if requested
+    positions = np.arange(L-1)
+    half_block_diag = C * half_pixel_diag
+    if show_positions:
+
+        # Draw l1 positions
+        for i in positions:
+            x1 = 0 \
+                + i * half_block_diag \
+                - l1_positions_pad * half_block_diag
+            y1 = + half_block_diag \
+                 + i * half_block_diag \
+                 + l1_positions_pad * half_block_diag
+            ax.text(x1, y1, f'{i:d}', va='center',
+                    ha='center', rotation=45, fontsize=position_size)
+
+        # Draw l2 positions
+        for i in positions:
+            x2 = L * half_block_diag \
+                 + i * half_block_diag \
+                 + l2_positions_pad * half_block_diag
+            y2 = (L-1) * half_block_diag \
+                 - i * half_block_diag \
+                 + l2_positions_pad * half_block_diag
+            ax.text(x2, y2, f'{i:d}', va='center',
+                    ha='center', rotation=-45, fontsize=position_size)
+
 
     # Create colorbar if requested, make one
     if cbar:
@@ -405,9 +496,11 @@ def _shape_for_output(x, shape=None):
 
 @handle_errors
 def additive_heatmap(df,
+                     mask_dict=None,
                      wt_seq=None,
                      wt_at_zero=True,
                      ax=None,
+                     show_spines=False,
                      cbar=True,
                      cax=None,
                      clim=None,
@@ -417,7 +510,7 @@ def additive_heatmap(df,
                      cmap_size="5%",
                      cmap_pad=0.1):
     """
-    Draws a heatmap illustrating a matrix of parameters.
+    Draws a heatmap illustrating a matrix of values.
 
     parameters
     ----------
@@ -427,6 +520,11 @@ def additive_heatmap(df,
         or additive parameters. Rows correspond to positions while
         columns correspond to characters. Column names must be single
         characters and row indices must be integers.
+
+    mask_dict: (dict)
+        Specifies which characters to mask at specific positions.
+        For example, to mask ACGT at position 3 and AG at position 4, set
+        mask_dict={3:'ACGT',4:'AG'}
 
     wt_seq: (str)
         The wild-type sequence. Must have length len(df)
@@ -491,6 +589,12 @@ def additive_heatmap(df,
     # Flip
     df = df.loc[:, ::-1]
 
+    # Set extent
+    C = df.shape[1]
+    L = df.shape[0]
+    xlim = [-.5, L - .5]
+    ylim = [-.5, C - .5]
+
     # If wt_seq is set
     if wt_seq:
 
@@ -510,9 +614,35 @@ def additive_heatmap(df,
             if ccenter is None:
                 ccenter = 0
 
+    # If there is a mask, set values to nan
+    if mask_dict is not None:
+
+        # Make sure mask_dict is a dictionary
+        check(isinstance(mask_dict, dict),
+              f'type(mask_dict)={type(mask_dict)}; must be dict')
+
+        # Check that mask_dict has valid positions
+        mask_ls = mask_dict.keys()
+        positions = list(range(L))
+        check(set(mask_ls) <= set(positions),
+              f'mask_dict={mask_dict} contains positions not compatible with length L={L}.')
+
+        # Check that mask_dict has valid characters
+        mask_cs = ''.join(mask_dict.values())
+        alphabet = df.columns.values
+        check(set(mask_cs) <= set(alphabet),
+              f'mask_dict={mask_dict} contains characters not compatible with alphabet={alphabet}.')
+
+        # Set masked values of dataframe to np.nan
+        for l, cs in mask_dict.items():
+            for c in cs:
+                df.loc[l,c] = np.nan
+
+
     # Set color lims to central 95% quantile
     if clim is None:
         vals = df.values.ravel()
+        vals = vals[np.isfinite(vals)]
         clim = np.quantile(vals, q=[(1 - clim_quantile) / 2,
                                     1 - (1 - clim_quantile) / 2])
 
@@ -522,12 +652,6 @@ def additive_heatmap(df,
     else:
         fig = ax.figure
 
-    # Set extent
-    Y = df.shape[1]
-    L = df.shape[0]
-    xlim = [-.5, L - .5]
-    ylim = [-.5, Y - .5]
-
     # Needed to center colorbar at zero
     if ccenter is not None:
         norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
@@ -536,7 +660,7 @@ def additive_heatmap(df,
 
     # Plot heatmap
     x_edges = np.arange(L + 1) - .5
-    y_edges = np.arange(Y + 1) - .5
+    y_edges = np.arange(C + 1) - .5
     im = ax.pcolormesh(x_edges,
                        y_edges,
                        df.T,
@@ -555,8 +679,12 @@ def additive_heatmap(df,
     # Style plot
     ax.set_ylim(ylim)
     ax.set_xlim(xlim)
-    ax.set_yticks(range(Y))
+    ax.set_yticks(range(C))
     ax.set_yticklabels(df.columns, ha='center')
+
+    if not show_spines:
+        for loc, spine in ax.spines.items():
+            spine.set_visible(False)
 
     # Create colorbar if requested, make one
     if cbar:
@@ -1004,173 +1132,173 @@ def ge_plots_for_mavenn_demo(loss_history,
     plt.show()
 
 
-@handle_errors
-def na_plots_for_mavenn_demo(loss_history,
-                             NAR,
-                             noise_model,
-                             phi_range):
-    """
+# @handle_errors
+# def na_plots_for_mavenn_demo(loss_history,
+#                              NAR,
+#                              noise_model,
+#                              phi_range):
+#     """
+#
+#     Helper function that plots inferred additive parameters,
+#     losses and the MPA noise model for mavenn's demo functions
+#
+#     parameters
+#     ----------
+#     loss_history: (tf loss history/array-like)
+#         arrays containing loss values
+#
+#     NAR: (NoiseAgnosticModel object)
+#         trained MPA model from which additive parameters
+#         will be extracted and plotted as a sequence logo
+#
+#     noise_model: (array-like)
+#         the inferred noise model which will be plotted
+#         as a heatmap
+#
+#
+#     returns
+#     -------
+#     None
+#     """
+#
+#     # plot results
+#     fig, ax = plt.subplots(1, 3, figsize=(10, 3))
+#
+#     ax[0].plot(loss_history.history['loss'], color='blue')
+#     ax[0].plot(loss_history.history['val_loss'], color='orange')
+#     ax[0].set_title('Model loss')
+#     ax[0].set_ylabel('loss')
+#     ax[0].set_xlabel('epoch')
+#     ax[0].legend(['train', 'validation'])
+#
+#     # make logo to visualize additive parameters
+#     ax[1].set_ylabel('additive parameters')
+#     ax[1].set_xlabel('position')
+#
+#     #theta_df = pd.DataFrame(NAR.get_nn().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
+#     theta_df = pd.DataFrame(NAR.return_theta().reshape(39, 4), columns=['A', 'C', 'G', 'T'])
+#
+#
+#     additive_logo = logomaker.Logo(theta_df,
+#                                    center_values=True,
+#                                    ax=ax[1])
+#
+#     # view the inferred noise model as a heatmap
+#     # noise_model_heatmap = sns.heatmap(p_of_all_y_given_phi.T, cmap='Greens', ax=ax[2])
+#     # ax[2].invert_yaxis()
+#     # ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
+#     # ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
+#     # ax[2].set_ylabel(' bin numbers')
+#     # ax[2].set_xlabel('latent trait ($\phi$)')
+#
+#     if noise_model.T[noise_model.T.shape[0] - 1][0] > noise_model.T[noise_model.T.shape[0] - 1][
+#                 noise_model.T.shape[1] - 1]:
+#         noise_model_heatmap = sns.heatmap(pd.DataFrame(noise_model.T).loc[::1, ::-1], cmap='Greens', ax=ax[2])
+#     else:
+#         noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
+#     ax[2].invert_yaxis()
+#     ax[2].set_xticks(([0, int(len(phi_range) / 2), len(phi_range) - 2]), minor=False)
+#     middle_tick = str(phi_range[int(len(phi_range) / 2)])
+#     ax[2].set_xticklabels(([str(phi_range[0])[1:5], middle_tick[1:5], str(phi_range[len(phi_range) - 1])[1:5]]),
+#                        minor=False)
+#     ax[2].set_ylabel(' bin numbers')
+#     ax[2].set_xlabel('latent trait ($\phi$)')
+#
+#
+#     plt.tight_layout()
+#     plt.show()
 
-    Helper function that plots inferred additive parameters,
-    losses and the MPA noise model for mavenn's demo functions
-
-    parameters
-    ----------
-    loss_history: (tf loss history/array-like)
-        arrays containing loss values
-
-    NAR: (NoiseAgnosticModel object)
-        trained MPA model from which additive parameters
-        will be extracted and plotted as a sequence logo
-
-    noise_model: (array-like)
-        the inferred noise model which will be plotted
-        as a heatmap
-
-
-    returns
-    -------
-    None
-    """
-
-    # plot results
-    fig, ax = plt.subplots(1, 3, figsize=(10, 3))
-
-    ax[0].plot(loss_history.history['loss'], color='blue')
-    ax[0].plot(loss_history.history['val_loss'], color='orange')
-    ax[0].set_title('Model loss')
-    ax[0].set_ylabel('loss')
-    ax[0].set_xlabel('epoch')
-    ax[0].legend(['train', 'validation'])
-
-    # make logo to visualize additive parameters
-    ax[1].set_ylabel('additive parameters')
-    ax[1].set_xlabel('position')
-
-    #theta_df = pd.DataFrame(NAR.get_nn().layers[1].get_weights()[0].reshape(39, 4),columns=['A', 'C', 'G', 'T'])
-    theta_df = pd.DataFrame(NAR.return_theta().reshape(39, 4), columns=['A', 'C', 'G', 'T'])
-
-
-    additive_logo = logomaker.Logo(theta_df,
-                                   center_values=True,
-                                   ax=ax[1])
-
-    # view the inferred noise model as a heatmap
-    # noise_model_heatmap = sns.heatmap(p_of_all_y_given_phi.T, cmap='Greens', ax=ax[2])
-    # ax[2].invert_yaxis()
-    # ax[2].set_xticks(([0,int(len(phi_range)/2), len(phi_range)-2]), minor=False)
-    # ax[2].set_xticklabels(([str(phi_range[0]), 0, str(phi_range[len(phi_range)-1])]), minor=False)
-    # ax[2].set_ylabel(' bin numbers')
-    # ax[2].set_xlabel('latent trait ($\phi$)')
-
-    if noise_model.T[noise_model.T.shape[0] - 1][0] > noise_model.T[noise_model.T.shape[0] - 1][
-                noise_model.T.shape[1] - 1]:
-        noise_model_heatmap = sns.heatmap(pd.DataFrame(noise_model.T).loc[::1, ::-1], cmap='Greens', ax=ax[2])
-    else:
-        noise_model_heatmap = sns.heatmap(noise_model.T, cmap='Greens', ax=ax[2])
-    ax[2].invert_yaxis()
-    ax[2].set_xticks(([0, int(len(phi_range) / 2), len(phi_range) - 2]), minor=False)
-    middle_tick = str(phi_range[int(len(phi_range) / 2)])
-    ax[2].set_xticklabels(([str(phi_range[0])[1:5], middle_tick[1:5], str(phi_range[len(phi_range) - 1])[1:5]]),
-                       minor=False)
-    ax[2].set_ylabel(' bin numbers')
-    ax[2].set_xlabel('latent trait ($\phi$)')
-
-
-    plt.tight_layout()
-    plt.show()
-
-@handle_errors
-def load_olson_data_GB1():
-
-    """
-    Helper function to turn data provided by Olson et al.
-    into sequence-values arrays. This method is used in the
-    GB1 GE demo.
-
-
-    return
-    ------
-    gb1_df: (pd dataframe)
-        dataframe containing sequences (single and double mutants)
-        and their corresponding log enrichment values
-
-    """
-
-    # GB1 WT sequences
-    WT_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
-
-    # WT sequence library and selection counts.
-    WT_input_count = 1759616
-    WT_selection_count = 3041819
-
-    # load double mutant data
-    oslon_mutant_positions_data = pd.read_csv(mavenn.__path__[0] +
-                                              '/examples/datafiles/gb1/oslon_data_double_mutants_ambler.csv',
-                                              na_values="nan")
-
-    # lists that will contain sequences and their values
-    sequences = []
-    enrichment = []
-
-    for loop_index in range(len(oslon_mutant_positions_data)):
-
-        # skip row 259455 containing, it contains bad data
-        if loop_index == 259455:
-            continue
-
-        # get positions of double mutants in sequence
-        mut_1_index = int(oslon_mutant_positions_data['Mut1 Position'][loop_index]) - 2
-        mut_2_index = int(oslon_mutant_positions_data['Mut2 Position'][loop_index]) - 2
-
-        # get identity of mutations
-        mut_1 = oslon_mutant_positions_data['Mut1 Mutation'][loop_index]
-        mut_2 = oslon_mutant_positions_data['Mut2 Mutation'][loop_index]
-
-        # form full mutant sequence.
-        temp_dbl_mutant_seq = list(WT_seq)
-        temp_dbl_mutant_seq[mut_1_index] = mut_1
-        temp_dbl_mutant_seq[mut_2_index] = mut_2
-
-        if loop_index % 100000 == 0:
-            print('generating data: %d out of %d' % (loop_index,len(oslon_mutant_positions_data)))
-
-        # calculate enrichment for double mutant sequence sequence
-        input_count = oslon_mutant_positions_data['Input Count'][loop_index]
-        selection_count = oslon_mutant_positions_data['Selection Count'][loop_index]
-        # added pseudocount to ensure log doesn't throw up
-        temp_fitness = ((selection_count + 1) / input_count) / (WT_selection_count / WT_input_count)
-
-        # append sequence
-        sequences.append(''.join(temp_dbl_mutant_seq))
-        enrichment.append(temp_fitness)
-
-    # load single mutants data
-    oslon_single_mutant_positions_data = pd.read_csv(mavenn.__path__[0] +
-                                                     '/examples/datafiles/gb1/oslon_data_single_mutants_ambler.csv',
-                                                     na_values="nan")
-
-    for loop_index in range(len(oslon_single_mutant_positions_data)):
-        mut_index = int(oslon_single_mutant_positions_data['Position'][loop_index]) - 2
-
-        mut = oslon_single_mutant_positions_data['Mutation'][loop_index]
-
-        temp_seq = list(WT_seq)
-        temp_seq[mut_index] = mut
-
-        # calculate enrichment for sequence
-        input_count = oslon_single_mutant_positions_data['Input Count'][loop_index]
-        selection_count = oslon_single_mutant_positions_data['Selection Count'][loop_index]
-        # added pseudo count to ensure log doesn't throw up
-        temp_fitness = ((selection_count + 1) / input_count) / (WT_selection_count / WT_input_count)
-
-        sequences.append(''.join(temp_seq))
-        enrichment.append(temp_fitness)
-
-    enrichment = np.array(enrichment).copy()
-
-    gb1_df = pd.DataFrame({'sequence': sequences, 'values': np.log(enrichment)}, columns=['sequence', 'values'])
-    return gb1_df
+# @handle_errors
+# def load_olson_data_GB1():
+#
+#     """
+#     Helper function to turn data provided by Olson et al.
+#     into sequence-values arrays. This method is used in the
+#     GB1 GE demo.
+#
+#
+#     return
+#     ------
+#     gb1_df: (pd dataframe)
+#         dataframe containing sequences (single and double mutants)
+#         and their corresponding log enrichment values
+#
+#     """
+#
+#     # GB1 WT sequences
+#     WT_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
+#
+#     # WT sequence library and selection counts.
+#     WT_input_count = 1759616
+#     WT_selection_count = 3041819
+#
+#     # load double mutant data
+#     oslon_mutant_positions_data = pd.read_csv(mavenn.__path__[0] +
+#                                               '/examples/datafiles/gb1/oslon_data_double_mutants_ambler.csv',
+#                                               na_values="nan")
+#
+#     # lists that will contain sequences and their values
+#     sequences = []
+#     enrichment = []
+#
+#     for loop_index in range(len(oslon_mutant_positions_data)):
+#
+#         # skip row 259455 containing, it contains bad data
+#         if loop_index == 259455:
+#             continue
+#
+#         # get positions of double mutants in sequence
+#         mut_1_index = int(oslon_mutant_positions_data['Mut1 Position'][loop_index]) - 2
+#         mut_2_index = int(oslon_mutant_positions_data['Mut2 Position'][loop_index]) - 2
+#
+#         # get identity of mutations
+#         mut_1 = oslon_mutant_positions_data['Mut1 Mutation'][loop_index]
+#         mut_2 = oslon_mutant_positions_data['Mut2 Mutation'][loop_index]
+#
+#         # form full mutant sequence.
+#         temp_dbl_mutant_seq = list(WT_seq)
+#         temp_dbl_mutant_seq[mut_1_index] = mut_1
+#         temp_dbl_mutant_seq[mut_2_index] = mut_2
+#
+#         if loop_index % 100000 == 0:
+#             print('generating data: %d out of %d' % (loop_index,len(oslon_mutant_positions_data)))
+#
+#         # calculate enrichment for double mutant sequence sequence
+#         input_count = oslon_mutant_positions_data['Input Count'][loop_index]
+#         selection_count = oslon_mutant_positions_data['Selection Count'][loop_index]
+#         # added pseudocount to ensure log doesn't throw up
+#         temp_fitness = ((selection_count + 1) / input_count) / (WT_selection_count / WT_input_count)
+#
+#         # append sequence
+#         sequences.append(''.join(temp_dbl_mutant_seq))
+#         enrichment.append(temp_fitness)
+#
+#     # load single mutants data
+#     oslon_single_mutant_positions_data = pd.read_csv(mavenn.__path__[0] +
+#                                                      '/examples/datafiles/gb1/oslon_data_single_mutants_ambler.csv',
+#                                                      na_values="nan")
+#
+#     for loop_index in range(len(oslon_single_mutant_positions_data)):
+#         mut_index = int(oslon_single_mutant_positions_data['Position'][loop_index]) - 2
+#
+#         mut = oslon_single_mutant_positions_data['Mutation'][loop_index]
+#
+#         temp_seq = list(WT_seq)
+#         temp_seq[mut_index] = mut
+#
+#         # calculate enrichment for sequence
+#         input_count = oslon_single_mutant_positions_data['Input Count'][loop_index]
+#         selection_count = oslon_single_mutant_positions_data['Selection Count'][loop_index]
+#         # added pseudo count to ensure log doesn't throw up
+#         temp_fitness = ((selection_count + 1) / input_count) / (WT_selection_count / WT_input_count)
+#
+#         sequences.append(''.join(temp_seq))
+#         enrichment.append(temp_fitness)
+#
+#     enrichment = np.array(enrichment).copy()
+#
+#     gb1_df = pd.DataFrame({'sequence': sequences, 'values': np.log(enrichment)}, columns=['sequence', 'values'])
+#     return gb1_df
 
 
 @handle_errors

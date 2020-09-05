@@ -53,10 +53,10 @@ fig, axs = plt.subplots(1, 2, figsize=[12, 4])
 
 # Left panel: draw heatmap illustrating 1pt mutation effects
 ax = axs[0]
-ax, cb = mavenn.heatmap(dphi_df,
-                        wt_seq=gb1_seq,
-                        cmap='PiYG',
-                        ax=ax)
+ax, cb = mavenn.additive_heatmap(dphi_df,
+                                 wt_seq=gb1_seq,
+                                 cmap='PiYG',
+                                 ax=ax)
 ax.set_xlabel('position ($l$)')
 ax.set_ylabel('amino acid ($c$)')
 cb.set_label('effect ($\Delta\phi$)', rotation=-90, va="bottom")

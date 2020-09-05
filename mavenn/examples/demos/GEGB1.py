@@ -62,7 +62,7 @@ ax3 = fig.add_subplot(gs[1, :])
 # display heatmap
 theta = pd.DataFrame(GER.get_gpmap_parameters()['value'][1:].values.reshape(55,20), columns=GER.model.characters)
 WT_sequence_GB1 = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
-mavenn.heatmap(theta, wt_seq=WT_sequence_GB1, cmap='PiYG', ax=ax3)
+mavenn.additive_heatmap(theta, wt_seq=WT_sequence_GB1, cmap='PiYG', ax=ax3)
 
 plt.tight_layout()
 plt.show()
