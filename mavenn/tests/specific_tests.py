@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, '../../')
 import mavenn
 
-from mavenn.src.utils import get_example_dataset
+from mavenn.src.examples import example_dataset
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.landscape import get_1pt_variants
 from mavenn.src.utils import load
@@ -106,7 +106,7 @@ def test_get_1pt_variants():
 def test_GlobalEpistasisModel():
 
     # load MPSA dataset for testing
-    x, y = get_example_dataset()
+    x, y = example_dataset()
 
     # test on subset of sequences
     x = x[0:1000].copy()
@@ -180,7 +180,7 @@ def test_GlobalEpistasisModel():
 def test_NoiseAgnosticModel():
 
     # load MPSA dataset for testing
-    x, y, ct_n = get_example_dataset(name='Sort-Seq')
+    x, y, ct_n = example_dataset(name='Sort-Seq')
 
     # test on subset of sequences
     x = x[0:1000].copy()

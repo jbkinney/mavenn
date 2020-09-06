@@ -1,32 +1,29 @@
-# Classes / functions imported with mavenn
-from mavenn.src.model import Model
+# The functions imported here are the ONLY "maven.xxx()" functions that
+# users are expected to interact with
 
-from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.utils import get_example_dataset
+# For running functional tests
 from mavenn.tests import run_tests
 
-from mavenn.src.utils import load
-from mavenn.src.entropy import estimate_instrinsic_information
-
-from mavenn.src.utils import SkewedTNoiseModel
-from mavenn.src.utils import GaussianNoiseModel
-from mavenn.src.utils import CauchyNoiseModel
-
-from mavenn.src import npeet as ee
-
-from mavenn.src.visualization import heatmap
-from mavenn.src.visualization import pairwise_heatmap
-from mavenn.src.landscape import get_1pt_variants
-
+# Example demonstrations
 from mavenn.src.examples import demo
 
-# imports required for helper functions in demos
-#import mavenn
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
+# Example datasets
+from mavenn.src.examples import example_dataset
+# TODO: write example_model()
 
-import os
-import re
-import glob
+# Primary model class
+from mavenn.src.model import Model
+
+# For loading models
+from mavenn.src.utils import load
+
+# For estimating the intrinsic information in a dataset
+from mavenn.src.entropy import estimate_instrinsic_information
+
+# For visualizing G-P maps
+from mavenn.src.visualization import heatmap
+from mavenn.src.visualization import pairwise_heatmap
+#from mavenn.src.landscape import get_1pt_variants
+
+
 

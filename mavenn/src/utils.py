@@ -2,8 +2,6 @@
 import numpy as np
 import pandas as pd
 import mavenn
-import pdb
-from collections.abc import Iterable
 
 # scikit-learn imports (for one-hot encoding)
 from sklearn.preprocessing import LabelEncoder
@@ -308,62 +306,6 @@ def _generate_all_pair_features_from_sequences(sequences,
         allpairs_seqs_OHE.append(OHE_dinucl_seq.ravel())
 
     return np.array(allpairs_seqs_OHE)
-
-
-@handle_errors
-def get_example_dataset(name='MPSA'):
-    """
-
-    Load example sequence-function datasets that
-    come with the mavenn package.
-
-    Parameters:
-    -----------
-
-    name: (str)
-        Name of example dataset. Must be one of
-        ('MPSA', 'Sort-Seq', 'GB1-DMS')
-
-    Returns:
-    --------
-    X, y: (array-like)
-        An array containing sequences X and an
-        array containing their target values y
-    """
-
-    # check that parameter 'name' is valid
-    check(name in {'MPSA', 'Sort-Seq', 'GB1-DMS'},
-          'name = %s; must be "MPSA", "Sort-Seq", or "GB1-DMS"' %name)
-
-    if name == 'MPSA':
-
-        mpsa_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/mpsa/psi_9nt_mavenn.csv')
-        mpsa_df = mpsa_df.dropna()
-        mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
-
-        #return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
-        return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
-
-    elif name == 'Sort-Seq':
-
-        # sequences = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt',
-        #                        dtype='str')
-        # bin_counts = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/bin_counts.txt')
-        #
-        # return sequences, bin_counts
-
-        data_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/full-wt-sort_seq.csv', index_col=[0])
-
-        sequences = data_df['seq'].values
-        bin_counts = data_df['bin'].values
-        ct_n = data_df['ct'].values
-
-        return sequences, bin_counts, ct_n
-
-    elif name == 'GB1-DMS':
-
-        gb1_df = load_olson_data_GB1()
-        return gb1_df['sequence'].values, gb1_df['values'].values
 
 
 @handle_errors
