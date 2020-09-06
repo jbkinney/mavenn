@@ -6,7 +6,7 @@ from mavenn.src.utils import onehot_encode_array, \
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
-from mavenn.src.utils import mi_continuous, mi_mixed
+from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.utils import get_1pt_variants
 
 # Needed for properly shaping outputs

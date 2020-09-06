@@ -32,20 +32,20 @@ def get_45deg_mesh(mat):
 
 
 @handle_errors
-def additive_heatmap(df,
-                     mask_dict=None,
-                     wt_seq=None,
-                     wt_at_zero=True,
-                     ax=None,
-                     show_spines=False,
-                     cbar=True,
-                     cax=None,
-                     clim=None,
-                     clim_quantile=.95,
-                     ccenter=0,
-                     cmap='coolwarm',
-                     cmap_size="5%",
-                     cmap_pad=0.1):
+def heatmap(df,
+            mask_dict=None,
+            wt_seq=None,
+            wt_at_zero=True,
+            ax=None,
+            show_spines=False,
+            cbar=True,
+            cax=None,
+            clim=None,
+            clim_quantile=.95,
+            ccenter=0,
+            cmap='coolwarm',
+            cmap_size="5%",
+            cmap_pad=0.1):
     """
     Draws a heatmap illustrating a matrix of values.
 
