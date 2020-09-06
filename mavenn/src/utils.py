@@ -60,14 +60,12 @@ def pairwise_heatmap(theta_df,
                      mask_dict=None,
                      ax=None,
                      gpmap_type="auto",
-                     show_positions=True,
-                     position_size=8,
-                     l1_positions_pad=0,
-                     l2_positions_pad=0,
+                     show_position=False,
+                     position_size=None,
+                     position_pad=1,
                      show_alphabet=True,
-                     alphabet_size=8,
-                     c1_alphabet_pad=0,
-                     c2_alphabet_pad=0,
+                     alphabet_size=None,
+                     alphabet_pad=1,
                      show_seplines=True,
                      sepline_kwargs=None,
                      xlim_pad=.1,
@@ -75,7 +73,7 @@ def pairwise_heatmap(theta_df,
                      cbar=True,
                      cax=None,
                      clim=None,
-                     clim_quantile=.95,
+                     clim_quantile=1,
                      ccenter=0,
                      cmap='coolwarm',
                      cmap_size="5%",
@@ -118,19 +116,15 @@ def pairwise_heatmap(theta_df,
         will be set automatically depending on the contents of
         theta_df.
 
-    show_positions: (bool)
+    show_position: (bool)
         Whether to draw position labels on the plot.
 
     position_size: (float >= 0)
         Font size to use for position labels.
 
-    l1_position_pad: (float)
-        Additional padding, in units of half_block_diag, used to space
-        the l1 position labels further from the heatmap.
-
-    l2_position_pad: (float)
-        Additional padding, in units of half_block_diag, used to space
-        the l2 position labels further from the heatmap.
+    position_pad: (float)
+        Additional padding, in units of half_pixel_diag, used to space
+        the position labels further from the heatmap.
 
     show_alphabet: (bool)
         Whether to draw alphabet on the plot.
@@ -138,13 +132,9 @@ def pairwise_heatmap(theta_df,
     alphabet_size: (float >= 0)
         Font size to use for alphabet.
 
-    c1_alphabet_pad: (float)
+    alphabet_pad: (float)
         Additional padding, in units of half_pixel_diag, used to space
         the c1 alphabet labels from the heatmap.
-
-    c2_alphabet_pad: (float)
-        Additional padding, in units of half_pixel_diag, used to space
-        the c2 alphabet labels from the heatmap.
 
     show_seplines: (bool)
         Whether to draw seplines, i.e. lines separating character blocks
@@ -384,51 +374,74 @@ def pairwise_heatmap(theta_df,
 
         # Draw c1 alphabet
         for i, c in enumerate(chars):
-            x1 = 0 \
-                + i * half_pixel_diag \
-                - c1_alphabet_pad * half_pixel_diag
-            y1 = - half_pixel_diag \
+            x1 = 0.5 * half_pixel_diag \
+                 + i * half_pixel_diag \
+                 - alphabet_pad * half_pixel_diag
+            y1 = - 0.5 * half_pixel_diag \
                  - i * half_pixel_diag \
-                 - c1_alphabet_pad * half_pixel_diag
+                 - alphabet_pad * half_pixel_diag
             ax.text(x1, y1, c, va='center',
                     ha='center', rotation=-45, fontsize=alphabet_size)
 
         # Draw c2 alphabet
         for i, c in enumerate(chars):
-            x2 = (.5 + half_pixel_diag) \
+            x2 = 0.5 + 0.5 * half_pixel_diag \
                  + i * half_pixel_diag \
-                 + c2_alphabet_pad * half_pixel_diag
-            y2 = - .5 \
+                 + alphabet_pad * half_pixel_diag
+            y2 = - 0.5 + 0.5 * half_pixel_diag \
                  + i * half_pixel_diag \
-                 - c2_alphabet_pad * half_pixel_diag
+                 - alphabet_pad * half_pixel_diag
             ax.text(x2, y2, c, va='center',
                     ha='center', rotation=45, fontsize=alphabet_size)
 
-    # Display positions if requested
-    positions = np.arange(L-1)
+    # Display positions if requested (only if model is pairwise)
+    l1_positions = np.arange(0, L-1)
+    l2_positions = np.arange(1, L)
     half_block_diag = C * half_pixel_diag
-    if show_positions:
-
-        # Draw l1 positions
-        for i in positions:
-            x1 = 0 \
-                + i * half_block_diag \
-                - l1_positions_pad * half_block_diag
-            y1 = + half_block_diag \
-                 + i * half_block_diag \
-                 + l1_positions_pad * half_block_diag
-            ax.text(x1, y1, f'{i:d}', va='center',
-                    ha='center', rotation=45, fontsize=position_size)
+    if show_position and gpmap_type == "pairwise":
 
         # Draw l2 positions
-        for i in positions:
-            x2 = L * half_block_diag \
+        for i, l2 in enumerate(l2_positions):
+            x2 = 0.5 * half_block_diag \
                  + i * half_block_diag \
-                 + l2_positions_pad * half_block_diag
-            y2 = (L-1) * half_block_diag \
+                 - position_pad * half_pixel_diag
+            y2 = 0.5 * half_block_diag \
+                 + i * half_block_diag \
+                 + position_pad * half_pixel_diag
+            ax.text(x2, y2, f'{l2:d}', va='center',
+                    ha='center', rotation=45, fontsize=position_size)
+
+        # Draw l1 positions
+        for i, l1 in enumerate(l1_positions):
+            x1 = (L - 0.5) * half_block_diag \
+                 + i * half_block_diag \
+                 + position_pad * half_pixel_diag
+            y1 = (L - 1.5) * half_block_diag \
                  - i * half_block_diag \
-                 + l2_positions_pad * half_block_diag
-            ax.text(x2, y2, f'{i:d}', va='center',
+                 + position_pad * half_pixel_diag
+            ax.text(x1, y1, f'{l1:d}', va='center',
+                    ha='center', rotation=-45, fontsize=position_size)
+
+    elif show_position and gpmap_type == "neighbor":
+
+        # Draw l2 positions
+        for i, l2 in enumerate(l2_positions):
+            x2 = 0.5 * half_block_diag \
+                 + 2 * i * half_block_diag \
+                 - position_pad * half_pixel_diag
+            y2 = 0.5 * half_block_diag \
+                 + position_pad * half_pixel_diag
+            ax.text(x2, y2, f'{l2:d}', va='center',
+                    ha='center', rotation=45, fontsize=position_size)
+
+        # Draw l1 positions
+        for i, l1 in enumerate(l1_positions):
+            x1 = 1.5 * half_block_diag \
+                 + 2* i * half_block_diag \
+                 + position_pad * half_pixel_diag
+            y1 = + 0.5 * half_block_diag \
+                 + position_pad * half_pixel_diag
+            ax.text(x1, y1, f'{l1:d}', va='center',
                     ha='center', rotation=-45, fontsize=position_size)
 
 
