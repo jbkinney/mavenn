@@ -14,12 +14,11 @@ from mavenn.src.utils import CauchyNoiseModel
 
 from mavenn.src import entropy_estimators as ee
 
-from mavenn.src.utils import additive_heatmap
-from mavenn.src.utils import pairwise_heatmap
+from mavenn.src.visualization import additive_heatmap
+from mavenn.src.visualization import pairwise_heatmap
 from mavenn.src.utils import get_1pt_variants
 
 # imports required for helper functions in demos
-import pandas as pd
 import mavenn
 import numpy as np
 import matplotlib.pyplot as plt

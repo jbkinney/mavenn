@@ -472,10 +472,10 @@ def test_x_to_phi_or_yhat():
     mavenn_dir = mavenn.__path__[0]
     model_dir = f'{mavenn_dir}/examples/models/'
 
-    mpa_model = mavenn.load(model_dir + 'full-wt')
+    mpa_model = mavenn.load(model_dir + 'sortseq_mpa_additive')
     mpa_seq = 'GGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG'
     mpa_seq_gap = 'GGCTTTACAC-TTATGCTTCCGGCTCGTATGTTGTGTGG'
-    ge_model = mavenn.load(model_dir + 'gaussian_GB1_model')
+    ge_model = mavenn.load(model_dir + 'gb1_ge_additive')
     ge_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
     ge_seq_gap = 'QYKLILNGKTLK-ETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
 
@@ -537,9 +537,7 @@ seq       : {seq}""")
     # Get model type
     if model.gpmap_type == 'additive':
         f = additive_model_features
-    elif model.gpmap_type == 'neighbor':
-        f = neighbor_model_features
-    elif model.gpmap_type == 'pairwise':
+    elif model.gpmap_type in ['pairwise', 'neighbor']:
         f = pairwise_model_features
     else:
         check(model.gpmap_type in ['additive', 'neighbor', 'pairwise'],
@@ -558,11 +556,11 @@ seq       : {seq}""")
     # Make sure theta_df and x_df have the same indices
     x_ids = set(x_df.index)
     theta_ids = set(theta_df.index)
-    check(x_ids == theta_ids, f"""theta and x features do not match""")
+    check(x_ids >= theta_ids, f"theta features are not contained within x features.")
 
     # Merge theta_df and x_df into one dataframe
     df = pd.merge(left=theta_df, right=x_df, left_index=True, right_index=True,
-                  how='outer')
+                  how='left')
 
     # Make sure there are no nan entries
     num_null_entries = df.isnull().sum().sum()
