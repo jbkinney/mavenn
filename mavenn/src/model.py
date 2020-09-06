@@ -7,10 +7,10 @@ from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
-from mavenn.src.utils import get_1pt_variants
+from mavenn.src.landscape import get_1pt_variants
 
 # Needed for properly shaping outputs
-from mavenn.src.utils import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
+from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
 
 import tensorflow as tf
 import tensorflow.keras
@@ -1683,10 +1683,6 @@ class Model:
             NAR_dict['ct_n'] = [single_ct]
 
             pd.DataFrame(NAR_dict, index=[0]).to_csv(filename + '.csv')
-
-    from mavenn.src.error_handling import check, handle_errors
-    from mavenn.src.validate import validate_alphabet
-    from mavenn.src.utils import get_1pt_variants
 
 
     @handle_errors

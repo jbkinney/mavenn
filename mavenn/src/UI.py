@@ -1,4 +1,3 @@
-from mavenn.src.validate import validate_input
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.utils import onehot_encode_array, \

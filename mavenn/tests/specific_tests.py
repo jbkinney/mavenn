@@ -4,7 +4,7 @@ import mavenn
 
 from mavenn.src.utils import get_example_dataset
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.utils import get_1pt_variants
+from mavenn.src.landscape import get_1pt_variants
 from mavenn.src.utils import load
 
 from mavenn.src.features import additive_model_features, pairwise_model_features
