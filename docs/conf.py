@@ -110,7 +110,7 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-html_logo = '_static/mavenn_logo_man.png'
+html_logo = '_static/logo.png'
 
 # to customize CSS
 # def setup(app):

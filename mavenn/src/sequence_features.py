@@ -1,6 +1,11 @@
+# Standard imports
 import numpy as np
 
+# MAVE-NN imports
+from mavenn.src.validate import validate_seqs
+from mavenn.src.error_handling import handle_errors, check
 
+@handle_errors
 def _seqs_to_x_lc(seqs, alphabet,
                   return_features=False,
                   verbose=False,
@@ -60,6 +65,7 @@ def _seqs_to_x_lc(seqs, alphabet,
         return x_add
 
 
+@handle_errors
 def _seqs_to_x_lclc(seqs, alphabet,
                     return_features=False,
                     verbose=False,
@@ -91,12 +97,18 @@ def _seqs_to_x_lclc(seqs, alphabet,
     if feature_mask == 'neighbor':
         keep = (l1_grid == l2_grid - 1)
         K = int((C ** 2) * (L - 1))
+
     elif feature_mask == 'pairwise':
         keep = (l1_grid < l2_grid)
         K = int((C ** 2) * L * (L - 1) / 2)
+
     else:
         print(f'Invalid feature_mask={feature_mask}')
-    assert K == keep.ravel().sum(), f"K={K} doesn't match keep.ravel().sum()={keep.ravel().sum()} "
+
+    check(K == keep.ravel().sum(),
+          f"This shouldnt ever happen." 
+          f"K={K} doesn't match keep.ravel().sum()={keep.ravel().sum()}")
+
     if verbose:
         print(f"K = {K} features")
 
@@ -136,46 +148,7 @@ def _seqs_to_x_lclc(seqs, alphabet,
         return x_pair
 
 
-def _validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True):
-    """
-    Makes sure that seqs is an array of equal-length sequences
-    drawn from the set of characters in alphabet. Returns
-    a version of seqs cast as a numpy array of strings.
-    """
-
-    # Cast as np.array
-    if isinstance(seqs, str):
-        seqs = np.array([seqs])
-    elif isinstance(seqs, list):
-        seqs = np.array(seqs).astype(str)
-    elif isinstance(seqs, pd.Series):
-        seqs = seqs.values.astype(str)
-    else:
-        assert False, f'type(seqs)={type(seqs)} is invalid.'
-
-    # Make sure array is 1D
-    assert len(seqs.shape) == 1, f'seqs should be 1D; seqs.shape={seqs.shape}'
-
-    # Get length and make sure its >= 1
-    N = len(seqs)
-    assert N >= 1, f'N={N} must be >= 1'
-
-    # Make sure all seqs are the same length
-    lengths = np.unique([len(seq) for seq in seqs])
-    assert len(
-        lengths == 1), f"Sequences should all be the same length; found multiple lengths={lengths}"
-    L = lengths[0]
-
-    # Make sure sequences only contain characters in alphabet
-    if restrict_seqs_to_alphabet:
-        seq_chars = set(''.join(seqs))
-        alphabet_chars = set(alphabet)
-        assert seq_chars <= alphabet_chars, \
-            f"seqs contain the following characters not in alphabet: {seq_chars-alphabet_chars}"
-
-    return seqs
-
-
+@handle_errors
 def additive_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     """
     Compute additive model features from a list of sequences.
@@ -211,7 +184,7 @@ def additive_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     """
 
     # Validate seqs
-    seqs = _validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet)
+    seqs = validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet)
 
     # Get constant features
     N = len(seqs)
@@ -227,6 +200,7 @@ def additive_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     return x, names
 
 
+@handle_errors
 def neighbor_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     """
     Compute neighbor model features from a list of sequences.
@@ -262,7 +236,7 @@ def neighbor_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     """
 
     # Validate seqs
-    seqs = _validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True)
+    seqs = validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True)
 
     # Get constant features
     N = len(seqs)
@@ -283,6 +257,7 @@ def neighbor_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     return x, names
 
 
+@handle_errors
 def pairwise_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     """
     Compute pairwise model features from a list of sequences.
@@ -317,7 +292,7 @@ def pairwise_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
         A list of feature names
     """
     # Validate seqs
-    seqs = _validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True)
+    seqs = validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True)
 
     # Get constant features
     N = len(seqs)

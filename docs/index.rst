@@ -1,12 +1,19 @@
 =====================================================================================
-MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Bottlenecks
+MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Compression
 =====================================================================================
 
-MAVE-NN is a python package for inferring models of sequence-function relationships from 
-multiplexed assays of variant effects (MAVEs). MAVE-NN currently implements global epistasis 
-regression and noise agnostic regression. Both models are implemented as neural networks 
-using TensorFlow. The :ref:`installation`, :ref:`quickstart`,  :ref:`examples`, 
-and :ref:`tutorial` sections below are provided to help users  quickly get 
+MAVE-NN is a Python package for inferring quantitative models of
+genotype-phenotype (G-P) maps from multiplexed assays of variant effect (MAVEs).
+MAVE-NN formulates this inference problem as a neural network training problem,
+one designed to identify G-P maps that compress sequence-encoded
+information with minimal loss. By using a TensorFlow back end, MAVE-NN enables
+the rapid and robust inference of G-P maps even on very large datasets.
+
+MAVE-NN is written for Python 3.6 and has minimal dependencies.
+
+under an MIT open source license.
+The :ref:`installation`, :ref:`quickstart`,  :ref:`examples`,
+and :ref:`tutorial` sections below will help users quickly get
 MAVE-NN working for their own research needs.
 
 .. toctree::
@@ -19,47 +26,68 @@ MAVE-NN working for their own research needs.
 Installation
 --------------
 
-MAVE-NN has minimal dependencies and is compatible with both Python 2.7 and Python 3.6.
-The code for MAVENN is available on `GitHub <https://github.com/jbkinney/mavenn>`_ under an MIT open source license.
-mavenn can be installed from `PyPI <https://pypi.org/project/mavenn/>`_ using the ``pip`` package manager by executing the following at the commandline: ::
+MAVE-NN can be installed from `PyPI <https://pypi.org/project/mavenn/>`_
+using the ``pip`` package manager by executing the following at the
+commandline: ::
 
     pip install mavenn
+
+Alternatively, you can clone MAVE-NN from
+`GitHub <https://github.com/jbkinney/mavenn>`_ by doing
+this at the command line: ::
+
+    $ cd appropriate_directory
+    $ git clone https://github.com/jbkinney/mavenn.git
+
+where ``appropriate_directory`` is the absolute path to where you would like
+MAVE-NN to reside. Then add this to the top of any Python file in
+which you use MAVE-NN: ::
+
+    # Insert local path to MAVE-NN at beginning of Python's path
+    import sys
+    sys.path.insert(0, "appropriate_directory/mavenn")
+
+    #Load mavenn
+    import mavenn
 
 .. _quickstart:
 
 Quick Start
 -----------
 
-For a quick demonstration of mavenn's global epistasis model, execute the following within Python::
+For a quick demonstration of MAVE-NN's capabilities, execute the following
+within Python::
 
    import mavenn
-   mavenn.run_demo(name='GEmpsaPairwise')
+   mavenn.list_demos()
 
-This command will train a pairwise global epistasis model on massively parallel
-splicing assay data from Wong et al. 2018 [#Wong2018]_ and return the loss history, predictions vs.
-true labels, and the global epistasis nonlinear function.
+This will produce a list of names for multiple built-in demos. Then choose
+whichever demo you like. For example, try running the "mpsa_ge_training" demo::
 
-.. image:: _static/examples_images/GE_pairwise_mpsa_demo.png
+    mavenn.run_demo(name="mpsa_ge_training", print_code=True)
 
-For a demonstration of mavenn's noise agnostic model, execute the following within Python::
+This trains a model on massively parallel splicing assay (MPSA) performed by
+Wong et al. 2018 [#Wong2018]_, a process that takes approximately 15 seconds.
+It also produces the following figure, which illustrates model performance
+and training history. If you set ``print_code=False``, the code used to perform
+these computations will also be printed.
 
-   import mavenn
-   mavenn.run_demo(name='NAsortseq')
-
-This command will train an additive noise agnostic model on Sort-Seq
-data from Kinney et. al. (2010) [#sortseq2010]_ and return the loss history, inferred additive
-parameters as a sequence logo, and the inferred noise model.
-
-.. image:: _static/examples_images/NA_additive_sort_seq_demo.png
+.. image:: _static/mpsa_ge_training.png
 
 .. _tutorial:
 
 Tutorial
 --------
 
-A tutorial is available via a series of Jupyter notebooks, each of which focuses on a different aspect of MAVE-NN's
-functionality. To view the notebooks statically on GitHub,
-`click here <https://github.com/jbkinney/mavenn/tree/master/mavenn/tutorials>`_.
+Jupyter notebook tutorials covering a variety of MAVE-NN's capabilities
+are available on GitHub at
+`here <https://github.com/jbkinney/mavenn/tree/master/mavenn/tutorials>`_.
+If you have installed MAVE-NN, you can locate these notebooks on your local
+machine by running the following in Python: ::
+
+    import mavenn
+    mavenn.list_tutorials()
+
 
 Resources
 ---------

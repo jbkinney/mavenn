@@ -9,7 +9,7 @@ from mavenn.src.examples import load_example_dataset
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.landscape import get_1pt_variants
 from mavenn.src.utils import load
-from mavenn.src.features import additive_model_features, pairwise_model_features
+from mavenn.src.sequence_features import additive_model_features, pairwise_model_features
 from mavenn.src.error_handling import check, handle_errors
 from mavenn.tests.testing_utils import test_parameter_values
 

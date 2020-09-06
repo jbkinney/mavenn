@@ -107,6 +107,49 @@ def validate_alphabet(alphabet):
 
     return alphabet
 
+
+@handle_errors
+def validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True):
+    """
+    Makes sure that seqs is an array of equal-length sequences
+    drawn from the set of characters in alphabet. Returns
+    a version of seqs cast as a numpy array of strings.
+    """
+
+    # Cast as np.array
+    if isinstance(seqs, str):
+        seqs = np.array([seqs])
+    elif isinstance(seqs, list):
+        seqs = np.array(seqs).astype(str)
+    elif isinstance(seqs, pd.Series):
+        seqs = seqs.values.astype(str)
+    else:
+        check(False, f'type(seqs)={type(seqs)} is invalid.')
+
+    # Make sure array is 1D
+    check(len(seqs.shape) == 1, f'seqs should be 1D; seqs.shape={seqs.shape}')
+
+    # Get length and make sure its >= 1
+    N = len(seqs)
+    check(N >= 1, f'N={N} must be >= 1')
+
+    # Make sure all seqs are the same length
+    lengths = np.unique([len(seq) for seq in seqs])
+    check(len(lengths) == 1,
+          f"Sequences should all be the same length"
+          "; found multiple lengths={lengths}")
+
+    # Make sure sequences only contain characters in alphabet
+    if restrict_seqs_to_alphabet:
+        seq_chars = set(''.join(seqs))
+        alphabet_chars = set(alphabet)
+        check(seq_chars <= alphabet_chars,
+              f"seqs contain the following characters not in alphabet:"
+              "{seq_chars-alphabet_chars}")
+
+    return seqs
+
+
 # @handle_errors
 # def validate_input(df):
 #     """
