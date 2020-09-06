@@ -1,17 +1,20 @@
+import numpy as np
+import pandas as pd
+import numbers
+
+# Tensorflow imports
+import tensorflow as tf
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
+from tensorflow.keras.constraints import non_neg as nonneg
+
+# MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.utils import onehot_encode_array, \
     _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
+from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
 
-import numpy as np
-import pandas as pd
-
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
-from tensorflow.keras.constraints import non_neg as nonneg
-from mavenn.src.likelihood_layers import *
-
-import numbers
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -151,7 +154,8 @@ class GlobalEpistasisModel:
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(np.shape(self.y_train)[0], 1)
 
-    # CONTINE CODE REVIEW BELOW (date: 20.07.20)
+
+    @handle_errors
     def _input_checks(self):
 
         """
@@ -208,6 +212,7 @@ class GlobalEpistasisModel:
 
         # check that ohe_batch_size is > 0
         check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
+
 
     @handle_errors
     def define_model(self,
@@ -289,7 +294,8 @@ class GlobalEpistasisModel:
 
         return model
 
-    # Do code review below: 20.07.22
+
+    @handle_errors
     def phi_to_yhat(self,
                     phi):
 
@@ -332,6 +338,7 @@ class GlobalEpistasisModel:
 
         return y_hat
 
+#TODO: @handle_errors should be moved to each method, right?
 @handle_errors
 class GlobalEpistasisModelMultipleReplicates:
 
@@ -669,7 +676,7 @@ class GlobalEpistasisModelMultipleReplicates:
             self.model = custom_architecture
             return custom_architecture
 
-    # Do code review below: 20.07.22
+
     def ge_nonlinearity(self,
                         phi):
 

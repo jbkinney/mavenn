@@ -1,16 +1,23 @@
+# Standard imports
 import numpy as np
-from mavenn.src.error_handling import handle_errors, check
 import matplotlib.pyplot as plt
-import pandas as pd
-import mavenn
 import re
 
-
+# Special plotting-related imports
 from matplotlib.colors import DivergingNorm, Normalize
-from matplotlib.colors import DivergingNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def get_45deg_mesh(mat):
+# MAVE-NN imports
+from mavenn.src.error_handling import handle_errors, check
+
+
+@handle_errors
+def _get_45deg_mesh(mat):
+    """
+    Helper function for pairwise_heatmap. Creates X and Y
+    grids, based on mat, rotated -45 degrees.
+    """
+
     # Define rotation matrix
     theta = -np.pi / 4
     R = np.array([[np.cos(theta), -np.sin(theta)],
@@ -484,7 +491,7 @@ def pairwise_heatmap(theta_df,
         norm = Normalize(vmin=clim[0], vmax=clim[1])
 
     # Get rotated mesh
-    X_rot, Y_rot = get_45deg_mesh(mat)
+    X_rot, Y_rot = _get_45deg_mesh(mat)
 
     # Normalize
     half_pixel_diag = 1 / (2*C)

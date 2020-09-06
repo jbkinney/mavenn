@@ -25,7 +25,7 @@ from mavenn.src.visualization import pairwise_heatmap
 
 # For generating lists of variants
 from mavenn.src.landscape import get_1pt_variants
-#TODO: write get_2p_variants
+#TODO: write get_2p_variants()
 
 
 

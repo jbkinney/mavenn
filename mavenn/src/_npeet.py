@@ -5,6 +5,7 @@
 
 import warnings
 
+# standard imports
 import numpy as np
 import numpy.linalg as la
 from numpy import log

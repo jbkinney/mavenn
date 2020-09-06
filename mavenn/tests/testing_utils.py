@@ -1,14 +1,14 @@
-import sys
-sys.path.insert(0, '../../')
-
+# Standard imports
 import matplotlib.pyplot as plt
 
+# Initialize global counts
 global_success_counter = 0
 global_fail_counter = 0
 
 # Common success and fail lists
 bool_fail_list = [0, -1, 'True', 'x', 1]
 bool_success_list = [False, True]
+
 
 # helper method for functional test_for_mistake
 def test_for_mistake(func, *args, **kw):

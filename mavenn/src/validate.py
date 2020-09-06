@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-# MAVE-NN error handling
+# MAVE-NN imports
 from mavenn.src.reshape import _get_shape_and_return_1d_array
 from mavenn.src.error_handling import check, handle_errors
 

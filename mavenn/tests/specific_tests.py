@@ -1,28 +1,18 @@
-import sys
-sys.path.insert(0, '../../')
-import mavenn
+# Standard imports
+import numpy as np
+import pandas as pd
+import glob
 
+# MAVE-NN imports
+import mavenn
 from mavenn.src.examples import load_example_dataset
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.landscape import get_1pt_variants
 from mavenn.src.utils import load
-
 from mavenn.src.features import additive_model_features, pairwise_model_features
 from mavenn.src.error_handling import check, handle_errors
-
-import numpy as np
-import pandas as pd
-
-import glob
-
 from mavenn.tests.testing_utils import test_parameter_values
 
-global_success_counter = 0
-global_fail_counter = 0
-
-# Common success and fail lists
-bool_fail_list = [0, -1, 'True', 'x', 1]
-bool_success_list = [False, True]
 
 # Need to incorporate into model before testing.
 def test_validate_alphabet():
@@ -57,6 +47,7 @@ def test_validate_alphabet():
                           var_name='alphabet',
                           fail_list=fail_list,
                           success_list=success_list)
+
 
 def test_get_1pt_variants():
     """20.09.01 JBK"""

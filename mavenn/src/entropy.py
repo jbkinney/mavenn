@@ -4,7 +4,7 @@ import pdb
 import numbers
 from collections.abc import Iterable
 
-from mavenn.src import npeet as ee
+from mavenn.src import _npeet as ee
 from mavenn.src.error_handling import handle_errors, check
 
 
