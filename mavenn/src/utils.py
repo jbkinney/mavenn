@@ -1,37 +1,27 @@
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import OneHotEncoder
+# Standard imports
 import numpy as np
-from mavenn.src.error_handling import handle_errors, check
-import matplotlib.pyplot as plt
 import pandas as pd
 import mavenn
-import re
 import pdb
-import numbers
 from collections.abc import Iterable
 
+# scikit-learn imports (for one-hot encoding)
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 
+# tensorflow imports
 import tensorflow.keras.backend as K
 import tensorflow.keras
 
+# Special function imports
+from numpy import log as Log
 from scipy.special import betaincinv as BetaIncInv
 from scipy.special import gammaln as LogGamma
-from numpy import log as Log
-
 from scipy.stats import cauchy
-from mavenn.src import npeet as ee
 from scipy.special import erfinv
 
-# Needed for get_1p_variants
-from mavenn.src.validate import validate_alphabet
-
-# Special import needed for heatmap
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.colors import DivergingNorm, Normalize
-
+# Imports from MAVE-NN
 from mavenn.src.error_handling import handle_errors, check
-from matplotlib.colors import DivergingNorm
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 @handle_errors
@@ -78,93 +68,6 @@ def _shape_for_output(x, shape=None):
     if x.ndim == 0:
         x = x.tolist()
     return x
-
-
-
-
-
-@handle_errors
-def get_1pt_variants(wt_seq, alphabet, include_wt=True):
-    """
-    Returns a list of all single-point mutants of a given wilde-type sequence.
-
-    parameters
-    ----------
-        wt_seq: (str)
-            The wild-type sequence. Must comprise characters from alphabet.
-
-        alphabet: (str, array-like)
-            The alphabet (name or list of characters) to use for mutations.
-
-        include_wt: (bool)
-            Whether to include the wild-type sequence in the output.
-
-    returns
-    -------
-
-        out_df: (pd.DataFrame)
-            A dataframe listing each variant sequence along with its name,
-            the position mutated, the wild-type character at that position,
-            and the mutant character at that position. Characters ' ' and
-            a position of -1 is used for the wild-type sequence if
-            include_wt is True.
-    """
-
-    # Check that wt_seq is a string
-    check(isinstance(wt_seq, str),
-          f'wt_seq must be a string; is of type {type(wt_seq)}')
-    L = len(wt_seq)
-
-    # Check that include_wt is bool
-    check(isinstance(include_wt, bool),
-          f'type(include_wt)={type(include_wt)}; must be bool.')
-
-    # Check length
-    check(L >= 1,
-          f'len(wt_seq)={L}; must be >= 1.')
-
-    # Create a list of all single-point variants of wt sequence
-    alphabet = validate_alphabet(alphabet)
-    C = len(alphabet)
-
-    # Make sure wt_seq comprises alphabet
-    seq_set = set(list(wt_seq))
-    alphabet_set = set(alphabet)
-    check(seq_set <= alphabet_set,
-          f"wt_seq={wt_seq} contains the invalid characters {seq_set-alphabet_set}")
-
-    # Create a list of seqs with all single amino acid changes at all positions
-    pos = np.arange(L).astype(int)
-    cs = list(np.tile(np.reshape(alphabet, [1, C]), [L, 1]).ravel())
-    ls = list(np.tile(np.reshape(pos, [L, 1]), [1, C]).ravel())
-    cs_wt = [wt_seq[l] for c, l in zip(cs, ls)]
-    seqs = [wt_seq[:l] + c + wt_seq[l + 1:] for c, l in zip(cs, ls)]
-    names = [wt_seq[l] + str(l) + c for c, l in zip(cs, ls)]
-    ix = [wt_seq[l] != c for c, l in zip(cs, ls)]
-
-    # Include wt if requested
-    if include_wt:
-        names = ['WT'] + names
-        cs_wt = [' '] + cs_wt
-        cs = [' '] + cs
-        ls = [-1] + ls
-        seqs = [wt_seq] + seqs
-        ix = [True] + ix
-
-    # Report results in the form of a dataframe
-    out_df = pd.DataFrame()
-    out_df['name'] = names
-    out_df['pos'] = ls
-    out_df['wt_char'] = cs_wt
-    out_df['mut_char'] = cs
-    out_df['seq'] = seqs
-
-    # Remove sequences identical to wt
-    out_df = out_df[ix]
-    out_df.set_index('name', inplace=True)
-
-    # Return seqs
-    return out_df
 
 
 @handle_errors
@@ -638,7 +541,6 @@ def fix_gauge_neighbor_model(sequenceLength,
     thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel(), thetaPairwise.ravel()])
 
     return thetaGaugeFixed
-
 
 
 @handle_errors
@@ -1379,6 +1281,7 @@ def load(filename):
             loaded_model.get_nn().load_weights(filename + '.h5')
 
             return loaded_model
+
 
 @handle_errors
 def vec_data_to_mat_data(y_n,
