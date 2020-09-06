@@ -14,12 +14,8 @@ import matplotlib.pyplot as plt
 # Import MAVE-NN
 import mavenn
 
-# Specify model file and test data files
-model_file = mavenn.__path__[0] + '/examples/models/gaussian_GB1_model'
-data_file = mavenn.__path__[0] + '/examples/datafiles/gb1/GB1_test_data.csv'
-
 # Load model
-model = mavenn.load(model_file)
+model = mavenn.load_example_model('gb1_ge_additive')
 
 # Get effects of all 1pt mutations to the wild-type sequence
 gb1_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
@@ -27,6 +23,7 @@ dphi_df = model.get_1pt_effects(wt_seq=gb1_seq,
                                 out_format="matrix")
 
 # Load data as dataframe
+data_file = mavenn.__path__[0] + '/examples/datafiles/gb1/GB1_test_data.csv'
 data_df = pd.read_csv(data_file, index_col=[0])
 
 # Subsample test data, just to make plotting faster

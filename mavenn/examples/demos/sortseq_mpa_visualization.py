@@ -14,8 +14,7 @@ import mavenn
 import logomaker
 
 # Load model
-model_file = mavenn.__path__[0] +'/examples/models/rnap-wt'
-model = mavenn.load(model_file)
+model = mavenn.load_example_model('sortseq_mpa_additive')
 
 # Get G-P map parameters in matrix form
 theta_df = model.get_additive_parameters(out_format="matrix")
