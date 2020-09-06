@@ -10,20 +10,19 @@ from mavenn.src.error_handling import handle_errors, check
 
 
 @handle_errors
-def demo(name=None, print_code=True):
-
+def run_demo(name=None, print_code=True):
     """
     Performs a demonstration of the mavenn software.
 
     parameters
     -----------
     name: (str, None)
-        Name of demo to run. If None, a list of valid demo names
+        Name of run_demo to run. If None, a list of valid run_demo names
         will be printed.
 
     print_code: (bool)
-        If True, text of the demo file will be printed along with
-        the output of the demo file. If False, only the demo output
+        If True, text of the run_demo file will be printed along with
+        the output of the run_demo file. If False, only the run_demo output
         will be shown.
 
     returns
@@ -45,13 +44,13 @@ def demo(name=None, print_code=True):
 
     # If no input, list valid names
     if name is None:
-        print("Please enter a demo name. Valid are:")
+        print("Please enter a run_demo name. Valid are:")
         print("\n".join([f'"{name}"' for name in demo_names]))
 
-    # If input is valid, run demo
+    # If input is valid, run run_demo
     elif name in demo_names:
 
-        # Get demo file name
+        # Get run_demo file name
         file_name = demos_dict[name]
 
         # Print code if requested
@@ -64,7 +63,7 @@ def demo(name=None, print_code=True):
         else:
             pass
 
-        # Run demo
+        # Run run_demo
         exec(open(file_name).read())
 
     # If input is invalid, raise error
@@ -74,42 +73,94 @@ def demo(name=None, print_code=True):
               f'name = {name} is invalid. Must be one of {demo_names}')
 
 
+@handle_errors
+def load_example_model(name=None):
+    """
+    Load an example model already inferred by MAVE-NN.
+
+    parameters
+    -----------
+    name: (str, None)
+        Name of model to load. If None, a list of valid model names
+        will be printed.
+
+    returns
+    -------
+    model: (mavenn.Model)
+
+    """
+    models_dir = mavenn.__path__[0] +'/examples/models'
+    model_file_names = glob.glob(f'{models_dir}/*.h5')
+    models_dict = {}
+    for file_name in model_file_names:
+        base_name = file_name.split('/')[-1]
+        pattern = '^(.*)\.h5$'
+        key = re.match(pattern, base_name).group(1)
+        models_dict[key] = file_name
+    model_names = list(models_dict.keys())
+    model_names.sort()
+
+    # If no input, list valid names
+    if name is None:
+        print("Please enter a model name. Valid choices are:")
+        print("\n".join([f'"{name}"' for name in model_names]))
+        model = None
+
+    # If input is valid, load model
+    elif name in model_names:
+        model = mavenn.load(models_dir + '/' + name)
+
+    # Otherwise
+    else:
+        check(False, f"Invalid choice of name={repr(name)}."
+                     f"Please enter None or one of {model_names}")
+
+    return model
+
 
 @handle_errors
-def example_dataset(name='MPSA'):
+def load_example_dataset(name=None):
     """
-
-    Load example sequence-function datasets that
-    come with the mavenn package.
+    Load example dataset.
 
     Parameters:
     -----------
 
     name: (str)
-        Name of example dataset. Must be one of
-        ('MPSA', 'Sort-Seq', 'GB1-DMS')
+        Name of example dataset. If None, a list
+        of valid names will be printed.
 
     Returns:
     --------
-    X, y: (array-like)
-        An array containing sequences X and an
-        array containing their target values y
+    data_df: (np.array)
+        Pandas dataframe containing the example data.
     """
 
-    # check that parameter 'name' is valid
-    check(name in {'MPSA', 'Sort-Seq', 'GB1-DMS'},
-          'name = %s; must be "MPSA", "Sort-Seq", or "GB1-DMS"' %name)
+    # Create list of valid dataset names
+    dataset_names = ['mpsa', 'sortseq', 'gb1']
+    dataset_names.sort()
 
-    if name == 'MPSA':
+    # If no input, list valid names
+    if name is None:
+        print("Please enter a dataset name. Valid choices are:")
+        print("\n".join([f'"{name}"' for name in dataset_names]))
+        return None
+
+    elif name == 'mpsa':
 
         mpsa_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/mpsa/psi_9nt_mavenn.csv')
         mpsa_df = mpsa_df.dropna()
         mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
 
         #return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
-        return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
+        #return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
 
-    elif name == 'Sort-Seq':
+        data_df = pd.DataFrame()
+        data_df['y'] = np.log10(mpsa_df['values'].values)
+        data_df['x'] = mpsa_df['sequence'].values
+        return data_df
+
+    elif name == 'sortseq':
 
         # sequences = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt',
         #                        dtype='str')
@@ -123,12 +174,28 @@ def example_dataset(name='MPSA'):
         bin_counts = data_df['bin'].values
         ct_n = data_df['ct'].values
 
-        return sequences, bin_counts, ct_n
+        #return sequences, bin_counts, ct_n
 
-    elif name == 'GB1-DMS':
+        data_df = pd.DataFrame()
+        data_df['ct'] = bin_counts
+        data_df['y'] = ct_n
+        data_df['x'] = sequences
+        return data_df
+
+    elif name == 'gb1':
 
         gb1_df = _load_olson_data_GB1()
-        return gb1_df['sequence'].values, gb1_df['values'].values
+        #return gb1_df['sequence'].values, gb1_df['values'].values
+
+        data_df = pd.DataFrame()
+        data_df['y'] = gb1_df['values'].values
+        data_df['x'] = gb1_df['sequence'].values
+        return data_df
+
+    # Otherwise
+    else:
+        check(False, f"Invalid choice of name={repr(name)}."
+                     f"Please enter None or one of {dataset_names}")
 
 
 @handle_errors
@@ -137,7 +204,7 @@ def _load_olson_data_GB1():
     """
     Helper function to turn data provided by Olson et al.
     into sequence-values arrays. This method is used in the
-    GB1 GE demo.
+    GB1 GE run_demo.
 
 
     return
@@ -222,3 +289,44 @@ def _load_olson_data_GB1():
 
     gb1_df = pd.DataFrame({'sequence': sequences, 'values': np.log(enrichment)}, columns=['sequence', 'values'])
     return gb1_df
+
+
+#TODO: Write this function. Subsumes load_example_dataset and load_example_model
+@handle_errors
+def load_example(name=None, model=True, training_data=False, test_data=False):
+    """
+
+    parameters
+    ----------
+
+    name: (str)
+        Name of example model. If None, a list of valid
+        choices will be printed.
+
+    model: (bool)
+        Whether to include inferred model.
+
+    training_data: (bool)
+        Whether to include training data. Slows execution.
+
+    test_data: (bool)
+        Whether to include test data. Slows execution.
+
+    returns
+    -------
+    out_dict: (dict)
+        A dictionary containing the example analysis.
+        Keys may include,
+            "model": The inferred MAVE-NN model
+            "x_train": The training-set sequences
+            "y_train": The training-set labels
+            "x_test": The test-set sequeces
+            "y_text": The test-set labels
+            "wt_seq": The wild-type sequence, if applicable
+
+    """
+    out_dict = {}
+
+    check(False, 'Function under construction.')
+
+    return out_dict

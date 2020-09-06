@@ -16,7 +16,7 @@ Demo function
 
 .. _demo:
 
-.. autofunction:: mavenn.demo
+.. autofunction:: mavenn.run_demo
 
 
 Example data function
@@ -24,7 +24,7 @@ Example data function
 
 .. _load_example_dataset:
 
-.. autofunction:: mavenn.src.utils.get_example_dataset
+.. autofunction:: mavenn.src.utils.load_example_dataset
 
 
 Functional tests

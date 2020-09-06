@@ -1,5 +1,5 @@
 '''
-demo: sortseq_mpa_visualization
+run_demo: sortseq_mpa_visualization
 
 Illustrates an additive G-P map trained using MPA regression
 on the rnap-wt dataset of Kinney et al., 2010. Runs fast.

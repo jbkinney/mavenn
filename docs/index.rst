@@ -33,7 +33,7 @@ Quick Start
 For a quick demonstration of mavenn's global epistasis model, execute the following within Python::
 
    import mavenn
-   mavenn.demo(name='GEmpsaPairwise')
+   mavenn.run_demo(name='GEmpsaPairwise')
 
 This command will train a pairwise global epistasis model on massively parallel
 splicing assay data from Wong et al. 2018 [#Wong2018]_ and return the loss history, predictions vs.
@@ -44,7 +44,7 @@ true labels, and the global epistasis nonlinear function.
 For a demonstration of mavenn's noise agnostic model, execute the following within Python::
 
    import mavenn
-   mavenn.demo(name='NAsortseq')
+   mavenn.run_demo(name='NAsortseq')
 
 This command will train an additive noise agnostic model on Sort-Seq
 data from Kinney et. al. (2010) [#sortseq2010]_ and return the loss history, inferred additive

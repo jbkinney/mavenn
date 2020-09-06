@@ -19,7 +19,7 @@ qs = GER.yhat_to_yq(y_hat_GE, q=np.array([0.16,0.84]))
 GB1_test_data = pd.read_csv(mavenn.__path__[0] +'/examples/datafiles/gb1/GB1_test_data.csv',index_col=[0])
 
 
-# subsample test data set to display demo quickly
+# subsample test data set to display run_demo quickly
 rng = default_rng()
 numbers = rng.choice(len(GB1_test_data)-1, size=20000, replace=False)
 
@@ -62,7 +62,7 @@ ax3 = fig.add_subplot(gs[1, :])
 # display heatmap
 theta = pd.DataFrame(GER.get_gpmap_parameters()['value'][1:].values.reshape(55,20), columns=GER.model.characters)
 WT_sequence_GB1 = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
-mavenn.additive_heatmap(theta, wt_seq=WT_sequence_GB1, cmap='PiYG', ax=ax3)
+mavenn.heatmap(theta, wt_seq=WT_sequence_GB1, cmap='PiYG', ax=ax3)
 
 plt.tight_layout()
 plt.show()

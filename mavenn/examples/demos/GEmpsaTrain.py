@@ -1,5 +1,5 @@
 '''
-This demo trains a neighbor mpsa model
+This run_demo trains a neighbor mpsa model
 '''
 
 import mavenn

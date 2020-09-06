@@ -1,5 +1,5 @@
 """
-demo: mpsa_ge_training
+run_demo: mpsa_ge_training
 
 Trains a neighbor G-P map, using GE regression with
 a homoskedastic Gaussian noise model, on data from

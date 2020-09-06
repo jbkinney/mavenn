@@ -4,7 +4,7 @@ Examples
 ========
 
 As described in :ref:`quickstart`, global epistasis and noise agnostic models can 
-be fit to data, as shown in Tareen and Kinney (2020) using the function ``mavenn.demo``. 
+be fit to data, as shown in Tareen and Kinney (2020) using the function ``mavenn.run_demo``.
 Here we describe each of these analyses, as well as the snippets of code used to 
 generate them. All snippets shown below are designed for use within a Jupyter Notebook, 
 and assume that the following header cell has already been run. ::
@@ -28,7 +28,7 @@ Additive GE model: (MPSA)
 Example snippet for fitting additive GE model to MPSA data ::
 
     # load data
-    X, y = get_example_dataset(name='MPSA')
+    X, y = load_example_dataset(name='MPSA')
 
     # split data into training and testing sets
     x_train, x_test, y_train, y_test = train_test_split(X, y)
@@ -60,7 +60,7 @@ Pairwise GE model: (MPSA)
 Example snippet for fitting pairwise GE model to MPSA data ::
 
     # load data
-    X, y = get_example_dataset(name='MPSA')
+    X, y = load_example_dataset(name='MPSA')
 
     # split data into training and testing sets
     x_train, x_test, y_train, y_test = train_test_split(X, y)
@@ -96,7 +96,7 @@ Example snippet for fitting pairwise GE model to DMS data (note: this example
 may take over 10 minutes to complete) ::
 
     # load data
-    X, y = get_example_dataset(name='GB1-DMS')
+    X, y = load_example_dataset(name='GB1-DMS')
 
     # split data into training and testing sets
     x_train, x_test, y_train, y_test = train_test_split(X, y)
@@ -132,7 +132,7 @@ Additive NA model: (Sort-Seq)
 Example snippet for inferring NA model from Sort-Seq data ::
 
     # load data
-    sequences, bin_counts = get_example_dataset(name='Sort-Seq')
+    sequences, bin_counts = load_example_dataset(name='Sort-Seq')
 
     # load mavenn's NA model
     NAR = mavenn.Model(regression_type='NA',
@@ -161,7 +161,7 @@ Example snippet for inferring NA model from Sort-Seq data with nearest
 neighbor interactions included ::
 
     # load data
-    sequences, bin_counts = get_example_dataset(name='Sort-Seq')
+    sequences, bin_counts = load_example_dataset(name='Sort-Seq')
 
     # load mavenn's NA model
     NAR = mavenn.Model(regression_type='NA',
