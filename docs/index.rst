@@ -2,6 +2,10 @@
 MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Bottlenecks
 =====================================================================================
 
+.. raw:: html
+
+    <h2><font color="red">Project under active development.</font></h2>
+
 MAVE-NN is a python package for inferring models of sequence-function relationships from 
 multiplexed assays of variant effects (MAVEs). MAVE-NN currently implements global epistasis 
 regression and noise agnostic regression. Both models are implemented as neural networks 
