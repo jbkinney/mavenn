@@ -1,18 +1,9 @@
-from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
-from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
-from mavenn.src.utils import onehot_encode_array, \
-    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
-from mavenn.src.likelihood_layers import *
-from mavenn.src.utils import fixDiffeomorphicMode
-from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
-from mavenn.src.entropy import mi_continuous, mi_mixed
-from mavenn.src.landscape import get_1pt_variants
-from mavenn.src.utils import get_mask_dict
+# Standard imports
+import numpy as np
+import pandas as pd
+import re
 
-# Needed for properly shaping outputs
-from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
-
+# Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras
 from tensorflow.keras.optimizers import Adam
@@ -22,9 +13,17 @@ from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenat
 from tensorflow.keras.constraints import non_neg as nonneg
 import tensorflow.keras.backend as K
 
-import pandas as pd
-import numpy as np
-import re
+# MAVE-NN imports
+from mavenn.src.error_handling import handle_errors, check
+from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
+from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
+from mavenn.src.utils import onehot_encode_array, \
+    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
+from mavenn.src.likelihood_layers import *
+from mavenn.src.utils import fixDiffeomorphicMode
+from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
+from mavenn.src.entropy import mi_continuous, mi_mixed
+from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
 
 
 @handle_errors
@@ -1708,59 +1707,5 @@ class Model:
             pd.DataFrame(NAR_dict, index=[0]).to_csv(filename + '.csv')
 
 
-    @handle_errors
-    def get_1pt_effects(self, wt_seq, out_format="matrix"):
-        """
-        Returns effects of all single-point mutations to a
-        wild-type sequence in convenient formats.
-
-        parameters
-        ----------
-
-        wt_seq: (str)
-            The wild-type sequence.
-
-        out_format: ("matrix" or "tidy")
-            If matrix, a 2D matrix of dphi values is
-            returned, with characters across columns and
-            positions across rows. If "tidy", a tidy
-            dataframe is returned that additionally lists
-            all variant sequences, phi values, etc.
-
-        returns
-        -------
-
-        out_df: (pd.DataFrame)
-            Dataframe containing dphi values and other
-            information.
-        """
-
-        # Get all 1pt variant sequences
-        df = get_1pt_variants(wt_seq=wt_seq, alphabet=self.alphabet,
-                              include_wt=True)
-        x = df['seq'].values
-
-        # Compute dphi values
-        df['phi'] = self.x_to_phi(x)
-        df['dphi'] = df['phi'] - df['phi']['WT']
-
-        if out_format == "tidy":
-            mut_df = df
-        elif out_format == "matrix":
-            # Keep only non-wt rows
-            ix = (df.index != 'WT')
-            tmp_df = df[ix]
-
-            # Pivot matrix and return
-            mut_df = tmp_df.pivot(index='pos', columns='mut_char',
-                                  values='dphi')
-            mut_df.fillna(0, inplace=True)
-            mut_df.columns.name = None
-        else:
-            mut_df = None
-            check(out_format in ["tidy", "matrix"],
-                  f"out_format={out_format}; must be 'tidy' or 'matrix'.")
-
-        return mut_df.copy()
 
 

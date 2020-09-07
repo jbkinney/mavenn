@@ -16,7 +16,7 @@ from mavenn.src.error_handling import handle_errors, check
 @handle_errors
 def _get_45deg_mesh(mat):
     """
-    Helper function for pairwise_heatmap. Creates X and Y
+    Helper function for heatmap_pairwise. Creates X and Y
     grids, based on mat, rotated -45 degrees.
     """
 
@@ -301,8 +301,16 @@ def heatmap(df,
 
 
 @handle_errors
-def pairwise_heatmap(df,
+def heatmap_pairwise(df,
+                     l1_col="l1",
+                     c1_col="c1",
+                     l2_col="l2",
+                     c2_col="c2",
+                     value_col="value",
+                     missing_values=np.nan,
                      mask_dict=None,
+                     seq=None,
+                     seq_kwargs=None,
                      ax=None,
                      gpmap_type="auto",
                      show_position=False,
@@ -352,6 +360,38 @@ def pairwise_heatmap(df,
             "l2": position 2 > position 1; values are 1,...,L-1.
             "c2": character 2.
             "value": indicates value of $\theta_{l1:c1,l2:c2}$
+
+    l1_col: (str)
+        Name of df column containing sequence positions 1. Values must be
+        0,...,L-1.
+
+    c1_col: (str)
+        Name of df column containing sequence characters at position 1.
+
+    l2_col: (str)
+        Name of df column containing sequence positions 2. Values must be
+        1,...,L.
+
+    c2_col: (str)
+        Name of df column containing sequence characters at position 2.
+
+    value_col: (str)
+        Name of df column containing values to illustrate.
+
+    missing_values: (bool)
+        Value to use when not provided in df.
+
+    mask_dict: (dict)
+        Specifies which characters to mask at specific positions.
+        For example, to mask ACGT at position 3 and AG at position 4, set
+        mask_dict={3:'ACGT',4:'AG'}
+
+    seq: (str)
+        The sequence to show, if any. Must have length len(df)
+        and be comprised of characters in df.columns.
+
+    seq_kwargs: (dict)
+        Arguments to pass to plt.plot() when illustrating seq characters.
 
     ax: (matplotlib.axes.Axes)
         The Axes object on which the heatmap will be drawn.
@@ -443,6 +483,42 @@ def pairwise_heatmap(df,
         Colorbar object linked to Axes.
     """
 
+    df = df.rename(columns={
+        l1_col: "l1",
+        c1_col: "c1",
+        l2_col: "l2",
+        c2_col: "c2",
+        value_col: "value"
+    })
+    df = df[["l1", "c1", "l2", "c2", "value"]].copy()
+
+    # Get dims
+    L = len(set(list(df['l1']) + list(df['l2'])))
+    alphabet = list(set(list(df['c1']) + list(df['c2'])))
+    alphabet.sort()
+    C = len(alphabet)
+    K = (L - 1) * C
+
+    # Create new dataframe with all entries
+    pos = np.arange(L).astype(int)
+    new_df = pd.DataFrame()
+    new_df["l1"] = np.tile(np.reshape(pos, [L, 1, 1, 1]),
+                           [1, C, L, C]).ravel()
+    new_df["c1"] = np.tile(np.reshape(alphabet, [1, C, 1, 1]),
+                           [L, 1, L, C]).ravel()
+    new_df["l2"] = np.tile(np.reshape(pos, [1, 1, L, 1]),
+                           [L, C, 1, C]).ravel()
+    new_df["c2"] = np.tile(np.reshape(alphabet, [1, 1, 1, C]),
+                           [L, C, L, 1]).ravel()
+    df = new_df.merge(right=df, on=["l1", "c1", "l2", "c2"], how='outer')
+
+    # Remove invalid pairs of positions
+    ix = df["l1"] < df["l2"]
+    df = df[ix]
+
+    # Fill in missing values
+    df = df.fillna(missing_values)
+
     # Create subscript columns
     df['sub1'] = df['l1'].astype(str) + ':' + df['c1']
     df['sub2'] = df['l2'].astype(str) + ':' + df['c2']
@@ -450,19 +526,24 @@ def pairwise_heatmap(df,
     # Sort rows
     df.sort_values(by=['l1', 'c1', 'l2', 'c2'], inplace=True)
 
-    # Get dims
-    L = len(set(list(df['l1']) + list(df['l2'])))
-    chars = list(set(list(df['c1']) + list(df['c2'])))
-    chars.sort()
-    C = len(chars)
-    K = (L - 1) * C
-
     # Determine if neighbor or pairwise if gpmap_type is not set.
     l1 = df['l1'].values
     l2 = df['l2'].values
     c1 = df['c1'].values
     c2 = df['c2'].values
     assert np.all(l2 > l1), 'Strange; l2 <= l1 sometimes. Shouldnt happen'
+
+    # If wt_seq is set
+    if seq:
+
+        # Verify wt_seq is valid
+        assert isinstance(seq,
+                          str), f'type(wt_seq)={type(seq)} is not str.'
+
+        # Verify wt_seq is composed of valid characters
+        wt_seq_set = set(seq)
+        char_set = set(alphabet)
+        assert wt_seq_set <= char_set, f'wt_seq contains the following invalid characters: {wt_seq_set - char_set}'
 
     # If there is a mask, set corresponding values to nan
     if mask_dict is not None:
@@ -479,8 +560,8 @@ def pairwise_heatmap(df,
 
         # Check that mask_dict has valid characters
         mask_cs = ''.join(mask_dict.values())
-        check(set(mask_cs) <= set(chars),
-              f'mask_dict={mask_dict} contains characters not compatible with alphabet={chars}.')
+        check(set(mask_cs) <= set(alphabet),
+              f'mask_dict={mask_dict} contains characters not compatible with alphabet={alphabet}.')
 
         # Set masked values of dataframe to np.nan
         for l, cs in mask_dict.items():
@@ -533,9 +614,15 @@ def pairwise_heatmap(df,
     else:
         fig = ax.figure
 
-    # Needed to center colorbar at zero
+    # Needed to center colormap at zero
     if ccenter is not None:
+
+        # Reset ccenter if is not compatible with clim
+        if (clim[0] > ccenter) or (clim[1] < ccenter):
+            ccenter = 0.5 * (clim[0] + clim[1])
+
         norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
+
     else:
         norm = Normalize(vmin=clim[0], vmax=clim[1])
 
@@ -612,7 +699,7 @@ def pairwise_heatmap(df,
     if show_alphabet:
 
         # Draw c1 alphabet
-        for i, c in enumerate(chars):
+        for i, c in enumerate(alphabet):
             x1 = 0.5 * half_pixel_diag \
                  + i * half_pixel_diag \
                  - alphabet_pad * half_pixel_diag
@@ -623,7 +710,7 @@ def pairwise_heatmap(df,
                     ha='center', rotation=-45, fontsize=alphabet_size)
 
         # Draw c2 alphabet
-        for i, c in enumerate(chars):
+        for i, c in enumerate(alphabet):
             x2 = 0.5 + 0.5 * half_pixel_diag \
                  + i * half_pixel_diag \
                  + alphabet_pad * half_pixel_diag
@@ -682,6 +769,38 @@ def pairwise_heatmap(df,
                  + position_pad * half_pixel_diag
             ax.text(x1, y1, f'{l1:d}', va='center',
                     ha='center', rotation=-45, fontsize=position_size)
+
+    # Mark wt sequence
+    if seq:
+
+        # Set seq_kwargs if not set in constructor
+        if seq_kwargs is None:
+            seq_kwargs = {'marker': '.', 'color': 'k', 's': 2}
+
+        # Iterate over pairs of positions
+        for l1 in range(L):
+            for l2 in range(l1+1, L):
+
+                # Break out of loop if gmap_type is "neighbor" and l2 > l1+1
+                if (l2-l1 > 1) and gpmap_type == "neighbor":
+                    continue
+
+                # Iterate over pairs of characters
+                for i1, c1 in enumerate(alphabet):
+                    for i2, c2 in enumerate(alphabet):
+
+                        # If there is a match to the wt sequence,
+                        if seq[l1] == c1 and seq[l2] == c2:
+
+                            # Compute coordinates of point
+                            x = half_pixel_diag + \
+                                (i1 + i2) * half_pixel_diag + \
+                                (l1 + l2 - 1) * half_block_diag
+                            y = (i2 - i1) * half_pixel_diag + \
+                                (l2 - l1 - 1) * half_block_diag
+
+                            # Plot point
+                            ax.scatter(x, y, **seq_kwargs)
 
 
     # Create colorbar if requested, make one

@@ -3,8 +3,53 @@ import numpy as np
 import pandas as pd
 
 # Imports from MAVE-NN
-from mavenn.src.validate import validate_alphabet
+from mavenn.src.validate import validate_alphabet, validate_seqs
 from mavenn.src.error_handling import handle_errors, check
+
+
+@handle_errors
+def get_mask_dict(x, alphabet):
+    """
+    Identify the missing characters at each position within a set
+    of sequences.
+
+    parameters
+    ----------
+    x: (np.ndarray)
+        List of sequences. Sequences must all be the same length.
+
+    alphabet: (string or list of characters)
+        The alphabet from which characters in x are expected to be drawn.
+        mask_dict will list characters that are in alphabet but are not
+        found at specific positions within the sequences in x.
+
+    returns
+    -------
+    mask_dict: (dict)
+        Keys denote positions, values are strings comprised of missing
+        characters.
+    """
+
+    # Validate alphabet
+    alphabet = validate_alphabet(alphabet)
+
+    # Validate sequences
+    x = validate_seqs(seqs=x, alphabet=alphabet,
+                                          restrict_seqs_to_alphabet=False)
+
+    # Split strings, creating a matrix of individual characters
+    seqs = np.array([list(s) for s in x])
+
+    # For each position, identify missing characters and use to make mask_dict
+    L = seqs.shape[1]
+    mask_dict = {}
+    for l in range(L):
+        missing_chars = list(set(alphabet) - set(seqs[:, l]))
+        missing_chars.sort()
+        if len(missing_chars) > 0:
+            mask_dict[l] = ''.join(missing_chars)
+
+    return mask_dict
 
 
 @handle_errors
@@ -156,7 +201,7 @@ def get_2pt_variants(wt_seq, alphabet, include_wt=True):
     c2s = list(c2s[ix])
 
     # Create all pairwise variants
-    seqs = [wt_seq[:l1] + c1 + wt_seq[l1 + 1:l2] + c2 + wt_seq[l2:]
+    seqs = [wt_seq[:l1] + c1 + wt_seq[l1 + 1:l2] + c2 + wt_seq[l2+1:]
             for (l1, c1, l2, c2) in zip(l1s, c1s, l2s, c2s)]
 
     names = [wt_seq[l1] + str(l1) + c1 + ',' + wt_seq[l2] + str(l2) + c2
@@ -199,4 +244,118 @@ def get_2pt_variants(wt_seq, alphabet, include_wt=True):
     out_df.set_index('name', inplace=True)
 
     # Return seqs
+    return out_df
+
+
+@handle_errors
+def get_1pt_effects(func, wt_seq, alphabet):
+    """
+    Returns effects of all single-point mutations to a
+    wild-type sequence.
+
+    parameters
+    ----------
+
+    func: (function)
+        A function that maps sequences to phenotype values.
+
+    wt_seq: (str)
+        The wild-type sequence.
+
+    alphabet: (str)
+        The alphabet of allowable characters.
+
+    returns
+    -------
+
+    out_df: (pd.DataFrame)
+        Dataframe containing dphi values and other
+        information.
+    """
+
+    alphabet = validate_alphabet(alphabet)
+
+    # Get all 1pt variant sequences
+    df = get_1pt_variants(wt_seq=wt_seq,
+                          alphabet=alphabet,
+                          include_wt=False)
+    x = df['seq'].values
+
+    # Compute dphi values
+    df['phi'] = func(x)
+    df['phi_wt'] = func(wt_seq)
+    df['dphi'] = df['phi'] - df['phi_wt']
+
+    # Order columns
+    out_df = df[["l", "c_wt", "c_mut", "phi", "phi_wt", "dphi", "seq"]].copy()
+
+    return out_df
+
+
+
+@handle_errors
+def get_2pt_effects(func, wt_seq, alphabet):
+    """
+    Returns effects of all two-point mutations to a
+    wild-type sequence.
+
+    parameters
+    ----------
+
+    func: (function)
+        A function that maps sequences to phenotype values.
+
+    wt_seq: (str)
+        The wild-type sequence.
+
+    alphabet: (str)
+        The alphabet of allowable characters
+
+    returns
+    -------
+
+    out_df: (pd.DataFrame)
+        Dataframe containing ddphi values and other
+        information.
+    """
+
+    alphabet = validate_alphabet(alphabet)
+
+    # Get single-point effects
+    df1 = get_1pt_effects(func=func,
+                          alphabet=alphabet,
+                          wt_seq=wt_seq)
+
+    # Get all 1pt variant sequences
+    df2 = get_2pt_variants(wt_seq=wt_seq,
+                          alphabet=alphabet,
+                          include_wt=False)
+
+    # Compute dphi values
+    x = df2['seq'].values
+    df2['phi_12'] = func(x)
+    df2['phi_wt'] = func(wt_seq)
+
+    # Parse mut names
+    mut_names = np.array([name.split(',') for name in df2.index])
+    df2['mut1'] = mut_names[:, 0]
+    df2['mut2'] = mut_names[:, 1]
+
+    # Merge in one-point phi values
+    df2 = df2.merge(left_on="mut1", right_index=True, right=df1["phi"],
+                    how='left')
+    df2 = df2.rename(columns={'phi': 'phi_1'})
+
+    df2 = df2.merge(left_on="mut2", right_index=True, right=df1["phi"],
+                    how='left')
+    df2 = df2.rename(columns={'phi': 'phi_2'})
+
+    # Compute ddphi values
+    df2["ddphi"] = df2["phi_12"] - df2["phi_1"] - df2["phi_2"] + df2["phi_wt"]
+
+    # Order columns
+    out_df = df2[["l1", "c1_wt", "c1_mut",
+                  "l2", "c2_wt", "c2_mut",
+                  "phi_12", "phi_1", "phi_2", "phi_wt", "ddphi", "seq"]].copy()
+
     return out_df

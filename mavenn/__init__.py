@@ -21,13 +21,17 @@ from mavenn.src.utils import load
 # For estimating the intrinsic information in a dataset
 from mavenn.src.entropy import estimate_instrinsic_information
 
+# Generates lists of variants
+from mavenn.src.landscape import get_1pt_variants
+from mavenn.src.landscape import get_2pt_variants
+
+# Computes variant effects
+from mavenn.src.landscape import get_1pt_effects
+from mavenn.src.landscape import get_2pt_effects
+
+# Gets list of unobserved bases in a set of sequences
+from mavenn.src.landscape import get_mask_dict
+
 # For visualizing G-P maps
 from mavenn.src.visualization import heatmap
-from mavenn.src.visualization import pairwise_heatmap
-
-# For generating lists of variants
-from mavenn.src.landscape import get_1pt_variants
-#TODO: write get_2p_variants()
-
-
-
+from mavenn.src.visualization import heatmap_pairwise
