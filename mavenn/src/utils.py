@@ -21,6 +21,50 @@ from scipy.special import erfinv
 # Imports from MAVE-NN
 from mavenn.src.error_handling import handle_errors, check
 
+@handle_errors
+def get_mask_dict(x, alphabet):
+    """
+    Identify the missing characters at each position within a set
+    of sequences.
+
+    parameters
+    ----------
+    x: (np.ndarray)
+        List of sequences. Sequences must all be the same length.
+
+    alphabet: (string or list of characters)
+        The alphabet from which characters in x are expected to be drawn.
+        mask_dict will list characters that are in alphabet but are not
+        found at specific positions within the sequences in x.
+
+    returns
+    -------
+    mask_dict: (dict)
+        Keys denote positions, values are strings comprised of missing
+        characters.
+    """
+
+    # Validate alphabet
+    alphabet = mavenn.src.validate.validate_alphabet(alphabet)
+
+    # Validate sequences
+    x = mavenn.src.validate.validate_seqs(seqs=x, alphabet=alphabet,
+                                          restrict_seqs_to_alphabet=False)
+
+    # Split strings, creating a matrix of individual characters
+    seqs = np.array([list(s) for s in x])
+
+    # For each position, identify missing characters and use to make mask_dict
+    L = seqs.shape[1]
+    mask_dict = {}
+    for l in range(L):
+        missing_chars = list(set(alphabet) - set(seqs[:, l]))
+        missing_chars.sort()
+        if len(missing_chars) > 0:
+            mask_dict[l] = ''.join(missing_chars)
+
+    return mask_dict
+
 
 @handle_errors
 def onehot_sequence(sequence, bases):

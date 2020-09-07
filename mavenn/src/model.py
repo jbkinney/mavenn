@@ -8,6 +8,7 @@ from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.landscape import get_1pt_variants
+from mavenn.src.utils import get_mask_dict
 
 # Needed for properly shaping outputs
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
@@ -107,7 +108,7 @@ class Model:
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
-                 ge_heteroskedasticity_order=2,
+                 ge_heteroskedasticity_order=0,
                  na_hidden_nodes=50,
                  theta_regularization=0.01,
                  eta_regularization=0.01,
@@ -774,7 +775,7 @@ class Model:
         return yhat
 
     @handle_errors
-    def get_gpmap_parameters(self):
+    def _get_all_gpmap_parameters(self):
 
         """
         Returns gauge-fixed parameters for the G-P map as a pandas dataframe.
@@ -908,20 +909,18 @@ class Model:
         return theta_df
 
     @handle_errors
-    def get_additive_parameters(self, out_format="matrix"):
+    def get_gpmap_parameters(self, which='all'):
         """
-        Returns the additive parameters of a model
-        in convenient formats.
+        Returns the G-P map parameters theta.
 
         parameters
         ----------
 
-        out_format: ("matrix" or "tidy")
-            If matrix, a 2D matrix of theta values is
-            returned, with characters across columns and
-            positions across rows. If "tidy", a tidy
-            dataframe is returned that additionally lists
-            all variant sequences, phi values, etc.
+        which: ("all", "additive", "pairwise")
+            Which subset of parameters to return. If "additive"
+            or "pairwise", additional columns will be added indicating
+            the position(s) and character(s) associated with each
+            parameter.
 
         returns
         -------
@@ -931,36 +930,60 @@ class Model:
             information.
         """
 
-        # get all parameters
-        theta_df = self.get_gpmap_parameters()
+        # Get all model parameters
+        theta_df = self._get_all_gpmap_parameters()
 
-        # Set pattern for matching and parsing additive params
-        pattern = re.compile('^theta_([0-9]+):([A-Za-z])$')
-
-        # Set pos and char cols, and remove non-additive params
-        matches = [pattern.match(name) for name in theta_df['name']]
-        ix = [bool(m) for m in matches]
-        theta_df['pos'] = [int(m.group(1) if m else '-1') for m in matches]
-        theta_df['char'] = [(m.group(2) if m else ' ') for m in matches]
-        theta_df = theta_df[ix]
-
-        # If matrix format is requested, pivot theta_df and erase columns name
-        if out_format == "matrix":
-            theta_df = theta_df.pivot(index='pos', columns='char',
-                                      values='value')
-            theta_df.columns.name = None
-
-        # If tidy format requested, just return a copy of theta_df
-        elif out_format == "tidy":
+        # If "all", just return all model parameters
+        if which == "all":
             pass
 
-        # Otherwise, throw error regarding out_format
-        else:
-            check(out_format in ["matrix", "tidy"],
-                  f'invalid out_format: "{out_format}"')
+        # If "additive", remove non-additive parameters and
+        # create columns "l" and "c"
+        elif which == "additive":
+            # Set pattern for matching and parsing additive params
+            pattern = re.compile('^theta_([0-9]+):([A-Za-z]+)$')
 
-        # Return dataframe
+            # Set pos and char cols, and remove non-additive params
+            matches = [pattern.match(name) for name in theta_df['name']]
+            ix = [bool(m) for m in matches]
+            theta_df['l'] = [int(m.group(1) if m else '-1') for m in matches]
+            theta_df['c'] = [(m.group(2) if m else ' ') for m in matches]
+            theta_df = theta_df[ix]
+
+        # If "additive", remove non-additive parameters and
+        # create columns "l1","c1","l2","c2"
+        elif which == "pairwise":
+            # Set pattern for matching and parsing additive params
+            pattern = re.compile(
+                '^theta_([0-9]+):([A-Za-z]+),([0-9]+):([A-Za-z]+)$')
+
+            # Set pos and char cols, and remove non-additive params
+            matches = [pattern.match(name) for name in theta_df['name']]
+            ix = [bool(m) for m in matches]
+            theta_df['l1'] = [int(m.group(1) if m else '-1') for m in matches]
+            theta_df['c1'] = [(m.group(2) if m else ' ') for m in matches]
+            theta_df['l2'] = [int(m.group(3) if m else '-1') for m in matches]
+            theta_df['c2'] = [(m.group(4) if m else ' ') for m in matches]
+            theta_df = theta_df[ix]
+
+        else:
+            which_options = ("all", "additive", "pairwise")
+            check(False,
+                  f"which={repr(which)}; must be one of {which_options}.")
+
+        # Reset index
+        theta_df.reset_index(inplace=True, drop=True)
+
         return theta_df
+
+    # @handle_errors
+    # def get_mask_dict(self):
+    #     """
+    #     Returns a dict listing which characters do not occur
+    #     at each position within the training sequences. Positions with no
+    #     missing characters are omitted.
+    #     """
+    #     return get_mask_dict(self.x, self.alphabet)
 
 
     @handle_errors

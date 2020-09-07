@@ -119,7 +119,7 @@ def validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True):
     # Cast as np.array
     if isinstance(seqs, str):
         seqs = np.array([seqs])
-    elif isinstance(seqs, list):
+    elif isinstance(seqs, (list, np.ndarray)):
         seqs = np.array(seqs).astype(str)
     elif isinstance(seqs, pd.Series):
         seqs = seqs.values.astype(str)

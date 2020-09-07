@@ -1,7 +1,9 @@
 # Standard imports
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import re
+import pdb
 
 # Special plotting-related imports
 from matplotlib.colors import DivergingNorm, Normalize
@@ -37,19 +39,43 @@ def _get_45deg_mesh(mat):
 
     return X_rot, Y_rot
 
+@handle_errors
+def tidy_to_matrix_additive(df):
+    """
+    Converts a tidy dataframe of additive params to matrix format.
+    df must be a pd.DataFrame that contains columns "l","c","values".
+    """
+    df = df.copy()
+    check(isinstance(df, pd.DataFrame),
+          f'type(df)={type(df)}; must be pd.DataFrame.')
+    check('l' in df.columns,
+          f'df.columns={df.columns} does not contain "l".')
+    check('c' in df.columns,
+          f'df.columns={df.columns} does not contain "c".')
+    check('value' in df.columns,
+          f'df.columns={df.columns} does not contain "value".')
+    df = df.pivot(index='l', columns='c',
+                  values='value')
+    df.columns.name = None
+    return df
+
 
 @handle_errors
 def heatmap(df,
+            l_col="l",
+            c_col="c",
+            value_col="value",
+            missing_values=np.nan,
             mask_dict=None,
-            wt_seq=None,
-            wt_at_zero=True,
+            seq=None,
+            seq_kwargs=None,
             ax=None,
             show_spines=False,
             cbar=True,
             cax=None,
             clim=None,
-            clim_quantile=.95,
-            ccenter=0,
+            clim_quantile=1,
+            ccenter=None,
             cmap='coolwarm',
             cmap_size="5%",
             cmap_pad=0.1):
@@ -60,25 +86,33 @@ def heatmap(df,
     ----------
 
     df: (pd.DataFrame)
-        A matrix specifying additive values, eg 1pt effects
-        or additive parameters. Rows correspond to positions while
-        columns correspond to characters. Column names must be single
-        characters and row indices must be integers.
+        A dataframe specifying additive values, eg 1pt effects
+        or additive parameters.
+
+    l_col: (str)
+        Name of df column containing sequence positions. Values must be
+        0,...,L-1.
+
+    c_col: (str)
+        Name of df column containing sequence characters.
+
+    value_col: (str)
+        Name of df column containing values to illustrate.
+
+    missing_values: (bool)
+        Value to use when (l,c) pairs are not observed.
 
     mask_dict: (dict)
         Specifies which characters to mask at specific positions.
         For example, to mask ACGT at position 3 and AG at position 4, set
         mask_dict={3:'ACGT',4:'AG'}
 
-    wt_seq: (str)
-        The wild-type sequence. Must have length len(df)
+    seq: (str)
+        The sequence to show, if any. Must have length len(df)
         and be comprised of characters in df.columns.
 
-    wt_at_zero: (bool)
-        Whether to subtract values from each row in df so that
-        the wild-type character at each position has
-        effect zero. This is common in heatmap representations
-        of DMS experiments.
+    seq_kwargs: (dict)
+        Arguments to pass to plt.plot() when illustrating seq characters.
 
     ax: (matplotlib.axes.Axes)
         The Axes object on which the heatmap will be drawn.
@@ -104,8 +138,7 @@ def heatmap(df,
 
     ccenter: (float)
         The effect value at which to position the center of a diverging
-        colormap. A value of ccenter=0 often makes sense, especially if
-        using wt_at_zero=True.
+        colormap. A value of ccenter=0 often makes sense.
 
     cmap: (str or matplotlib.colors.Colormap)
         Colormap to use.
@@ -130,6 +163,24 @@ def heatmap(df,
         Colorbar object linked to Axes.
     """
 
+    # Copy dataframe
+    df = df.copy()
+
+    # Rename columns
+    df = df.rename(columns={l_col: "l",
+                            c_col: "c",
+                            value_col: "value"})
+
+    # Remove indices with missing characters
+    ix = [len(c) > 0 for c in df["c"]]
+    df = df[ix]
+
+    # Convert to matrix
+    df = tidy_to_matrix_additive(df)
+
+    # Fill in missing values
+    df = df.fillna(missing_values)
+
     # Flip
     df = df.loc[:, ::-1]
 
@@ -140,23 +191,16 @@ def heatmap(df,
     ylim = [-.5, C - .5]
 
     # If wt_seq is set
-    if wt_seq:
+    if seq:
 
         # Verify wt_seq is valid
-        assert isinstance(wt_seq,
-                          str), f'type(wt_seq)={type(wt_seq)} is not str.'
+        assert isinstance(seq,
+                          str), f'type(wt_seq)={type(seq)} is not str.'
 
         # Verify wt_seq is composed of valid characters
-        wt_seq_set = set(wt_seq)
+        wt_seq_set = set(seq)
         char_set = set(df.columns)
         assert wt_seq_set <= char_set, f'wt_seq contains the following invalid characters: {wt_seq_set - char_set}'
-
-        # If using the wt gauge
-        if wt_at_zero:
-            for i, c_i in enumerate(wt_seq):
-                df.loc[i, :] = df.loc[i, :] - df.loc[i, c_i]
-            if ccenter is None:
-                ccenter = 0
 
     # If there is a mask, set values to nan
     if mask_dict is not None:
@@ -196,9 +240,16 @@ def heatmap(df,
     else:
         fig = ax.figure
 
-    # Needed to center colorbar at zero
+    # Needed to center colormap at zero
     if ccenter is not None:
+
+        # Reset ccenter if is not compatible with clim
+        if (clim[0] > ccenter) or (clim[1] < ccenter):
+            ccenter = 0.5 * (clim[0] + clim[1])
+
         norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
+
+    # Otherwise, use uncentered colormap
     else:
         norm = Normalize(vmin=clim[0], vmax=clim[1])
 
@@ -214,11 +265,15 @@ def heatmap(df,
                        norm=norm)
 
     # Mark wt sequence
-    if wt_seq:
-        aas = list(df.columns)
-        for x, aa in enumerate(wt_seq):
-            y = aas.index(aa)
-            ax.plot(x, y, '.k', markersize=2)
+    if seq:
+
+        if seq_kwargs is None:
+            seq_kwargs = {'marker': '.', 'color': 'k', 's': 2}
+
+        chars = list(df.columns)
+        x = range(len(seq))
+        y = [chars.index(c) for c in seq]
+        ax.scatter(x, y, **seq_kwargs)
 
     # Style plot
     ax.set_ylim(ylim)
@@ -246,7 +301,7 @@ def heatmap(df,
 
 
 @handle_errors
-def pairwise_heatmap(theta_df,
+def pairwise_heatmap(df,
                      mask_dict=None,
                      ax=None,
                      gpmap_type="auto",
@@ -288,9 +343,15 @@ def pairwise_heatmap(theta_df,
     parameters
     ----------
 
-    theta_df: (pd.DataFrame)
-        A dataframe listing model parameters. This can be
-        obtained using Model.get_gpmap_parameters().
+    df: (pd.DataFrame)
+        A dataframe listing pairwise model parameters. This can be
+        obtained using Model.get_gpmap_parameters(which="pairwise").
+        Must contain the following columns:
+            "l1": position 1; values are 0,...,L-2.
+            "c1": character 1.
+            "l2": position 2 > position 1; values are 1,...,L-1.
+            "c2": character 2.
+            "value": indicates value of $\theta_{l1:c1,l2:c2}$
 
     ax: (matplotlib.axes.Axes)
         The Axes object on which the heatmap will be drawn.
@@ -304,7 +365,7 @@ def pairwise_heatmap(theta_df,
         "pairwise", a B2-shape will be plotted. If "neighbor",
         a string of diamonds will be plotted. If "auto", this
         will be set automatically depending on the contents of
-        theta_df.
+        df.
 
     show_position: (bool)
         Whether to draw position labels on the plot.
@@ -382,37 +443,25 @@ def pairwise_heatmap(theta_df,
         Colorbar object linked to Axes.
     """
 
-    # Set regular expression for parsing pariwise parameters
-    pattern = re.compile("theta_([0-9]+):([A-Z]),([0-9]+):([A-Z])")
-
-    # Remove rows of theta_df that do not match the pattern
-    ix = [bool(pattern.match(name)) for name in theta_df['name']]
-    theta_df = theta_df[ix].copy()
-
-    # Parse remaining parameter names
-    matches = [pattern.match(name) for name in theta_df['name']]
-    theta_df['l1'] = [int(m.group(1)) for m in matches]
-    theta_df['c1'] = [m.group(2) for m in matches]
-    theta_df['l2'] = [int(m.group(3)) for m in matches]
-    theta_df['c2'] = [m.group(4) for m in matches]
-    theta_df['sub1'] = theta_df['l1'].astype(str) + ':' + theta_df['c1']
-    theta_df['sub2'] = theta_df['l2'].astype(str) + ':' + theta_df['c2']
+    # Create subscript columns
+    df['sub1'] = df['l1'].astype(str) + ':' + df['c1']
+    df['sub2'] = df['l2'].astype(str) + ':' + df['c2']
 
     # Sort rows
-    theta_df.sort_values(by=['l1', 'c1', 'l2', 'c2'], inplace=True)
+    df.sort_values(by=['l1', 'c1', 'l2', 'c2'], inplace=True)
 
     # Get dims
-    L = len(set(list(theta_df['l1']) + list(theta_df['l2'])))
-    chars = list(set(list(theta_df['c1']) + list(theta_df['c2'])))
+    L = len(set(list(df['l1']) + list(df['l2'])))
+    chars = list(set(list(df['c1']) + list(df['c2'])))
     chars.sort()
     C = len(chars)
     K = (L - 1) * C
 
     # Determine if neighbor or pairwise if gpmap_type is not set.
-    l1 = theta_df['l1'].values
-    l2 = theta_df['l2'].values
-    c1 = theta_df['c1'].values
-    c2 = theta_df['c2'].values
+    l1 = df['l1'].values
+    l2 = df['l2'].values
+    c1 = df['c1'].values
+    c2 = df['c2'].values
     assert np.all(l2 > l1), 'Strange; l2 <= l1 sometimes. Shouldnt happen'
 
     # If there is a mask, set corresponding values to nan
@@ -439,7 +488,7 @@ def pairwise_heatmap(theta_df,
                 ix1 = (l1 == l) & (c1 == c)
                 ix2 = (l2 == l) & (c2 == c)
                 ix1or2 = ix1 | ix2
-                theta_df.loc[ix1or2, 'value'] = np.nan
+                df.loc[ix1or2, 'value'] = np.nan
 
     # If user specifies gpmap_type="auto", automatically determine which
     # type of plot to make
@@ -450,9 +499,9 @@ def pairwise_heatmap(theta_df,
             gpmap_type = "neighbor"
 
     # If user specifies gpmap_type="neighbor", remove non-neighbor entries
-    # from theta_df
+    # from df
     elif gpmap_type == "neighbor":
-        theta_df = theta_df[l2-l1 == 1].copy()
+        df = df[l2 - l1 == 1].copy()
 
     # Don't do anything if gpmap_type="pairwise"
     elif gpmap_type == "pairwise":
@@ -463,7 +512,7 @@ def pairwise_heatmap(theta_df,
         check(False, f"Invalid gpmap_type={gpmap_type}")
 
     # Pivot to matrix LCxLC in size
-    mat_df = theta_df.pivot(index="sub1", columns="sub2", values="value")
+    mat_df = df.pivot(index="sub1", columns="sub2", values="value")
     mat = mat_df.values
 
     # Verify that mat is the right size
