@@ -646,9 +646,7 @@ class Model:
             early_stopping_patience=20,
             callbacks=[],
             optimizer=Adam,
-            optimizer_kwargs={},
-            fit_kwargs={},
-            compile_kwargs={}):
+            optimizer_kwargs={}):
 
         """
 
@@ -687,9 +685,6 @@ class Model:
             Additional keyword arguments to pass to the constructor of the
             tf.keras.optimizers.Optimizer class.
 
-        fit_kwargs: (dict)
-            Additional keyword arguments to pass to tf.keras.model.fit().
-
         compile_kwargs: (dict):
             Additional keyword arguments to pass to tf.keras.model.compile().
 
@@ -706,7 +701,7 @@ class Model:
         self._compile_model(optimizer=optimizer,
                            lr=self.learning_rate,
                            **optimizer_kwargs)
-                           #**compile_kwargs)
+
 
         if early_stopping:
             callbacks += [tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
@@ -731,7 +726,6 @@ class Model:
                                        epochs=epochs,
                                        verbose=verbose,
                                        callbacks=callbacks,
-                                       #**fit_kwargs,
                                        )
 
         # gauge fix model after fitting
@@ -974,15 +968,6 @@ class Model:
         theta_df.reset_index(inplace=True, drop=True)
 
         return theta_df
-
-    # @handle_errors
-    # def get_mask_dict(self):
-    #     """
-    #     Returns a dict listing which characters do not occur
-    #     at each position within the training sequences. Positions with no
-    #     missing characters are omitted.
-    #     """
-    #     return get_mask_dict(self.x, self.alphabet)
 
 
     @handle_errors
