@@ -65,8 +65,8 @@ def run_demo(name=None, print_code=False):
         the output of the run_demo file. If False, only the run_demo output
         will be shown.
 
-    returns
-    -------
+    return
+    ------
     None
 
     """

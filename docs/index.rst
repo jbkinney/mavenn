@@ -93,7 +93,6 @@ Resources
 .. toctree::
     :maxdepth: 2
 
-    examples
     implementation
 
 

@@ -10,14 +10,6 @@ from mavenn.tests.specific_tests import \
 def run_tests():
     """
     Run all mavenn functional tests.
-
-    parameters
-    ----------
-    None.
-
-    return
-    ------
-    None.
     """
 
     test_GlobalEpistasisModel()

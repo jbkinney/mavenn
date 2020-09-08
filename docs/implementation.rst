@@ -1,35 +1,58 @@
 Implementation
 ==============
 
+Testing
+-------
 
-MAVE-NN Model class
--------------------
+.. autofunction:: mavenn.run_tests
 
-.. autoclass:: mavenn.src.model.Model
-    :members:
+Built-in examples
+-----------------
 
-.. _GlobalEpistasisModel_class:
-    
-    
-Demo function
--------------
+.. autofunction:: mavenn.list_tutorials
 
-.. _demo:
+.. autofunction:: mavenn.list_demos
 
 .. autofunction:: mavenn.run_demo
 
+.. autofunction:: mavenn.load_example_dataset
 
-Example data function
+.. autofunction:: mavenn.load_example_model
+
+Loading models
+--------------
+
+.. autofunction:: mavenn.load
+
+Information estimation
+-----------------------
+
+.. autofunction:: mavenn.estimate_instrinsic_information
+
+
+Sequence variant utils
 ----------------------
 
-.. _load_example_dataset:
+.. autofunction:: mavenn.get_1pt_variants
 
-.. autofunction:: mavenn.src.utils.load_example_dataset
+.. autofunction:: mavenn.get_2pt_variants
+
+.. autofunction:: mavenn.get_1pt_effects
+
+.. autofunction:: mavenn.get_2pt_effects
+
+.. autofunction:: mavenn.get_mask_dict
+
+Visualization
+-------------
+
+.. autofunction:: mavenn.heatmap
+
+.. autofunction:: mavenn.heatmap_pairwise
 
 
-Functional tests
-----------------
+Model class
+-----------
 
-.. _functional_tests:
-
-.. autofunction:: mavenn.run_tests
+.. autoclass:: mavenn.Model
+    :members:

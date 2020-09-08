@@ -1,6 +1,9 @@
 # The functions imported here are the ONLY "maven.xxx()" functions that
 # users are expected to interact with
 
+# Primary model class
+from mavenn.src.model import Model
+
 # For running functional tests
 from mavenn.tests import run_tests
 
@@ -11,9 +14,6 @@ from mavenn.src.examples import run_demo
 from mavenn.src.examples import load_example_dataset
 from mavenn.src.examples import load_example_model
 # TODO: write load_example() to unify interface to examples.
-
-# Primary model class
-from mavenn.src.model import Model
 
 # For loading models
 from mavenn.src.utils import load
