@@ -47,7 +47,7 @@ def validate_nd_array(x):
 
     return x
 
-
+# TODO: 'protein*' will break current regular expressions. Those need to change.
 @handle_errors
 def validate_alphabet(alphabet):
     """

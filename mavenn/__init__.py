@@ -13,7 +13,6 @@ from mavenn.src.examples import list_demos
 from mavenn.src.examples import run_demo
 from mavenn.src.examples import load_example_dataset
 from mavenn.src.examples import load_example_model
-# TODO: write load_example() to unify interface to examples.
 
 # For loading models
 from mavenn.src.utils import load
