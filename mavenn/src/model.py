@@ -8,7 +8,7 @@ import tensorflow as tf
 import tensorflow.keras
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers import *
-from tensorflow.keras.models import Model as kerasFunctionalModel # to distinguish from class name
+from tensorflow.keras.models import Model as kerasFunctionalModel
 from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
 import tensorflow.keras.backend as K
@@ -98,6 +98,7 @@ class Model:
 
     """
 
+
     def __init__(self,
                  x,
                  y,
@@ -166,6 +167,7 @@ class Model:
                                                          ohe_batch_size=self.ohe_batch_size)
 
             self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
+
 
     @handle_errors
     def gauge_fix_model_multiple_replicates(self):
@@ -396,6 +398,7 @@ class Model:
         # obtained a readable format by using the method return_theta
         self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
 
+
     @handle_errors
     def fix_gauge(self, gauge="hierarchichal", wt_sequence=None):
         """
@@ -418,6 +421,7 @@ class Model:
         self.gauge = gauge
         self.wt_sequence = wt_sequence
         pass
+
 
     # TODO: put underscore in front on function name
     @handle_errors
@@ -735,6 +739,7 @@ class Model:
         self.model.history = history
         return history
 
+
     @handle_errors
     def phi_to_yhat(self,
                     phi):
@@ -766,6 +771,7 @@ class Model:
         yhat = _shape_for_output(yhat, phi_shape)
 
         return yhat
+
 
     @handle_errors
     def _get_all_gpmap_parameters(self):
@@ -901,6 +907,7 @@ class Model:
 
         return theta_df
 
+
     @handle_errors
     def get_gpmap_parameters(self, which='all'):
         """
@@ -980,7 +987,6 @@ class Model:
         return self.model.model
 
 
-    # TODO: Make internal
     @handle_errors
     def _compile_model(self,
                       optimizer=Adam,
@@ -1031,6 +1037,7 @@ class Model:
             self.model.model.compile(loss=likelihood_loss,
                                      optimizer=optimizer(lr=lr, **optimizer_kwargs),
                                      **compile_kwargs)
+
 
     @handle_errors
     def x_to_phi(self,
@@ -1108,6 +1115,7 @@ class Model:
 
         # Return latent phenotype values
         return phi
+
 
     @handle_errors
     def x_to_yhat(self,
@@ -1227,6 +1235,7 @@ class Model:
                             num_subsamples=num_subsamples,
                             verbose=verbose)
 
+
     def yhat_to_yq(self,
                    yhat,
                    q=[0.16,0.84]):
@@ -1269,7 +1278,6 @@ class Model:
         yqs = _shape_for_output(yqs, yqs_shape)
 
         return yqs
-
 
 
     def p_of_y_given_phi(self, y, phi, paired=False):
@@ -1482,7 +1490,6 @@ class Model:
         return p
 
 
-
     def _p_of_y_given_y_hat(self,
                             y,
                             yhat):
@@ -1512,6 +1519,7 @@ class Model:
         ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self, yhat, None)
 
         return ge_noise_model.p_of_y_given_yhat(y, yhat)
+
 
     def __p_of_y_given_y_hat(self,
                              y,
@@ -1578,7 +1586,6 @@ class Model:
         return p_of_dot_given_phi
 
 
-    # TODO: this function is possibly experiencing a tensorflow backend bug with a single example x, need to check.
     def p_of_y_given_x(self, y, x):
 
         """
@@ -1622,6 +1629,7 @@ class Model:
             phi = self.x_to_phi(x)
             p_of_y_given_x = self.p_of_y_given_phi(y, phi)
             return p_of_y_given_x
+
 
     def save(self,
              filename):

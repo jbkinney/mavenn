@@ -222,7 +222,6 @@ def _generate_nbr_features_from_sequences(sequences,
 
 def _generate_all_pair_features_from_sequences(sequences,
                                                alphabet_dict='dna'):
-
     """
     Method that takes in sequences are generates sequences
     with all pair features
@@ -341,6 +340,7 @@ def _center_matrix(df):
 
     return out_df, theta_bar
 
+
 @handle_errors
 def fix_gauge_additive_model(sequenceLength,
                              alphabetSize,
@@ -379,6 +379,7 @@ def fix_gauge_additive_model(sequenceLength,
     thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel()])
 
     return thetaGaugeFixed
+
 
 @handle_errors
 def fix_gauge_neighbor_model(sequenceLength,
@@ -442,7 +443,6 @@ def fix_gauge_neighbor_model(sequenceLength,
 @handle_errors
 def kronecker_delta(n1, n2):
     """
-
     helper method implementing Kronecker delta,
     used in fix_gauge_pairwise_model
     """
@@ -614,6 +614,7 @@ class SkewedTNoiseModel:
             #                                             np.exp(log_a),
             #                                             np.exp(log_b))
 
+
     # First compute log PDF to avoid overflow problems
     def log_f(self, t, a, b):
         arg = t / np.sqrt(a + b + t ** 2)
@@ -625,13 +626,16 @@ class SkewedTNoiseModel:
                (a + 0.5) * Log(1 + arg) + \
                (b + 0.5) * Log(1 - arg)
 
+
     # Exponentiate to get true distribution
     def f(self, t, a, b):
         return np.exp(self.log_f(t, a, b))
 
+
     # Compute the mode as a function of a and b
     def t_mode(self, a, b):
         return (a - b) * np.sqrt(a + b) / (np.sqrt(2 * a + 1) * np.sqrt(2 * b + 1))
+
 
     # Compute mean
     def t_mean(self, a, b):
@@ -641,6 +645,7 @@ class SkewedTNoiseModel:
             return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
                 LogGamma(a - 0.5) + LogGamma(b - 0.5) - LogGamma(a) - LogGamma(b))
 
+
     # Compute variance
     def t_std(self, a, b):
         if a <= 1 or b <= 1:
@@ -649,6 +654,7 @@ class SkewedTNoiseModel:
             t_expected = self.t_mean(a, b)
             tsq_expected = 0.25 * (a + b) * ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
             return np.sqrt(tsq_expected - t_expected ** 2)
+
 
     def p_of_y_given_yhat(self,
                           y,
@@ -666,6 +672,7 @@ class SkewedTNoiseModel:
 
         t = self.t_mode(a, b) + (y - y_mode) / y_scale
         return self.f(t, a, b) / y_scale
+
 
     def p_of_y_given_phi(self,
                          y,
@@ -685,20 +692,24 @@ class SkewedTNoiseModel:
         y_hat_of_phi = self.model.phi_to_yhat(phi)
         return self.p_of_y_given_yhat(y, y_hat_of_phi)
 
+
     def p_mean_std(self, y_mode, y_scale, a, b):
         y_mean = self.t_mean(a, b) * y_scale + y_mode
         y_std = self.t_std(a, b) * y_scale
         return y_mean, y_std
+
 
     def t_quantile(self, q, a, b):
         x_q = BetaIncInv(a, b, q)
         t_q = (2 * x_q - 1) * np.sqrt(a + b) / np.sqrt(1 - (2 * x_q - 1) ** 2)
         return t_q
 
+
     def y_quantile(self, q, y_hat, s, a, b):
         t_q = self.t_quantile(q, a, b)
         y_q = (t_q - self.t_mode(a, b)) * s + y_hat
         return y_q
+
 
     def estimate_predictive_information(self,
                                         y,
@@ -757,7 +768,6 @@ class SkewedTNoiseModel:
 
 @handle_errors
 class GaussianNoiseModel:
-
     """
     Class used to obtain +/- sigma from the Gaussian noise model
     in the GE model. The sigma, which is a function of y_hat, can
@@ -774,6 +784,7 @@ class GaussianNoiseModel:
         This should be the output of the GE model.
 
     """
+
 
     def __init__(self,
                  model,
@@ -797,7 +808,6 @@ class GaussianNoiseModel:
                 self.user_quantile_values.append(yhat_GE+self.sigma*np.sqrt(2)*erfinv(2*current_q-1))
 
             #self.user_quantile_values = np.array(self.user_quantile_values).reshape(len(yhat_GE), len(q))
-
 
 
     def p_of_y_given_yhat(self,
@@ -824,6 +834,7 @@ class GaussianNoiseModel:
         sigma = np.exp(logsigma)
 
         return (1 / np.sqrt(2 * np.pi * sigma ** 2)) * np.exp(-((y - yhat) ** 2) / (2 * sigma ** 2))
+
 
     def p_of_y_given_phi(self,
                        y,
@@ -946,6 +957,7 @@ class CauchyNoiseModel:
             for current_q in q:
                 self.user_quantile_values.append(self.y_quantile(current_q, self.yhat).ravel())
 
+
     def p_of_y_given_yhat(self,
                           y,
                           yhat):
@@ -968,6 +980,7 @@ class CauchyNoiseModel:
 
         return cauchy(loc=yhat, scale=np.exp(log_gamma)).pdf(y)
 
+
     def p_of_y_given_phi(self,
                          y,
                          phi):
@@ -985,6 +998,7 @@ class CauchyNoiseModel:
 
         y_hat_of_phi = self.model.phi_to_yhat(phi)
         return self.p_of_y_given_yhat(y, y_hat_of_phi)
+
 
     def y_quantile(self,
                    user_quantile,
@@ -1005,6 +1019,7 @@ class CauchyNoiseModel:
             log_gamma += self.polynomial_weights[polynomial_index][0] * np.power(yhat, polynomial_index)
 
         return cauchy(loc=yhat, scale=np.exp(log_gamma)).ppf(user_quantile)
+
 
     def estimate_predictive_information(self,
                                         y,
@@ -1251,8 +1266,6 @@ def vec_data_to_mat_data(y_n,
     # Clean dataframe
     data_df.reset_index(inplace=True)
     data_df.columns.name = None
-
-
 
     # Get ct_my values
     cols = [c for c in data_df.columns if not c in ['x']]
