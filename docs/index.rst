@@ -2,6 +2,10 @@
 MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Compression
 =====================================================================================
 
+.. raw:: html
+
+    <h3><font color="red">Project under active development.</font></h3>
+
 MAVE-NN is a Python package for inferring quantitative models of
 genotype-phenotype (G-P) maps from multiplexed assays of variant effect (MAVEs).
 MAVE-NN formulates this inference problem as a neural network training problem,
@@ -13,10 +17,6 @@ MAVE-NN is written for Python 3.6 and is provided under an
 MIT open source license. The :ref:`installation`, :ref:`quickstart`,
 and :ref:`tutorial` sections below will help users quickly get
 MAVE-NN working for their own research needs.
-
-.. raw:: html
-
-    <h2><font color="red">Project under active development for new release.</font></h2>
 
 .. _installation:
 
