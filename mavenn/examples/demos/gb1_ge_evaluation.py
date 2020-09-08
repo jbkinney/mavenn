@@ -17,10 +17,13 @@ import mavenn
 # Load model
 model = mavenn.load_example_model('gb1_ge_additive')
 
-# Get effects of all 1pt mutations to the wild-type sequence
+# Set wild-type sequence
 gb1_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
-dphi_df = model.get_1pt_effects(wt_seq=gb1_seq,
-                                out_format="matrix")
+
+# Get effects of all single-point mutations on phi
+dphi_df = mavenn.get_1pt_effects(func=model.x_to_phi,
+                                 wt_seq=gb1_seq,
+                                 alphabet='protein')
 
 # Load data as dataframe
 data_file = mavenn.__path__[0] + '/examples/datafiles/gb1/GB1_test_data.csv'
@@ -51,6 +54,9 @@ fig, axs = plt.subplots(1, 2, figsize=[12, 4])
 # Left panel: draw heatmap illustrating 1pt mutation effects
 ax = axs[0]
 ax, cb = mavenn.heatmap(dphi_df,
+                        c_col='c_mut',
+                        l_col='l',
+                        value_col='dphi',
                         seq=gb1_seq,
                         cmap='PiYG',
                         ax=ax)
@@ -75,3 +81,4 @@ ax.legend()
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
+fig.savefig('gb1_ge_evaluation.png')

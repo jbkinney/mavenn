@@ -40,7 +40,10 @@ def _get_45deg_mesh(mat):
     return X_rot, Y_rot
 
 @handle_errors
-def tidy_to_matrix_additive(df):
+def tidy_df_to_logomaker_df(df,
+                            l_col="l",
+                            c_col="c",
+                            value_col="value"):
     """
     Converts a tidy dataframe of additive params to matrix format.
     df must be a pd.DataFrame that contains columns "l","c","values".
@@ -48,14 +51,13 @@ def tidy_to_matrix_additive(df):
     df = df.copy()
     check(isinstance(df, pd.DataFrame),
           f'type(df)={type(df)}; must be pd.DataFrame.')
-    check('l' in df.columns,
-          f'df.columns={df.columns} does not contain "l".')
-    check('c' in df.columns,
-          f'df.columns={df.columns} does not contain "c".')
-    check('value' in df.columns,
-          f'df.columns={df.columns} does not contain "value".')
-    df = df.pivot(index='l', columns='c',
-                  values='value')
+    check(l_col in df.columns,
+          f'df.columns={df.columns} does not contain "{l_col}".')
+    check(c_col in df.columns,
+          f'df.columns={df.columns} does not contain "{c_col}".')
+    check(value_col in df.columns,
+          f'df.columns={df.columns} does not contain "{value_col}".')
+    df = df.pivot(index=l_col, columns=c_col, values=value_col)
     df.columns.name = None
     return df
 
@@ -176,7 +178,7 @@ def heatmap(df,
     df = df[ix]
 
     # Convert to matrix
-    df = tidy_to_matrix_additive(df)
+    df = tidy_df_to_logomaker_df(df)
 
     # Fill in missing values
     df = df.fillna(missing_values)

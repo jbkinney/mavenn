@@ -61,12 +61,12 @@ within Python::
 This will produce a list of names for multiple built-in demos. Then choose
 whichever demo you like. For example, try running the "mpsa_ge_training" demo::
 
-    mavenn.run_demo(name="mpsa_ge_training", print_code=True)
+    mavenn.run_demo(name="mpsa_ge_training", print_code=False)
 
 This trains a model on massively parallel splicing assay (MPSA) performed by
 Wong et al. 2018 [#Wong2018]_, a process that takes approximately 15 seconds.
 It also produces the following figure, which illustrates model performance
-and training history. If you set ``print_code=False``, the code used to perform
+and training history. If you set ``print_code=True``, the code used to perform
 these computations will also be printed.
 
 .. image:: _static/mpsa_ge_training.png

@@ -56,4 +56,11 @@ docs/_build/
 # PyBuilder
 target/
 
+# Jupyter notebook shit
+.ipynb_checkpoints/
+
+# PyCharm shit
+.idea/
+
+# Apple shit
 .DS_Store

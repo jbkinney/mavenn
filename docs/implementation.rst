@@ -50,6 +50,8 @@ Visualization
 
 .. autofunction:: mavenn.heatmap_pairwise
 
+.. autofunction:: mavenn.tidy_df_to_logomaker_df
+
 
 Model class
 -----------

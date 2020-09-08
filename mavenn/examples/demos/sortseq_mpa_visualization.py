@@ -17,7 +17,10 @@ import logomaker
 model = mavenn.load_example_model('sortseq_mpa_additive')
 
 # Get G-P map parameters in matrix form
-theta_df = model.get_additive_parameters(out_format="matrix")
+theta_df = model.get_gpmap_parameters(which="additive")
+
+# Change theta_df to a matrix format compatible with logomaker
+theta_logomaker_df = mavenn.tidy_df_to_logomaker_df(theta_df)
 
 # Create grid in phi space
 phi_lim = [-5, 3]
@@ -36,7 +39,7 @@ fig, axs = plt.subplots(1,2,figsize=[12,4])
 
 # Left panel: draw logo using logomaker
 ax = axs[0]
-logo = logomaker.Logo(theta_df, ax=ax)
+logo = logomaker.Logo(theta_logomaker_df, ax=ax)
 ax.set_ylabel(r'parameter value ($\theta_{l:c}$)')
 ax.set_xlabel(r'position ($l$)')
 ax.set_title('G-P map parameters')
@@ -52,9 +55,10 @@ im = ax.imshow(measurement_process,
 ax.set_yticks(y_all)
 ax.set_ylabel('bin number (y)')
 ax.set_xlabel('latent phenotype ($\phi$)')
-ax.set_title('mesurement process')
+ax.set_title('measurement process')
 cb = plt.colorbar(im)
-cb.set_label('probaility  $p(y|\phi)$', rotation=-90, va="bottom")
+cb.set_label('probability  $p(y|\phi)$', rotation=-90, va="bottom")
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
+fig.savefig('sortseq_mpa_visualization.png')

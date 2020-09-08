@@ -35,3 +35,4 @@ from mavenn.src.landscape import get_mask_dict
 # For visualizing G-P maps
 from mavenn.src.visualization import heatmap
 from mavenn.src.visualization import heatmap_pairwise
+from mavenn.src.visualization import tidy_df_to_logomaker_df
