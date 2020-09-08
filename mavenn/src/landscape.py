@@ -15,6 +15,7 @@ def get_mask_dict(x, alphabet):
 
     parameters
     ----------
+
     x: (np.ndarray)
         List of sequences. Sequences must all be the same length.
 
@@ -25,6 +26,7 @@ def get_mask_dict(x, alphabet):
 
     returns
     -------
+
     mask_dict: (dict)
         Keys denote positions, values are strings comprised of missing
         characters.
@@ -34,8 +36,9 @@ def get_mask_dict(x, alphabet):
     alphabet = validate_alphabet(alphabet)
 
     # Validate sequences
-    x = validate_seqs(seqs=x, alphabet=alphabet,
-                                          restrict_seqs_to_alphabet=False)
+    x = validate_seqs(seqs=x,
+                      alphabet=alphabet,
+                      restrict_seqs_to_alphabet=False)
 
     # Split strings, creating a matrix of individual characters
     seqs = np.array([list(s) for s in x])
@@ -59,24 +62,25 @@ def get_1pt_variants(wt_seq, alphabet, include_wt=True):
 
     parameters
     ----------
-        wt_seq: (str)
-            The wild-type sequence. Must comprise characters from alphabet.
 
-        alphabet: (str, array-like)
-            The alphabet (name or list of characters) to use for mutations.
+    wt_seq: (str)
+        The wild-type sequence. Must comprise characters from alphabet.
 
-        include_wt: (bool)
-            Whether to include the wild-type sequence in the output.
+    alphabet: (str, array-like)
+        The alphabet (name or list of characters) to use for mutations.
+
+    include_wt: (bool)
+        Whether to include the wild-type sequence in the output.
 
     returns
     -------
 
-        out_df: (pd.DataFrame)
-            A dataframe listing each variant sequence along with its name,
-            the position mutated, the wild-type character at that position,
-            and the mutant character at that position. Characters ' ' and
-            a position of -1 is used for the wild-type sequence if
-            include_wt is True.
+    out_df: (pd.DataFrame)
+        A dataframe listing each variant sequence along with its name,
+        the position mutated, the wild-type character at that position,
+        and the mutant character at that position. Characters ' ' and
+        a position of -1 is used for the wild-type sequence if
+        include_wt is True.
     """
 
     # Check that wt_seq is a string
@@ -143,24 +147,25 @@ def get_2pt_variants(wt_seq, alphabet, include_wt=True):
 
     parameters
     ----------
-        wt_seq: (str)
-            The wild-type sequence. Must comprise characters from alphabet.
 
-        alphabet: (str, array-like)
-            The alphabet (name or list of characters) to use for mutations.
+    wt_seq: (str)
+        The wild-type sequence. Must comprise characters from alphabet.
 
-        include_wt: (bool)
-            Whether to include the wild-type sequence in the output.
+    alphabet: (str, array-like)
+        The alphabet (name or list of characters) to use for mutations.
+
+    include_wt: (bool)
+        Whether to include the wild-type sequence in the output.
 
     returns
     -------
 
-        out_df: (pd.DataFrame)
-            A dataframe listing each variant sequence along with its name,
-            the positions mutated, the wild-type characters at each position
-            pair, and the mutant characters at those positions.
-            Empty strings and positions of -1 are used for the
-            wild-type sequence if include_wt=True.
+    out_df: (pd.DataFrame)
+        A dataframe listing each variant sequence along with its name,
+        the positions mutated, the wild-type characters at each position
+        pair, and the mutant characters at those positions.
+        Empty strings and positions of -1 are used for the
+        wild-type sequence if include_wt=True.
     """
 
     # Check that wt_seq is a string

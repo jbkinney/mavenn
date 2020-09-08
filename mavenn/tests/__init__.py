@@ -5,8 +5,7 @@ from mavenn.tests.specific_tests import \
     test_validate_alphabet, \
     test_load, \
     test_x_to_phi_or_yhat, \
-    test_phi_calculations, \
-    test_get_additive_parameters
+    test_phi_calculations
 
 def run_tests():
     """
@@ -28,4 +27,3 @@ def run_tests():
     test_load()
     test_x_to_phi_or_yhat()
     test_phi_calculations()
-    test_get_additive_parameters()

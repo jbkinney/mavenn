@@ -9,11 +9,9 @@ one designed to identify G-P maps that compress sequence-encoded
 information with minimal loss. By using a TensorFlow back end, MAVE-NN enables
 the rapid and robust inference of G-P maps even on very large datasets.
 
-MAVE-NN is written for Python 3.6 and has minimal dependencies.
-
-under an MIT open source license.
-The :ref:`installation`, :ref:`quickstart`,  :ref:`examples`,
-and :ref:`tutorial` sections below will help users quickly get
+MAVE-NN is written for Python 3.6 and is provided under an
+MIT open source license. The :ref:`installation`, :ref:`quickstart`,
+:ref:`examples`, and :ref:`tutorial` sections below will help users quickly get
 MAVE-NN working for their own research needs.
 
 .. toctree::
