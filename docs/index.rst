@@ -1,5 +1,5 @@
 =================================================================================
-MAVE-NN: Learning genotype-phenotype maps from multiplex assays of variant effect
+MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
 =================================================================================
 
 .. raw:: html
