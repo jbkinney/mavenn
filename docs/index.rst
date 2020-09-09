@@ -1,10 +1,10 @@
-=================================================================================
-MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
-=================================================================================
+========================================================================
+MAVE-NN: genotype-phenotype maps from multiplex assays of variant effect
+========================================================================
 
 .. raw:: html
 
-    <h3><font color="red">Project under active development.</font></h3>
+    <h3><font color="red">Under active development.</font></h3>
 
 MAVE-NN is a Python package for inferring quantitative models of
 genotype-phenotype (G-P) maps from multiplexed assays of variant effect (MAVEs).
