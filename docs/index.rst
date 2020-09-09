@@ -2,7 +2,7 @@
 MAVE-NN: genotype-phenotype maps from multiplex assays of variant effect
 ========================================================================
 
-MAVE-NN enables the rapid quantitative modeling of genotype-phenotype (G-P) maps from the data produced by a wide variety of multiplex assays of variant effect (MAVEs). Such assays include deep mutational scanning (DMS) experiments on proteins, as well as massively parallel reporter assays (MPRAs) on DNA or RNA regulatory sequences. MAVE-NN conceptualizes G-P map inference as a problem in information compression; this problem is then solved by training a neural network using a TensorFlow backend. 
+MAVE-NN enables the rapid quantitative modeling of genotype-phenotype (G-P) maps from the data produced by multiplex assays of variant effect (MAVEs). Such assays include deep mutational scanning (DMS) experiments on proteins, massively parallel reporter assays (MPRAs) on DNA or RNA regulatory sequences, and more. MAVE-NN conceptualizes G-P map inference as a problem in information compression; this problem is then solved by training a neural network using a TensorFlow backend. 
 
 MAVE-NN is written for Python 3 and is provided under an
 MIT open source license. The :ref:`installation`, :ref:`quickstart`,
