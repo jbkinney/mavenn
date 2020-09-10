@@ -213,14 +213,14 @@ def load_example_dataset(name=None):
         data_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/full-wt-sort_seq.csv', index_col=[0])
 
         sequences = data_df['seq'].values
-        bin_counts = data_df['bin'].values
-        ct_n = data_df['ct'].values
+        bins = data_df['bin'].values
+        ct = data_df['ct'].values
 
         #return sequences, bin_counts, ct_n
 
         data_df = pd.DataFrame()
-        data_df['ct'] = bin_counts
-        data_df['y'] = ct_n
+        data_df['y'] = bins
+        data_df['ct'] = ct
         data_df['x'] = sequences
         return data_df
 

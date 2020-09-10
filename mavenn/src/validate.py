@@ -109,11 +109,23 @@ def validate_alphabet(alphabet):
 
 
 @handle_errors
-def validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True):
+def validate_seqs(seqs, alphabet=None, restrict_seqs_to_alphabet=False):
     """
     Makes sure that seqs is an array of equal-length sequences
     drawn from the set of characters in alphabet. Returns
-    a version of seqs cast as a numpy array of strings.
+    a version of seqs cast as a numpy array of strings. Note that
+    alphabet must be set when setting restrict_seqs_to_alphabet=True.
+
+    parameters
+    ----------
+    seqs: (array of seqs)
+        Array of equal-length sequences.
+
+    alphabet: (str or array)
+        Alphabet from which strings are drawn.
+
+    restrict_seqs_to_alphabet:
+        Whether to restrict sequences to the specified alphabet.
     """
 
     # Cast as np.array
@@ -139,8 +151,17 @@ def validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True):
           f"Sequences should all be the same length"
           "; found multiple lengths={lengths}")
 
-    # Make sure sequences only contain characters in alphabet
+    # If user requests to restrict sequences to a given alphabet
     if restrict_seqs_to_alphabet:
+
+        # Check that alphabet is specified
+        check(alphabet is not None,
+              "alphabet must be specified when restrict_seqs_to_alphabet=True.")
+
+        # Validate alphabet
+        alphabet = validate_alphabet(alphabet)
+
+        # Make sure all sequences are in alphabet
         seq_chars = set(''.join(seqs))
         alphabet_chars = set(alphabet)
         check(seq_chars <= alphabet_chars,
