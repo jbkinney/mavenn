@@ -5,14 +5,13 @@ import glob
 
 # MAVE-NN imports
 import mavenn
-from mavenn.src.examples import load_example_dataset
+from mavenn.src.examples import load_example, load_example_dataset
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.landscape import get_1pt_variants
 from mavenn.src.utils import load
 from mavenn.src.sequence_features import additive_model_features, pairwise_model_features
 from mavenn.src.error_handling import check, handle_errors
 from mavenn.tests.testing_utils import test_parameter_values
-
 
 # Need to incorporate into model before testing.
 def test_validate_alphabet():
@@ -484,3 +483,41 @@ def test_phi_calculations():
                           var_name='model_file',
                           success_list=model_files,
                           fail_list=[])
+
+
+def test_load_example():
+
+    successful_which_list = [None, 'model', 'training_data', 'test_data']
+    fail_which_list = [0, 'xxx', True]
+
+    successful_dataset_names_list = [None, 'mpsa', 'sortseq']   # excluding gb1 for now, for slightly quicker testing.
+    incorrect_dataset_names_list = [0, 'xxx']
+
+    successful_model_names_list = ["gb1_ge_additive",
+                                   "mpsa_ge_additive",
+                                   "mpsa_ge_neighbor",
+                                   "mpsa_ge_pairwise",
+                                   "sortseq_mpa_additive"]
+
+    incorrect_model_names_list = [0, "gb1", 'xxx']
+
+    # test parameter which
+    test_parameter_values(func=load_example,
+                          var_name='which',
+                          success_list=successful_which_list,
+                          fail_list=fail_which_list)
+
+    # test parameter name, with which='test_data'
+    test_parameter_values(func=load_example,
+                          var_name='name',
+                          which='test_data',
+                          success_list=successful_dataset_names_list,
+                          fail_list=incorrect_dataset_names_list)
+
+    # test parameter name, with which='model'
+    test_parameter_values(func=load_example,
+                          var_name='name',
+                          which='model',
+                          success_list=successful_model_names_list,
+                          fail_list=incorrect_model_names_list)
+
