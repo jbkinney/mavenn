@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import glob
+from sklearn.model_selection import train_test_split
 
 # MAVE-NN imports
 import mavenn
@@ -333,42 +334,89 @@ def _load_olson_data_GB1():
     return gb1_df
 
 
-#TODO: Write this function. Subsumes load_example_dataset and load_example_model
 @handle_errors
-def load_example(name=None, model=True, training_data=False, test_data=False):
+def load_example(which=None,
+                 name=None):
     """
+
+    Method that returns either a model or an example dataset
+    based on the parameter "which".
 
     parameters
     ----------
+    which: (str)
+        String which specifies whether to load example model or
+        example dataset. Valid choice include ['model', 'dataset'].
 
     name: (str)
-        Name of example model. If None, a list of valid
-        choices will be printed.
-
-    model: (bool)
-        Whether to include inferred model.
-
-    training_data: (bool)
-        Whether to include training data. Slows execution.
-
-    test_data: (bool)
-        Whether to include test data. Slows execution.
+        Name of example model or example dataset. If None, a list
+        of valid choices will be printed.
 
     returns
     -------
-    out_dict: (dict)
-        A dictionary containing the example analysis.
-        Keys may include,
-            "model": The inferred MAVE-NN model
-            "x_train": The training-set sequences
-            "y_train": The training-set labels
-            "x_test": The test-set sequeces
-            "y_text": The test-set labels
-            "wt_seq": The wild-type sequence, if applicable
+    if which == "model":
+        mavenn-model
+    else:
+        return data_df with either training or test data.
 
     """
-    out_dict = {}
 
-    check(False, 'Function under construction.')
+    valid_which_list = ['model', 'training_data', 'test_data']
 
-    return out_dict
+    # if which is none, list valid choices of model/datasets names that can be loaded.
+    if which is None:
+
+        print(f"Valid choices for parameter which must be one of {valid_which_list}")
+        return None
+
+    elif which == 'model':
+
+        if name is None:
+            # call example model which would list out valid model names
+            load_example_model()
+            return None
+        else:
+            return load_example_model(name=name)
+
+    elif which == 'training_data':
+
+        if name is None:
+            # call example dataset which would list out valid dataset names
+            load_example_dataset()
+            return None
+        else:
+            data_df = load_example_dataset(name=name)
+
+            # Extract x and y as Numpy arrays
+            x = data_df['x'].values
+            y = data_df['y'].values
+
+            # Split data 80/20 into training / test sets.
+
+            x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
+
+            return pd.DataFrame({"x_train": x_train, "y_train": y_train})
+
+    elif which == 'test_data':
+
+        if name is None:
+            # call example dataset which would list out valid dataset names
+            load_example_dataset()
+            return None
+
+        else:
+            data_df = load_example_dataset(name=name)
+
+            # Extract x and y as Numpy arrays
+            x = data_df['x'].values
+            y = data_df['y'].values
+
+            # Split data into training / test sets.
+
+            x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
+
+            return pd.DataFrame({"x_test": x_test, "y_test": y_test})
+
+    else:
+        check(which in valid_which_list, f"parameter which = {which}, "
+                                         f"needs to be one of {valid_which_list}.")
