@@ -191,16 +191,12 @@ def load_example_dataset(name=None):
 
     elif name == 'mpsa':
 
-        mpsa_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/mpsa/psi_9nt_mavenn.csv')
-        mpsa_df = mpsa_df.dropna()
-        mpsa_df = mpsa_df[mpsa_df['values'] > 0]  # No pseudocounts
-
-        #return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
-        #return mpsa_df['sequence'].values, np.log10(mpsa_df['values'].values)
+        mpsa_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/mpsa/brca2_lib1_rep1.csv')
 
         data_df = pd.DataFrame()
-        data_df['y'] = np.log10(mpsa_df['values'].values)
-        data_df['x'] = mpsa_df['sequence'].values
+        data_df['y'] = mpsa_df['log_psi'].values
+        data_df['x'] = mpsa_df['ss'].values
+
         return data_df
 
     elif name == 'sortseq':

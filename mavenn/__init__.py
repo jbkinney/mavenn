@@ -13,6 +13,7 @@ from mavenn.src.examples import list_demos
 from mavenn.src.examples import run_demo
 from mavenn.src.examples import load_example_dataset
 from mavenn.src.examples import load_example_model
+from mavenn.src.examples import load_example
 
 # For loading models
 from mavenn.src.utils import load

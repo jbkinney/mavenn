@@ -115,50 +115,50 @@ def test_GlobalEpistasisModel():
 
     # test sequences parameter X
     test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_x], success_list=[x],
-                          gpmap_type='additive', y=y, regression_type='GE', alphabet='rna')
+                          gpmap_type='additive', y=y, regression_type='GE', alphabet='dna')
 
     # test labels parameter y
     test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-                          gpmap_type='additive', x=x, regression_type='GE', alphabet='rna')
+                          gpmap_type='additive', x=x, regression_type='GE', alphabet='dna')
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['GE'],
-                          gpmap_type='additive', x=x, y=y, alphabet='rna')
+                          gpmap_type='additive', x=x, y=y, alphabet='dna')
 
     # test labels parameter ge_nonlinearity_monotonic
     test_parameter_values(func=mavenn.Model, var_name='ge_nonlinearity_monotonic', fail_list=['True', -1],
                           success_list=[True,False], regression_type='GE',
-                          gpmap_type='additive', x=x, y=y, alphabet='rna')
+                          gpmap_type='additive', x=x, y=y, alphabet='dna')
 
     # test labels parameter ge_nonlinearity_hidden_nodes
     test_parameter_values(func=mavenn.Model, var_name='ge_nonlinearity_hidden_nodes', fail_list=[0.6,-1,0],
                           success_list=[1,10,100],  regression_type='GE',
-                          gpmap_type='additive', x=x, y=y, alphabet='rna')
+                          gpmap_type='additive', x=x, y=y, alphabet='dna')
 
     # test parameter gpmap_type
     test_parameter_values(func=mavenn.Model, var_name='gpmap_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
-                          regression_type='GE', x=x, y=y, alphabet='rna')
+                          regression_type='GE', x=x, y=y, alphabet='dna')
 
     # test parameter ge_heteroskedasticity_order
     test_parameter_values(func=mavenn.Model, var_name='ge_heteroskedasticity_order', fail_list=['0', 0.1, -1],
                           success_list=[0, 1, 10], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='rna')
+                          regression_type='GE', x=x, y=y, alphabet='dna')
 
     # test parameter theta_regularization
     test_parameter_values(func=mavenn.Model, var_name='theta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='rna')
+                          regression_type='GE', x=x, y=y, alphabet='dna')
 
     # test parameter eta_regularization
     test_parameter_values(func=mavenn.Model, var_name='eta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='rna')
+                          regression_type='GE', x=x, y=y, alphabet='dna')
 
     # test parameter ohe_batch_size
     test_parameter_values(func=mavenn.Model, var_name='ohe_batch_size', fail_list=['0', -1, -0.1, 0],
                           success_list=[20000], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='rna')
+                          regression_type='GE', x=x, y=y, alphabet='dna')
 
 
     '''
