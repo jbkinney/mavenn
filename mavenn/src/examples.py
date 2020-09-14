@@ -317,11 +317,10 @@ def load_example(which=None,
         elif name == 'gb1':
 
             data_df = load_example_dataset(name=name)
-            gb1_df_training = data_df[data_df['training_set'] == True].copy()
-            x_train = gb1_df_training['x'].values
-            y_train = gb1_df_training['y'].values
 
-            return pd.DataFrame({"x_train": x_train, "y_train": y_train})
+            gb1_df_training = data_df[data_df['training_set'] == True].copy()
+
+            return gb1_df_training
 
         else:
             data_df = load_example_dataset(name=name)
@@ -334,7 +333,7 @@ def load_example(which=None,
 
             x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
 
-            return pd.DataFrame({"x_train": x_train, "y_train": y_train})
+            return pd.DataFrame({"x": x_train, "y": y_train})
 
     elif which == 'test_data':
 
@@ -347,11 +346,9 @@ def load_example(which=None,
         elif name == 'gb1':
 
             data_df = load_example_dataset(name=name)
-            gb1_df_training = data_df[data_df['training_set'] == False].copy()
-            x_test = gb1_df_training['x'].values
-            y_test = gb1_df_training['y'].values
+            gb1_df_test = data_df[data_df['training_set'] == False].copy()
 
-            return pd.DataFrame({"x_test": x_test, "y_test": y_test})
+            return gb1_df_test
 
         else:
             data_df = load_example_dataset(name=name)
@@ -364,7 +361,7 @@ def load_example(which=None,
 
             x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
 
-            return pd.DataFrame({"x_test": x_test, "y_test": y_test})
+            return pd.DataFrame({"x": x_test, "y": y_test})
 
     else:
         check(which in valid_which_list, f"parameter which = {which}, "
