@@ -34,16 +34,16 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
 model = mavenn.Model(x=x_train,
                      y=y_train,
                      gpmap_type='pairwise',
-                     alphabet='rna',
+                     alphabet='dna',
                      regression_type='GE',
                      ge_noise_model_type='Gaussian',
                      ge_nonlinearity_monotonic=True,
-                     ge_heteroskedasticity_order=2)
+                     ge_heteroskedasticity_order=0)
 
 # Fit model to training data
 start_time = time.time()
-model.fit(epochs=20,
-          learning_rate=0.0005,
+model.fit(epochs=30,
+          learning_rate=0.001,
           early_stopping=False)
 training_time = time.time()-start_time
 print(f'training time: {training_time:.1f} seconds')
@@ -92,7 +92,7 @@ ax.legend()
 ax = axs[1]
 ys = np.vstack([y_test])
 ax.scatter(yhat_test, y_test, color='C0', s=5, alpha=.2, label='test data')
-ax.set_autoscale_on(False)
+#ax.set_autoscale_on(False)
 lims = ax.get_xlim()
 ax.plot(lims, lims, linestyle=':', color='k', label='$y=\hat{y}$')
 ax.set_xlabel('model prediction ($\hat{y}$)')
