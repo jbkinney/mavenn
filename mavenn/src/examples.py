@@ -230,10 +230,10 @@ def load_example_dataset(name=None):
         gb1_df = _load_olson_data_GB1()
         #return gb1_df['sequence'].values, gb1_df['values'].values
 
-        data_df = pd.DataFrame()
-        data_df['y'] = gb1_df['values'].values
-        data_df['x'] = gb1_df['sequence'].values
-        return data_df
+        # data_df = pd.DataFrame()
+        # data_df['y'] = gb1_df['values'].values
+        # data_df['x'] = gb1_df['sequence'].values
+        return gb1_df
 
     # Otherwise
     else:
@@ -258,81 +258,9 @@ def _load_olson_data_GB1():
 
     """
 
-    # GB1 WT sequences
-    WT_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
+    gb1_df = pd.read_csv(mavenn.__path__[0]+'/examples/datafiles/gb1/gb1_data.csv.gz')
 
-    # WT sequence library and selection counts.
-    WT_input_count = 1759616
-    WT_selection_count = 3041819
-
-    # load double mutant data
-    oslon_mutant_positions_data = pd.read_csv(mavenn.__path__[0] +
-                                              '/examples/datafiles/gb1/oslon_data_double_mutants_ambler.csv',
-                                              na_values="nan")
-
-    # lists that will contain sequences and their values
-    sequences = []
-    enrichment = []
-
-    for loop_index in range(len(oslon_mutant_positions_data)):
-
-        # skip row 259455 containing, it contains bad data
-        if loop_index == 259455:
-            continue
-
-        # get positions of double mutants in sequence
-        mut_1_index = int(oslon_mutant_positions_data['Mut1 Position'][loop_index]) - 2
-        mut_2_index = int(oslon_mutant_positions_data['Mut2 Position'][loop_index]) - 2
-
-        # get identity of mutations
-        mut_1 = oslon_mutant_positions_data['Mut1 Mutation'][loop_index]
-        mut_2 = oslon_mutant_positions_data['Mut2 Mutation'][loop_index]
-
-        # form full mutant sequence.
-        temp_dbl_mutant_seq = list(WT_seq)
-        temp_dbl_mutant_seq[mut_1_index] = mut_1
-        temp_dbl_mutant_seq[mut_2_index] = mut_2
-
-        if loop_index % 100000 == 0:
-            print('generating data: %d out of %d' % (loop_index,len(oslon_mutant_positions_data)))
-
-        # calculate enrichment for double mutant sequence sequence
-        input_count = oslon_mutant_positions_data['Input Count'][loop_index]
-        selection_count = oslon_mutant_positions_data['Selection Count'][loop_index]
-        # added pseudocount to ensure log doesn't throw up
-        temp_fitness = ((selection_count + 1) / input_count) / (WT_selection_count / WT_input_count)
-
-        # append sequence
-        sequences.append(''.join(temp_dbl_mutant_seq))
-        enrichment.append(temp_fitness)
-
-    # load single mutants data
-    oslon_single_mutant_positions_data = pd.read_csv(mavenn.__path__[0] +
-                                                     '/examples/datafiles/gb1/oslon_data_single_mutants_ambler.csv',
-                                                     na_values="nan")
-
-    for loop_index in range(len(oslon_single_mutant_positions_data)):
-        mut_index = int(oslon_single_mutant_positions_data['Position'][loop_index]) - 2
-
-        mut = oslon_single_mutant_positions_data['Mutation'][loop_index]
-
-        temp_seq = list(WT_seq)
-        temp_seq[mut_index] = mut
-
-        # calculate enrichment for sequence
-        input_count = oslon_single_mutant_positions_data['Input Count'][loop_index]
-        selection_count = oslon_single_mutant_positions_data['Selection Count'][loop_index]
-        # added pseudo count to ensure log doesn't throw up
-        temp_fitness = ((selection_count + 1) / input_count) / (WT_selection_count / WT_input_count)
-
-        sequences.append(''.join(temp_seq))
-        enrichment.append(temp_fitness)
-
-    enrichment = np.array(enrichment).copy()
-
-    gb1_df = pd.DataFrame({'sequence': sequences, 'values': np.log(enrichment)}, columns=['sequence', 'values'])
     return gb1_df
-
 
 @handle_errors
 def load_example(which=None,
@@ -384,6 +312,17 @@ def load_example(which=None,
             # call example dataset which would list out valid dataset names
             load_example_dataset()
             return None
+
+        # TODO: change this snippet when the dataset formats for all experiments are the same.
+        elif name == 'gb1':
+
+            data_df = load_example_dataset(name=name)
+            gb1_df_training = data_df[data_df['training_set'] == True].copy()
+            x_train = gb1_df_training['x'].values
+            y_train = gb1_df_training['y'].values
+
+            return pd.DataFrame({"x_train": x_train, "y_train": y_train})
+
         else:
             data_df = load_example_dataset(name=name)
 
@@ -403,6 +342,16 @@ def load_example(which=None,
             # call example dataset which would list out valid dataset names
             load_example_dataset()
             return None
+
+        # TODO: change this snippet when the dataset formats for all experiments are the same.
+        elif name == 'gb1':
+
+            data_df = load_example_dataset(name=name)
+            gb1_df_training = data_df[data_df['training_set'] == False].copy()
+            x_test = gb1_df_training['x'].values
+            y_test = gb1_df_training['y'].values
+
+            return pd.DataFrame({"x_test": x_test, "y_test": y_test})
 
         else:
             data_df = load_example_dataset(name=name)

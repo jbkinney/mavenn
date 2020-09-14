@@ -490,7 +490,7 @@ def test_load_example():
     successful_which_list = [None, 'model', 'training_data', 'test_data']
     fail_which_list = [0, 'xxx', True]
 
-    successful_dataset_names_list = [None, 'mpsa', 'sortseq']   # excluding gb1 for now, for slightly quicker testing.
+    successful_dataset_names_list = [None, 'mpsa', 'sortseq', 'gb1']
     incorrect_dataset_names_list = [0, 'xxx']
 
     successful_model_names_list = ["gb1_ge_additive",
