@@ -77,7 +77,7 @@ def onehot_encode_array(data, bases_dict, ohe_single_batch_size=10000):
 
     bases_dict: (str)
         Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein']
+        allowed: ['dna','rna','protein', 'protein*']
 
     ohe_single_batch_size: (int)
         integer specifying how many sequences to one-hot encode at a time.
