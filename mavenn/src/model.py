@@ -49,7 +49,7 @@ class Model:
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein'].
+        allowed: ['dna','rna','protein', 'protein*'].
 
     regression_type: (str)
         variable that choose type of regression, valid options

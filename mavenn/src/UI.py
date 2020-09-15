@@ -34,7 +34,7 @@ class GlobalEpistasisModel:
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein'].
+        allowed: ['dna','rna','protein', 'protein*'].
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
@@ -115,6 +115,11 @@ class GlobalEpistasisModel:
                                'G', 'H', 'I', 'K', 'L',
                                'M', 'N', 'P', 'Q', 'R',
                                'S', 'T', 'V', 'W', 'Y']
+        elif self.alphabet == 'protein*':
+            self.characters = ['A', 'C', 'D', 'E', 'F',
+                               'G', 'H', 'I', 'K', 'L',
+                               'M', 'N', 'P', 'Q', 'R',
+                               'S', 'T', 'V', 'W', 'Y', '*']
 
         # compute appropriate one-hot encoding of sequences
         if gpmap_type == 'additive':
@@ -742,7 +747,7 @@ class MeasurementProcessAgnosticModel:
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein'].
+        allowed: ['dna','rna','protein', 'protein*'].
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
@@ -813,6 +818,11 @@ class MeasurementProcessAgnosticModel:
                                'G', 'H', 'I', 'K', 'L',
                                'M', 'N', 'P', 'Q', 'R',
                                'S', 'T', 'V', 'W', 'Y']
+        elif self.alphabet == 'protein*':
+            self.characters = ['A', 'C', 'D', 'E', 'F',
+                               'G', 'H', 'I', 'K', 'L',
+                               'M', 'N', 'P', 'Q', 'R',
+                               'S', 'T', 'V', 'W', 'Y', '*']
 
         if gpmap_type == 'additive':
             # one-hot encode sequences in batches in a vectorized way
