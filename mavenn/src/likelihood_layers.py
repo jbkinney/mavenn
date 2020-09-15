@@ -1,8 +1,15 @@
+import numpy as np
+
 # Tensorflow imports
 import tensorflow.keras.backend as K
 import tensorflow.keras
 import tensorflow as tf
 
+eps = 1E-6 #np.finfo(float).eps
+max_exp_arg = 30
+pi = np.pi
+e = np.exp(1)
+nan_penalty = 10
 
 class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
@@ -51,7 +58,16 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
         # regularize parameters of the polynomials
         self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
 
-        negative_log_likelihood = 0.5 * K.sum(K.square((ytrue - yhat) / K.exp(self.logsigma)) + self.logsigma, axis=1)
+        # JBK: This is missing a + 0.5*np.log(2*pi) term within the sum
+        # negative_log_likelihood = 0.5 * K.sum(
+        #    K.square((ytrue - yhat) / K.exp(self.logsigma)) + self.logsigma,
+        #    axis=1)
+
+        negative_log_likelihood = K.sum(
+            0.5 * K.square((ytrue - yhat) / K.exp(self.logsigma))
+            + self.logsigma
+            + 0.5*np.log(2*pi)
+            , axis=1)
 
         #self.add_loss(negative_log_likelihood)
 
@@ -70,6 +86,11 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
 
         self.polynomial_order = polynomial_order
         self.eta_regularization = eta_regularization
+
+        # # For NaN surveillance
+        # self.everything_ok = True
+        # self.first_bad_vals_ok = None
+        # self.first_bad_nll_contributions = None
 
         super(CauchyLikelihoodLayer, self).__init__(**kwargs)
 
@@ -101,8 +122,44 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
         self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
 
         # Negative log Cauchy likelihood
-        negative_log_likelihood = K.sum(K.log(K.square((ytrue - yhat)) +
-                                              K.square(K.exp(self.log_gamma))) - self.log_gamma, axis=1)
+        # JBK: This is missing the pi contribution
+        # negative_log_likelihood = \
+        #     K.sum(K.log(K.square((ytrue - yhat)) +
+        #           K.square(K.exp(self.log_gamma))) - self.log_gamma, axis=1)
+
+        # Makes min of log_gamma -max_exp_arg and max of log_gamma +max_exp_arg
+        # Supposed to prevent NaNs from occurring in the exponential.
+        #reg_log_gamma = K.tanh(self.log_gamma/max_exp_arg)*max_exp_arg
+        reg_log_gamma = tf.clip_by_value(self.log_gamma,
+                                         -max_exp_arg,
+                                         max_exp_arg)
+
+        # Compute contributions to negative log likelihood
+        nll_contributions = \
+            K.log(K.exp(2*reg_log_gamma) + K.square(ytrue - yhat) + eps) \
+            - reg_log_gamma \
+            + np.log(pi)
+
+        # Regularize log likelihood contributions
+        reg_nll_contributions = tf.clip_by_value(nll_contributions,
+                                                 -max_exp_arg,
+                                                 max_exp_arg)
+
+        # # Make sure all values are ok
+        # vals_ok = tf.math.is_finite(nll_contributions)
+        #
+        # # If this is the first time where they are not, store stuff
+        # if self.everything_ok and (not all(vals_ok)):
+        #     self.everything_ok = False
+        #     self.first_bad_vals_ok = vals_ok
+        #     self.first_bad_nll_contributions = nll_contributions
+        #
+        # # Remove contributions to negative log likelihood that are not finite
+        # nll_contributions = tf.where(vals_ok, nll_contributions, nan_penalty)
+
+        # Compute total negative log likelihood
+        negative_log_likelihood = K.sum(reg_nll_contributions, axis=1)
+
         return negative_log_likelihood
 
 

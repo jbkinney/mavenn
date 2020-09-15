@@ -648,9 +648,11 @@ class Model:
             verbose=1,
             early_stopping=True,
             early_stopping_patience=20,
+            batch_size=None,
             callbacks=[],
             optimizer=Adam,
-            optimizer_kwargs={}):
+            optimizer_kwargs={},
+            fit_kwargs={}):
 
         """
 
@@ -677,6 +679,8 @@ class Model:
             If using early stopping, specifies the number of epochs to wait
             after a new optimum is identified.
 
+        batch_size: (None, int)
+            Batch size to use. If None, a full-sized batch will be used.
 
         callbacks: (list)
             List of tf.keras.callbacks.Callback instances.
@@ -692,6 +696,9 @@ class Model:
         compile_kwargs: (dict):
             Additional keyword arguments to pass to tf.keras.model.compile().
 
+        fit_kwargs: (dict):
+            Additional keyword arguments to pass to tf.keras.model.fit()
+
         returns
         -------
         history: (tf.keras.callbacks.History object)
@@ -699,12 +706,16 @@ class Model:
 
         """
 
+        # Set batch size
+        if batch_size is None:
+            batch_size = len(self.x)
+
         self.learning_rate = learning_rate
 
         # removing compiler kwargs temporarily to debug RTD issues.
         self._compile_model(optimizer=optimizer,
-                           lr=self.learning_rate,
-                           **optimizer_kwargs)
+                            lr=self.learning_rate,
+                            optimizer_kwargs=optimizer_kwargs)
 
 
         if early_stopping:
@@ -730,7 +741,8 @@ class Model:
                                        epochs=epochs,
                                        verbose=verbose,
                                        callbacks=callbacks,
-                                       )
+                                       batch_size=batch_size,
+                                       **fit_kwargs)
 
         # gauge fix model after fitting
         self.gauge_fix_model()
