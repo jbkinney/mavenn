@@ -2,12 +2,13 @@
 import numpy as np
 import pandas as pd
 import re
+import pdb
 
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.optimizers import *
+#from tensorflow.keras.optimizers import Adam
+#from tensorflow.keras.optimizers import *
 from tensorflow.keras.models import Model as kerasFunctionalModel
 from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
@@ -645,18 +646,19 @@ class Model:
             epochs=50,
             learning_rate=0.005,
             validation_split=0.2,
-            verbose=1,
+            verbose=True,
             early_stopping=True,
             early_stopping_patience=20,
-            batch_size=None,
+            batch_size=50,
+            seed=None,
             callbacks=[],
-            optimizer=Adam,
+            optimizer='Adam',
             optimizer_kwargs={},
             fit_kwargs={}):
 
         """
-
-        Infers parameters, from data, for both the G-P map and the measurement process.
+        Infers parameters, from data, for both the G-P map and the
+        measurement process.
 
         parameters
         ----------
@@ -682,19 +684,23 @@ class Model:
         batch_size: (None, int)
             Batch size to use. If None, a full-sized batch will be used.
 
+        seed: (None, int)
+            If int, the value provided is used in both np.random.seed()
+            and tf.random.set_seed(), in order to make training reproducible.
+            If None, no seed is passed.
+
         callbacks: (list)
             List of tf.keras.callbacks.Callback instances.
 
-        optimizer: (string or tf.keras.optimizers.Optimizer instance)
-            Optimizer to use. Name of a TensorFlow optimizer. Valid string options are:
-            ['SGD', 'RMSprop', 'Adam', 'Adadelta', 'Adagrad', 'Adamax', 'Nadam', 'Ftrl']
+        optimizer: (str, tf.keras.optimizers.Optimizer)
+            Optimizer to use. Either pass an optimizer instance, or the
+            name of a TensorFlow optimizer. Valid
+            string options include: ['SGD', 'RMSprop', 'Adam', 'Adadelta',
+            'Adagrad', 'Adamax', 'Nadam', 'Ftrl']
 
         optimizer_kwargs: (dict)
             Additional keyword arguments to pass to the constructor of the
             tf.keras.optimizers.Optimizer class.
-
-        compile_kwargs: (dict):
-            Additional keyword arguments to pass to tf.keras.model.compile().
 
         fit_kwargs: (dict):
             Additional keyword arguments to pass to tf.keras.model.fit()
@@ -706,13 +712,82 @@ class Model:
 
         """
 
-        # Set batch size
-        if batch_size is None:
-            batch_size = len(self.x)
+        # Check epochs
+        check(isinstance(epochs, int),
+              f'type(epochs)={type(epochs)}; must be int.')
+        check(epochs > 0,
+              f'epochs={epochs}; must be > 0.')
 
+        # Check learning rate & set
+        check(isinstance(learning_rate, float),
+              f'type(learning_rate)={type(learning_rate)}; must be float.')
+        check(learning_rate > 0,
+              f'learning_rate={learning_rate}; must be > 0.')
         self.learning_rate = learning_rate
 
+        # Check epochs
+        check(isinstance(validation_split, float),
+              f'type(validation_split)={type(validation_split)}; '
+              f'must be float.')
+        check(0 < validation_split < 1,
+              f'validation_split={validation_split}; must be in (0,1).')
+
+        # Check verbose
+        check(isinstance(verbose, bool),
+              f'type(verbose)={type(verbose)}; must be bool.')
+
+        # Check early_stopping
+        check(isinstance(early_stopping, bool),
+              f'type(early_stopping)={type(early_stopping)}; must be bool.')
+
+        # Check early_stopping_patience
+        check(isinstance(early_stopping_patience, int),
+              f'type(early_stopping_patience)={type(early_stopping_patience)};'
+              f' must be int.')
+        check(early_stopping_patience > 0,
+              f'early_stopping_patience={early_stopping_patience};'
+              f'must be > 0.')
+
+        # Check/set batch size
+        check(isinstance(batch_size, (int, None)),
+              f'type(batch_size)={type(batch_size)}; must be int or None.')
+        if batch_size is None:
+            batch_size = len(self.x)
+        else:
+            check(batch_size > 0,
+                  f'batch_size={batch_size}; must be > 0.')
+
+        # Check seed
+        check(isinstance(seed, (int, None)),
+              f'type(seed)={type(seed)}; must be int or None.')
+        if isinstance(seed, int):
+            np.random.seed(seed)
+            tf.random.set_seed(seed)
+
+        # Check callbacks
+        check(isinstance(callbacks, list),
+              f'type(callbacks)={type(callbacks)}; must be list.')
+
+        # Check optimizer
+        check(isinstance(optimizer, (str, tf.keras.optimizers.Optimizer)),
+              f'type(optimizer)={type(optimizer)}; must be on of '
+              f'(str, tf.keras.optimizers.Optimizer)')
+        if isinstance(optimizer, str):
+            optimizer = tf.keras.optimizers.get(optimizer)
+
+        # Check optimizer_kwargs
+        check(isinstance(optimizer_kwargs, dict),
+              f'type(optimizer_kwargs)={type(optimizer_kwargs)}; must be dict.')
+
+        # Check optimizer_kwargs
+        check(isinstance(fit_kwargs, dict),
+              f'type(fit_kwargs)={type(fit_kwargs)}; must be dict.')
+
+
         # removing compiler kwargs temporarily to debug RTD issues.
+        if not isinstance(optimizer, tf.keras.optimizers.Optimizer):
+            print(f'optimizer={optimizer}')
+            pdb.set_trace()
         self._compile_model(optimizer=optimizer,
                             lr=self.learning_rate,
                             optimizer_kwargs=optimizer_kwargs)
@@ -1001,10 +1076,10 @@ class Model:
 
     @handle_errors
     def _compile_model(self,
-                      optimizer=Adam,
-                      lr=0.005,
-                      optimizer_kwargs={},
-                      compile_kwargs={}):
+                       optimizer,
+                       lr,
+                       optimizer_kwargs={},
+                       compile_kwargs={}):
         """
         This method will compile the model created in the constructor. The loss used will be
         log_poisson_loss for MPA regression, or mean_squared_error for GE regression
@@ -1012,7 +1087,7 @@ class Model:
         parameters
         ----------
 
-        optimizer: (str)
+        optimizer: (str, tf.keras.optimizers.Optimizer)
             Specifies which optimizers to use during training. See
             'https://www.tensorflow.org/api_docs/python/tf/keras/optimizers',
             for a all available optimizers
@@ -1026,6 +1101,13 @@ class Model:
         None
 
         """
+
+        # Check optimizer
+        check(isinstance(optimizer, (str, tf.keras.optimizers.Optimizer)),
+              f'type(optimizer)={type(optimizer)}; must be on of '
+              f'(str, tf.keras.optimizers.Optimizer)')
+        if isinstance(optimizer, str):
+            optimizer = tf.keras.optimizers.get(optimizer)
 
         if self.regression_type == 'GE':
 

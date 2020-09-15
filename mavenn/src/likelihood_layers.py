@@ -5,11 +5,11 @@ import tensorflow.keras.backend as K
 import tensorflow.keras
 import tensorflow as tf
 
-eps = 1E-6 #np.finfo(float).eps
-max_exp_arg = 30
+eps = 1E-10 #np.finfo(float).eps
+#max_exp_arg = 30
 pi = np.pi
 e = np.exp(1)
-nan_penalty = 10
+#nan_penalty = 10
 
 class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
@@ -130,20 +130,20 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
         # Makes min of log_gamma -max_exp_arg and max of log_gamma +max_exp_arg
         # Supposed to prevent NaNs from occurring in the exponential.
         #reg_log_gamma = K.tanh(self.log_gamma/max_exp_arg)*max_exp_arg
-        reg_log_gamma = tf.clip_by_value(self.log_gamma,
-                                         -max_exp_arg,
-                                         max_exp_arg)
+        # reg_log_gamma = tf.clip_by_value(self.log_gamma,
+        #                                  -max_exp_arg,
+        #                                  max_exp_arg)
 
         # Compute contributions to negative log likelihood
         nll_contributions = \
-            K.log(K.exp(2*reg_log_gamma) + K.square(ytrue - yhat) + eps) \
-            - reg_log_gamma \
+            K.log(K.exp(2*self.log_gamma) + K.square(ytrue - yhat) + eps) \
+            - self.log_gamma \
             + np.log(pi)
 
         # Regularize log likelihood contributions
-        reg_nll_contributions = tf.clip_by_value(nll_contributions,
-                                                 -max_exp_arg,
-                                                 max_exp_arg)
+        # reg_nll_contributions = tf.clip_by_value(nll_contributions,
+        #                                          -max_exp_arg,
+        #                                          max_exp_arg)
 
         # # Make sure all values are ok
         # vals_ok = tf.math.is_finite(nll_contributions)
@@ -158,7 +158,7 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
         # nll_contributions = tf.where(vals_ok, nll_contributions, nan_penalty)
 
         # Compute total negative log likelihood
-        negative_log_likelihood = K.sum(reg_nll_contributions, axis=1)
+        negative_log_likelihood = K.sum(nll_contributions, axis=1)
 
         return negative_log_likelihood
 

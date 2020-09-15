@@ -1,12 +1,230 @@
 # Standard imports
 import numpy as np
 import pandas as pd
+import re
+import tempfile
+import os
 
 # MAVE-NN imports
 from mavenn.src.validate \
     import validate_seqs, validate_alphabet, validate_1d_array
 from mavenn.src.error_handling import check, handle_errors
 from mavenn.src.validate import alphabet_dict
+
+abreviation_dict = {
+    'Ala': 'A',
+    'Arg': 'R',
+    'Asn': 'N',
+    'Asp': 'D',
+    'Cys': 'C',
+    'Glu': 'E',
+    'Gln': 'Q',
+    'Gly': 'G',
+    'His': 'H',
+    'Ile': 'I',
+    'Leu': 'L',
+    'Lys': 'K',
+    'Met': 'M',
+    'Phe': 'F',
+    'Pro': 'P',
+    'Ser': 'S',
+    'Thr': 'T',
+    'Trp': 'W',
+    'Tyr': 'Y',
+    'Val': 'V'
+}
+
+
+@handle_errors
+def mavedb_to_dataset(df,
+                      hgvs_col,
+                      y_col,
+                      other_cols=None,
+                      training_frac=.8,
+                      seed=0,
+                      dropna_y=True):
+    """
+    Converts a variants dataset from MaveDB to a MAVE-NN compatible datset.
+
+    parameters
+    ----------
+    df: (pd.DataFrame)
+        A pandas dataframe containing by-variant data from MaveDB.
+
+    hgvs_col: (str)
+        Name of column containing variant information.
+
+    y_col: (str)
+        Name of column in df to use as y-values.
+
+    other_cols: (None, list)
+        List of names of other columns to include in dataset.
+        If None, all columns other than y_col and hgvs_col will be used.
+
+    training_frac: (float in [0,1])
+        Fraction of data to mark for training set.
+
+    seed: (int)
+        Argument to pass to np.random.seed() before setting
+        training set flags.
+
+    dropna_y: (bool)
+        Remove rows that contain NA values in y_col.
+    """
+
+    ### Perform checks
+
+    # Check hgvs_col
+    check(isinstance(hgvs_col, str),
+          f'type(hgvs_col)={type(hgvs_col)}; must be str')
+    check(hgvs_col in df.columns,
+          f'hgvs_col={hgvs_col} is not in df.columns={df.columns}')
+
+    # Check y_col
+    check(isinstance(y_col, str),
+          f'type(y_col)={type(y_col)}; must be str')
+    check(y_col in df.columns,
+          f'y_col={y_col} is not in df.columns={df.columns}')
+
+    # Of other_cols is None, set equal to df columns other than ones above
+    if other_cols is None:
+        other_cols = [col for col in df.columns if col not in [hgvs_col, y_col]]
+
+    # If other_cols is list, make sure its a subset of df.columns
+    elif isinstance(other_cols, list):
+        check(set(other_cols) <= set(df.columns),
+              f'y_col={other_cols} is not in df.columns={df.columns}')
+
+    # Otherwise, throw error
+    else:
+        check(False,
+              f'type(other_cols)={type(other_cols)} is not None or list.')
+
+    # Check training_frac
+    check(isinstance(training_frac, float),
+          f'type(training_frac)={type(training_frac)} is not float.')
+    check((training_frac <= 1) and (training_frac >= 0),
+          f'training_frac={training_frac} is not in [0,1]')
+
+    # Check seed
+    check(isinstance(seed, int),
+          f'type(seed)={type(seed)}; must be int')
+
+    # Check dropna_y
+    check(isinstance(dropna_y, bool),
+          f'type(dropna_y)={type(dropna_y)}')
+
+    ### Compute y_df
+
+    # Get number of variants
+    N = len(df)
+
+    # Create y_df
+    y_df = pd.DataFrame()
+
+    # Set training set and testing set with specified split
+    np.random.seed(seed)
+    training_flag = (np.random.rand(N) < training_frac)
+    y_df['training_set'] = training_flag
+
+    # Parse hgvs notation
+    matches_list = [re.findall('([A-Za-z\*]+)([0-9]+)([A-Za-z\*]+)', s)
+                    for s in df[hgvs_col]]
+
+    # Add hamming_dist col to y_df
+    y_df['hamming_dist'] = [len(m) for m in matches_list]
+
+    # Set other columns
+    y_df[other_cols] = df[other_cols].copy()
+
+    # Set y
+    y_df['y'] = df[y_col].copy()
+
+    ### Parse hgvs_col values into mut_df
+
+    # Parse strings in hgvs_col column.
+    # There should be a better way than writing to a temp file
+    fd, fname = tempfile.mkstemp(text=True)
+    f = open(fname, 'w')
+    f.write('id,l,c,c_wt\n')
+    for i, matches in enumerate(matches_list):
+        for c_wt, l, c in matches:
+            f.write(f'{i},{int(l)-1},{c},{c_wt}\n')
+    f.close()
+    os.close(fd)
+    mut_df = pd.read_csv(fname)
+    os.remove(fname)
+
+    # If any characters c have length 3, assume it's long protein
+    # and do translation
+    cs = list(mut_df['c']) + list(mut_df['c_wt'])
+    if max([len(c) for c in cs]) == 3:
+
+
+        # Remove all unrecognized 'c'
+        ix = mut_df['c'].isin(abreviation_dict.keys())
+        ix_wt = mut_df['c_wt'].isin(abreviation_dict.keys())
+        mut_df = mut_df[ix & ix_wt]
+
+        # Map long-form aa to short-form aa
+        mut_df['c'] = mut_df['c'].map(abreviation_dict).astype(str)
+        mut_df['c_wt'] = mut_df['c_wt'].map(abreviation_dict).astype(str)
+
+        # Set alphabet
+        alphabet = 'protein'
+
+    # Otherwise, just capitalize, and remove any rows not in the alphabet
+    else:
+
+        # Capitalize
+        mut_df['c'] = [c.upper() for c in mut_df['c']]
+        mut_df['c_wt'] = [c.upper() for c in mut_df['c_wt']]
+        cs = list(mut_df['c']) + list(mut_df['c_wt'])
+        alphabet = x_to_alphabet(cs, return_name=True)
+
+    ### Compute wt_seq from mut_df
+
+    # Get unique list of lengths
+    ls = mut_df['l'].unique()
+    ls.sort()
+
+    # Subtract minimum value; to take care of strange indexing
+    ls -= ls.min()
+
+    # Get sequence length
+    L = ls.max() + 1
+
+    # Fill in array; use '?' as missing character
+    wt_seq_arr = np.array(['.'] * L)
+    for l in ls:
+        ix = mut_df['l'] == l
+        c_wts = mut_df.loc[ix, 'c_wt'].unique()
+        assert len(c_wts == 1)
+        wt_seq_arr[l] = c_wts[0]
+    wt_seq = ''.join(wt_seq_arr)
+
+    ### Create data_df
+
+    # Create dataset
+    data_df = mutations_to_dataset(wt_seq=wt_seq, mut_df=mut_df, y_df=y_df)
+
+    # Remove rows with NaN y-values if requested
+    if dropna_y:
+        ix_na = data_df['y'].isna()
+        data_df = data_df[~ix_na]
+
+    # Reindex
+    data_df.reset_index(inplace=True, drop=True)
+    data_df.index.name = 'id'
+
+    ### Create info_dict
+
+    # Add other useful information to info_dict
+    info_dict = {}
+    info_dict['wt_seq'] = wt_seq
+    info_dict['alphabet'] = alphabet
+
+    return data_df, info_dict
 
 
 @handle_errors
