@@ -41,3 +41,4 @@ from mavenn.src.visualization import tidy_df_to_logomaker_df
 from mavenn.src.dev import x_to_consensus
 from mavenn.src.dev import x_to_alphabet
 from mavenn.src.dev import x_to_missing
+from mavenn.src.dev import set_seed

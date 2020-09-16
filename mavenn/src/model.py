@@ -7,6 +7,7 @@ import pdb
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras
+from tensorflow.keras.optimizers import Optimizer
 #from tensorflow.keras.optimizers import Adam
 #from tensorflow.keras.optimizers import *
 from tensorflow.keras.models import Model as kerasFunctionalModel
@@ -650,7 +651,6 @@ class Model:
             early_stopping=True,
             early_stopping_patience=20,
             batch_size=50,
-            seed=None,
             callbacks=[],
             optimizer='Adam',
             optimizer_kwargs={},
@@ -684,19 +684,12 @@ class Model:
         batch_size: (None, int)
             Batch size to use. If None, a full-sized batch will be used.
 
-        seed: (None, int)
-            If int, the value provided is used in both np.random.seed()
-            and tf.random.set_seed(), in order to make training reproducible.
-            If None, no seed is passed.
-
         callbacks: (list)
             List of tf.keras.callbacks.Callback instances.
 
-        optimizer: (str, tf.keras.optimizers.Optimizer)
-            Optimizer to use. Either pass an optimizer instance, or the
-            name of a TensorFlow optimizer. Valid
-            string options include: ['SGD', 'RMSprop', 'Adam', 'Adadelta',
-            'Adagrad', 'Adamax', 'Nadam', 'Ftrl']
+        optimizer: (str)
+            Optimizer to use. Valid options include: ['SGD', 'RMSprop',
+            'Adam', 'Adadelta', 'Adagrad', 'Adamax', 'Nadam', 'Ftrl']
 
         optimizer_kwargs: (dict)
             Additional keyword arguments to pass to the constructor of the
@@ -757,23 +750,18 @@ class Model:
             check(batch_size > 0,
                   f'batch_size={batch_size}; must be > 0.')
 
-        # Check seed
-        check(isinstance(seed, (int, None)),
-              f'type(seed)={type(seed)}; must be int or None.')
-        if isinstance(seed, int):
-            np.random.seed(seed)
-            tf.random.set_seed(seed)
-
         # Check callbacks
         check(isinstance(callbacks, list),
               f'type(callbacks)={type(callbacks)}; must be list.')
 
         # Check optimizer
-        check(isinstance(optimizer, (str, tf.keras.optimizers.Optimizer)),
-              f'type(optimizer)={type(optimizer)}; must be on of '
-              f'(str, tf.keras.optimizers.Optimizer)')
-        if isinstance(optimizer, str):
-            optimizer = tf.keras.optimizers.get(optimizer)
+        check(isinstance(optimizer, str),
+              f'type(optimizer)={type(optimizer)}; must be str')
+
+        # Make Optimizer instance with specified name and learning rate
+        optimizer_kwargs['learning_rate'] = learning_rate
+        optimizer = tf.keras.optimizers.get({"class_name": optimizer,
+                                             "config": optimizer_kwargs})
 
         # Check optimizer_kwargs
         check(isinstance(optimizer_kwargs, dict),
@@ -783,11 +771,11 @@ class Model:
         check(isinstance(fit_kwargs, dict),
               f'type(fit_kwargs)={type(fit_kwargs)}; must be dict.')
 
+        assert isinstance(optimizer, tf.keras.optimizers.Optimizer), \
+            f'optimizer = {repr(optimizer)}' \
+            'This not happen. optimizer should be ' \
+            'tf.keras.optimizers.Optimizer instance by now.'
 
-        # removing compiler kwargs temporarily to debug RTD issues.
-        if not isinstance(optimizer, tf.keras.optimizers.Optimizer):
-            print(f'optimizer={optimizer}')
-            pdb.set_trace()
         self._compile_model(optimizer=optimizer,
                             lr=self.learning_rate,
                             optimizer_kwargs=optimizer_kwargs)
@@ -1087,11 +1075,8 @@ class Model:
         parameters
         ----------
 
-        optimizer: (str, tf.keras.optimizers.Optimizer)
-            Specifies which optimizers to use during training. See
-            'https://www.tensorflow.org/api_docs/python/tf/keras/optimizers',
-            for a all available optimizers
-
+        optimizer: (tf.keras.optimizers.Optimizer)
+            Which optimizer to use
 
         lr: (float)
             Learning rate of the optimizer.
@@ -1103,11 +1088,9 @@ class Model:
         """
 
         # Check optimizer
-        check(isinstance(optimizer, (str, tf.keras.optimizers.Optimizer)),
-              f'type(optimizer)={type(optimizer)}; must be on of '
-              f'(str, tf.keras.optimizers.Optimizer)')
-        if isinstance(optimizer, str):
-            optimizer = tf.keras.optimizers.get(optimizer)
+        assert isinstance(optimizer, tf.keras.optimizers.Optimizer), \
+            f'type(optimizer)={type(optimizer)}; must be on of ' \
+            f'tf.keras.optimizers.Optimizer)'
 
         if self.regression_type == 'GE':
 
@@ -1118,7 +1101,7 @@ class Model:
                 return K.sum(y_pred)
 
             self.model.model.compile(loss=likelihood_loss,
-                                     optimizer=optimizer(lr=lr, **optimizer_kwargs),
+                                     optimizer=optimizer,
                                      **compile_kwargs)
 
         elif self.regression_type == 'MPA':
@@ -1127,9 +1110,8 @@ class Model:
             def likelihood_loss(y_true, y_pred):
                 return y_pred
 
-            #self.model.model.compile(loss=tf.nn.log_poisson_loss,
             self.model.model.compile(loss=likelihood_loss,
-                                     optimizer=optimizer(lr=lr, **optimizer_kwargs),
+                                     optimizer=optimizer,
                                      **compile_kwargs)
 
 

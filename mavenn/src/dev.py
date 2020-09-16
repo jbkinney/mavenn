@@ -4,6 +4,7 @@ import pandas as pd
 import re
 import tempfile
 import os
+import tensorflow as tf
 
 # MAVE-NN imports
 from mavenn.src.validate \
@@ -33,6 +34,31 @@ abreviation_dict = {
     'Tyr': 'Y',
     'Val': 'V'
 }
+
+@handle_errors
+def set_seed(seed):
+    """
+    Set seed in order to make results reproducible.
+
+    parameters
+    -------
+    seed: (int)
+        The value provided is used in both np.random.seed()
+        and tf.random.set_seed().
+
+    returns
+    -------
+    None
+
+    """
+
+    # Check seed
+    check(isinstance(seed, int),
+          f'type(seed)={type(seed)}; must be int')
+
+    # Set seed
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
 
 @handle_errors
