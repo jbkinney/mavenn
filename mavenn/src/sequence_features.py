@@ -236,7 +236,7 @@ def neighbor_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     """
 
     # Validate seqs
-    seqs = validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet=True)
+    seqs = validate_seqs(seqs, alphabet, restrict_seqs_to_alphabet)
 
     # Get constant features
     N = len(seqs)
