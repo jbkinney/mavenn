@@ -1,5 +1,6 @@
 # Standard imports
 import matplotlib.pyplot as plt
+import pdb
 
 # Initialize global counts
 global_success_counter = 0

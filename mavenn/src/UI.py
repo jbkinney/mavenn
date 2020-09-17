@@ -157,9 +157,10 @@ class GlobalEpistasisModel:
         #     self.input_seqs_ohe = X_train_features
 
         # Encode sequences as features
-        self.input_seqs_ohe, _ = x_to_features(x=self.x_train,
-                                               alphabet=self.alphabet,
-                                               model_type=self.gpmap_type)
+        self.input_seqs_ohe, self.feature_names = \
+            x_to_features(x=self.x_train,
+                          alphabet=self.alphabet,
+                          model_type=self.gpmap_type)
 
         # Leave out constant feature
         self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
@@ -487,9 +488,10 @@ class GlobalEpistasisModelMultipleReplicates:
         #     self.input_seqs_ohe = X_train_features
 
         # Encode sequences as features
-        self.input_seqs_ohe, _ = x_to_features(x=self.x_train,
-                                               alphabet=self.alphabet,
-                                               model_type=self.gpmap_type)
+        self.input_seqs_ohe, self.feature_names = \
+            x_to_features(x=self.x_train,
+                          alphabet=self.alphabet,
+                          model_type=self.gpmap_type)
 
         # Leave out constant feature
         self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
@@ -873,9 +875,10 @@ class MeasurementProcessAgnosticModel:
         #     self.input_seqs_ohe = X_train_features
 
         # Encode sequences as features
-        self.input_seqs_ohe, _ = x_to_features(x=self.x_train,
-                                               alphabet=self.alphabet,
-                                               model_type=self.gpmap_type)
+        self.input_seqs_ohe, self.feature_names = \
+            x_to_features(x=self.x_train,
+                          alphabet=self.alphabet,
+                          model_type=self.gpmap_type)
 
         # Leave out constant feature
         self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]

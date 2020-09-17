@@ -27,7 +27,7 @@ from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseM
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
 from mavenn.src.dev import x_to_features
-from mavenn.src.validate import validate_seqs
+from mavenn.src.validate import validate_seqs, validate_1d_array
 
 
 @handle_errors
@@ -44,8 +44,7 @@ class Model:
     ----------
 
     x: (array-like)
-        Input pandas DataFrame containing sequences. x are
-        DNA, RNA, or protein sequences to be regressed over
+        DNA, RNA, or protein sequences to be regressed over.
 
     y: (array-like)
         y represents counts in bins, or continuous measurement values
@@ -119,9 +118,25 @@ class Model:
                  ohe_batch_size=50000,
                  ct_n=None):
 
+        # Check x
+        x = validate_1d_array(x)
+        x = validate_seqs(x, alphabet=alphabet)
+        check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
+        x0 = x[0]
+        check(isinstance(x0, str),
+              f'type(x[0])={type(x0)}; must be str')
+        L = len(x0)
+        check(L > 0,
+              f'len(x[0])={L}; must be > 0')
+
+        # Check y
+        y = validate_1d_array(y)
+
         # set class attributes
         self.x, self.y = x, y
         self.alphabet = alphabet
+
+        self.L = L
         self.regression_type = regression_type
         self.gpmap_type = gpmap_type
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
@@ -851,141 +866,6 @@ class Model:
 
 
     @handle_errors
-    def _get_all_gpmap_parameters(self):
-
-        """
-        Returns gauge-fixed parameters for the G-P map as a pandas dataframe.
-        The returned dataframe has two columns: name and values.
-        The format of each parameter name is of the following form:
-
-        constant parameters: "theta_0"
-        additive parameters: "theta_1:A"
-        pairwise parameters: "theta_1:A,5:G"
-
-        returns
-        -------
-        theta_df: (pd.DataFrame)
-            Gauge-fixed G-P map parameters, formatted as a dataframe.
-        """
-
-        # temp variable to store characters.
-        chars = self.model.characters
-
-        # position and character indices
-        char_indices = list(range(len(chars)))
-        pos_indices = list(range(len(self.model.x_train[0])))
-
-        # update theta_gf in case load model is called.
-        theta_0 = self.get_nn().layers[2].get_weights()[1]
-        theta_gpmap = self.get_nn().layers[2].get_weights()[0]
-        self.model.theta_gf = np.insert(theta_gpmap, 0, theta_0)
-
-
-        # list that will contain parameter names
-        names = []
-
-        # list that will contain parameter values corresponding to names
-        values = []
-
-        # These parameters are gauge fixed are the model has been fit.
-        if self.gpmap_type == 'additive':
-
-            # get constant term.
-            #print(self.model.theta_gf.shape)
-            theta_0 = self.model.theta_gf[0]
-
-            # add it to the lists that will get returned.
-            names.append('theta_0')
-            values.append(theta_0)
-
-            reshaped_theta = self.model.theta_gf[1:].reshape(len(self.model.x_train[0]), len(chars))
-            for position in pos_indices:
-                for char in char_indices:
-                    names.append('theta_' + str(position) + ':' + chars[char])
-                    values.append(reshaped_theta[position][char])
-
-        elif self.gpmap_type == 'neighbor':
-
-            # define helper variables
-            sequenceLength = len(self.model.x_train[0])
-            num_possible_pairs = int((sequenceLength * (sequenceLength - 1)) / 2)
-
-            # get constant term.
-            theta_0 = self.model.theta_gf[0]
-
-            # add it to the lists that will get returned.
-            names.append('theta_0')
-            values.append(theta_0)
-
-            # get additive terms, starting from 1 because 0 represents constant term
-            reshaped_theta = self.model.theta_gf[1:sequenceLength*len(self.model.characters)+1].\
-                reshape(len(self.model.x_train[0]), len(chars))
-
-            for position in pos_indices:
-                for char in char_indices:
-                    names.append('theta_' + str(position) + ':' + chars[char])
-                    values.append(reshaped_theta[position][char])
-
-            reshaped_theta = self.model.theta_gf[sequenceLength*len(self.model.characters)+1:]\
-                .reshape(len(self.model.x_train[0]) - 1, len(chars), len(chars))
-
-            # get parameters in tidy format
-            for pos1 in pos_indices[:-1]:
-                for char1 in char_indices:
-                    for char2 in char_indices:
-                        value = reshaped_theta[pos1][char1][char2]
-                        name = f'theta_{pos1}:{chars[char1]},{pos1+1}:{chars[char2]}'
-                        names.append(name)
-                        values.append(value)
-
-        elif self.gpmap_type == 'pairwise':
-
-            # define helper variables
-            sequenceLength = len(self.model.x_train[0])
-            num_possible_pairs = int((sequenceLength * (sequenceLength - 1)) / 2)
-
-            # get constant term.
-            theta_0 = self.model.theta_gf[0]
-
-            # add it to the lists that will get returned.
-            names.append('theta_0')
-            values.append(theta_0)
-
-            # get additive terms, starting from 1 because 0 represents constant term
-            reshaped_theta = self.model.theta_gf[1:sequenceLength*len(self.model.characters)+1].\
-                reshape(len(self.model.x_train[0]), len(chars))
-
-            for position in pos_indices:
-                for char in char_indices:
-                    names.append('theta_' + str(position) + ':' + chars[char])
-                    values.append(reshaped_theta[position][char])
-
-
-            # get pairwise terms
-            # reshape to num_possible_pairs by len(chars) by len(chars) array
-            reshaped_theta = self.model.theta_gf[sequenceLength*len(self.model.characters)+1:].\
-                reshape(num_possible_pairs, len(chars), len(chars))
-
-            pos_pair_num = 0
-            for pos1 in pos_indices:
-                for pos2 in pos_indices[pos1+1:]:
-                    for char1 in char_indices:
-                        for char2 in char_indices:
-                            value = reshaped_theta[pos_pair_num][char1][char2]
-                            name = f'theta_{pos1}:{chars[char1]},{pos2}:{chars[char2]}'
-                            names.append(name)
-                            values.append(value)
-                    pos_pair_num += 1
-
-        theta_df = pd.DataFrame(
-            {'name': names,
-             'value': values
-             })
-
-        return theta_df
-
-
-    @handle_errors
     def get_gpmap_parameters(self, which='all'):
         """
         Returns the G-P map parameters theta.
@@ -1007,8 +887,19 @@ class Model:
             information.
         """
 
-        # Get all model parameters
-        theta_df = self._get_all_gpmap_parameters()
+        # Create vector of theta values
+        theta_0 = self.get_nn().layers[2].get_weights()[1]
+        theta_vec = self.get_nn().layers[2].get_weights()[0]
+        values = np.insert(theta_vec, 0, theta_0)
+
+        # Get feature names
+        names = self.model.feature_names
+
+        # Store all model parameters in dataframe
+        theta_df = pd.DataFrame(
+            {'name': names,
+             'value': values
+            })
 
         # If "all", just return all model parameters
         if which == "all":
@@ -1139,6 +1030,12 @@ class Model:
 
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
+
+        # Check seqs
+        x = validate_seqs(x, alphabet=self.alphabet)
+        L = len(self.x[0])
+        check(len(x[0]) == L,
+              f'len(x[0])={len(x[0])}; should be L={L}')
 
         # Encode sequences as features
         seqs_ohe, _ = x_to_features(x=x,

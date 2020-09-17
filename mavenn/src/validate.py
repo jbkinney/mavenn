@@ -1,10 +1,11 @@
 # Standard imports
 import numpy as np
 import pandas as pd
+import pdb
 
 # MAVE-NN imports
 from mavenn.src.reshape import _get_shape_and_return_1d_array
-from mavenn.src.error_handling import check, handle_errors
+from mavenn.src.error_handling import check, handle_errors, MavennError
 
 # Define built-in alphabets to use with MAVE-NN
 alphabet_dict = {
@@ -109,7 +110,9 @@ def validate_alphabet(alphabet):
 
 
 @handle_errors
-def validate_seqs(seqs, alphabet=None, restrict_seqs_to_alphabet=False):
+def validate_seqs(seqs,
+                  alphabet=None,
+                  restrict_seqs_to_alphabet=True):
     """
     Makes sure that seqs is an array of equal-length sequences
     drawn from the set of characters in alphabet. Returns
@@ -141,7 +144,7 @@ def validate_seqs(seqs, alphabet=None, restrict_seqs_to_alphabet=False):
     # Make sure array is 1D
     check(len(seqs.shape) == 1, f'seqs should be 1D; seqs.shape={seqs.shape}')
 
-    # Get length and make sure its >= 1
+    # Get N and make sure its >= 1
     N = len(seqs)
     check(N >= 1, f'N={N} must be >= 1')
 
@@ -150,6 +153,12 @@ def validate_seqs(seqs, alphabet=None, restrict_seqs_to_alphabet=False):
     check(len(lengths) == 1,
           f"Sequences should all be the same length"
           "; found multiple lengths={lengths}")
+
+    # # Make sure sequences are desired length if specified
+    # if L is not None:
+    #     check(L == lengths[0],
+    #           f"Sequences should all be length L={L};"
+    #           f"Instead they are length {lengths[0]}")
 
     # If user requests to restrict sequences to a given alphabet
     if restrict_seqs_to_alphabet:
