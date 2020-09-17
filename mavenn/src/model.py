@@ -18,7 +18,7 @@ import tensorflow.keras.backend as K
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
-from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
+#from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
 #from mavenn.src.utils import onehot_encode_array, \
 #    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 from mavenn.src.likelihood_layers import *
@@ -216,21 +216,25 @@ class Model:
         theta_nought = self.model.model.layers[2].get_weights()[1]
         theta = np.hstack((theta_nought, theta_all.ravel()))
 
+        # JBK: all gauge fixing has been disabled.
+        # This should be done only in get_gpmap_parameters()
+        theta_gf = theta
+
         # The following conditionals gauge fix the x_to_phi parameters depending of the value of x_to_phi
-        if self.gpmap_type == 'additive':
-
-            # compute gauge-fixed, additive model theta
-            theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
-
-        elif self.gpmap_type == 'neighbor':
-
-            # compute gauge-fixed, neighbor model theta
-            theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
-
-        elif self.gpmap_type == 'pairwise':
-
-            # compute gauge-fixed, pairwise model theta
-            theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
+        # if self.gpmap_type == 'additive':
+        #
+        #     # compute gauge-fixed, additive model theta
+        #     theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
+        #
+        # elif self.gpmap_type == 'neighbor':
+        #
+        #     # compute gauge-fixed, neighbor model theta
+        #     theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
+        #
+        # elif self.gpmap_type == 'pairwise':
+        #
+        #     # compute gauge-fixed, pairwise model theta
+        #     theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
 
         # The following variable unfixed_gpmap is a tf.keras backend function
         # which computes the non-gauge fixed value of the hidden node phi for a given input
@@ -475,21 +479,25 @@ class Model:
         theta_nought = self.model.model.layers[2].get_weights()[1]
         theta = np.hstack((theta_nought, theta_all.ravel()))
 
-        # The following conditionals gauge fix the x_to_phi parameters depending of the value of x_to_phi
-        if self.gpmap_type == 'additive':
+        # 20.09.16 JBK: I'm disabling this.
+        # Move gauge fixing to Model.get_gpmap_parameters()
+        theta_gf = theta
 
-            # compute gauge-fixed, additive model theta
-            theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
-
-        elif self.gpmap_type == 'neighbor':
-
-            # compute gauge-fixed, neighbor model theta
-            theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
-
-        elif self.gpmap_type == 'pairwise':
-
-            # compute gauge-fixed, pairwise model theta
-            theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
+        # # The following conditionals gauge fix the x_to_phi parameters depending of the value of x_to_phi
+        # if self.gpmap_type == 'additive':
+        #
+        #     # compute gauge-fixed, additive model theta
+        #     theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
+        #
+        # elif self.gpmap_type == 'neighbor':
+        #
+        #     # compute gauge-fixed, neighbor model theta
+        #     theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
+        #
+        # elif self.gpmap_type == 'pairwise':
+        #
+        #     # compute gauge-fixed, pairwise model theta
+        #     theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
 
         # The following variable unfixed_gpmap is a tf.keras backend function
         # which computes the non-gauge fixed value of the hidden node phi for a given input
@@ -894,6 +902,7 @@ class Model:
 
         # Get feature names
         names = self.model.feature_names
+        names = ['theta'+name[1:] for name in names]
 
         # Store all model parameters in dataframe
         theta_df = pd.DataFrame(
