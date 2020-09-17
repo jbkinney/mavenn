@@ -121,41 +121,6 @@ class GlobalEpistasisModel:
                                'M', 'N', 'P', 'Q', 'R',
                                'S', 'T', 'V', 'W', 'Y', '*']
 
-        # # compute appropriate one-hot encoding of sequences
-        # if gpmap_type == 'additive':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     self.input_seqs_ohe = onehot_encode_array(self.x_train, self.characters, self.ohe_batch_size)
-        #
-        # elif gpmap_type == 'neighbor':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     # TODO: vectorize neighbor feature creation
-        #     # Generate additive one-hot encoding.
-        #     X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_batch_size)
-        #
-        #     # Generate neighbor one-hot encoding.
-        #     X_train_neighbor = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     X_train_features = np.hstack((X_train_additive, X_train_neighbor))
-        #
-        #     # this is the input to the neighbor model
-        #     self.input_seqs_ohe = X_train_features
-        #
-        # elif gpmap_type == 'pairwise':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     # TODO: vectorize pairwise feature creation
-        #     # Generate additive one-hot encoding.
-        #     X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_batch_size)
-        #
-        #     # Generate pairwise one-hot encoding.
-        #     X_train_pairwise = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     X_train_features = np.hstack((X_train_additive, X_train_pairwise))
-        #
-        #     # this is the input to the pairwise model
-        #     self.input_seqs_ohe = X_train_features
-
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \
             x_to_features(x=self.x_train,
@@ -451,41 +416,6 @@ class GlobalEpistasisModelMultipleReplicates:
                                'G', 'H', 'I', 'K', 'L',
                                'M', 'N', 'P', 'Q', 'R',
                                'S', 'T', 'V', 'W', 'Y']
-
-        # # compute appropriate one-hot encoding of sequences
-        # if gpmap_type == 'additive':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     self.input_seqs_ohe = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
-        #
-        # elif gpmap_type == 'neighbor':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     # TODO: vectorize neighbor feature creation
-        #     # Generate additive one-hot encoding.
-        #     X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
-        #
-        #     # Generate neighbor one-hot encoding.
-        #     X_train_neighbor = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     X_train_features = np.hstack((X_train_additive, X_train_neighbor))
-        #
-        #     # this is the input to the neighbor model
-        #     self.input_seqs_ohe = X_train_features
-        #
-        # elif gpmap_type == 'pairwise':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     # TODO: vectorize pairwise feature creation
-        #     # Generate additive one-hot encoding.
-        #     X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_single_batch_size)
-        #
-        #     # Generate pairwise one-hot encoding.
-        #     X_train_pairwise = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     X_train_features = np.hstack((X_train_additive, X_train_pairwise))
-        #
-        #     # this is the input to the pairwise model
-        #     self.input_seqs_ohe = X_train_features
 
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \
@@ -841,38 +771,6 @@ class MeasurementProcessAgnosticModel:
                                'G', 'H', 'I', 'K', 'L',
                                'M', 'N', 'P', 'Q', 'R',
                                'S', 'T', 'V', 'W', 'Y', '*']
-
-        # if gpmap_type == 'additive':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     self.input_seqs_ohe = onehot_encode_array(self.x_train, self.characters, self.ohe_batch_size)
-        #
-        # elif gpmap_type == 'neighbor':
-        #
-        #     # Generate additive one-hot encoding.
-        #     X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_batch_size)
-        #
-        #     # Generate pairwise one-hot encoding.
-        #     X_train_neighbor = _generate_nbr_features_from_sequences(self.x_train, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     X_train_features = np.hstack((X_train_additive, X_train_neighbor))
-        #
-        #     # this is the input to the neighbor model
-        #     self.input_seqs_ohe = X_train_features
-        #
-        # elif gpmap_type == 'pairwise':
-        #
-        #     # Generate additive one-hot encoding.
-        #     X_train_additive = onehot_encode_array(self.x_train, self.characters, self.ohe_batch_size)
-        #
-        #     # Generate pairwise one-hot encoding.
-        #     X_train_pairwise = _generate_all_pair_features_from_sequences(self.x_train, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     X_train_features = np.hstack((X_train_additive, X_train_pairwise))
-        #
-        #     # this is the input to the pairwise model
-        #     self.input_seqs_ohe = X_train_features
 
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \

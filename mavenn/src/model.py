@@ -1043,44 +1043,6 @@ class Model:
                                     model_type=self.gpmap_type)
         seqs_ohe = seqs_ohe[:, 1:]
 
-        # # Make sure all sequences have the proper length
-        # L = self.model.L
-        # lengths = np.unique([len(seq) for seq in x])
-        # check(len(lengths) == 1,
-        #       f'Input sequences have multiple lengths: {lengths}')
-        # check(lengths[0] == L,
-        #       f'Input sequence length {lengths[0]} does not match L={L}')
-        #
-        # # Make sure sequences in x have only valid characters
-        # model_chars = set(self.model.characters)
-        # x_chars = set(''.join(x))
-        # check(x_chars <= model_chars,
-        #       f'Input sequences contain the following invalid characters: {x_chars-model_chars}')
-
-        # if self.gpmap_type == 'additive':
-        #     # one-hot encode sequences in batches in a vectorized way
-        #     seqs_ohe = onehot_encode_array(x, self.model.characters)
-        #
-        # elif self.gpmap_type == 'neighbor':
-        #     # Generate additive one-hot encoding.
-        #     X_test_additive = onehot_encode_array(x, self.model.characters, self.ohe_batch_size)
-        #
-        #     # Generate neighbor one-hot encoding.
-        #     X_test_neighbor = _generate_nbr_features_from_sequences(x, self.alphabet)
-        #
-        #     # Append additive and neighbor features together.
-        #     seqs_ohe = np.hstack((X_test_additive, X_test_neighbor))
-        #
-        # elif self.gpmap_type == 'pairwise':
-        #     # Generate additive one-hot encoding.
-        #     X_test_additive = onehot_encode_array(x, self.model.characters, self.ohe_batch_size)
-        #
-        #     # Generate pairwise one-hot encoding.
-        #     X_test_pairwise = _generate_all_pair_features_from_sequences(x, self.alphabet)
-        #
-        #     # Append additive and pairwise features together.
-        #     seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
-
         # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
         gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
 
