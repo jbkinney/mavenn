@@ -53,7 +53,11 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
         self.logsigma = 0
         for poly_coeff_index in range(self.polynomial_order+1):
-            self.logsigma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
+            if poly_coeff_index == 0:
+                self.logsigma += self.a[poly_coeff_index]
+            else:
+                self.logsigma += self.a[poly_coeff_index] * \
+                                 K.pow(yhat, poly_coeff_index)
 
         # regularize parameters of the polynomials
         self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
@@ -116,7 +120,11 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
 
         self.log_gamma = 0
         for poly_coeff_index in range(self.polynomial_order+1):
-            self.log_gamma += self.a[poly_coeff_index]*K.pow(yhat, poly_coeff_index)
+            if poly_coeff_index == 0:
+                self.log_gamma += self.a[poly_coeff_index]
+            else:
+                self.log_gamma += self.a[poly_coeff_index] * \
+                                  K.pow(yhat, poly_coeff_index)
 
         # regularize parameters of the polynomials
         self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
@@ -218,10 +226,17 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
         self.log_scale = 0
 
         for poly_coeff_index in range(self.polynomial_order+1):
-
-            self.log_a += self.w_a[poly_coeff_index]*K.pow(y_hat, poly_coeff_index)
-            self.log_b += self.w_b[poly_coeff_index] * K.pow(y_hat, poly_coeff_index)
-            self.log_scale += self.w_s[poly_coeff_index] * K.pow(y_hat, poly_coeff_index)
+            if poly_coeff_index == 0:
+                self.log_a += self.w_a[poly_coeff_index]
+                self.log_b += self.w_b[poly_coeff_index]
+                self.log_scale += self.w_s[poly_coeff_index]
+            else:
+                self.log_a += self.w_a[poly_coeff_index] * \
+                              K.pow(y_hat, poly_coeff_index)
+                self.log_b += self.w_b[poly_coeff_index] * \
+                              K.pow(y_hat, poly_coeff_index)
+                self.log_scale += self.w_s[poly_coeff_index] * \
+                                  K.pow(y_hat, poly_coeff_index)
 
         # Compute a, b, scale in terms of trainable parameters
         self.a = Exp(self.log_a)
