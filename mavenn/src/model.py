@@ -19,13 +19,15 @@ import tensorflow.keras.backend as K
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
 from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
-from mavenn.src.utils import onehot_encode_array, \
-    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
+#from mavenn.src.utils import onehot_encode_array, \
+#    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
+from mavenn.src.dev import x_to_features
+from mavenn.src.validate import validate_seqs
 
 
 @handle_errors
@@ -1116,8 +1118,7 @@ class Model:
 
 
     @handle_errors
-    def x_to_phi(self,
-                 x):
+    def x_to_phi(self, x):
         """
 
         Evaluates the latent phenotype phi on input sequences.
@@ -1139,43 +1140,49 @@ class Model:
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
-        # Make sure all sequences have the proper length
-        L = self.model.L
-        lengths = np.unique([len(seq) for seq in x])
-        check(len(lengths) == 1,
-              f'Input sequences have multiple lengths: {lengths}')
-        check(lengths[0] == L,
-              f'Input sequence length {lengths[0]} does not match L={L}')
+        # Encode sequences as features
+        seqs_ohe, _ = x_to_features(x=x,
+                                    alphabet=self.alphabet,
+                                    model_type=self.gpmap_type)
+        seqs_ohe = seqs_ohe[:, 1:]
 
-        # Make sure sequences in x have only valid characters
-        model_chars = set(self.model.characters)
-        x_chars = set(''.join(x))
-        check(x_chars <= model_chars,
-              f'Input sequences contain the following invalid characters: {x_chars-model_chars}')
+        # # Make sure all sequences have the proper length
+        # L = self.model.L
+        # lengths = np.unique([len(seq) for seq in x])
+        # check(len(lengths) == 1,
+        #       f'Input sequences have multiple lengths: {lengths}')
+        # check(lengths[0] == L,
+        #       f'Input sequence length {lengths[0]} does not match L={L}')
+        #
+        # # Make sure sequences in x have only valid characters
+        # model_chars = set(self.model.characters)
+        # x_chars = set(''.join(x))
+        # check(x_chars <= model_chars,
+        #       f'Input sequences contain the following invalid characters: {x_chars-model_chars}')
 
-        if self.gpmap_type == 'additive':
-            # one-hot encode sequences in batches in a vectorized way
-            seqs_ohe = onehot_encode_array(x, self.model.characters)
-
-        elif self.gpmap_type == 'neighbor':
-            # Generate additive one-hot encoding.
-            X_test_additive = onehot_encode_array(x, self.model.characters, self.ohe_batch_size)
-
-            # Generate neighbor one-hot encoding.
-            X_test_neighbor = _generate_nbr_features_from_sequences(x, self.alphabet)
-
-            # Append additive and neighbor features together.
-            seqs_ohe = np.hstack((X_test_additive, X_test_neighbor))
-
-        elif self.gpmap_type == 'pairwise':
-            # Generate additive one-hot encoding.
-            X_test_additive = onehot_encode_array(x, self.model.characters, self.ohe_batch_size)
-
-            # Generate pairwise one-hot encoding.
-            X_test_pairwise = _generate_all_pair_features_from_sequences(x, self.alphabet)
-
-            # Append additive and pairwise features together.
-            seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
+        # if self.gpmap_type == 'additive':
+        #     # one-hot encode sequences in batches in a vectorized way
+        #     seqs_ohe = onehot_encode_array(x, self.model.characters)
+        #
+        # elif self.gpmap_type == 'neighbor':
+        #     # Generate additive one-hot encoding.
+        #     X_test_additive = onehot_encode_array(x, self.model.characters, self.ohe_batch_size)
+        #
+        #     # Generate neighbor one-hot encoding.
+        #     X_test_neighbor = _generate_nbr_features_from_sequences(x, self.alphabet)
+        #
+        #     # Append additive and neighbor features together.
+        #     seqs_ohe = np.hstack((X_test_additive, X_test_neighbor))
+        #
+        # elif self.gpmap_type == 'pairwise':
+        #     # Generate additive one-hot encoding.
+        #     X_test_additive = onehot_encode_array(x, self.model.characters, self.ohe_batch_size)
+        #
+        #     # Generate pairwise one-hot encoding.
+        #     X_test_pairwise = _generate_all_pair_features_from_sequences(x, self.alphabet)
+        #
+        #     # Append additive and pairwise features together.
+        #     seqs_ohe = np.hstack((X_test_additive, X_test_pairwise))
 
         # Form tf.keras function that will evaluate the value of gauge fixed latent phenotype
         gpmap_function = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])

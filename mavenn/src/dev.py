@@ -5,12 +5,19 @@ import re
 import tempfile
 import os
 import tensorflow as tf
+import pdb
 
 # MAVE-NN imports
-from mavenn.src.validate \
-    import validate_seqs, validate_alphabet, validate_1d_array
+from mavenn.src.validate import validate_seqs, \
+                                validate_alphabet, \
+                                validate_1d_array
 from mavenn.src.error_handling import check, handle_errors
 from mavenn.src.validate import alphabet_dict
+from mavenn.src.reshape import _get_shape_and_return_1d_array
+from mavenn.src.sequence_features import additive_model_features, \
+                                         neighbor_model_features, \
+                                         pairwise_model_features
+
 
 abreviation_dict = {
     'Ala': 'A',
@@ -34,6 +41,148 @@ abreviation_dict = {
     'Tyr': 'Y',
     'Val': 'V'
 }
+
+
+@handle_errors
+def x_to_features(x,
+                  alphabet,
+                  model_type,
+                  batch_size=1000,
+                  max_mem=1E9,
+                  restrict_seqs_to_alphabet=True):
+    """
+    Encodes sequences as sequence features.
+
+    parameters
+    ----------
+    x: (np.ndarray)
+        1D numpy array of sequences. Each element must be a string of
+        identical length L.
+
+    alphabet: (str)
+        Name of alphabet to use.
+
+    model_type: (str)
+        Type of model. Must be one of "additive", "neighbor", "pairwise".
+
+    batch_size: (int)
+        Number of sequences to encode simultaneously.
+
+    max_mem: (int, float)
+        Maximum memory to allocate for output. If output exceeds this memory,
+        an error will be raised.
+
+    restrict_seqs_to_alphabet: (bool)
+        Whether to throw an error if any sequences have a character not in
+        the alphabet. If False, unrecognized characters will be encoded as 0.
+
+    returns
+    -------
+
+    x_bin: (np.array of int8)
+        2D numpy array of binary sequence features. Shape is (N,K), where
+        N is the number of sequences and K is the number of sequence features.
+
+    names: (list)
+        A list of strings, giving the names of the features encoded in x_bin.
+    """
+
+    # Cast x as a 1D array. Get shape in order to reshape output
+    x, in_shape = _get_shape_and_return_1d_array(x)
+    N = len(x)
+
+    # Check model_type
+    valid_model_types = ['additive', 'neighbor', 'pairwise']
+    check(model_type in valid_model_types,
+          f'model_type={repr(model_type)}; must be one of {valid_model_types}.')
+
+    # Check alphabet
+    alphabet = validate_alphabet(alphabet)
+
+    # Get number of characters
+    C = len(alphabet)
+
+    # Check batch_size
+    check(isinstance(batch_size, int),
+          f'type(batch_size)={type(batch_size)}; must be int.')
+    check(batch_size > 0,
+          f'batch_size={batch_size}; must be > 0.')
+
+    # Check max_mem
+    check(isinstance(max_mem, (int, float)),
+          f'type(max_mem)={type(max_mem)}; must be int or float.')
+
+    # Validate sequences
+    x = validate_seqs(x,
+                      alphabet=alphabet,
+                      restrict_seqs_to_alphabet=restrict_seqs_to_alphabet)
+
+    # Get sequence length
+    L = len(x[0])
+
+    # Get the number of features
+    if model_type == 'additive':
+        K = 1 + C*L
+    elif model_type == 'neighbor':
+        K = 1 + C*L + C*C*(L-1)
+    elif model_type == 'pairwise':
+        K = 1 + C*L + C*C*L*(L-1)/2
+    else:
+        assert False, 'This should not happen.'
+    K = int(K)
+
+    # Make sure that max_mem is not exceeded
+
+    check(N * K <= max_mem,
+          f'Aborting; would require storing {N * K:.2g} values in'
+          f'representing x; must be <= max_mem={max_mem:.2g}.')
+
+    # Allocate memory
+    x_bin = np.zeros([N, K], dtype=np.int8)
+
+    # Fill in x_bin by batch
+    start = 0
+    stop = min(start+batch_size, N)
+    while start < N:
+
+        # Take batch of sequences
+        x_batch = x[start:stop]
+
+        # Encode batch
+        if model_type == 'additive':
+            x_batch_bin, names = \
+                additive_model_features(x_batch,
+                                        alphabet,
+                                        restrict_seqs_to_alphabet)
+        elif model_type == 'neighbor':
+            x_batch_bin, names = \
+                neighbor_model_features(x_batch,
+                                        alphabet,
+                                        restrict_seqs_to_alphabet)
+        elif model_type == 'pairwise':
+            x_batch_bin, names = \
+                pairwise_model_features(x_batch,
+                                        alphabet,
+                                        restrict_seqs_to_alphabet)
+        else:
+            assert False, 'This should not happen.'
+
+        # Make sure sizes are correct
+        assert x_batch_bin.shape[1] == K, 'This should not happen.'
+
+        # Store batch
+        x_bin[start:stop] = x_batch_bin
+
+        # Reset batch bounds
+        start = stop
+        stop = min(start+batch_size, N)
+
+    # Reshape encoded sequences and return
+    out_shape = list(in_shape) + [K]
+    x_bin = x_bin.reshape(out_shape)
+
+    return x_bin, names
+
 
 @handle_errors
 def set_seed(seed):
