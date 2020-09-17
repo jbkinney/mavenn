@@ -342,8 +342,8 @@ def _center_matrix(df):
 
 
 @handle_errors
-def fix_gauge_additive_model(sequenceLength,
-                             alphabetSize,
+def fix_gauge_additive_model(L,
+                             C,
                              theta):
     """
     Calculates the hierarchical gauge where constant feature > single-site features.
@@ -352,10 +352,10 @@ def fix_gauge_additive_model(sequenceLength,
 
     parameters
     ----------
-    sequenceLength: (int)
+    L: (int)
         length of one input sequence
 
-    alphabetSize: (int)
+    C: (int)
         number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
 
     theta: (array-like)
@@ -370,7 +370,7 @@ def fix_gauge_additive_model(sequenceLength,
 
     # copy/reshape input parameter vector:
     thetaConstant = theta[0]
-    thetaSinglesite = np.copy(theta[1:]).reshape(sequenceLength, alphabetSize)
+    thetaSinglesite = np.copy(theta[1:]).reshape(L, C)
 
     # mean center columns in position weight matrix
     thetaConstant += sum(thetaSinglesite.mean(axis=1))
@@ -382,8 +382,8 @@ def fix_gauge_additive_model(sequenceLength,
 
 
 @handle_errors
-def fix_gauge_neighbor_model(sequenceLength,
-                             alphabetSize,
+def fix_gauge_neighbor_model(L,
+                             C,
                              theta):
     """
     Calculates the hierarchical gauge where constant feature > single-site features > neighbor features.
@@ -393,10 +393,10 @@ def fix_gauge_neighbor_model(sequenceLength,
 
     parameters
     ----------
-    sequenceLength: (int)
+    L: (int)
         length of one input sequence
 
-    alphabetSize: (int)
+    C: (int)
         number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
 
     theta: (array-like)
@@ -410,11 +410,11 @@ def fix_gauge_neighbor_model(sequenceLength,
     """
 
     # copy/reshape input parameter vector:
-    numSinglesiteFeatures = sequenceLength * alphabetSize
-    numPosPairs = sequenceLength - 1
+    numSinglesiteFeatures = L * C
+    numPosPairs = L - 1
     thetaConstant = theta[0]
-    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(sequenceLength, alphabetSize)
-    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, alphabetSize, alphabetSize)
+    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(L, C)
+    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, C, C)
 
     # apply g1 (given in SI):
     thetaConstant += sum(thetaPairwise.mean(axis=(1, 2)))
@@ -426,9 +426,9 @@ def fix_gauge_neighbor_model(sequenceLength,
     thetaPairwise = thetaPairwise - rowMeans - columnMeans
 
     # apply g2 and g3 (given in SI) to single-site coefficients:
-    for p in range(1, sequenceLength):
+    for p in range(1, L):
         thetaSinglesite[p] = thetaSinglesite[p] + columnMeans[p - 1].ravel()
-    for p in range(sequenceLength - 1):
+    for p in range(L - 1):
         thetaSinglesite[p] = thetaSinglesite[p] + rowMeans[p].ravel()
 
     # apply g4 (given in SI):
@@ -454,18 +454,18 @@ def kronecker_delta(n1, n2):
 
 
 @handle_errors
-def fix_gauge_pairwise_model(sequenceLength,
-                             alphabetSize,
+def fix_gauge_pairwise_model(L,
+                             C,
                              theta):
     """
     Calculates the hierarchical gauge where constant feature > single-site features > pairwise features.
 
     parameters
     ----------
-    sequenceLength: (int)
+    L: (int)
         length of one input sequence
 
-    alphabetSize: (int)
+    C: (int)
         number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
 
     theta: (array-like)
@@ -481,11 +481,11 @@ def fix_gauge_pairwise_model(sequenceLength,
     """"""
 
     # copy/reshape input parameter vector:
-    numSinglesiteFeatures = sequenceLength * alphabetSize
-    numPosPairs = int(sequenceLength * (sequenceLength - 1) / 2)
+    numSinglesiteFeatures = L * C
+    numPosPairs = int(L * (L - 1) / 2)
     thetaConstant = theta[0]
-    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(sequenceLength, alphabetSize)
-    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, alphabetSize, alphabetSize)
+    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(L, C)
+    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, C, C)
 
     # apply g1 (given in SI):
     thetaConstant += sum(thetaPairwise.mean(axis=(1, 2)))
@@ -497,17 +497,17 @@ def fix_gauge_pairwise_model(sequenceLength,
     thetaPairwise = thetaPairwise - rowMeans - columnMeans
 
     # apply g2 and g3 (given in SI) to single-site coefficients:
-    l = [i for i in range(1, sequenceLength)]
+    l = [i for i in range(1, L)]
     splittingPoints = [sum(l[-k:]) for k in range(1,
-                                                  sequenceLength)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
+                                                  L)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
     rowMeans = np.array(np.split(rowMeans, splittingPoints, axis=0),
                         dtype=object)  # reshape rowMeans so that it is indexed as [pos1][pos2-(pos1+1),char1,char2]
     columnMeans = np.array(np.split(columnMeans, splittingPoints, axis=0),
                            dtype=object)  # reshape columnMeans so that it is indexed as [pos1][pos2-(pos1+1),char1,char2]
-    for p in range(sequenceLength):
+    for p in range(L):
         for pp in range(p):
             thetaSinglesite[p] = thetaSinglesite[p] + columnMeans[pp][p - (pp + 1)].ravel()
-        for pp in range(p + 1, sequenceLength):
+        for pp in range(p + 1, L):
             thetaSinglesite[p] = thetaSinglesite[p] + rowMeans[p][pp - (p + 1)].ravel()
 
     # apply g4 (given in SI):

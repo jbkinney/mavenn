@@ -18,7 +18,7 @@ import tensorflow.keras.backend as K
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
-#from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
+from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
 #from mavenn.src.utils import onehot_encode_array, \
 #    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 from mavenn.src.likelihood_layers import *
@@ -27,7 +27,7 @@ from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseM
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
 from mavenn.src.dev import x_to_features
-from mavenn.src.validate import validate_seqs, validate_1d_array
+from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
 
 
 @handle_errors
@@ -134,9 +134,10 @@ class Model:
 
         # set class attributes
         self.x, self.y = x, y
-        self.alphabet = alphabet
-
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
         self.L = L
+
         self.regression_type = regression_type
         self.gpmap_type = gpmap_type
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
@@ -209,7 +210,7 @@ class Model:
 
         # Helper variables used for gauge fixing x_to_phi trait parameters theta below.
         sequence_length = len(self.model.x_train[0])
-        alphabetSize = len(self.model.characters)
+        alphabetSize = self.C
 
         # Non-gauge fixed theta
         theta_all = self.model.model.layers[2].get_weights()[0]    # E.g., could be theta_additive + theta_pairwise
@@ -470,9 +471,9 @@ class Model:
 
         """
 
-        # Helper variables used for gauge fixing x_to_phi trait parameters theta below.
-        sequence_length = len(self.model.x_train[0])
-        alphabetSize = len(self.model.characters)
+        # # Helper variables used for gauge fixing x_to_phi trait parameters theta below.
+        # sequence_length = len(self.model.x_train[0])
+        # alphabetSize = len(self.model.characters)
 
         # Non-gauge fixed theta
         theta_all = self.model.model.layers[2].get_weights()[0]    # E.g., could be theta_additive + theta_pairwise
@@ -898,7 +899,23 @@ class Model:
         # Create vector of theta values
         theta_0 = self.get_nn().layers[2].get_weights()[1]
         theta_vec = self.get_nn().layers[2].get_weights()[0]
-        values = np.insert(theta_vec, 0, theta_0)
+        theta = np.insert(theta_vec, 0, theta_0)
+
+        # Do gauge-fixing
+        if self.gpmap_type == 'additive':
+
+            # compute gauge-fixed, additive model theta
+            theta = fix_gauge_additive_model(self.L, self.C, theta)
+
+        elif self.gpmap_type == 'neighbor':
+
+            # compute gauge-fixed, neighbor model theta
+            theta = fix_gauge_neighbor_model(self.L, self.C, theta)
+
+        elif self.gpmap_type == 'pairwise':
+            pass
+            # compute gauge-fixed, pairwise model theta
+            #theta = fix_gauge_pairwise_model(self.L, self.C, theta)
 
         # Get feature names
         names = self.model.feature_names
@@ -907,7 +924,7 @@ class Model:
         # Store all model parameters in dataframe
         theta_df = pd.DataFrame(
             {'name': names,
-             'value': values
+             'value': theta
             })
 
         # If "all", just return all model parameters

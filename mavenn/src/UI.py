@@ -15,6 +15,7 @@ from mavenn.src.utils import vec_data_to_mat_data
 #    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
 from mavenn.src.dev import x_to_features
+from mavenn.src.validate import validate_alphabet
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -77,7 +78,8 @@ class GlobalEpistasisModel:
         # set class attributes
         self.X, self.y = X, y
         self.gpmap_type = gpmap_type
-        self.alphabet = alphabet
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
         self.ge_heteroskedasticity_order = ge_heteroskedasticity_order
         self.ohe_batch_size = ohe_batch_size
@@ -104,22 +106,6 @@ class GlobalEpistasisModel:
 
         # record sequence length for convenience
         self.L = len(self.x_train[0])
-
-        # set characters
-        if self.alphabet == 'dna':
-            self.characters = ['A', 'C', 'G', 'T']
-        elif self.alphabet == 'rna':
-            self.characters = ['A', 'C', 'G', 'U']
-        elif self.alphabet == 'protein':
-            self.characters = ['A', 'C', 'D', 'E', 'F',
-                               'G', 'H', 'I', 'K', 'L',
-                               'M', 'N', 'P', 'Q', 'R',
-                               'S', 'T', 'V', 'W', 'Y']
-        elif self.alphabet == 'protein*':
-            self.characters = ['A', 'C', 'D', 'E', 'F',
-                               'G', 'H', 'I', 'K', 'L',
-                               'M', 'N', 'P', 'Q', 'R',
-                               'S', 'T', 'V', 'W', 'Y', '*']
 
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \
@@ -383,7 +369,8 @@ class GlobalEpistasisModelMultipleReplicates:
         self.gpmap_type = gpmap_type
         self.test_size = test_size
         self.monotonic = monotonic
-        self.alphabet = alphabet
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
         self.custom_architecture = custom_architecture
         self.ohe_single_batch_size = ohe_single_batch_size
         self.polynomial_order_ll = polynomial_order_ll
@@ -405,17 +392,6 @@ class GlobalEpistasisModelMultipleReplicates:
 
         # clarify that X and y are the training datasets (including validation sets)
         self.x_train, self.y_train = self.X, self.y
-
-        # set characters
-        if self.alphabet == 'dna':
-            self.characters = ['A', 'C', 'G', 'T']
-        elif self.alphabet == 'rna':
-            self.characters = ['A', 'C', 'G', 'U']
-        elif self.alphabet == 'protein':
-            self.characters = ['A', 'C', 'D', 'E', 'F',
-                               'G', 'H', 'I', 'K', 'L',
-                               'M', 'N', 'P', 'Q', 'R',
-                               'S', 'T', 'V', 'W', 'Y']
 
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \
@@ -725,7 +701,8 @@ class MeasurementProcessAgnosticModel:
         self.y = y
         self.ct_n = ct_n
         self.gpmap_type = gpmap_type
-        self.alphabet = alphabet
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
         self.theta_regularization = theta_regularization
         self.ohe_batch_size = ohe_batch_size
 
@@ -756,21 +733,6 @@ class MeasurementProcessAgnosticModel:
         self.all_y = np.arange(self.Y).astype(int)
 
         self.x_train, self.y_train = self.x, self.y
-
-        if self.alphabet == 'dna':
-            self.characters = ['A', 'C', 'G', 'T']
-        elif self.alphabet == 'rna':
-            self.characters = ['A', 'C', 'G', 'U']
-        elif self.alphabet == 'protein':
-            self.characters = ['A', 'C', 'D', 'E', 'F',
-                               'G', 'H', 'I', 'K', 'L',
-                               'M', 'N', 'P', 'Q', 'R',
-                               'S', 'T', 'V', 'W', 'Y']
-        elif self.alphabet == 'protein*':
-            self.characters = ['A', 'C', 'D', 'E', 'F',
-                               'G', 'H', 'I', 'K', 'L',
-                               'M', 'N', 'P', 'Q', 'R',
-                               'S', 'T', 'V', 'W', 'Y', '*']
 
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \
