@@ -18,9 +18,6 @@ import tensorflow.keras.backend as K
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
-from mavenn.src.utils import fix_gauge_additive_model, fix_gauge_neighbor_model, fix_gauge_pairwise_model
-#from mavenn.src.utils import onehot_encode_array, \
-#    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
@@ -28,6 +25,7 @@ from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
 from mavenn.src.dev import x_to_features
 from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
+from mavenn.src.utils import get_gpmap_params_in_cannonical_gauge
 
 
 @handle_errors
@@ -875,18 +873,21 @@ class Model:
 
 
     @handle_errors
-    def get_gpmap_parameters(self, which='all'):
+    def get_gpmap_parameters(self, which='all', fix_gauge=True):
         """
         Returns the G-P map parameters theta.
 
         parameters
         ----------
 
-        which: ("all", "additive", "pairwise")
+        which: ("all", "constant", "additive", "pairwise")
             Which subset of parameters to return. If "additive"
             or "pairwise", additional columns will be added indicating
             the position(s) and character(s) associated with each
             parameter.
+
+        fix_gauge: (bool)
+            Whether or not to fix the gauge.
 
         returns
         -------
@@ -896,40 +897,48 @@ class Model:
             information.
         """
 
-        # Create vector of theta values
-        theta_0 = self.get_nn().layers[2].get_weights()[1]
-        theta_vec = self.get_nn().layers[2].get_weights()[0]
-        theta = np.insert(theta_vec, 0, theta_0)
+        # Check which option
+        which_options = ("all", "constant", "additive", "pairwise")
+        check(which in which_options,
+              f"which={repr(which)}; must be one of {which_options}.")
 
-        # Do gauge-fixing
-        if self.gpmap_type == 'additive':
+        # Check gauge fix
+        check(isinstance(fix_gauge, bool),
+              f"type(fix_gauge)={type(fix_gauge)}; must be bool.")
 
-            # compute gauge-fixed, additive model theta
-            theta = fix_gauge_additive_model(self.L, self.C, theta)
 
-        elif self.gpmap_type == 'neighbor':
+        # Do gauge-fixing if requested
+        if fix_gauge:
 
-            # compute gauge-fixed, neighbor model theta
-            theta = fix_gauge_neighbor_model(self.L, self.C, theta)
+            # Defer to utils function
+            theta_df = get_gpmap_params_in_cannonical_gauge(self)
 
-        elif self.gpmap_type == 'pairwise':
-            pass
-            # compute gauge-fixed, pairwise model theta
-            #theta = fix_gauge_pairwise_model(self.L, self.C, theta)
+        # Otherwise, just report parameters
+        else:
+            # Create vector of theta values
+            theta_0 = self.get_nn().layers[2].get_weights()[1]
+            theta_vec = self.get_nn().layers[2].get_weights()[0]
+            theta = np.insert(theta_vec, 0, theta_0)
 
-        # Get feature names
-        names = self.model.feature_names
-        names = ['theta'+name[1:] for name in names]
+            # Get feature names
+            names = self.model.feature_names
+            names = ['theta'+name[1:] for name in names]
 
-        # Store all model parameters in dataframe
-        theta_df = pd.DataFrame(
-            {'name': names,
-             'value': theta
-            })
+            # Store all model parameters in dataframe
+            theta_df = pd.DataFrame({'name': names, 'value': theta})
 
         # If "all", just return all model parameters
         if which == "all":
             pass
+
+        # If "constant", return only the constant parameter
+        # Don't create any new columns
+        elif which == "constant":
+            # Set pattern for matching and parsing constant parameter
+            pattern = re.compile('^theta_0$')
+            matches = [pattern.match(name) for name in theta_df['name']]
+            ix = [bool(m) for m in matches]
+            theta_df = theta_df[ix]
 
         # If "additive", remove non-additive parameters and
         # create columns "l" and "c"
@@ -961,9 +970,7 @@ class Model:
             theta_df = theta_df[ix]
 
         else:
-            which_options = ("all", "additive", "pairwise")
-            check(False,
-                  f"which={repr(which)}; must be one of {which_options}.")
+            assert False, 'This should not happen.'
 
         # Reset index
         theta_df.reset_index(inplace=True, drop=True)

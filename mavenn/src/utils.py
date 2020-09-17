@@ -342,181 +342,90 @@ def _center_matrix(df):
 
 
 @handle_errors
-def fix_gauge_additive_model(L,
-                             C,
-                             theta):
-    """
-    Calculates the hierarchical gauge where constant feature > single-site features.
-    Model parameters are given in the 1d array theta. Order of coefficients in theta, e.g. ,
-    sequence length = 3 and alphabet = 'AB': theta0,theta1A,theta1B,theta2A,...
+def get_gpmap_params_in_cannonical_gauge(model):
 
-    parameters
-    ----------
-    L: (int)
-        length of one input sequence
+    # Get basic dimension info on model
+    L = model.L
+    C = model.C
+    alphabet = model.alphabet
 
-    C: (int)
-        number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
+    # Get constant and additive parameters separately
+    df_0 = model.get_gpmap_parameters(which='constant', fix_gauge=False)
+    df_lc = model.get_gpmap_parameters(which='additive', fix_gauge=False)
+    if model.gpmap_type != "additive":
+        df_lclc = model.get_gpmap_parameters(which='pairwise', fix_gauge=False)
 
-    theta: (array-like)
-        the parameters of the latent neigbhor model
+    # Make copies for fixed values. Only need name and value columns
+    df_0_new = df_0.copy()[['name', 'value']]
+    df_lc_new = df_lc.copy()[['name', 'value']]
+    if model.gpmap_type != "additive":
+        df_lclc_new = df_lclc.copy()[['name', 'value']]
 
-    returns
-    -------
-    thetaGaugeFixed: (array-like)
-        the gauge fixed neighbor parameters
+    # Compute new constant term
+    df_0_new.loc[:, 'value'] += (1/C) * df_lc.loc[:, 'value'].sum()
+    if model.gpmap_type != "additive":
+        df_0_new.loc[:, 'value'] += (1/(C**2)) * df_lclc.loc[:, 'value'].sum()
 
-    """
+    # Compute new additive terms
+    for l in range(L):
+        ix_l = (df_lc['l'] == l)
+        df_lc_new.loc[ix_l, 'value'] += -(1/C) * df_lc.loc[ix_l, 'value'].sum()
+        if model.gpmap_type != "additive":
+            for c in alphabet:
+                ix_lc = (df_lc['l'] == l) & (df_lc['c'] == c)
+                ix_lcxx = (df_lclc['l1'] == l) & (df_lclc['c1'] == c)
+                ix_xxlc = (df_lclc['l2'] == l) & (df_lclc['c2'] == c)
+                ix_lxxx = (df_lclc['l1'] == l)
+                ix_xxlx = (df_lclc['l2'] == l)
 
-    # copy/reshape input parameter vector:
-    thetaConstant = theta[0]
-    thetaSinglesite = np.copy(theta[1:]).reshape(L, C)
+                df_lc_new.loc[ix_lc, 'value'] += \
+                    (1/C) * df_lclc.loc[ix_lcxx, 'value'].sum() + \
+                    (1/C) * df_lclc.loc[ix_xxlc, 'value'].sum()
+                df_lc_new.loc[ix_lc, 'value'] += \
+                    -(1/C**2) * df_lclc.loc[ix_lxxx, 'value'].sum() + \
+                    -(1/C**2) * df_lclc.loc[ix_xxlx, 'value'].sum()
 
-    # mean center columns in position weight matrix
-    thetaConstant += sum(thetaSinglesite.mean(axis=1))
-    thetaSinglesite = thetaSinglesite - thetaSinglesite.mean(axis=1, keepdims=True)
+    if model.gpmap_type != "additive":
+        for l1 in range(L):
+            for c1 in alphabet:
+                if model.gpmap_type == "neighbor":
+                    l2_range = [l1+1]
+                elif model.gpmap_type == "pairwise":
+                    l2_range = range(l1+1, L)
+                else:
+                    assert False, 'This should not happen'
 
-    thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel()])
+                for l2 in l2_range:
+                    for c2 in alphabet:
+                        ix_lclc = (df_lclc['l1'] == l1) & \
+                                  (df_lclc['c1'] == c1) & \
+                                  (df_lclc['l2'] == l2) & \
+                                  (df_lclc['c2'] == c2)
+                        ix_lxlc = (df_lclc['l1'] == l1) & \
+                                  (df_lclc['l2'] == l2) & \
+                                  (df_lclc['c2'] == c2)
+                        ix_lclx = (df_lclc['l1'] == l1) & \
+                                  (df_lclc['c1'] == c1) & \
+                                  (df_lclc['l2'] == l2)
+                        ix_lxlx = (df_lclc['l1'] == l1) & \
+                                  (df_lclc['l2'] == l2)
 
-    return thetaGaugeFixed
+                        df_lclc_new.loc[ix_lclc, 'value'] += \
+                            -(1/C) * df_lclc.loc[ix_lxlc, 'value'].sum() + \
+                            -(1/C) * df_lclc.loc[ix_lclx, 'value'].sum()
+                        df_lclc_new.loc[ix_lclc, 'value'] += \
+                            (1/C**2) * df_lclc.loc[ix_lxlx, 'value'].sum()
 
-
-@handle_errors
-def fix_gauge_neighbor_model(L,
-                             C,
-                             theta):
-    """
-    Calculates the hierarchical gauge where constant feature > single-site features > neighbor features.
-    Model parameters are given in the 1d array theta. Order of coefficients in theta, e.g. sequence length = 3
-    and alphabet = 'AB':  theta0,theta1A,theta1B,...,theta12AA,theta12AB,theta12BA,theta12BB,
-    theta23AA,theta23AB,theta23BA,theta23BB
-
-    parameters
-    ----------
-    L: (int)
-        length of one input sequence
-
-    C: (int)
-        number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
-
-    theta: (array-like)
-        the parameters of the latent neigbhor model
-
-    returns
-    -------
-    thetaGaugeFixed: (array-like)
-        the gauge fixed neighbor parameters
-
-    """
-
-    # copy/reshape input parameter vector:
-    numSinglesiteFeatures = L * C
-    numPosPairs = L - 1
-    thetaConstant = theta[0]
-    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(L, C)
-    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, C, C)
-
-    # apply g1 (given in SI):
-    thetaConstant += sum(thetaPairwise.mean(axis=(1, 2)))
-    thetaPairwise = thetaPairwise - thetaPairwise.mean(axis=(1, 2), keepdims=True)
-
-    # apply g2 and g3 (given in SI) to pairwise coefficients:
-    rowMeans = np.mean(thetaPairwise, axis=2, keepdims=True)
-    columnMeans = np.mean(thetaPairwise, axis=1, keepdims=True)
-    thetaPairwise = thetaPairwise - rowMeans - columnMeans
-
-    # apply g2 and g3 (given in SI) to single-site coefficients:
-    for p in range(1, L):
-        thetaSinglesite[p] = thetaSinglesite[p] + columnMeans[p - 1].ravel()
-    for p in range(L - 1):
-        thetaSinglesite[p] = thetaSinglesite[p] + rowMeans[p].ravel()
-
-    # apply g4 (given in SI):
-    thetaConstant += sum(thetaSinglesite.mean(axis=1))
-    thetaSinglesite = thetaSinglesite - thetaSinglesite.mean(axis=1, keepdims=True)
-
-    thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel(), thetaPairwise.ravel()])
-
-    return thetaGaugeFixed
-
-
-@handle_errors
-def kronecker_delta(n1, n2):
-    """
-    helper method implementing Kronecker delta,
-    used in fix_gauge_pairwise_model
-    """
-
-    if n1 == n2:
-        return 1
+    # Concatenate into output and return
+    if model.gpmap_type != "additive":
+        df_new = pd.concat([df_0_new, df_lc_new, df_lclc_new])
     else:
-        return 0
+        df_new = pd.concat([df_0_new, df_lc_new])
 
+    # Reset index
+    df_new.reset_index(inplace=True, drop=True)
 
-@handle_errors
-def fix_gauge_pairwise_model(L,
-                             C,
-                             theta):
-    """
-    Calculates the hierarchical gauge where constant feature > single-site features > pairwise features.
-
-    parameters
-    ----------
-    L: (int)
-        length of one input sequence
-
-    C: (int)
-        number of unique bases or amino-acids; e.g. 4 for DNA and 20 for proteins
-
-    theta: (array-like)
-        the parameters of the latent neigbhor model
-
-    returns
-    -------
-    thetaGaugeFixed: (array-like)
-        the gauge fixed pairwise parameters
-
-     """
-
-    """"""
-
-    # copy/reshape input parameter vector:
-    numSinglesiteFeatures = L * C
-    numPosPairs = int(L * (L - 1) / 2)
-    thetaConstant = theta[0]
-    thetaSinglesite = np.copy(theta[1:numSinglesiteFeatures + 1]).reshape(L, C)
-    thetaPairwise = theta[numSinglesiteFeatures + 1:].reshape(numPosPairs, C, C)
-
-    # apply g1 (given in SI):
-    thetaConstant += sum(thetaPairwise.mean(axis=(1, 2)))
-    thetaPairwise = thetaPairwise - thetaPairwise.mean(axis=(1, 2), keepdims=True)
-
-    # apply g2 and g3 (given in SI) to pairwise coefficients:
-    rowMeans = np.mean(thetaPairwise, axis=2, keepdims=True)
-    columnMeans = np.mean(thetaPairwise, axis=1, keepdims=True)
-    thetaPairwise = thetaPairwise - rowMeans - columnMeans
-
-    # apply g2 and g3 (given in SI) to single-site coefficients:
-    l = [i for i in range(1, L)]
-    splittingPoints = [sum(l[-k:]) for k in range(1,
-                                                  L)]  # [(sequenceLength-1), (sequenceLength-1+sequenceLength-2),...,(sequenceLength-1+sequenceLength-2+...+1)]
-    rowMeans = np.array(np.split(rowMeans, splittingPoints, axis=0),
-                        dtype=object)  # reshape rowMeans so that it is indexed as [pos1][pos2-(pos1+1),char1,char2]
-    columnMeans = np.array(np.split(columnMeans, splittingPoints, axis=0),
-                           dtype=object)  # reshape columnMeans so that it is indexed as [pos1][pos2-(pos1+1),char1,char2]
-    for p in range(L):
-        for pp in range(p):
-            thetaSinglesite[p] = thetaSinglesite[p] + columnMeans[pp][p - (pp + 1)].ravel()
-        for pp in range(p + 1, L):
-            thetaSinglesite[p] = thetaSinglesite[p] + rowMeans[p][pp - (p + 1)].ravel()
-
-    # apply g4 (given in SI):
-    thetaConstant += sum(thetaSinglesite.mean(axis=1))
-    thetaSinglesite = thetaSinglesite - thetaSinglesite.mean(axis=1, keepdims=True)
-
-    thetaGaugeFixed = np.concatenate([[thetaConstant], thetaSinglesite.ravel(), thetaPairwise.ravel()])
-
-    return thetaGaugeFixed
+    return df_new
 
 
 class fixDiffeomorphicMode(tensorflow.keras.layers.Layer):

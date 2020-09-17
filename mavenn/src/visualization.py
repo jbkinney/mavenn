@@ -485,6 +485,7 @@ def heatmap_pairwise(df,
         Colorbar object linked to Axes.
     """
 
+    # Rename columns
     df = df.rename(columns={
         l1_col: "l1",
         c1_col: "c1",
@@ -493,6 +494,28 @@ def heatmap_pairwise(df,
         value_col: "value"
     })
     df = df[["l1", "c1", "l2", "c2", "value"]].copy()
+
+    # If user specifies gpmap_type="auto", automatically determine which
+    # type of plot to make
+    if gpmap_type == "auto":
+        if any(df['l2'] - df['l1'] > 1):
+            gpmap_type = "pairwise"
+        else:
+            gpmap_type = "neighbor"
+        print(f'Automatically determined gpmap_type={gpmap_type}.')
+
+    # If user specifies gpmap_type="neighbor", remove non-neighbor entries
+    # from df
+    elif gpmap_type == "neighbor":
+        ix = (df['l2'] == df['l1']+1)
+        df = df[ix].copy()
+
+    # Don't do anything if gpmap_type="pairwise"
+    elif gpmap_type == "pairwise":
+        pass
+
+    else:
+        check(False, f'Unrecognized gpmap_type={repr(gpmap_type)}.')
 
     # Get dims
     L = len(set(list(df['l1']) + list(df['l2'])))
@@ -518,8 +541,14 @@ def heatmap_pairwise(df,
     ix = df["l1"] < df["l2"]
     df = df[ix]
 
-    # Fill in missing values
-    df = df.fillna(missing_values)
+    # Fill in missing values if requested
+    if gpmap_type == 'pairwise':
+        df = df.fillna(missing_values)
+    elif gpmap_type == 'neighbor':
+        ix = (df["l2"] == df["l1"] + 1)
+        df[ix] = df[ix].fillna(missing_values)
+    else:
+        assert False, 'This should not happen.'
 
     # Create subscript columns
     df['sub1'] = df['l1'].astype(str) + ':' + df['c1']
@@ -573,26 +602,9 @@ def heatmap_pairwise(df,
                 ix1or2 = ix1 | ix2
                 df.loc[ix1or2, 'value'] = np.nan
 
-    # If user specifies gpmap_type="auto", automatically determine which
-    # type of plot to make
-    if gpmap_type == "auto":
-        if any(l2 - l1 > 1):
-            gpmap_type = "pairwise"
-        else:
-            gpmap_type = "neighbor"
-
-    # If user specifies gpmap_type="neighbor", remove non-neighbor entries
-    # from df
-    elif gpmap_type == "neighbor":
-        df = df[l2 - l1 == 1].copy()
-
-    # Don't do anything if gpmap_type="pairwise"
-    elif gpmap_type == "pairwise":
-        pass
-
-    # Otherwise, throw an error
-    else:
-        check(False, f"Invalid gpmap_type={gpmap_type}")
+    # # Otherwise, throw an error
+    # else:
+    #     check(False, f"Invalid gpmap_type={gpmap_type}")
 
     # Pivot to matrix LCxLC in size
     mat_df = df.pivot(index="sub1", columns="sub2", values="value")
