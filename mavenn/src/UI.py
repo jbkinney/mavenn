@@ -26,7 +26,7 @@ class GlobalEpistasisModel:
     attributes
     ----------
 
-    X: (array-like of str)
+    x: (array-like of str)
         Sequence inputs; can represent DNA, RNA, or protein sequences, as
         specified by the alphabet attribute.
 
@@ -65,7 +65,7 @@ class GlobalEpistasisModel:
     """
 
     def __init__(self,
-                 X,
+                 x,
                  y,
                  alphabet,
                  gpmap_type,
@@ -76,7 +76,7 @@ class GlobalEpistasisModel:
                  eta_regularization):
 
         # set class attributes
-        self.X, self.y = X, y
+        self.x, self.y = x, y
         self.gpmap_type = gpmap_type
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
@@ -102,7 +102,7 @@ class GlobalEpistasisModel:
         self._input_checks()
 
         # clarify that X and y are the training datasets (including validation sets)
-        self.x_train, self.y_train = self.X, self.y
+        self.x_train, self.y_train = self.x, self.y
 
         # record sequence length for convenience
         self.L = len(self.x_train[0])
@@ -132,20 +132,20 @@ class GlobalEpistasisModel:
         # validate input df
         #self.df = validate_input(self.df)
 
-        check(isinstance(self.X, (list, np.ndarray)),
-              'type(X) = %s must be of type list or np.array' % type(self.X))
-        self.X = np.array(self.X)
+        check(isinstance(self.x, (list, np.ndarray)),
+              'type(X) = %s must be of type list or np.array' % type(self.x))
+        self.x = np.array(self.x)
 
-        check(isinstance(self.X[0], str),
-              'type(x_train) = %s must be of type str' % type(self.X))
+        check(isinstance(self.x[0], str),
+              'type(x_train) = %s must be of type str' % type(self.x))
 
         check(isinstance(self.y, (list, np.ndarray)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
         self.y = np.array(self.y)
 
-        check(len(self.X) == len(self.y),
+        check(len(self.x) == len(self.y),
               'length of inputs (X, y) must be equal')
-        self.num_measurements = len(self.X)
+        self.num_measurements = len(self.x)
 
         # check that ge_nonlinearity_monotonic is a boolean.
         check(isinstance(self.ge_nonlinearity_monotonic, (bool, np.bool, np.bool_)), 'ge_nonlinearity_monotonic must be a boolean')
@@ -303,6 +303,7 @@ class GlobalEpistasisModel:
 
         return y_hat
 
+
 #TODO: @handle_errors should be moved to each method, right?
 @handle_errors
 class GlobalEpistasisModelMultipleReplicates:
@@ -314,7 +315,7 @@ class GlobalEpistasisModelMultipleReplicates:
     attributes
     ----------
 
-    X: (array-like of str)
+    x: (array-like of str)
         Sequence inputs; can represent DNA, RNA, or protein sequences, as
         specified by the alphabet attribute.
 
@@ -354,7 +355,7 @@ class GlobalEpistasisModelMultipleReplicates:
     """
 
     def __init__(self,
-                 X,
+                 x,
                  y,
                  gpmap_type,
                  test_size,
@@ -365,7 +366,7 @@ class GlobalEpistasisModelMultipleReplicates:
                  polynomial_order_ll):
 
         # set class attributes
-        self.X, self.y = X, y
+        self.x, self.y = x, y
         self.gpmap_type = gpmap_type
         self.test_size = test_size
         self.monotonic = monotonic
@@ -391,7 +392,7 @@ class GlobalEpistasisModelMultipleReplicates:
         self._input_checks()
 
         # clarify that X and y are the training datasets (including validation sets)
-        self.x_train, self.y_train = self.X, self.y
+        self.x_train, self.y_train = self.x, self.y
 
         # Encode sequences as features
         self.input_seqs_ohe, self.feature_names = \
@@ -407,6 +408,7 @@ class GlobalEpistasisModelMultipleReplicates:
 
     # CONTINE CODE REVIEW BELOW (date: 20.07.20)
 
+
     def _input_checks(self):
 
         """
@@ -415,9 +417,9 @@ class GlobalEpistasisModelMultipleReplicates:
         # validate input df
         #self.df = validate_input(self.df)
 
-        check(isinstance(self.X, (list, np.ndarray)),
-              'type(X) = %s must be of type list or np.array' % type(self.X))
-        self.X = np.array(self.X)
+        check(isinstance(self.x, (list, np.ndarray)),
+              'type(X) = %s must be of type list or np.array' % type(self.x))
+        self.x = np.array(self.x)
 
         check(isinstance(self.y, (list, np.ndarray)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
@@ -431,6 +433,7 @@ class GlobalEpistasisModelMultipleReplicates:
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
               'x_to_phi = %s; must be "additive", "neighbor", or "pairwise"' %
               self.gpmap_type)
+
 
     def define_model(self,
                      noise_model,
@@ -746,6 +749,7 @@ class MeasurementProcessAgnosticModel:
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train)
 
+
     def _input_checks(self):
 
         """
@@ -785,6 +789,7 @@ class MeasurementProcessAgnosticModel:
 
         # check that ohe_batch_size is > 0
         check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
+
 
     def define_model(self,
                      na_hidden_nodes=10):
@@ -839,6 +844,7 @@ class MeasurementProcessAgnosticModel:
         self.model = model
         self.na_hidden_nodes = na_hidden_nodes
         return model
+
 
     def p_of_all_y_given_phi(self,
                              phi):

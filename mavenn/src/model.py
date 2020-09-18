@@ -3,17 +3,15 @@ import numpy as np
 import pandas as pd
 import re
 import pdb
+import pickle
+from collections.abc import Iterable
 
 # Tensorflow imports
 import tensorflow as tf
-import tensorflow.keras
-from tensorflow.keras.optimizers import Optimizer
-#from tensorflow.keras.optimizers import Adam
-#from tensorflow.keras.optimizers import *
+import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model as kerasFunctionalModel
 from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
-import tensorflow.keras.backend as K
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
@@ -106,6 +104,7 @@ class Model:
                  alphabet,
                  regression_type,
                  gpmap_type='additive',
+                 ct_n=None,
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
@@ -113,8 +112,12 @@ class Model:
                  na_hidden_nodes=50,
                  theta_regularization=0.01,
                  eta_regularization=0.01,
-                 ohe_batch_size=50000,
-                 ct_n=None):
+                 ohe_batch_size=50000):
+
+        # Get dictionary of args passed to constructor
+        # This is needed for saving models.
+        self.arg_dict = locals()
+        self.arg_dict.pop('self')
 
         # Check x
         x = validate_1d_array(x)
@@ -131,7 +134,8 @@ class Model:
         y = validate_1d_array(y)
 
         # set class attributes
-        self.x, self.y = x, y
+        self.x = x
+        self.y = y
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
         self.L = L
@@ -160,7 +164,7 @@ class Model:
         # choose model based on regression_type
         if regression_type == 'GE':
 
-            self.model = GlobalEpistasisModel(X=self.x,
+            self.model = GlobalEpistasisModel(x=self.x,
                                               y=self.y,
                                               gpmap_type=self.gpmap_type,
                                               ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
@@ -187,264 +191,6 @@ class Model:
             self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
 
 
-    @handle_errors
-    def gauge_fix_model_multiple_replicates(self):
-
-        """
-        Method that gauge fixes the model (x_to_phi+measurement).
-
-
-        parameters
-        ----------
-        None
-
-        returns
-        -------
-        None
-
-        """
-
-        # TODO disable this method if user uses custom architecture
-
-        # Helper variables used for gauge fixing x_to_phi trait parameters theta below.
-        sequence_length = len(self.model.x_train[0])
-        alphabetSize = self.C
-
-        # Non-gauge fixed theta
-        theta_all = self.model.model.layers[2].get_weights()[0]    # E.g., could be theta_additive + theta_pairwise
-        theta_nought = self.model.model.layers[2].get_weights()[1]
-        theta = np.hstack((theta_nought, theta_all.ravel()))
-
-        # JBK: all gauge fixing has been disabled.
-        # This should be done only in get_gpmap_parameters()
-        theta_gf = theta
-
-        # The following conditionals gauge fix the x_to_phi parameters depending of the value of x_to_phi
-        # if self.gpmap_type == 'additive':
-        #
-        #     # compute gauge-fixed, additive model theta
-        #     theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
-        #
-        # elif self.gpmap_type == 'neighbor':
-        #
-        #     # compute gauge-fixed, neighbor model theta
-        #     theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
-        #
-        # elif self.gpmap_type == 'pairwise':
-        #
-        #     # compute gauge-fixed, pairwise model theta
-        #     theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
-
-        # The following variable unfixed_gpmap is a tf.keras backend function
-        # which computes the non-gauge fixed value of the hidden node phi for a given input
-        # this is  used to compute diffeomorphic scaling factor.
-        unfixed_gpmap = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
-
-        # compute unfixed phi using the function unfixed_gpmap with training sequences.
-        unfixed_phi = unfixed_gpmap([self.model.input_seqs_ohe])
-
-        # Compute diffeomorphic scaling factor which is used to rescale the parameters theta
-        diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
-        diffeomorphic_mean = np.mean(unfixed_phi[0])
-
-        # diffeomorphic_mode fix thetas
-        theta_nought_gf = theta_gf[0]-diffeomorphic_mean
-        thet_gf_vec = theta_gf[1:]/diffeomorphic_std
-
-        # Default neural network weights that are non gauge fixed.
-        # This will be used for updating the weights of the measurement
-        # network after the gauge fixed neural network is define below.
-        temp_weights = [layer.get_weights() for layer in self.model.model.layers]
-
-        # define gauge fixed model
-        if self.regression_type == 'GE':
-
-            if len(self.model.y_train.shape) == 1:
-                number_of_replicate_targets = 1
-            else:
-                number_of_replicate_targets = min(self.model.y_train.shape)
-
-            print('number of y nodes to add: ', number_of_replicate_targets)
-            # create input layer with nodes allowing sequence to be input and also
-            # target labels to be input, together.
-            #number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y_train.shape[0]
-            number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + number_of_replicate_targets
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
-
-            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
-                                    output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
-
-            replicates_input = []
-
-            #number_of_replicate_targets = self.y_train.shape[0]
-
-            for replicate_layer_index in range(number_of_replicate_targets):
-
-                # build up lambda layers, on step at a time, which will be
-                # fed to each of the measurement blocks
-                print(replicate_layer_index, replicate_layer_index + 1)
-
-                temp_replicate_layer = Lambda(lambda x:
-                                              x[:, len(self.model.input_seqs_ohe[0])+replicate_layer_index:
-                                              len(self.model.input_seqs_ohe[0]) + replicate_layer_index + 1],
-                                              output_shape=((1,)), trainable=False,
-                                              name='Labels_input_'+str(replicate_layer_index))(inputTensor)
-
-                replicates_input.append(temp_replicate_layer)
-
-            # labels_input_rep1 = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
-            #                       output_shape=((1, )), trainable=False, name='Labels_input_1')(inputTensor)
-            #
-            # labels_input_rep2 = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0])+1:len(self.input_seqs_ohe[0]) + 2],
-            #                            output_shape=((1,)), trainable=False, name='Labels_input_2')(inputTensor)
-
-            # sequence to latent phenotype
-            #phi = Dense(1, name='phi')(sequence_input)
-
-        elif self.regression_type == 'MPA':
-
-            number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
-
-            sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
-                                    output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
-            labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + self.model.y_train.shape[1]],
-                                  output_shape=((1,)), trainable=False, name='Labels_input')(inputTensor)
-
-        # same phi as before
-        phi = Dense(1, name='phiPrime')(sequence_input)
-        # fix diffeomorphic scale
-        #phi_scaled = fixDiffeomorphicMode()(phi)
-        phiOld = Dense(1, name='phi')(phi)
-
-        # implement monotonicity constraints if GE regression
-        if self.regression_type == 'GE':
-
-            if self.ge_nonlinearity_monotonic==True:
-
-                # phi feeds into each of the replicate intermediate layers
-                intermediate_layers = []
-                for intermediate_index in range(number_of_replicate_targets):
-
-                    temp_intermediate_layer = Dense(self.ge_nonlinearity_hidden_nodes,
-                                                    activation='sigmoid',
-                                                    kernel_constraint=nonneg(),
-                                                    name='intermediate_bbox_'+str(intermediate_index))(phiOld)
-
-                    intermediate_layers.append(temp_intermediate_layer)
-
-                yhat_layers = []
-                for yhat_index in range(number_of_replicate_targets):
-
-                    temp_yhat_layer = Dense(1, kernel_constraint=nonneg(),
-                                            name='y_hat_rep_'+str(yhat_index))(intermediate_layers[yhat_index])
-                    yhat_layers.append(temp_yhat_layer)
-
-                # intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid',
-                #                            kernel_constraint=nonneg())(phiOld)
-
-                # y_hat = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
-
-                # concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
-
-                concatenateLayer_rep_input = []
-
-                for concat_index in range(number_of_replicate_targets):
-
-                    temp_concat = Concatenate(name='yhat_and_rep_'+str(concat_index))\
-                        ([yhat_layers[concat_index], replicates_input[concat_index]])
-
-                    concatenateLayer_rep_input.append(temp_concat)
-
-                likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
-
-                #ll_rep1 = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep1)
-                #ll_rep2 = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep2)
-
-                ll_rep_layers = []
-                for ll_index in range(number_of_replicate_targets):
-                    temp_ll_layer = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer_rep_input[ll_index])
-                    ll_rep_layers.append(temp_ll_layer)
-
-
-                #outputTensor = [ll_rep1, ll_rep2]
-                outputTensor = ll_rep_layers
-
-                # dynamic likelihood class instantiation by the globals dictionary
-                # manual instantiation can be done as follows:
-                # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
-
-                # likelihoodClass = globals()[self.p_of_all_y_given_phi + 'LikelihoodLayer']
-                # outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
-
-            else:
-                intermediateTensor = Dense(self.ge_nonlinearity_hidden_nodes, activation='sigmoid')(phiOld)
-                y_hat = Dense(1)(intermediateTensor)
-
-                concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
-
-                likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
-                outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
-
-        elif self.regression_type == 'MPA':
-
-            #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-            #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
-
-            intermediateTensor = Dense(self.ge_nonlinearity_hidden_nodes, activation='sigmoid')(phiOld)
-            yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
-
-            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-            outputTensor = MPALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
-
-
-        # create the gauge-fixed model:
-        model_gf = kerasFunctionalModel(inputTensor, outputTensor)
-
-        # set new model theta weights
-        theta_nought_gf = theta_nought_gf
-        model_gf.layers[2].set_weights([thet_gf_vec.reshape(-1, 1), np.array([theta_nought_gf])])
-
-        # update weights as sigma*phi+mean, which ensures predictions (y_hat) don't change from
-        # the diffeomorphic scaling.
-        model_gf.layers[3].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
-
-        for layer_index in range(4, len(model_gf.layers)):
-            model_gf.layers[layer_index].set_weights(temp_weights[layer_index-1])
-
-        # Update default neural network model with gauge-fixed model
-        self.model.model = model_gf
-
-        # The theta_gf attribute now contains gauge fixed parameters, and
-        # can be obtained in raw form by accessing this attribute or can be
-        # obtained a readable format by using the method return_theta
-        self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
-
-
-    @handle_errors
-    def fix_gauge(self, gauge="hierarchichal", wt_sequence=None):
-        """
-        Gauge-fixes the G-P map parameters $\theta$
-
-        parameters
-        ----------
-        gauge: (string)
-            Gauge to use. Options are "hierarchichal" or "wild-type".
-
-        wt_sequence: (string)
-            Sequence to use when adopting the wild-type gauge.
-
-        returns
-        -------
-        None
-        """
-        # TODO: Fill out this function. If user calls this method and wants
-        # to switch to WT gauge, if parameters are HA, switch parameters to WT, and vice versa
-        self.gauge = gauge
-        self.wt_sequence = wt_sequence
-        pass
-
-
     # TODO: put underscore in front on function name
     @handle_errors
     def gauge_fix_model(self,
@@ -458,10 +204,12 @@ class Model:
         parameters
         ----------
         load_model: (bool)
-            If true, then this variable specifies that this method was used while calling load(),
-            else, this method is called during fit. The purpose of calling this model during load
-            is to ensure that it has the appropriate model architecture. However this variable
-            ensures that the theta parameters aren't rescaled again.
+            If True, then this variable specifies that this method
+            was used while calling load(). If False, this method is called
+            during fit. The purpose of calling this model during load
+            is to ensure that it has the appropriate model architecture.
+            However this variable ensures that the theta parameters aren't
+            rescaled again.
 
         returns
         -------
@@ -469,12 +217,8 @@ class Model:
 
         """
 
-        # # Helper variables used for gauge fixing x_to_phi trait parameters theta below.
-        # sequence_length = len(self.model.x_train[0])
-        # alphabetSize = len(self.model.characters)
-
         # Non-gauge fixed theta
-        theta_all = self.model.model.layers[2].get_weights()[0]    # E.g., could be theta_additive + theta_pairwise
+        theta_all = self.model.model.layers[2].get_weights()[0]
         theta_nought = self.model.model.layers[2].get_weights()[1]
         theta = np.hstack((theta_nought, theta_all.ravel()))
 
@@ -482,42 +226,32 @@ class Model:
         # Move gauge fixing to Model.get_gpmap_parameters()
         theta_gf = theta
 
-        # # The following conditionals gauge fix the x_to_phi parameters depending of the value of x_to_phi
-        # if self.gpmap_type == 'additive':
-        #
-        #     # compute gauge-fixed, additive model theta
-        #     theta_gf = fix_gauge_additive_model(sequence_length, alphabetSize, theta)
-        #
-        # elif self.gpmap_type == 'neighbor':
-        #
-        #     # compute gauge-fixed, neighbor model theta
-        #     theta_gf = fix_gauge_neighbor_model(sequence_length, alphabetSize, theta)
-        #
-        # elif self.gpmap_type == 'pairwise':
-        #
-        #     # compute gauge-fixed, pairwise model theta
-        #     theta_gf = fix_gauge_pairwise_model(sequence_length, alphabetSize, theta)
-
         # The following variable unfixed_gpmap is a tf.keras backend function
-        # which computes the non-gauge fixed value of the hidden node phi for a given input
-        # this is  used to compute diffeomorphic scaling factor.
-        unfixed_gpmap = K.function([self.model.model.layers[1].input], [self.model.model.layers[2].output])
+        # which computes the non-gauge fixed value of the hidden node phi for
+        # a given input.  This is  used to compute diffeomorphic scaling factor.
+        unfixed_gpmap = K.function([
+            self.model.model.layers[1].input],
+            [self.model.model.layers[2].output])
 
-        # compute unfixed phi using the function unfixed_gpmap with training sequences.
+        # compute unfixed phi using the function unfixed_gpmap with
+        # training sequences.
         unfixed_phi = unfixed_gpmap([self.model.input_seqs_ohe])
 
-        # if load model is false, record the following attributes which will be used when loading model
+        # if load model is false, record the following attributes which will
+        # be used when loading model
         if load_model==False:
 
-            # Compute diffeomorphic scaling factor which is used to rescale the parameters theta
+            # Compute diffeomorphic scaling factor which is used to rescale
+            # the parameters theta
             diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
             diffeomorphic_mean = np.mean(unfixed_phi[0])
 
-            # ensure ymean is an increasing function of phi (change made on 09/04/2020)
+            # ensure ymean is an increasing function of phi
             if self.regression_type == 'MPA':
                 # compute for training phi
 
-                # Note, can't use function self.na_p_of_all_y_given_phi since model isn't gauge fixed yet.
+                # Note, can't use function self.na_p_of_all_y_given_phi
+                # since model isn't gauge fixed yet.
                 na_model_input = Input((1,))
                 next_input = na_model_input
 
@@ -531,7 +265,9 @@ class Model:
                     next_input = layer(next_input)
 
                 # Form gauge fixed GE_nonlinearity model
-                temp_na_model = kerasFunctionalModel(inputs=na_model_input, outputs=next_input)
+                temp_na_model = kerasFunctionalModel(
+                    inputs=na_model_input,
+                    outputs=next_input)
 
                 # compute the value of the nonlinearity for a given phi
 
@@ -543,24 +279,29 @@ class Model:
 
             elif self.regression_type == 'GE':
 
-                r = np.corrcoef(unfixed_phi[0].ravel(), self.model.y_train.ravel())[0, 1]
+                r = np.corrcoef(unfixed_phi[0].ravel(),
+                                self.model.y_train.ravel())[0, 1]
 
-            # this ensures phi is positively correlated with y_mean or y_train (MPA, GE respectively).
+            # this ensures phi is positively correlated with y_mean
+            # or y_train (MPA, GE respectively).
             if r < 0:
                 diffeomorphic_std = -diffeomorphic_std
 
-            # these attributes will also be saved in the saved model config file.
+            # these attributes will also be saved in the
+            # saved model config file.
             self.diffeomorphic_mean = diffeomorphic_mean
             self.diffeomorphic_std = diffeomorphic_std
 
 
-        # if this method is called after fit, scale the parameters to fix diffeomorphic mode.
+        # if this method is called after fit, scale the parameters
+        # to fix diffeomorphic mode.
         if load_model==False:
             # diffeomorphic_mode fix thetas
             theta_nought_gf = theta_gf[0]-diffeomorphic_mean
             theta_nought_gf/=diffeomorphic_std
             thet_gf_vec = theta_gf[1:]/diffeomorphic_std
-        # if model is called during model load, then parameters were already scaled.
+        # if model is called during model load, then parameters were
+        # already scaled.
         else:
             theta_nought_gf = theta_gf[0]
             thet_gf_vec = theta_gf[1:]
@@ -568,14 +309,16 @@ class Model:
         # Default neural network weights that are non gauge fixed.
         # This will be used for updating the weights of the measurement
         # network after the gauge fixed neural network is define below.
-        temp_weights = [layer.get_weights() for layer in self.model.model.layers]
+        temp_weights = [layer.get_weights() for layer
+                            in self.model.model.layers]
 
         # define gauge fixed model
 
         if self.regression_type == 'GE':
 
-            number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1     # the plus 1 indicates the node for y
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+            number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1
+            inputTensor = Input((number_input_layer_nodes,),
+                                name='Sequence_labels_input')
 
             sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
                                     output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
@@ -593,8 +336,6 @@ class Model:
                                     output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
             labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + self.model.y_train.shape[1]],
                                   output_shape=((1,)), trainable=False, name='Labels_input')(inputTensor)
-
-
 
         # same phi as before
         phi = Dense(1,
@@ -1607,7 +1348,9 @@ class Model:
 
 
     def save(self,
-             filename):
+             filename,
+             N_save=100,
+             verbose=True):
 
         """
         Method that will save the mave-nn model
@@ -1617,63 +1360,47 @@ class Model:
         filename: (str)
             filename of the saved model.
 
+        N_save: (int)
+            Number of training observations to store. Set to np.inf
+            to store all training examples
+
+        verbose: (bool)
+            Whether to provide user feedback.
+
         returns
         -------
         None
 
         """
 
+        # Determinehow much data to keep
+        N_save = min(len(self.x), N_save)
+
+        # Subsample x and y
+        self.arg_dict['x'] = self.x[:N_save].copy()
+        self.arg_dict['y'] = self.y[:N_save].copy()
+
+        # Subsample ct_n if set
+        if isinstance(self.ct_n, np.ndarray):
+            self.arg_dict['ct_n'] = self.ct_n[:N_save].copy()
+
+        # Create config_dict
+        config_dict = {
+            'model_kwargs': self.arg_dict,
+            'diffeomorphic_mean': self.diffeomorphic_mean,
+            'diffeomorphic_std': self.diffeomorphic_std
+        }
+
+        # Save config_dict as pickle file
+        filename_pickle = filename + '.pickle'
+        with open(filename_pickle, 'wb') as f:
+            pickle.dump(config_dict, f)
+
         # save weights
-        self.get_nn().save_weights(filename + '.h5')
+        filename_h5 = filename + '.h5'
+        self.get_nn().save_weights(filename_h5)
 
-        if self.regression_type=='GE':
-
-            # get GE model configuration which will be used to reload the model
-            GE_dict = self.__dict__.copy()
-
-            # keep a single instance of training data, used for initalizing model.Model
-            single_x = GE_dict['x'][0]
-            single_y = GE_dict['y'][0]
-
-            # remove all training data ...
-            GE_dict.pop('x', None)
-            GE_dict.pop('y', None)
-
-            # retain a single training instance for quick loading
-            GE_dict['x'] = single_x
-            GE_dict['y'] = single_y
-
-            # save these parameters to ensure
-            GE_dict['diffeomorphic_mean'] = self.diffeomorphic_mean
-            GE_dict['diffeomorphic_std'] = self.diffeomorphic_std
-
-            # save model configuration
-            pd.DataFrame(GE_dict, index=[0]).to_csv(filename+'.csv')
-        else:
-            NAR_dict = self.__dict__.copy()
-
-            # store a single example
-            single_x = NAR_dict['x'][0]
-            #single_y = [NAR_dict['y'][0]]
-            single_y = self.model.y_train[0]
-
-            single_ct = [NAR_dict['ct_n'][0]]
-
-            # remove training data ...
-            NAR_dict.pop('x', None)
-            NAR_dict.pop('y', None)
-            NAR_dict.pop('ct_n', None)
-
-            NAR_dict['diffeomorphic_mean'] = self.diffeomorphic_mean
-            NAR_dict['diffeomorphic_std'] = self.diffeomorphic_std
-
-            # and replace with single examples for quick loading
-            NAR_dict['x'] = single_x
-            NAR_dict['y'] = [single_y]
-            NAR_dict['ct_n'] = [single_ct]
-
-            pd.DataFrame(NAR_dict, index=[0]).to_csv(filename + '.csv')
-
-
-
-
+        if verbose:
+            print(f'Model saved to these files:\n'
+                  f'\t{filename_pickle}\n'
+                  f'\t{filename_h5}')

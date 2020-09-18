@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 import mavenn
+import pdb
+import pickle
 
 # scikit-learn imports (for one-hot encoding)
 from sklearn.preprocessing import LabelEncoder
@@ -984,7 +986,7 @@ class CauchyNoiseModel:
 
 
 @handle_errors
-def load(filename):
+def load(filename, verbose=True):
 
         """
         Method that will load a mave-nn model
@@ -992,7 +994,10 @@ def load(filename):
         parameters
         ----------
         filename: (str)
-            filename of saved model.
+            Filename of saved model.
+
+        verbose: (bool)
+            Whether to provide user feedback.
 
         returns
         -------
@@ -1001,106 +1006,33 @@ def load(filename):
 
         """
 
-        load_config = pd.read_csv(filename + '.csv', index_col=[0])
+        # Load model
+        filename_pickle = filename + '.pickle'
+        with open(filename_pickle, 'rb') as f:
+            config_dict = pickle.load(f)
 
-        # validate load config...
-        check(len(load_config) >= 1, 'Length of loaded model file must be at least 1.')
+        # Create model object
+        loaded_model = mavenn.Model(**config_dict['model_kwargs'])
 
-        # get regression_type variable to determine whether GE or MPA regression.
-        regression_type = load_config['regression_type'].values[0]
+        # Fix diffeomorphic modes; creates a new layer, so is necessary
+        loaded_model.gauge_fix_model(
+            load_model=True,
+            diffeomorphic_mean=config_dict['diffeomorphic_mean'],
+            diffeomorphic_std=config_dict['diffeomorphic_std']
+            )
 
-        if regression_type=='GE':
+        # set weights using a trained model.
+        filename_h5 = filename + '.h5'
+        loaded_model.get_nn().load_weights(filename_h5)
 
-            # load configuration file
-            load_config = pd.read_csv(filename+'.csv', index_col=[0])
+        # Provide feedback
+        if verbose:
+            print(f'Model loaded from these files:\n'
+                  f'\t{filename_pickle}\n'
+                  f'\t{filename_h5}')
 
-            # convert it to a dictionary
-            #config_dict = load_config[load_config.columns[2:]].loc[0].to_dict()
-            config_dict = load_config.loc[0].to_dict()
-
-            x_train = load_config['x'].values
-            y_train = load_config['y'].values
-
-            diffeomorphic_mean = load_config['diffeomorphic_mean'].values
-            diffeomorphic_std = load_config['diffeomorphic_std'].values
-
-            # delete keys not required for model loading
-            config_dict.pop('x', None)
-            config_dict.pop('y', None)
-            config_dict.pop('L', None)
-            config_dict.pop('model', None)
-            config_dict.pop('diffeomorphic_mean', None)
-            config_dict.pop('diffeomorphic_std', None)
-            config_dict.pop('define_model', None)
-            config_dict.pop('learning_rate', None)
-
-            # create object for loaded model
-            loaded_model = mavenn.Model(x=x_train,
-                                        y=y_train,
-                                        **config_dict)
-
-            # this gauge fixing method merely sets up the correct
-            # architecture for the neural network, for which the
-            # weights can then be set using a trained model
-            loaded_model.gauge_fix_model(load_model=True,
-                                         diffeomorphic_mean=diffeomorphic_mean[0],
-                                         diffeomorphic_std=diffeomorphic_std[0])
-
-            # set weights using a trained model.
-            loaded_model.get_nn().load_weights(filename+'.h5')
-
-            return loaded_model
-        else:
-
-            load_config = pd.read_csv(filename + '.csv', index_col=[0], keep_default_na=False)
-
-            # single_y = load_config['y'].values[0]
-            # single_y = single_y[1:len(single_y)-2].split('.')
-            # single_y = [int(i) for i in single_y]
-            # single_y = np.array(single_y)
-
-            single_y = load_config['y'].values[0]
-            single_y = single_y[1:len(single_y) - 1].split(' ')
-            single_y = [int(i) for i in single_y]
-            single_y = np.array(single_y)
-
-            single_x = load_config['x'].values
-
-            single_ct_n = load_config['ct_n'][0]
-            single_ct_n = [int(float(single_ct_n[1:len(single_ct_n) - 1]))]
-
-            diffeomorphic_mean = load_config['diffeomorphic_mean'].values
-            diffeomorphic_std = load_config['diffeomorphic_std'].values
-
-            config_dict = load_config.loc[0].to_dict()
-
-            config_dict.pop('x', None)
-            config_dict.pop('y', None)
-            config_dict.pop('ct_n', None)
-            config_dict.pop('model', None)
-            config_dict.pop('L', None)
-            config_dict.pop('diffeomorphic_mean', None)
-            config_dict.pop('diffeomorphic_std', None)
-            config_dict.pop('define_model', None)
-            config_dict.pop('learning_rate', None)
-
-            # create object for loaded model
-            loaded_model = mavenn.Model(x=single_x,
-                                        y=single_y,
-                                        ct_n=single_ct_n,
-                                        **config_dict)
-
-            # this gauge fixing method merely sets up the correct
-            # architecture for the neural network, for which the
-            # weights can then be set using a trained model
-            loaded_model.gauge_fix_model(load_model=True,
-                                         diffeomorphic_mean=diffeomorphic_mean[0],
-                                         diffeomorphic_std=diffeomorphic_std[0])
-
-            # set weights using a trained model.
-            loaded_model.get_nn().load_weights(filename + '.h5')
-
-            return loaded_model
+        # Return model
+        return loaded_model
 
 
 @handle_errors

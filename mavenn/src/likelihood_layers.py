@@ -5,11 +5,9 @@ import tensorflow.keras.backend as K
 import tensorflow.keras
 import tensorflow as tf
 
-eps = 1E-10 #np.finfo(float).eps
-#max_exp_arg = 30
+eps = 1E-10
 pi = np.pi
 e = np.exp(1)
-#nan_penalty = 10
 
 class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
