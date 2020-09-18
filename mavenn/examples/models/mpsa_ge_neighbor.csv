@@ -1,2 +1,0 @@
-,alphabet,regression_type,gpmap_type,ge_nonlinearity_monotonic,ge_nonlinearity_hidden_nodes,ge_noise_model_type,ge_heteroskedasticity_order,na_hidden_nodes,theta_regularization,eta_regularization,ohe_batch_size,ct_n,model,define_model,learning_rate,diffeomorphic_mean,diffeomorphic_std,x,y
-0,dna,GE,neighbor,True,50,Gaussian,0,50,0.01,0.01,50000,,<mavenn.src.UI.GlobalEpistasisModel object at 0x144588590>,<tensorflow.python.keras.engine.functional.Functional object at 0x1449eab90>,0.002,-3.8931935,2.1843083,TAAGCTTTA,-3.455264602932431
