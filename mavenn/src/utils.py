@@ -489,9 +489,9 @@ class SkewedTNoiseModel:
         self.yhat_GE = yhat_GE
         self.q = q
 
-        polynomial_weights_a = self.model.get_nn().layers[8].get_weights()[0].copy()
-        polynomial_weights_b = self.model.get_nn().layers[8].get_weights()[1].copy()
-        polynomial_weights_s = self.model.get_nn().layers[8].get_weights()[2].copy()
+        polynomial_weights_a = self.model.get_nn().layers[7].get_weights()[0].copy()
+        polynomial_weights_b = self.model.get_nn().layers[7].get_weights()[1].copy()
+        polynomial_weights_s = self.model.get_nn().layers[7].get_weights()[2].copy()
 
         log_a = 0
         log_b = 0
@@ -705,7 +705,7 @@ class GaussianNoiseModel:
         self.model = model
         self.yhat_GE = yhat_GE
 
-        self.polynomial_weights = self.model.get_nn().layers[8].get_weights()[0].copy()
+        self.polynomial_weights = self.model.get_nn().layers[7].get_weights()[0].copy()
         logsigma = 0
         for polynomial_index in range(len(self.polynomial_weights)):
             logsigma += self.polynomial_weights[polynomial_index][0] * np.power(yhat_GE, polynomial_index)
@@ -854,7 +854,7 @@ class CauchyNoiseModel:
         self.yhat = yhat
         self.q = q
 
-        self.polynomial_weights = self.model.get_nn().layers[8].get_weights()[0].copy()
+        self.polynomial_weights = self.model.get_nn().layers[7].get_weights()[0].copy()
 
         self.log_gamma = 0
         for polynomial_index in range(len(self.polynomial_weights)):
@@ -1014,14 +1014,11 @@ def load(filename, verbose=True):
         # Create model object
         loaded_model = mavenn.Model(**config_dict['model_kwargs'])
 
-        # Fix diffeomorphic modes; creates a new layer, so is necessary
-        loaded_model.gauge_fix_model(
-            load_model=True,
-            diffeomorphic_mean=config_dict['diffeomorphic_mean'],
-            diffeomorphic_std=config_dict['diffeomorphic_std']
-            )
+        # Add in diffeomorphic mode fixing params
+        loaded_model.unfixed_phi_mean = config_dict['unfixed_phi_mean']
+        loaded_model.unfixed_phi_std = config_dict['unfixed_phi_std']
 
-        # set weights using a trained model.
+        # Load and set weights
         filename_h5 = filename + '.h5'
         loaded_model.get_nn().load_weights(filename_h5)
 

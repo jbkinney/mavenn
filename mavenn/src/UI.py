@@ -287,8 +287,8 @@ class GlobalEpistasisModel:
         # the following variable is the index of
         # phi_index = 4
         # yhat_index = 7
-        phi_index = 3
-        yhat_index = 6
+        phi_index = 3   ## JBK, 20.09.19
+        yhat_index = 5  ## JBK, 20.09.19
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
@@ -635,8 +635,10 @@ class GlobalEpistasisModelMultipleReplicates:
         next_input = ge_model_input
 
         # the following variable is the index of
-        phi_index = 4
-        yhat_index = 7
+        # phi_index = 4
+        # yhat_index = 7
+        phi_index = 3  ## JBK, 20.09.19
+        yhat_index = 6 ## JBK, 20.09.19
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
@@ -870,8 +872,10 @@ class MeasurementProcessAgnosticModel:
         next_input = na_model_input
 
         # the following variable is the index of
-        phi_index = 3
-        yhat_index = 6
+        # phi_index = 3
+        # yhat_index = 6
+        phi_index = 3  ## JBK, 20.09.19
+        yhat_index = 5 ## JBK, 20.09.19
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output
