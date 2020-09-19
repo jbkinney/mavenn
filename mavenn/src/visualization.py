@@ -6,7 +6,8 @@ import re
 import pdb
 
 # Special plotting-related imports
-from matplotlib.colors import DivergingNorm, Normalize
+#from matplotlib.colors import DivergingNorm, Normalize
+from matplotlib.colors import TwoSlopeNorm, Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # MAVE-NN imports
@@ -249,7 +250,7 @@ def heatmap(df,
         if (clim[0] > ccenter) or (clim[1] < ccenter):
             ccenter = 0.5 * (clim[0] + clim[1])
 
-        norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
+        norm = TwoSlopeNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
 
     # Otherwise, use uncentered colormap
     else:
@@ -635,7 +636,7 @@ def heatmap_pairwise(df,
         if (clim[0] > ccenter) or (clim[1] < ccenter):
             ccenter = 0.5 * (clim[0] + clim[1])
 
-        norm = DivergingNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
+        norm = TwoSlopeNorm(vmin=clim[0], vcenter=ccenter, vmax=clim[1])
 
     else:
         norm = Normalize(vmin=clim[0], vmax=clim[1])
