@@ -232,21 +232,21 @@ def test_load():
     Method that tests the load method.
     """
 
+    mavenn_dir = mavenn.__path__[0]
+    model_dir = f'{mavenn_dir}/examples/models/'
 
-
-    # this model is missing all the values
-    bad_GE_model_1 = mavenn.__path__[0] +'/tests/model_files/test_GE_model_bad1'
-
-    # this file is missing the value for sequence.
-    bad_GE_model_2 = mavenn.__path__[0] +'/tests/model_files/test_GE_model_bad2'
+    good_MPA_model_1 = model_dir + 'sortseq_mpa_additive'
+    good_GE_model_1 = model_dir + 'gb1_ge_additive'
 
     # Good GE model file
-    good_GE_model = mavenn.__path__[0] +'/tests/model_files/test_GE_model_good'
+    #good_GE_model_1 = mavenn.__path__[0] +'/tests/model_files/test_GE_model_good'
+    #good_MPA_model_1 = mavenn.__path__[0] + '/tests/model_files/test_MPA_model_good'
 
     test_parameter_values(func=load,
                           var_name='filename',
-                          fail_list=[bad_GE_model_1, bad_GE_model_2],
-                          success_list=[good_GE_model])
+                          fail_list=[],
+                          success_list=[good_GE_model_1,
+                                        good_MPA_model_1])
 
 
 @handle_errors
