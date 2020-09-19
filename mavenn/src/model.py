@@ -4,6 +4,7 @@ import pandas as pd
 import re
 import pdb
 import pickle
+import time
 from collections.abc import Iterable
 
 # Tensorflow imports
@@ -470,6 +471,9 @@ class Model:
 
         """
 
+        # Start timer
+        start_time = time.time()
+
         # Check epochs
         check(isinstance(epochs, int),
               f'type(epochs)={type(epochs)}; must be int.')
@@ -589,6 +593,12 @@ class Model:
 
         # update history attribute
         self.model.history = history
+
+        # Compute training time
+        self.training_time = time.time() - start_time
+        if verbose:
+            print(f'training time: {self.training_time:.1f} seconds')
+
         return history
 
 

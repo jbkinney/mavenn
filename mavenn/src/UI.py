@@ -769,8 +769,10 @@ class MeasurementProcessAgnosticModel:
         check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
               'type(y) = %s must be of type list or np.array' % type(self.y))
 
-        check(isinstance(self.ct_n, (list, np.ndarray, pd.DataFrame, pd.Series)),
-              'type(ct_n) = %s must be of type list or np.array' % type(self.ct_n))
+        if self.ct_n is not None:
+            check(isinstance(self.ct_n,
+                             (list, np.ndarray, pd.DataFrame, pd.Series)),
+                'type(ct_n) = %s must be of type None, list or np.array' % type(self.ct_n))
 
         # check(len(self.x) == len(self.y),
         #      'length of inputs (X, y) must be equal')
