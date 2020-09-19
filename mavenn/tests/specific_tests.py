@@ -465,7 +465,7 @@ seq       : {seq}""")
     # Compute phi using model method
     phi_model = model.x_to_phi(seq)
 
-    check(np.isclose(phi_check, phi_model),
+    check(np.isclose(phi_check, phi_model, atol=1E-5),
           f'phi_check: {phi_check} != phi_model: {phi_model} for gpmap_type: {model.gpmap_type}')
     print(
 f"""phi_model : {phi_model}
@@ -494,8 +494,6 @@ def test_load_example():
     incorrect_dataset_names_list = [0, 'xxx']
 
     successful_model_names_list = ["gb1_ge_additive",
-                                   "mpsa_ge_additive",
-                                   "mpsa_ge_neighbor",
                                    "mpsa_ge_pairwise",
                                    "sortseq_mpa_additive"]
 
