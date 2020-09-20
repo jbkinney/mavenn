@@ -51,7 +51,8 @@ im = ax.imshow(measurement_process,
                extent=phi_lim+y_lim,
                vmin=0,
                origin='lower',
-               aspect="auto")
+               aspect="auto",
+               interpolation='nearest')
 ax.set_yticks(y_all)
 ax.set_ylabel('bin number (y)')
 ax.set_xlabel('latent phenotype ($\phi$)')

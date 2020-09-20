@@ -62,5 +62,9 @@ target/
 # PyCharm shit
 .idea/
 
+# Figures
+*.png
+*.pdf
+
 # Apple shit
 .DS_Store

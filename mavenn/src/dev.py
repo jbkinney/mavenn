@@ -7,6 +7,15 @@ import os
 import tensorflow as tf
 import pdb
 
+# Scipy imports
+from scipy.stats import expon
+
+# Tensorflow imports
+import tensorflow.keras.backend as K
+from tensorflow.keras.constraints import non_neg
+from tensorflow.keras.initializers import Constant
+from tensorflow.math import tanh, sigmoid
+
 # MAVE-NN imports
 from mavenn.src.validate import validate_seqs, \
                                 validate_alphabet, \
@@ -727,3 +736,75 @@ def mutations_to_dataset(wt_seq,
     data_df.index.name = 'id'
 
     return data_df
+
+
+# Create GE layer
+class GlobalEpistasisLayer(tf.keras.layers.Layer):
+
+    """
+    Represents a global epistasis layer.
+    """
+
+    def __init__(self,
+                 K,
+                 eta_regularization,
+                 monotonic,
+                 **kwargs):
+
+        # Whether to make monotonic function
+        self.monotonic = monotonic
+
+        # Create function that returns a kernel constraint
+        # based on self.monotonic
+        self.constraint = lambda: non_neg() if self.monotonic else None
+
+        # Set number of hidden nodes
+        self.K = K
+
+        # Set regularization contribution
+        self.eta_regularization = eta_regularization
+
+        # Call superclass constructor
+        super(GlobalEpistasisLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+
+        self.a_0 = self.add_weight(name='a_0',
+                                   shape=(1,),
+                                   initializer=Constant(0.),
+                                   trainable=True)
+
+        # Need to randomly initialize b_k
+        b_k_dist = expon(scale=1/self.K)
+        self.b_k = self.add_weight(name='b_k',
+                                   shape=(self.K,),
+                                   initializer=Constant(b_k_dist.rvs(self.K)),
+                                   trainable=True,
+                                   constraint=self.constraint())
+
+        self.c_k = self.add_weight(name='c_k',
+                                   shape=(self.K,),
+                                   initializer=Constant(1.),
+                                   trainable=True,
+                                   constraint=self.constraint())
+
+        self.d_k = self.add_weight(name='d_k',
+                                   shape=(self.K,),
+                                   initializer=Constant(0.),
+                                   trainable=True)
+
+    def call(self, phi):
+
+        # Compute yhat as function of phi
+        yhat = self.a_0 + tf.reshape(
+                    K.sum(self.b_k * tanh(self.c_k * phi + self.d_k), axis=1),
+                    shape=[-1, 1])
+
+        # Compute regularization loss
+        norm_sq = tf.norm(self.a_0) ** 2 + \
+                  tf.norm(self.b_k) ** 2 + \
+                  tf.norm(self.c_k) ** 2 + \
+                  tf.norm(self.d_k) ** 2
+        self.add_loss(self.eta_regularization * norm_sq)
+
+        return yhat

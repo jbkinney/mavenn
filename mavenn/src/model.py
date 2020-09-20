@@ -18,7 +18,6 @@ from tensorflow.keras.constraints import non_neg as nonneg
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
 from mavenn.src.likelihood_layers import *
-from mavenn.src.utils import fixDiffeomorphicMode
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
@@ -96,6 +95,9 @@ class Model:
         For MPA regression only. List N counts, one for each (sequence,bin) pair.
         If None, a value of 1 will be assumed for all observations
 
+    linear_initialization: (bool)
+        Whether to initialize model with linear regression results.
+
     """
 
 
@@ -111,9 +113,10 @@ class Model:
                  ge_noise_model_type='Gaussian',
                  ge_heteroskedasticity_order=0,
                  na_hidden_nodes=50,
-                 theta_regularization=0.01,
-                 eta_regularization=0.01,
-                 ohe_batch_size=50000):
+                 theta_regularization=0.1,
+                 eta_regularization=0.1,
+                 ohe_batch_size=50000,
+                 linear_initialization=False):
 
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
@@ -173,7 +176,8 @@ class Model:
                                               ohe_batch_size=self.ohe_batch_size,
                                               ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
                                               theta_regularization=self.theta_regularization,
-                                              eta_regularization=self.eta_regularization)
+                                              eta_regularization=self.eta_regularization,
+                                              linear_initialization=linear_initialization)
 
             self.define_model = self.model.define_model(ge_noise_model_type=self.ge_noise_model_type,
                                                         ge_nonlinearity_hidden_nodes=
@@ -188,224 +192,15 @@ class Model:
                                                          gpmap_type=self.gpmap_type,
                                                          theta_regularization=self.theta_regularization,
                                                          ohe_batch_size=self.ohe_batch_size)
+            self.model.theta_init = None
 
             self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
 
-    #
-    # # TODO: Remove this function
-    # @handle_errors
-    # def gauge_fix_model(self,
-    #                     load_model=False,
-    #                     diffeomorphic_mean=None,
-    #                     diffeomorphic_std=None):
-    #
-    #     """
-    #     Method that gauge fixes the entire model (x_to_phi+measurement).
-    #
-    #     parameters
-    #     ----------
-    #     load_model: (bool)
-    #         If True, then this variable specifies that this method
-    #         was used while calling load(). If False, this method is called
-    #         during fit. The purpose of calling this model during load
-    #         is to ensure that it has the appropriate model architecture.
-    #         However this variable ensures that the theta parameters aren't
-    #         rescaled again.
-    #
-    #     returns
-    #     -------
-    #     None
-    #
-    #     """
-    #
-    #     # Non-gauge fixed theta
-    #     theta_all = self.model.model.layers[2].get_weights()[0]
-    #     theta_nought = self.model.model.layers[2].get_weights()[1]
-    #     theta = np.hstack((theta_nought, theta_all.ravel()))
-    #
-    #     # 20.09.16 JBK: I'm disabling this.
-    #     # Move gauge fixing to Model.get_gpmap_parameters()
-    #     theta_gf = theta
-    #
-    #     # The following variable unfixed_gpmap is a tf.keras backend function
-    #     # which computes the non-gauge fixed value of the hidden node phi for
-    #     # a given input.  This is  used to compute diffeomorphic scaling factor.
-    #     unfixed_gpmap = K.function([
-    #         self.model.model.layers[1].input],
-    #         [self.model.model.layers[2].output])
-    #
-    #     # compute unfixed phi using the function unfixed_gpmap with
-    #     # training sequences.
-    #     unfixed_phi = unfixed_gpmap([self.model.input_seqs_ohe])
-    #
-    #     # if load model is false, record the following attributes which will
-    #     # be used when loading model
-    #     if load_model==False:
-    #
-    #         # Compute diffeomorphic scaling factor which is used to rescale
-    #         # the parameters theta
-    #         diffeomorphic_std = np.sqrt(np.var(unfixed_phi[0]))
-    #         diffeomorphic_mean = np.mean(unfixed_phi[0])
-    #
-    #         # ensure ymean is an increasing function of phi
-    #         if self.regression_type == 'MPA':
-    #             # compute for training phi
-    #
-    #             # Note, can't use function self.na_p_of_all_y_given_phi
-    #             # since model isn't gauge fixed yet.
-    #             na_model_input = Input((1,))
-    #             next_input = na_model_input
-    #
-    #             # the following variable is the index of
-    #             phi_index = 3
-    #             yhat_index = 5
-    #
-    #             # Form model using functional API in a loop, starting from
-    #             # phi input, and ending on network output
-    #             for layer in self.model.model.layers[phi_index:yhat_index]:
-    #                 next_input = layer(next_input)
-    #
-    #             # Form gauge fixed GE_nonlinearity model
-    #             temp_na_model = kerasFunctionalModel(
-    #                 inputs=na_model_input,
-    #                 outputs=next_input)
-    #
-    #             # compute the value of the nonlinearity for a given phi
-    #
-    #             p_of_all_y_given_phi = temp_na_model.predict([unfixed_phi[0]])
-    #             bin_numbers = np.arange(p_of_all_y_given_phi.shape[1])
-    #
-    #             ymean = p_of_all_y_given_phi @ bin_numbers
-    #             r = np.corrcoef(unfixed_phi[0].ravel(), ymean)[0, 1]
-    #
-    #         elif self.regression_type == 'GE':
-    #
-    #             r = np.corrcoef(unfixed_phi[0].ravel(),
-    #                             self.model.y_train.ravel())[0, 1]
-    #
-    #         # this ensures phi is positively correlated with y_mean
-    #         # or y_train (MPA, GE respectively).
-    #         if r < 0:
-    #             diffeomorphic_std = -diffeomorphic_std
-    #
-    #         # these attributes will also be saved in the
-    #         # saved model config file.
-    #         self.diffeomorphic_mean = diffeomorphic_mean
-    #         self.diffeomorphic_std = diffeomorphic_std
-    #
-    #
-    #     # if this method is called after fit, scale the parameters
-    #     # to fix diffeomorphic mode.
-    #     if load_model==False:
-    #         # diffeomorphic_mode fix thetas
-    #         theta_nought_gf = theta_gf[0]-diffeomorphic_mean
-    #         theta_nought_gf/=diffeomorphic_std
-    #         thet_gf_vec = theta_gf[1:]/diffeomorphic_std
-    #     # if model is called during model load, then parameters were
-    #     # already scaled.
-    #     else:
-    #         theta_nought_gf = theta_gf[0]
-    #         thet_gf_vec = theta_gf[1:]
-    #
-    #     # Default neural network weights that are non gauge fixed.
-    #     # This will be used for updating the weights of the measurement
-    #     # network after the gauge fixed neural network is define below.
-    #     temp_weights = [layer.get_weights() for layer
-    #                         in self.model.model.layers]
-    #
-    #     # define gauge fixed model
-    #
-    #     if self.regression_type == 'GE':
-    #
-    #         number_input_layer_nodes = len(self.model.input_seqs_ohe[0]) + 1
-    #         inputTensor = Input((number_input_layer_nodes,),
-    #                             name='Sequence_labels_input')
-    #
-    #         sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
-    #                                 output_shape=((len(self.model.input_seqs_ohe[0]),)))(inputTensor)
-    #
-    #         labels_input = Lambda(
-    #             lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + 1],
-    #             output_shape=((1,)), trainable=False)(inputTensor)
-    #
-    #     elif self.regression_type == 'MPA':
-    #
-    #         number_input_layer_nodes = len(self.model.input_seqs_ohe[0])+self.model.y_train.shape[1]
-    #         inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
-    #
-    #         sequence_input = Lambda(lambda x: x[:, 0:len(self.model.input_seqs_ohe[0])],
-    #                                 output_shape=((len(self.model.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
-    #         labels_input = Lambda(lambda x: x[:, len(self.model.input_seqs_ohe[0]):len(self.model.input_seqs_ohe[0]) + self.model.y_train.shape[1]],
-    #                               output_shape=((1,)), trainable=False, name='Labels_input')(inputTensor)
-    #
-    #     # same phi as before
-    #     phi = Dense(1,
-    #                 kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization),
-    #                 name='phiPrime')(sequence_input)
-    #     # fix diffeomorphic scale
-    #     #phi_scaled = fixDiffeomorphicMode()(phi)
-    #     phiOld = Dense(1, kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization), name='phi')(phi)
-    #
-    #     # implement monotonicity constraints if GE regression
-    #     if self.regression_type == 'GE':
-    #
-    #         if self.ge_nonlinearity_monotonic==True:
-    #
-    #             intermediateTensor = Dense(self.ge_nonlinearity_hidden_nodes, activation='sigmoid',
-    #                                        kernel_constraint=nonneg())(phiOld)
-    #             y_hat = Dense(1, kernel_constraint=nonneg())(intermediateTensor)
-    #
-    #             concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
-    #
-    #             # dynamic likelihood class instantiation by the globals dictionary
-    #             # manual instantiation can be done as follows:
-    #             # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
-    #
-    #             likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
-    #             outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
-    #
-    #         else:
-    #             intermediateTensor = Dense(self.ge_nonlinearity_hidden_nodes, activation='sigmoid')(phiOld)
-    #             y_hat = Dense(1)(intermediateTensor)
-    #
-    #             concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([y_hat, labels_input])
-    #
-    #             likelihoodClass = globals()[self.ge_noise_model_type + 'LikelihoodLayer']
-    #             outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
-    #
-    #     elif self.regression_type == 'MPA':
-    #
-    #         #intermediateTensor = Dense(self.num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-    #         #outputTensor = Dense(np.shape(self.model.y_train[0])[0], activation='softmax')(intermediateTensor)
-    #
-    #         intermediateTensor = Dense(self.na_hidden_nodes, activation='sigmoid')(phiOld)
-    #         yhat = Dense(np.shape(self.model.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
-    #
-    #         concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-    #         outputTensor = MPALikelihoodLayer(number_bins=np.shape(self.model.y_train[0])[0])(concatenateLayer)
-    #
-    #
-    #     # create the gauge-fixed model:
-    #     model_gf = kerasFunctionalModel(inputTensor, outputTensor)
-    #
-    #     # set new model theta weights
-    #     theta_nought_gf = theta_nought_gf
-    #     model_gf.layers[2].set_weights([thet_gf_vec.reshape(-1, 1), np.array([theta_nought_gf])])
-    #
-    #     # update weights as sigma*phi+mean, which ensures predictions (y_hat) don't change from
-    #     # the diffeomorphic scaling.
-    #     model_gf.layers[3].set_weights([np.array([[diffeomorphic_std]]), np.array([diffeomorphic_mean])])
-    #
-    #     for layer_index in range(4, len(model_gf.layers)):
-    #         model_gf.layers[layer_index].set_weights(temp_weights[layer_index-1])
-    #
-    #     # Update default neural network model with gauge-fixed model
-    #     self.model.model = model_gf
-    #
-    #     # The theta_gf attribute now contains gauge fixed parameters, and
-    #     # can be obtained in raw form by accessing this attribute or can be
-    #     # obtained a readable format by using the method return_theta
-    #     self.model.theta_gf = theta_gf.reshape(len(theta_gf), 1)
+        # Do linear regression if requested
+        if linear_initialization and regression_type == 'GE':
+            theta_init = np.reshape(self.model.theta_init, [-1, 1])
+            weights = [theta_init, np.zeros(1)]
+            self.model.model.layers[2].set_weights(weights)
 
 
     @handle_errors
@@ -635,7 +430,10 @@ class Model:
         yhat = self.model.phi_to_yhat(unfixed_phi)
 
         # Shape yhat for output
-        yhat = _shape_for_output(yhat, phi_shape)
+        try:
+            yhat = _shape_for_output(yhat, phi_shape)
+        except:
+            pdb.set_trace()
 
         return yhat
 

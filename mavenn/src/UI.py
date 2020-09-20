@@ -1,21 +1,25 @@
 import numpy as np
 import pandas as pd
 import numbers
+import time
+
+# Scipy imports
+from scipy.sparse import csc_matrix
+from scipy.sparse.linalg import lsmr
 
 # Tensorflow imports
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
-from tensorflow.keras.constraints import non_neg as nonneg
+from tensorflow.keras.layers \
+    import Dense, Activation, Input, Lambda, Concatenate
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.utils import vec_data_to_mat_data
-#from mavenn.src.utils import onehot_encode_array, \
-#    _generate_nbr_features_from_sequences, _generate_all_pair_features_from_sequences
 from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
 from mavenn.src.dev import x_to_features
 from mavenn.src.validate import validate_alphabet
+from mavenn.src.dev import GlobalEpistasisLayer
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -46,9 +50,10 @@ class GlobalEpistasisModel:
         This variable has no effect for MPA regression.
 
     ge_heteroskedasticity_order: (int)
-        Order of the exponentiated polynomials used to make noise model parameters
-        dependent on y_hat, and thus render the noise model heteroskedastic. Set
-        to zero for a homoskedastic noise model. (Only used for GE regression).
+        Order of the exponentiated polynomials used to make noise model
+        parameters dependent on y_hat, and thus render the noise model
+        heteroskedastic. Set to zero for a homoskedastic noise model.
+        (Only used for GE regression).
 
     ohe_batch_size: (int)
         Integer specifying how many sequences to one-hot encode at a time.
@@ -62,8 +67,11 @@ class GlobalEpistasisModel:
     eta_regularization: (float >= 0)
         Regularization strength for measurement process parameters $\eta$.
 
+    linear_initialization: (bool)
+        Whether to initialize model with linear regression results.
     """
 
+    @handle_errors
     def __init__(self,
                  x,
                  y,
@@ -73,7 +81,8 @@ class GlobalEpistasisModel:
                  ohe_batch_size,
                  ge_heteroskedasticity_order,
                  theta_regularization,
-                 eta_regularization):
+                 eta_regularization,
+                 linear_initialization):
 
         # set class attributes
         self.x, self.y = x, y
@@ -85,6 +94,7 @@ class GlobalEpistasisModel:
         self.ohe_batch_size = ohe_batch_size
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
+        self.linear_initialization = linear_initialization
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -97,40 +107,6 @@ class GlobalEpistasisModel:
         #self.num_nodes_hidden_measurement_layer = None
         self.theta_gf = None
         self.ge_model = None
-
-        # perform input checks to validate attributes
-        self._input_checks()
-
-        # clarify that X and y are the training datasets (including validation sets)
-        self.x_train, self.y_train = self.x, self.y
-
-        # record sequence length for convenience
-        self.L = len(self.x_train[0])
-
-        # Encode sequences as features
-        self.input_seqs_ohe, self.feature_names = \
-            x_to_features(x=self.x_train,
-                          alphabet=self.alphabet,
-                          model_type=self.gpmap_type)
-
-        # Leave out constant feature
-        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
-
-        # check if this is strictly required by tf
-        self.y_train = np.array(self.y_train).reshape(np.shape(self.y_train)[0], 1)
-
-
-    @handle_errors
-    def _input_checks(self):
-
-        """
-        Validate parameters passed to the GlobalEpistasis constructor
-        """
-
-        # useful tuple to check if some value is a number
-
-        # validate input df
-        #self.df = validate_input(self.df)
 
         check(isinstance(self.x, (list, np.ndarray)),
               'type(X) = %s must be of type list or np.array' % type(self.x))
@@ -148,35 +124,75 @@ class GlobalEpistasisModel:
         self.num_measurements = len(self.x)
 
         # check that ge_nonlinearity_monotonic is a boolean.
-        check(isinstance(self.ge_nonlinearity_monotonic, (bool, np.bool, np.bool_)), 'ge_nonlinearity_monotonic must be a boolean')
+        check(isinstance(self.ge_nonlinearity_monotonic,
+                         (bool, np.bool, np.bool_)),
+              'ge_nonlinearity_monotonic must be a boolean')
 
         # check that ge_heteroskedasticity_order is an number
-        check(isinstance(self.ge_heteroskedasticity_order, numbers.Integral), 'ge_heteroskedasticity_order must be an integers')
+        check(isinstance(self.ge_heteroskedasticity_order, numbers.Integral),
+              'ge_heteroskedasticity_order must be an integers')
 
-        check(self.ge_heteroskedasticity_order >= 0, 'ge_heteroskedasticity_order must be >= 0')
+        check(self.ge_heteroskedasticity_order >= 0,
+              'ge_heteroskedasticity_order must be >= 0')
 
         # check that gpmap_type valid
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
-              'gpmap_type = %s; must be "additive", "neighbor", or "pairwise"' %
-              self.gpmap_type)
+              f'gpmap_type = {self.gpmap_type};'
+              'must be "additive", "neighbor", or "pairwise"')
 
         # check that theta regularization is a number
-        check(isinstance(self.theta_regularization, numbers.Real), 'theta_regularization must be a number')
+        check(isinstance(self.theta_regularization, numbers.Real),
+              'theta_regularization must be a number')
 
         # check that theta regularization is greater than 0
-        check(self.theta_regularization >= 0, 'theta_regularization must be >= 0')
+        check(self.theta_regularization >= 0,
+              'theta_regularization must be >= 0')
 
         # check that eta regularization is a number
-        check(isinstance(self.eta_regularization, numbers.Real), 'eta_regularization must be a number')
+        check(isinstance(self.eta_regularization, numbers.Real),
+              'eta_regularization must be a number')
 
         # check that theta regularization is greater than 0
-        check(self.eta_regularization >= 0, 'eta_regularization must be >= 0')
+        check(self.eta_regularization >= 0,
+              'eta_regularization must be >= 0')
 
         # check that ohe_batch_size is an number
-        check(isinstance(self.ohe_batch_size, numbers.Integral), 'ohe_batch_size must be an integer')
+        check(isinstance(self.ohe_batch_size, numbers.Integral),
+              'ohe_batch_size must be an integer')
 
         # check that ohe_batch_size is > 0
-        check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
+        check(self.ohe_batch_size > 0,
+              'ohe_batch_size must be > 0')
+
+        # clarify that X and y are the training datasets
+        # (including validation sets)
+        self.x_train, self.y_train = self.x, self.y
+
+        # record sequence length for convenience
+        self.L = len(self.x_train[0])
+
+        # Encode sequences as features
+        self.input_seqs_ohe, self.feature_names = \
+            x_to_features(x=self.x_train,
+                          alphabet=self.alphabet,
+                          model_type=self.gpmap_type)
+
+        # Leave out constant feature
+        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
+
+        # check if this is strictly required by tf
+        self.y_train = np.array(self.y_train).reshape(
+            np.shape(self.y_train)[0], 1)
+
+        # Do linear regression if requested
+        if self.linear_initialization:
+            start_time = time.time()
+            x_sparse = csc_matrix(self.input_seqs_ohe)
+            self.theta_init = lsmr(x_sparse, self.y_train, show=True)[0]
+            linear_regression_time = time.time() - start_time
+            print(f'Linear regression time: {linear_regression_time:.4f} sec')
+        else:
+            self.theta_init = None
 
 
     @handle_errors
@@ -209,48 +225,49 @@ class GlobalEpistasisModel:
 
         # check that p_of_all_y_given_phi valid
         check(ge_noise_model_type in {'Gaussian', 'Cauchy', 'SkewedT'},
-              'p_of_all_y_given_phi = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
-              ge_noise_model_type)
+              f'p_of_all_y_given_phi = {ge_noise_model_type};' 
+              f'must be "Gaussian", "Cauchy", or "SkewedT"')
 
-        check(isinstance(ge_nonlinearity_hidden_nodes, numbers.Integral), 'ge_nonlinearity_hidden_nodes must be an integer.')
+        check(isinstance(ge_nonlinearity_hidden_nodes, numbers.Integral),
+              'ge_nonlinearity_hidden_nodes must be an integer.')
 
-        check(ge_nonlinearity_hidden_nodes > 0, 'ge_nonlinearity_hidden_nodes must be greater than 0.')
+        check(ge_nonlinearity_hidden_nodes > 0,
+              'ge_nonlinearity_hidden_nodes must be greater than 0.')
 
         number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
-        inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+        inputTensor = Input((number_input_layer_nodes,),
+                            name='Sequence_labels_input')
 
         sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                output_shape=((len(self.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
-        labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
-                              output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
+                                output_shape=((len(self.input_seqs_ohe[0]),)),
+                                name='Sequence_only')(inputTensor)
+        labels_input = Lambda(
+            lambda x: x[:, len(
+                self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
+            output_shape=((1, )),
+            trainable=False, name='Labels_input')(inputTensor)
 
-        phi = Dense(1, name='phi',
-                    kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization))(sequence_input)
+        theta_regularizer = tf.keras.regularizers.l2(self.theta_regularization)
+        phi = Dense(1,
+                    name='phi',
+                    kernel_regularizer=theta_regularizer)(sequence_input)
 
-        # implement monotonicity constraints
-        if self.ge_nonlinearity_monotonic==True:
+        # Make global epistasis layer
+        self.phi_to_yhat_layer = \
+            GlobalEpistasisLayer(K=ge_nonlinearity_hidden_nodes,
+                                 eta_regularization=self.eta_regularization,
+                                 monotonic=self.ge_nonlinearity_monotonic)
+        yhat = self.phi_to_yhat_layer(phi)
 
-            intermediateTensor = Dense(ge_nonlinearity_hidden_nodes, activation='sigmoid',
-                                       kernel_constraint=nonneg())(phi)
-            yhat = Dense(1, kernel_constraint=nonneg(),name='y_hat')(intermediateTensor)
+        # Concatenate yhat and training labels
+        yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+            [yhat, labels_input])
 
-            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-
-            # dynamic likelihood class instantiation by the globals dictionary
-            # manual instantiation can be done as follows:
-            # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
-
-            likelihoodClass = globals()[ge_noise_model_type + 'LikelihoodLayer']
-            outputTensor = likelihoodClass(self.ge_heteroskedasticity_order)(concatenateLayer)
-
-        else:
-
-            intermediateTensor = Dense(ge_nonlinearity_hidden_nodes, activation='sigmoid')(phi)
-            yhat = Dense(1, name='y_hat')(intermediateTensor)
-
-            concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-            likelihoodClass = globals()[ge_noise_model_type + 'LikelihoodLayer']
-            outputTensor = likelihoodClass(self.ge_heteroskedasticity_order, self.eta_regularization)(concatenateLayer)
+        # Compute likelihood
+        likelihood_class = globals()[ge_noise_model_type + 'LikelihoodLayer']
+        likelihood_object = likelihood_class(self.ge_heteroskedasticity_order,
+                                             self.eta_regularization)
+        outputTensor = likelihood_object(yhat_y_concat)
 
         # create the model:
         model = Model(inputTensor, outputTensor)
@@ -276,382 +293,21 @@ class GlobalEpistasisModel:
 
         returns
         -------
-        y_hat: (float or array-like)
+        yhat: (float or array-like)
             The nonlinear GE function evaluated at phi.
 
         """
 
-        ge_model_input = Input((1,))
-        next_input = ge_model_input
-
-        # the following variable is the index of
-        # phi_index = 4
-        # yhat_index = 7
-        phi_index = 3   ## JBK, 20.09.19
-        yhat_index = 5  ## JBK, 20.09.19
-
-        # Form model using functional API in a loop, starting from
-        # phi input, and ending on network output
-        for layer in self.model.layers[phi_index:yhat_index]:
-            next_input = layer(next_input)
-
-        # Form gauge fixed GE_nonlinearity model
-        ge_model = Model(inputs=ge_model_input, outputs=next_input)
-
-        # compute the value of the nonlinearity for a given phi
-        y_hat = ge_model.predict([phi])
-
-        return y_hat
-
-
-#TODO: @handle_errors should be moved to each method, right?
-@handle_errors
-class GlobalEpistasisModelMultipleReplicates:
-
-    """
-    Class that implements global epistasis regression with multiple targets
-    for each sequence. Missing target values/NANs are allowed.
-
-    attributes
-    ----------
-
-    x: (array-like of str)
-        Sequence inputs; can represent DNA, RNA, or protein sequences, as
-        specified by the alphabet attribute.
-
-    y: (array-like of float)
-        Measurement values corresponding to the sequences in X.
-
-    gpmap_type: (str)
-        Specifies the type of G-P model the user wants to infer.
-        Three possible choices allowed: ['additive','neighbor','pairwise']
-
-    test_size: (float in (0,1))
-        Fraction of data to be set aside as unseen test data for model evaluation.
-
-    monotonic: (boolean)
-        Whether to use a monotonicity constraint in GE regression.
-
-    alphabet: (str)
-        Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein'].
-
-    custom_architecture: (tf.model)
-        Specify a custom neural network architecture (including both the
-        G-P map and the measurement process) to fit to data.
-
-    ohe_single_batch_size: (int)
-        Integer specifying how many sequences to one-hot encode at a time.
-        The larger this number number, the quicker the encoding will happen,
-        but this may also take up a lot of memory and throw an exception
-        if its too large. Currently for additive models only.
-
-
-    polynomial_order_ll: (int)
-        Order of polynomial which specifies the dependence of the noise-model
-        distribution paramters, used in the computation of likelihood, on yhat.
-        (Only used for GE regression).
-
-    """
-
-    def __init__(self,
-                 x,
-                 y,
-                 gpmap_type,
-                 test_size,
-                 alphabet,
-                 monotonic,
-                 custom_architecture,
-                 ohe_single_batch_size,
-                 polynomial_order_ll):
-
-        # set class attributes
-        self.x, self.y = x, y
-        self.gpmap_type = gpmap_type
-        self.test_size = test_size
-        self.monotonic = monotonic
-        self.alphabet = validate_alphabet(alphabet)
-        self.C = len(self.alphabet)
-        self.custom_architecture = custom_architecture
-        self.ohe_single_batch_size = ohe_single_batch_size
-        self.polynomial_order_ll = polynomial_order_ll
-
-        # class attributes that are not parameters
-        # but are useful for using trained models
-        self.history = None
-        self.model = None
-
-        # the following set of attributes are used for
-        # gauge fixing the neural network model (x_to_phi and measurement)
-        # and are set after the model has been fit to data.
-        self.num_nodes_hidden_measurement_layer = None
-        self.theta_gf = None
-        self.ge_model = None
-
-        # perform input checks to validate attributes
-        self._input_checks()
-
-        # clarify that X and y are the training datasets (including validation sets)
-        self.x_train, self.y_train = self.x, self.y
-
-        # Encode sequences as features
-        self.input_seqs_ohe, self.feature_names = \
-            x_to_features(x=self.x_train,
-                          alphabet=self.alphabet,
-                          model_type=self.gpmap_type)
-
-        # Leave out constant feature
-        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
-
-        # check if this is strictly required by tf
-        # self.y_train = np.array(self.y_train).reshape(np.shape(self.y_train)[0], 1)
-
-    # CONTINE CODE REVIEW BELOW (date: 20.07.20)
-
-
-    def _input_checks(self):
-
-        """
-        Validate parameters passed to the GlobalEpistasis constructor
-        """
-        # validate input df
-        #self.df = validate_input(self.df)
-
-        check(isinstance(self.x, (list, np.ndarray)),
-              'type(X) = %s must be of type list or np.array' % type(self.x))
-        self.x = np.array(self.x)
-
-        check(isinstance(self.y, (list, np.ndarray)),
-              'type(y) = %s must be of type list or np.array' % type(self.y))
-        self.y = np.array(self.y)
-
-        # check(len(self.X) == len(self.y),
-        #       'length of inputs (X, y) must be equal')
-        # self.num_measurements = len(self.X)
-
-        # check that gpmap_type valid
-        check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
-              'x_to_phi = %s; must be "additive", "neighbor", or "pairwise"' %
-              self.gpmap_type)
-
-
-    def define_model(self,
-                     noise_model,
-                     num_nodes_hidden_measurement_layer=50,
-                     custom_architecture=None):
-
-        """
-        Defines the architecture of the global epistasis regression model.
-        using the tensorflow.keras functional API. If custom_architecture is not None,
-        this is used instead as the model architecture.
-
-        parameters
-        ----------
-        noise_model: (str)
-            Specifies the type of noise model the user wants to infer.
-            The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
-
-        num_nodes_hidden_measurement_layer: (int)
-            Number of nodes to use in the hidden layer of the measurement network
-            of the GE model architecture.
-
-        custom_architecture: (tf.model)
-            A custom neural network architecture that replaces the entire
-            default architecture implemented. Set to None to use default.
-
-        returns
-        -------
-
-        model: (tf.model)
-            A tensorflow model that can be compiled and subsequently fit to data.
-
-
-        """
-
-        # check that p_of_all_y_given_phi valid
-        check(noise_model in {'Gaussian', 'Cauchy', 'SkewedT'},
-              'p_of_all_y_given_phi = %s; must be "Gaussian", "Cauchy", or "SkewedT"' %
-              noise_model)
-
-        # If user has not provided custom architecture, implement a default architecture
-        if custom_architecture is None:
-
-            if len(self.y_train.shape) == 1:
-                number_of_replicate_targets = 1
-            else:
-                number_of_replicate_targets = min(self.y_train.shape)
-
-            print('number of y nodes to add: ',number_of_replicate_targets)
-            # create input layer with nodes allowing sequence to be input and also
-            # target labels to be input, together.
-            #number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y_train.shape[0]
-            number_input_layer_nodes = len(self.input_seqs_ohe[0]) + number_of_replicate_targets
-            inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
-
-            sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                    output_shape=((len(self.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
-
-            replicates_input = []
-
-            #number_of_replicate_targets = self.y_train.shape[0]
-
-            for replicate_layer_index in range(number_of_replicate_targets):
-
-                # build up lambda layers, on step at a time, which will be
-                # fed to each of the measurement blocks
-                print(replicate_layer_index, replicate_layer_index + 1)
-
-                temp_replicate_layer = Lambda(lambda x:
-                                              x[:, len(self.input_seqs_ohe[0])+replicate_layer_index:
-                                              len(self.input_seqs_ohe[0]) + replicate_layer_index + 1],
-                                              output_shape=((1,)), trainable=False,
-                                              name='Labels_input_'+str(replicate_layer_index))(inputTensor)
-
-                replicates_input.append(temp_replicate_layer)
-
-            # labels_input_rep1 = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
-            #                       output_shape=((1, )), trainable=False, name='Labels_input_1')(inputTensor)
-            #
-            # labels_input_rep2 = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0])+1:len(self.input_seqs_ohe[0]) + 2],
-            #                            output_shape=((1,)), trainable=False, name='Labels_input_2')(inputTensor)
-
-            # sequence to latent phenotype
-            phi = Dense(1, name='phi')(sequence_input)
-
-            # implement monotonicity constraints
-            if self.monotonic:
-
-                # phi feeds into each of the replicate intermediate layers
-                intermediate_layers = []
-                for intermediate_index in range(number_of_replicate_targets):
-
-                    temp_intermediate_layer = Dense(num_nodes_hidden_measurement_layer,
-                                                    activation='sigmoid',
-                                                    kernel_constraint=nonneg(),
-                                                    name='intermediate_bbox_'+str(intermediate_index))(phi)
-
-                    intermediate_layers.append(temp_intermediate_layer)
-
-                # intermediateTensor_1 = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid',
-                #                            kernel_constraint=nonneg(), name='intermediate_bbox_1')(phi)
-                #
-                # intermediateTensor_2 = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid',
-                #                              kernel_constraint=nonneg(), name='intermediate_bbox_2')(phi)
-
-                # build up yhat layers, going from phi through an intermediate,
-                # nonlinearly activated layer, to each of the y_hat nodes
-
-                # y_hat, each representing a prediction for a replicate y
-                yhat_layers = []
-                for yhat_index in range(number_of_replicate_targets):
-
-                    temp_yhat_layer = Dense(1, kernel_constraint=nonneg(),
-                                            name='y_hat_rep_'+str(yhat_index))(intermediate_layers[yhat_index])
-                    yhat_layers.append(temp_yhat_layer)
-
-                #yhat_rep1 = Dense(1, kernel_constraint=nonneg(),name='y_hat_rep1')(intermediateTensor_1)
-                #yhat_rep2 = Dense(1, kernel_constraint=nonneg(), name='y_hat_rep2')(intermediateTensor_2)
-
-                # concatenate yhat_ith with labels_input_rep_ith into the likelihood layers
-                # to compute the loss
-
-                concatenateLayer_rep_input = []
-
-                for concat_index in range(number_of_replicate_targets):
-
-                    temp_concat = Concatenate(name='yhat_and_rep_'+str(concat_index))\
-                        ([yhat_layers[concat_index], replicates_input[concat_index]])
-
-                    concatenateLayer_rep_input.append(temp_concat)
-
-                #concatenateLayer_rep1 = Concatenate(name='yhat_and_rep1')([yhat_rep1, labels_input_rep1])
-                #concatenateLayer_rep2 = Concatenate(name='yhat_and_rep2')([yhat_rep2, labels_input_rep2])
-
-                # dynamic likelihood class instantiation by the globals dictionary
-                # manual instantiation can be done as follows:
-                # outputTensor = GaussianLikelihoodLayer()(concatenateLayer)
-
-                likelihoodClass = globals()[noise_model + 'LikelihoodLayer']
-
-                #ll_rep1 = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep1)
-                #ll_rep2 = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep2)
-
-                ll_rep_layers = []
-                for ll_index in range(number_of_replicate_targets):
-                    temp_ll_layer = likelihoodClass(self.polynomial_order_ll)(concatenateLayer_rep_input[ll_index])
-                    ll_rep_layers.append(temp_ll_layer)
-
-
-                #outputTensor = [ll_rep1, ll_rep2]
-                outputTensor = ll_rep_layers
-
-
-            else:
-                # TODO: implement this without monotonicity constraints
-                pass
-                # intermediateTensor = Dense(num_nodes_hidden_measurement_layer, activation='sigmoid')(phi)
-                # yhat = Dense(1, name='y_hat')(intermediateTensor)
-                #
-                # concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-                # likelihoodClass = globals()[p_of_all_y_given_phi + 'LikelihoodLayer']
-                # outputTensor = likelihoodClass(self.polynomial_order_ll)(concatenateLayer)
-
-            # create the model:
-            model = Model(inputTensor, outputTensor)
-            self.model = model
-            self.num_nodes_hidden_measurement_layer = num_nodes_hidden_measurement_layer
-
-            return model
-
-        # if user has provided custom architecture
-        else:
-            self.model = custom_architecture
-            return custom_architecture
-
-
-    def ge_nonlinearity(self,
-                        phi):
-
-        """
-        Compute the GE nonlinearity at specified values of phi.
-
-        parameters
-        ----------
-
-        phi: (float or array-like)
-            Latent phenotype value(s) on which the GE nonlinearity
-            wil be evaluated.
-
-        returns
-        -------
-        y_hat: (float or array-like)
-            The nonlinear GE function evaluated at phi.
-
-        """
-
-        # TODO disable method if custom_architecture is specified.
-
-        ge_model_input = Input((1,))
-        next_input = ge_model_input
-
-        # the following variable is the index of
-        # phi_index = 4
-        # yhat_index = 7
-        phi_index = 3  ## JBK, 20.09.19
-        yhat_index = 6 ## JBK, 20.09.19
-
-        # Form model using functional API in a loop, starting from
-        # phi input, and ending on network output
-        for layer in self.model.layers[phi_index:yhat_index]:
-            next_input = layer(next_input)
-
-        # Form gauge fixed GE_nonlinearity model
-        ge_model = Model(inputs=ge_model_input, outputs=next_input)
-
-        # compute the value of the nonlinearity for a given phi
-        y_hat = ge_model.x_to_yhat([phi])
-
-        return y_hat
+        # Create phi_to_yhat function
+        phi_input = Input((1,))
+        yhat_output = self.phi_to_yhat_layer(phi_input)
+        self.phi_to_yhat_func = Model(inputs=phi_input,
+                                      outputs=yhat_output)
+
+        # Predict yhat values
+        yhat = self.phi_to_yhat_func.predict(phi)
+
+        return yhat
 
 
 class MeasurementProcessAgnosticModel:
@@ -692,6 +348,7 @@ class MeasurementProcessAgnosticModel:
         Regularization strength for G-P map parameters $\theta$.
     """
 
+    @handle_errors
     def __init__(self,
                  x,
                  y,
@@ -723,8 +380,45 @@ class MeasurementProcessAgnosticModel:
         self.theta_gf = None
         self.na_model = None
 
-        # perform input checks to validate attributes
-        self._input_checks()
+        # useful tuple to check if some value is a number
+
+        check(isinstance(self.x, (list, np.ndarray, pd.DataFrame, pd.Series)),
+              'type(X) = %s must be of type list or np.array' % type(self.x))
+
+        # check(isinstance(self.x[0], str),
+        #      'type(x_train) = %s must be of type str' % type(self.x))
+
+        check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
+              'type(y) = %s must be of type list or np.array' % type(self.y))
+
+        if self.ct_n is not None:
+            check(isinstance(self.ct_n,
+                             (list, np.ndarray, pd.DataFrame, pd.Series)),
+                  'type(ct_n) = %s; must be None or arrray,' % type(self.ct_n))
+
+        # check(len(self.x) == len(self.y),
+        #      'length of inputs (X, y) must be equal')
+
+        # check that model type valid
+        check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
+              f'model_type = {self.gpmap_type}; '
+              'must be "additive", "neighbor", or "pairwise"')
+
+        # check that theta regularization is a number
+        check(isinstance(self.theta_regularization, numbers.Real),
+              'theta_regularization must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.theta_regularization >= 0,
+              'theta_regularization must be >= 0')
+
+        # check that ohe_batch_size is an number
+        check(isinstance(self.ohe_batch_size, numbers.Integral),
+              'ohe_batch_size must be an integer')
+
+        # check that ohe_batch_size is > 0
+        check(self.ohe_batch_size > 0,
+              'ohe_batch_size must be > 0')
 
         self.y, self.x = vec_data_to_mat_data(x_n=x,
                                               y_n=y,
@@ -752,96 +446,68 @@ class MeasurementProcessAgnosticModel:
         self.y_train = np.array(self.y_train)
 
 
-    def _input_checks(self):
-
-        """
-        Validate parameters passed to the NoiseAgnosticRegression constructor
-        """
-
-        # useful tuple to check if some value is a number
-
-        check(isinstance(self.x, (list, np.ndarray, pd.DataFrame, pd.Series)),
-              'type(X) = %s must be of type list or np.array' % type(self.x))
-
-        #check(isinstance(self.x[0], str),
-        #      'type(x_train) = %s must be of type str' % type(self.x))
-
-        check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
-              'type(y) = %s must be of type list or np.array' % type(self.y))
-
-        if self.ct_n is not None:
-            check(isinstance(self.ct_n,
-                             (list, np.ndarray, pd.DataFrame, pd.Series)),
-                'type(ct_n) = %s must be of type None, list or np.array' % type(self.ct_n))
-
-        # check(len(self.x) == len(self.y),
-        #      'length of inputs (X, y) must be equal')
-
-        # check that model type valid
-        check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
-              'model_type = %s; must be "additive", "neighbor", or "pairwise"' %
-              self.gpmap_type)
-
-        # check that theta regularization is a number
-        check(isinstance(self.theta_regularization, numbers.Real), 'theta_regularization must be a number')
-
-        # check that theta regularization is greater than 0
-        check(self.theta_regularization >= 0, 'theta_regularization must be >= 0')
-
-        # check that ohe_batch_size is an number
-        check(isinstance(self.ohe_batch_size, numbers.Integral), 'ohe_batch_size must be an integer')
-
-        # check that ohe_batch_size is > 0
-        check(self.ohe_batch_size > 0, 'ohe_batch_size must be > 0')
-
-
     def define_model(self,
                      na_hidden_nodes=10):
 
         """
         Defines the architecture of the noise agnostic regression model.
-        using the tensorflow.keras functional API. If custom_architecture is not None,
-        this is used instead as the model architecture.
+        using the tensorflow.keras functional API. If custom_architecture is
+        not None, this is used instead as the model architecture.
 
         parameters
         ----------
         na_hidden_nodes: (int)
-            Number of nodes to use in the hidden layer of the measurement network
-            of the GE model architecture.
+            Number of nodes to use in the hidden layer of the measurement
+            network of the GE model architecture.
 
         returns
         -------
 
         model: (tf.model)
-            A tensorflow model that can be compiled and subsequently fit to data.
+            A tensorflow model that can be compiled and subsequently
+            fit to data.
 
 
         """
 
         # useful tuple to check if some value is a number
 
-        check(isinstance(na_hidden_nodes, numbers.Integral), 'na_hidden_nodes must be a number.')
+        check(isinstance(na_hidden_nodes, numbers.Integral),
+              'na_hidden_nodes must be a number.')
 
-        check(na_hidden_nodes > 0, 'na_hidden_nodes must be greater than 0.')
+        check(na_hidden_nodes > 0,
+              'na_hidden_nodes must be greater than 0.')
 
         number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
 
-        inputTensor = Input((number_input_layer_nodes,), name='Sequence_labels_input')
+        inputTensor = Input((number_input_layer_nodes,),
+                            name='Sequence_labels_input')
 
         sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                output_shape=((len(self.input_seqs_ohe[0]),)), name='Sequence_only')(inputTensor)
-        labels_input = Lambda(lambda x: x[:, len(self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + self.y.shape[1]],
-                              output_shape=((1, )), trainable=False, name='Labels_input')(inputTensor)
+                                output_shape=((len(self.input_seqs_ohe[0]),)),
+                                name='Sequence_only')(inputTensor)
+        labels_input = Lambda(
+            lambda x: x[:, len(
+                self.input_seqs_ohe[0]):len(
+                self.input_seqs_ohe[0]) + self.y.shape[1]],
+            output_shape=((1, )),
+            trainable=False,
+            name='Labels_input')(inputTensor)
 
         phi = Dense(1,
-                    kernel_regularizer=tf.keras.regularizers.l2(self.theta_regularization),
+                    kernel_regularizer=tf.keras.regularizers.l2(
+                        self.theta_regularization),
                     use_bias=True, name='phi')(sequence_input)
 
         intermediateTensor = Dense(na_hidden_nodes, activation='sigmoid')(phi)
-        yhat = Dense(np.shape(self.y_train[0])[0], name='yhat', activation='softmax')(intermediateTensor)
+        yhat = Dense(np.shape(self.y_train[0])[0],
+                     name='yhat',
+                     activation='softmax')(intermediateTensor)
 
-        concatenateLayer = Concatenate(name='yhat_and_y_to_ll')([yhat, labels_input])
-        outputTensor = MPALikelihoodLayer(number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
+        concatenateLayer = Concatenate(
+            name='yhat_and_y_to_ll')([yhat, labels_input])
+        outputTensor = MPALikelihoodLayer(
+            number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
 
         #create the model:
         model = Model(inputTensor, outputTensor)
@@ -873,11 +539,9 @@ class MeasurementProcessAgnosticModel:
         na_model_input = Input((1,))
         next_input = na_model_input
 
-        # the following variable is the index of
-        # phi_index = 3
-        # yhat_index = 6
-        phi_index = 3  ## JBK, 20.09.19
-        yhat_index = 5 ## JBK, 20.09.19
+        # TODO: Replace these with layer names
+        phi_index = 3
+        yhat_index = 5
 
         # Form model using functional API in a loop, starting from
         # phi input, and ending on network output

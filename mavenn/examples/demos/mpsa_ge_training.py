@@ -28,6 +28,9 @@ y = data_df['y'].values
 # Split into training and test sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
 
+# Set seed
+mavenn.set_seed(0)
+
 # Define a model with a pairwise G-P map
 # a heteroskedastic Gaussian GE measurement process,
 # and specify the training data.
@@ -38,15 +41,15 @@ model = mavenn.Model(x=x_train,
                      regression_type='GE',
                      ge_noise_model_type='Gaussian',
                      ge_nonlinearity_monotonic=True,
-                     ge_heteroskedasticity_order=0)
+                     ge_heteroskedasticity_order=0,
+                     linear_initialization=True)
 
 # Fit model to training data
 start_time = time.time()
 model.fit(epochs=30,
-          learning_rate=0.001,
+          learning_rate=0.005,
           early_stopping=False)
 training_time = time.time()-start_time
-print(f'training time: {training_time:.1f} seconds')
 
 # Predict latent phentoype values (phi) on test data
 phi_test = model.x_to_phi(x_test)

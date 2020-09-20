@@ -28,7 +28,7 @@ def list_tutorials():
 
 
 @handle_errors
-def list_demos():
+def list_demos(print_names=True):
     """
     Reveals the local directory in which mavenn demos are stored.
     """
@@ -43,12 +43,14 @@ def list_demos():
     demo_names = list(demos_dict.keys())
     demo_names.sort()
 
-    print("To run a demo, execute\n\n\t>>> mavenn.run_demo(name)"
-          "\n\nwhere 'name' is one of the following strings:\n")
-    for i, name in enumerate(demo_names):
-        print(f'\t{i+1}. "{name}"')
-    print(f"\nPython code for each demo is located in\n\n\t{demos_dir}/\n")
+    if print_names:
+        print("To run a demo, execute\n\n\t>>> mavenn.run_demo(name)"
+              "\n\nwhere 'name' is one of the following strings:\n")
+        for i, name in enumerate(demo_names):
+            print(f'\t{i+1}. "{name}"')
+        print(f"\nPython code for each demo is located in\n\n\t{demos_dir}/\n")
 
+    return demo_names
 
 @handle_errors
 def run_demo(name=None, print_code=False):
