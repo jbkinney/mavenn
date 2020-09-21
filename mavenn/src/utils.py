@@ -667,12 +667,13 @@ def load(filename, verbose=True):
             config_dict = pickle.load(f)
 
         # Create model object
-        config_dict['model_kwargs']['linear_initialization'] = False
         loaded_model = mavenn.Model(**config_dict['model_kwargs'])
 
         # Add in diffeomorphic mode fixing params
         loaded_model.unfixed_phi_mean = config_dict['unfixed_phi_mean']
         loaded_model.unfixed_phi_std = config_dict['unfixed_phi_std']
+        loaded_model.y_mean = config_dict['y_mean']
+        loaded_model.y_std = config_dict['y_std']
 
         # Load and set weights
         filename_h5 = filename + '.h5'

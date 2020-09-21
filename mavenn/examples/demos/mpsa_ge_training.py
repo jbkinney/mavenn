@@ -41,8 +41,7 @@ model = mavenn.Model(x=x_train,
                      regression_type='GE',
                      ge_noise_model_type='Gaussian',
                      ge_nonlinearity_monotonic=True,
-                     ge_heteroskedasticity_order=0,
-                     linear_initialization=True)
+                     ge_heteroskedasticity_order=0)
 
 # Fit model to training data
 start_time = time.time()

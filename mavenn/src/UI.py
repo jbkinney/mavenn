@@ -3,10 +3,6 @@ import pandas as pd
 import numbers
 import time
 
-# Scipy imports
-from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import lsmr
-
 # Tensorflow imports
 import tensorflow as tf
 from tensorflow.keras.models import Model
@@ -66,9 +62,6 @@ class GlobalEpistasisModel:
 
     eta_regularization: (float >= 0)
         Regularization strength for measurement process parameters $\eta$.
-
-    linear_initialization: (bool)
-        Whether to initialize model with linear regression results.
     """
 
     @handle_errors
@@ -81,8 +74,7 @@ class GlobalEpistasisModel:
                  ohe_batch_size,
                  ge_heteroskedasticity_order,
                  theta_regularization,
-                 eta_regularization,
-                 linear_initialization):
+                 eta_regularization):
 
         # set class attributes
         self.x, self.y = x, y
@@ -94,7 +86,6 @@ class GlobalEpistasisModel:
         self.ohe_batch_size = ohe_batch_size
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
-        self.linear_initialization = linear_initialization
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -183,16 +174,6 @@ class GlobalEpistasisModel:
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(
             np.shape(self.y_train)[0], 1)
-
-        # Do linear regression if requested
-        if self.linear_initialization:
-            start_time = time.time()
-            x_sparse = csc_matrix(self.input_seqs_ohe)
-            self.theta_init = lsmr(x_sparse, self.y_train, show=True)[0]
-            linear_regression_time = time.time() - start_time
-            print(f'Linear regression time: {linear_regression_time:.4f} sec')
-        else:
-            self.theta_init = None
 
 
     @handle_errors

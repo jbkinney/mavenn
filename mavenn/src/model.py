@@ -7,6 +7,10 @@ import pickle
 import time
 from collections.abc import Iterable
 
+# Scipy imports
+from scipy.sparse import csc_matrix
+from scipy.sparse.linalg import lsmr
+
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -95,9 +99,6 @@ class Model:
         For MPA regression only. List N counts, one for each (sequence,bin) pair.
         If None, a value of 1 will be assumed for all observations
 
-    linear_initialization: (bool)
-        Whether to initialize model with linear regression results.
-
     """
 
 
@@ -115,36 +116,61 @@ class Model:
                  na_hidden_nodes=50,
                  theta_regularization=0.1,
                  eta_regularization=0.1,
-                 ohe_batch_size=50000,
-                 linear_initialization=False):
+                 ohe_batch_size=50000):
 
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
         self.arg_dict = locals()
         self.arg_dict.pop('self')
 
-        # Check x
+        # Validate and set alphabet
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
+
+        # Validate x and set x
         x = validate_1d_array(x)
         x = validate_seqs(x, alphabet=alphabet)
         check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
-        x0 = x[0]
-        check(isinstance(x0, str),
-              f'type(x[0])={type(x0)}; must be str')
-        L = len(x0)
+        self.x = x
+
+        # Set sequence length
+        L = len(x[0])
         check(L > 0,
               f'len(x[0])={L}; must be > 0')
-
-        # Check y
-        y = validate_1d_array(y)
-
-        # set class attributes
-        self.x = x
-        self.y = y
-        self.alphabet = validate_alphabet(alphabet)
-        self.C = len(self.alphabet)
         self.L = L
 
+        # Set N
+        self.N = len(x)
+
+        # Validate and set y
+        self.y = validate_1d_array(y)
+
+        # Set regression_type
+        check(regression_type in {'MPA', 'GE'},
+              f'regression_type = {regression_type};'
+              f'must be "MPA", or "GE"')
         self.regression_type = regression_type
+
+        # If doing GE regression, compute y_norm, as well as y_mean and y_std
+        if self.regression_type == 'GE':
+            y_unique = np.unique(self.y)
+            check(len(y_unique),
+                  f'Only {len(y_unique)} unique y-values provided;'
+                  f'At least 2 are requied')
+            self.y_mean = self.y.mean()
+            self.y_std = self.y.std()
+            self.y_norm = (self.y - self.y_mean)/self.y_std
+
+        # If doing MPA regression, just set y_norm = y
+        elif self.regression_type == 'MPA':
+            self.y_norm = self.y
+            self.y_mean = 0
+            self.y_std = 1
+
+        else:
+            assert False, "This shouldn't happen"
+
+        # Set other parameters
         self.gpmap_type = gpmap_type
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
         self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
@@ -160,24 +186,18 @@ class Model:
         # attribute value is set below
         self.model = None
 
-        # check that regression_type is valid
-        check(self.regression_type in {'MPA', 'GE'},
-              'regression_type = %s; must be "MPA", or  "GE"' %
-              self.gpmap_type)
-
         # choose model based on regression_type
         if regression_type == 'GE':
 
             self.model = GlobalEpistasisModel(x=self.x,
-                                              y=self.y,
+                                              y=self.y_norm,
                                               gpmap_type=self.gpmap_type,
                                               ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
                                               alphabet=self.alphabet,
                                               ohe_batch_size=self.ohe_batch_size,
                                               ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
                                               theta_regularization=self.theta_regularization,
-                                              eta_regularization=self.eta_regularization,
-                                              linear_initialization=linear_initialization)
+                                              eta_regularization=self.eta_regularization)
 
             self.define_model = self.model.define_model(ge_noise_model_type=self.ge_noise_model_type,
                                                         ge_nonlinearity_hidden_nodes=
@@ -186,7 +206,7 @@ class Model:
         elif regression_type == 'MPA':
 
             self.model = MeasurementProcessAgnosticModel(x=self.x,
-                                                         y=self.y,
+                                                         y=self.y_norm,
                                                          ct_n = self.ct_n,
                                                          alphabet=self.alphabet,
                                                          gpmap_type=self.gpmap_type,
@@ -195,12 +215,6 @@ class Model:
             self.model.theta_init = None
 
             self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
-
-        # Do linear regression if requested
-        if linear_initialization and regression_type == 'GE':
-            theta_init = np.reshape(self.model.theta_init, [-1, 1])
-            weights = [theta_init, np.zeros(1)]
-            self.model.model.layers[2].set_weights(weights)
 
 
     @handle_errors
@@ -212,6 +226,7 @@ class Model:
             early_stopping=True,
             early_stopping_patience=20,
             batch_size=50,
+            linear_initialization=True,
             callbacks=[],
             optimizer='Adam',
             optimizer_kwargs={},
@@ -244,6 +259,9 @@ class Model:
 
         batch_size: (None, int)
             Batch size to use. If None, a full-sized batch will be used.
+
+        linear_initialization: (bool)
+            Whether to initialize model with linear regression results.
 
         callbacks: (list)
             List of tf.keras.callbacks.Callback instances.
@@ -314,6 +332,12 @@ class Model:
             check(batch_size > 0,
                   f'batch_size={batch_size}; must be > 0.')
 
+        # Check linear_initialization
+        check(isinstance(linear_initialization, bool),
+              f'type(linear_initialization)={type(linear_initialization)};'
+              f'must be bool.')
+        self.linear_initialization = linear_initialization
+
         # Check callbacks
         check(isinstance(callbacks, list),
               f'type(callbacks)={type(callbacks)}; must be list.')
@@ -350,20 +374,32 @@ class Model:
                                                                   mode='auto',
                                                                   patience=early_stopping_patience)]
 
-        # OHE training sequences with y appended to facilitate the calculation of likelihood.
-        train_sequences = []
+        # Do linear regression if requested
+        if self.linear_initialization and self.regression_type == 'GE':
+            start_time = time.time()
+            x_sparse = csc_matrix(self.model.input_seqs_ohe)
+            self.theta_init = lsmr(x_sparse,
+                                   self.y_norm,
+                                   show=verbose)[0]
+            linear_regression_time = time.time() - start_time
+            if verbose:
+                print(f'Linear regression time: '
+                      f'{linear_regression_time:.4f} sec')
+        else:
+            self.theta_init = None
 
-        # To each sequence in the training set, its target value is appended
-        # to its one-hot encoded form, which gets passed to fit.
-        for n in range(len(self.model.input_seqs_ohe)):
-            temp = self.model.input_seqs_ohe[n].ravel()
-            temp = np.append(temp, self.model.y_train[n])
-            train_sequences.append(temp)
+        # Do linear regression if requested
+        if self.linear_initialization and self.regression_type == 'GE':
+            theta_init = np.reshape(self.theta_init, [-1, 1])
+            weights = [theta_init, np.zeros(1)]
+            self.model.model.layers[2].set_weights(weights)
 
-        train_sequences = np.array(train_sequences)
+        # Concatenate seqs and ys
+        train_sequences = np.hstack([self.model.input_seqs_ohe,
+                                     self.model.y_train])
 
         history = self.model.model.fit(train_sequences,
-                                       self.model.y_train,
+                                       self.y_norm,
                                        validation_split=validation_split,
                                        epochs=epochs,
                                        verbose=verbose,
@@ -374,8 +410,8 @@ class Model:
         # Get unfixed_phi mean and std for diffeomorphic mode fixing
 
         # Get function representing the raw gp_map
-        self._unfixed_gpmap = K.function([
-            self.model.model.layers[1].input],
+        self._unfixed_gpmap = K.function(
+            [self.model.model.layers[1].input],
             [self.model.model.layers[2].output])
 
         # compute unfixed phi using the function unfixed_gpmap with
@@ -424,16 +460,17 @@ class Model:
         unfixed_phi = self.unfixed_phi_mean + self.unfixed_phi_std * phi
 
         # Multiply by diffeomorphic mode factors
+        check(self.regression_type == 'GE',
+              'regression type must be "GE" for this function')
 
-        check(self.regression_type == 'GE', 'regression type must be "GE" for this function ')
+        # Compute normalized prediciton
+        yhat_norm = self.model.phi_to_yhat(unfixed_phi)
 
-        yhat = self.model.phi_to_yhat(unfixed_phi)
+        # Restore shift and scale
+        yhat = self.y_mean + self.y_std * yhat_norm
 
         # Shape yhat for output
-        try:
-            yhat = _shape_for_output(yhat, phi_shape)
-        except:
-            pdb.set_trace()
+        yhat = _shape_for_output(yhat, phi_shape)
 
         return yhat
 
@@ -692,8 +729,6 @@ class Model:
 
         yhat = self.phi_to_yhat(self.x_to_phi(x))
 
-        #yhat = yhat[0].ravel().copy()
-
         # Shape yhat for output
         yhat = _shape_for_output(yhat, x_shape)
 
@@ -787,7 +822,7 @@ class Model:
 
     def yhat_to_yq(self,
                    yhat,
-                   q=[0.16,0.84]):
+                   q=[0.16, 0.84]):
         """
         Returns quantile values of p(y|yhat) given yhat and the quantiles q.
         Reserved only for GE models
@@ -810,23 +845,30 @@ class Model:
 
         # Shape yhat for processing
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
+        yhat_norm = (yhat - self.y_mean)/self.y_std
 
         # Shape x for processing
         q, q_shape = _get_shape_and_return_1d_array(q)
 
-        check(self.regression_type=='GE', 'regression type must be GE for this methdd')
+        # Make sure this is the right type of model
+        check(self.regression_type=='GE',
+              'regression type must be GE for this methdd')
+
         # Get GE noise model based on the users input.
-        # 20.09.03 JBK: I don't understand this line.
-        yqs = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat,q=q).user_quantile_values
+        yq_norm = globals()[self.ge_noise_model_type + 'NoiseModel']\
+            (self, yhat_norm, q=q).user_quantile_values
 
         # This seems to be needed
-        yqs = np.array(yqs).T
+        yq_norm = np.array(yq_norm).T
+
+        # Restore scale and shift
+        yq = self.y_mean + self.y_std * yq_norm
 
         # Shape yqs for output
-        yqs_shape = yhat_shape + q_shape
-        yqs = _shape_for_output(yqs, yqs_shape)
+        yq_shape = yhat_shape + q_shape
+        yq = _shape_for_output(yq, yq_shape)
 
-        return yqs
+        return yq
 
 
     def p_of_y_given_phi(self, y, phi, paired=False):
@@ -855,6 +897,9 @@ class Model:
         y, y_shape = _get_shape_and_return_1d_array(y)
         phi, phi_shape = _get_shape_and_return_1d_array(phi)
 
+        # Normalize y values
+        y_norm = (y - self.y_mean)/self.y_std
+
         # Unfix phi value
         unfixed_phi = self.unfixed_phi_mean + self.unfixed_phi_std * phi
 
@@ -865,7 +910,7 @@ class Model:
                   f"y shape={y_shape} does not match phi shape={phi_shape}")
 
             # Do computation
-            p = self._p_of_y_given_phi(y, unfixed_phi)
+            p_norm = self._p_of_y_given_phi(y_norm, unfixed_phi)
 
             # Use y_shape as output shape
             p_shape = y_shape
@@ -873,13 +918,16 @@ class Model:
         # Otherwise, broadcast inputs
         else:
             # Broadcast y and phi
-            y, unfixed_phi = _broadcast_arrays(y, unfixed_phi)
+            y_norm, unfixed_phi = _broadcast_arrays(y_norm, unfixed_phi)
 
             # Do computation
-            p = self._p_of_y_given_phi(y, unfixed_phi)
+            p_norm = self._p_of_y_given_phi(y_norm, unfixed_phi)
 
             # Set output shape
             p_shape = y_shape + phi_shape
+
+        # De-normalize probability
+        p = p_norm / self.y_std
 
         # Shape for output
         p = _shape_for_output(p, p_shape)
@@ -1014,6 +1062,10 @@ class Model:
         y, y_shape = _get_shape_and_return_1d_array(y)
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
 
+        # Normalize y values
+        y_norm = (y - self.y_mean)/self.y_std
+        yhat_norm = (yhat - self.y_mean)/self.y_std
+
         # If inputs are paired, use as is
         if paired:
             # Check that dimensions match
@@ -1021,7 +1073,7 @@ class Model:
                   f"y shape={y_shape} does not match yhat shape={yhat_shape}")
 
             # Do computation
-            p = self._p_of_y_given_y_hat(y, yhat)
+            p_norm = self._p_of_y_given_y_hat(y_norm, yhat_norm)
 
             # Use y_shape as output shape
             p_shape = y_shape
@@ -1029,13 +1081,16 @@ class Model:
         # Otherwise, broadcast inputs
         else:
             # Broadcast y and yhat
-            y, yhat = _broadcast_arrays(y, yhat)
+            y_norm, yhat_norm = _broadcast_arrays(y_norm, yhat_norm)
 
             # Do computation
-            p = self._p_of_y_given_y_hat(y, yhat)
+            p_norm = self._p_of_y_given_y_hat(y_norm, yhat_norm)
 
             # Set output shape
             p_shape = y_shape + yhat_shape
+
+        # De-normalize probability
+        p = p_norm / self.y_std
 
         # Shape for output
         p = _shape_for_output(p, p_shape)
@@ -1224,7 +1279,9 @@ class Model:
         config_dict = {
             'model_kwargs': self.arg_dict,
             'unfixed_phi_mean': self.unfixed_phi_mean,
-            'unfixed_phi_std': self.unfixed_phi_std
+            'unfixed_phi_std': self.unfixed_phi_std,
+            'y_std': self.y_std,
+            'y_mean': self.y_mean
         }
 
         # Save config_dict as pickle file
