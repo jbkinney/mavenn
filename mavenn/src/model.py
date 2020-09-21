@@ -375,21 +375,33 @@ class Model:
                                                                   patience=early_stopping_patience)]
 
         # Do linear regression if requested
-        if self.linear_initialization and self.regression_type == 'GE':
+        if self.linear_initialization:
+
+            # Set y targets for linear regression
+            # If GE regression, use normalized y values
+            if self.regression_type == 'GE':
+                y_targets = self.model.y_train
+
+            # If MPA regression, use mean bin number
+            elif self.regression_type == 'MPA':
+                bin_nums = np.arange(self.model.y_train.shape[1])
+                y_targets = (self.model.y_train
+                             * bin_nums[np.newaxis, :]).sum(axis=1) / \
+                            self.model.y_train.sum(axis=1)
+
+            else:
+                assert False, "This should never happen."
+
+            # Do linear regression
             start_time = time.time()
             x_sparse = csc_matrix(self.model.input_seqs_ohe)
-            self.theta_init = lsmr(x_sparse,
-                                   self.y_norm,
-                                   show=verbose)[0]
+            self.theta_init = lsmr(x_sparse, y_targets, show=verbose)[0]
             linear_regression_time = time.time() - start_time
             if verbose:
                 print(f'Linear regression time: '
                       f'{linear_regression_time:.4f} sec')
-        else:
-            self.theta_init = None
 
-        # Do linear regression if requested
-        if self.linear_initialization and self.regression_type == 'GE':
+            # Set weights from linear regression result
             theta_init = np.reshape(self.theta_init, [-1, 1])
             weights = [theta_init, np.zeros(1)]
             self.model.model.layers[2].set_weights(weights)
@@ -398,6 +410,7 @@ class Model:
         train_sequences = np.hstack([self.model.input_seqs_ohe,
                                      self.model.y_train])
 
+        # Train neural network using TensorFlow
         history = self.model.model.fit(train_sequences,
                                        self.y_norm,
                                        validation_split=validation_split,
@@ -406,8 +419,6 @@ class Model:
                                        callbacks=callbacks,
                                        batch_size=batch_size,
                                        **fit_kwargs)
-
-        # Get unfixed_phi mean and std for diffeomorphic mode fixing
 
         # Get function representing the raw gp_map
         self._unfixed_gpmap = K.function(
