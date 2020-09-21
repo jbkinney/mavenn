@@ -21,6 +21,7 @@ from tensorflow.keras.constraints import non_neg as nonneg
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
+from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
@@ -43,20 +44,16 @@ class Model:
     attributes
     ----------
 
-    x: (array-like)
-        DNA, RNA, or protein sequences to be regressed over.
+    regression_type: (str)
+        variable that choose type of regression, valid options
+        include 'GE', 'MPA'
 
-    y: (array-like)
-        y represents counts in bins, or continuous measurement values
-        corresponding to the sequences x
+    sequence_length: (int)
+        Integer specifying the length of a single training sequence.
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
         allowed: ['dna','rna','protein', 'protein*'].
-
-    regression_type: (str)
-        variable that choose type of regression, valid options
-        include 'GE', 'MPA'
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
@@ -95,20 +92,17 @@ class Model:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
-    ct_n: (array-like of ints)
-        For MPA regression only. List N counts, one for each (sequence,bin) pair.
-        If None, a value of 1 will be assumed for all observations
+    number_of_bins: (int)
+        Integer specifying the number of bins. (Only used for MPA regression).
 
     """
 
 
     def __init__(self,
-                 x,
-                 y,
-                 alphabet,
                  regression_type,
+                 sequence_length,
+                 alphabet,
                  gpmap_type='additive',
-                 ct_n=None,
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
@@ -116,34 +110,13 @@ class Model:
                  na_hidden_nodes=50,
                  theta_regularization=0.1,
                  eta_regularization=0.1,
-                 ohe_batch_size=50000):
+                 ohe_batch_size=50000,
+                 number_of_bins=None):
 
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
         self.arg_dict = locals()
         self.arg_dict.pop('self')
-
-        # Validate and set alphabet
-        self.alphabet = validate_alphabet(alphabet)
-        self.C = len(self.alphabet)
-
-        # Validate x and set x
-        x = validate_1d_array(x)
-        x = validate_seqs(x, alphabet=alphabet)
-        check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
-        self.x = x
-
-        # Set sequence length
-        L = len(x[0])
-        check(L > 0,
-              f'len(x[0])={L}; must be > 0')
-        self.L = L
-
-        # Set N
-        self.N = len(x)
-
-        # Validate and set y
-        self.y = validate_1d_array(y)
 
         # Set regression_type
         check(regression_type in {'MPA', 'GE'},
@@ -151,24 +124,15 @@ class Model:
               f'must be "MPA", or "GE"')
         self.regression_type = regression_type
 
-        # If doing GE regression, compute y_norm, as well as y_mean and y_std
-        if self.regression_type == 'GE':
-            y_unique = np.unique(self.y)
-            check(len(y_unique),
-                  f'Only {len(y_unique)} unique y-values provided;'
-                  f'At least 2 are requied')
-            self.y_mean = self.y.mean()
-            self.y_std = self.y.std()
-            self.y_norm = (self.y - self.y_mean)/self.y_std
+        # Set sequence length
+        L = sequence_length
+        check(L > 0,
+              f'len(x[0])={L}; must be > 0')
+        self.L = L
 
-        # If doing MPA regression, just set y_norm = y
-        elif self.regression_type == 'MPA':
-            self.y_norm = self.y
-            self.y_mean = 0
-            self.y_std = 1
-
-        else:
-            assert False, "This shouldn't happen"
+        # Validate and set alphabet
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
 
         # Set other parameters
         self.gpmap_type = gpmap_type
@@ -180,7 +144,7 @@ class Model:
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
-        self.ct_n = ct_n
+        self.number_of_bins = number_of_bins
 
         # represents GE or MPA model object, depending which is chosen.
         # attribute value is set below
@@ -189,8 +153,7 @@ class Model:
         # choose model based on regression_type
         if regression_type == 'GE':
 
-            self.model = GlobalEpistasisModel(x=self.x,
-                                              y=self.y_norm,
+            self.model = GlobalEpistasisModel(sequence_length=self.L,
                                               gpmap_type=self.gpmap_type,
                                               ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
                                               alphabet=self.alphabet,
@@ -205,9 +168,8 @@ class Model:
 
         elif regression_type == 'MPA':
 
-            self.model = MeasurementProcessAgnosticModel(x=self.x,
-                                                         y=self.y_norm,
-                                                         ct_n = self.ct_n,
+            self.model = MeasurementProcessAgnosticModel(sequence_length=self.L,
+                                                         number_of_bins=self.number_of_bins,
                                                          alphabet=self.alphabet,
                                                          gpmap_type=self.gpmap_type,
                                                          theta_regularization=self.theta_regularization,
@@ -216,6 +178,95 @@ class Model:
 
             self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
 
+    @handle_errors
+    def set_data(self,
+                 x,
+                 y,
+                 ct_n=None):
+
+        """
+        Method that feeds data into the mavenn model.
+
+        parameters
+        ----------
+
+        x: (array-like)
+            DNA, RNA, or protein sequences to be regressed over.
+
+        y: (array-like)
+            y represents counts in bins (for MPA regression), or
+            continuous measurement values (for GE regression) corresponding
+            to the sequences x.
+
+        ct_n: (array-like of ints)
+            For MPA regression only. List N counts, one for each (sequence,bin) pair.
+            If None, a value of 1 will be assumed for all observations.
+
+        returns
+        -------
+        None.
+        """
+
+        # Validate x and set x
+        x = validate_1d_array(x)
+        x = validate_seqs(x, alphabet=self.alphabet)
+        check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
+        self.x = x
+
+        # Set N
+        self.N = len(x)
+
+        # Validate and set y
+        self.y = validate_1d_array(y)
+        self.ct_n = ct_n
+
+        # If doing GE regression, compute y_norm, as well as y_mean and y_std
+        if self.regression_type == 'GE':
+            y_unique = np.unique(self.y)
+            check(len(y_unique),
+                  f'Only {len(y_unique)} unique y-values provided;'
+                  f'At least 2 are requied')
+            self.y_mean = self.y.mean()
+            self.y_std = self.y.std()
+            self.y_norm = (self.y - self.y_mean)/self.y_std
+
+        # If doing MPA regression, just set y_norm = y
+        elif self.regression_type == 'MPA':
+
+            self.y_norm, self.x = vec_data_to_mat_data(x_n=self.x,
+                                                  y_n=self.y,
+                                                  ct_n=ct_n)
+            self.y_mean = 0
+            self.y_std = 1
+
+        else:
+            assert False, "This shouldn't happen"
+
+        check(len(self.x) == len(self.y),
+              'length of inputs (x, y) must be equal')
+        self.num_measurements = len(self.x)
+
+        # clarify that x and y_norm are used for training, including validation.
+        self.x_train, self.y_train = self.x, self.y_norm
+
+        ### THE FOLLOWING FROM GE ###
+        # Encode sequences as features
+        self.input_seqs_ohe, self.feature_names = \
+            x_to_features(x=self.x_train,
+                          alphabet=self.alphabet,
+                          model_type=self.gpmap_type)
+
+        # Leave out constant feature
+        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
+
+        # reshaping to make TF network construction work
+        if self.regression_type == 'GE':
+
+            self.y_train = np.array(self.y_train).reshape(
+               np.shape(self.y_train)[0], 1)
+
+        elif self.regression_type=='MPA':
+            self.y_train = np.array(self.y_train)
 
     @handle_errors
     def fit(self,
@@ -380,21 +431,21 @@ class Model:
             # Set y targets for linear regression
             # If GE regression, use normalized y values
             if self.regression_type == 'GE':
-                y_targets = self.model.y_train
+                y_targets = self.y_train
 
             # If MPA regression, use mean bin number
             elif self.regression_type == 'MPA':
-                bin_nums = np.arange(self.model.y_train.shape[1])
-                y_targets = (self.model.y_train
+                bin_nums = np.arange(self.y_train.shape[1])
+                y_targets = (self.y_train
                              * bin_nums[np.newaxis, :]).sum(axis=1) / \
-                            self.model.y_train.sum(axis=1)
+                            self.y_train.sum(axis=1)
 
             else:
                 assert False, "This should never happen."
 
             # Do linear regression
             start_time = time.time()
-            x_sparse = csc_matrix(self.model.input_seqs_ohe)
+            x_sparse = csc_matrix(self.input_seqs_ohe)
             self.theta_init = lsmr(x_sparse, y_targets, show=verbose)[0]
             linear_regression_time = time.time() - start_time
             if verbose:
@@ -407,8 +458,8 @@ class Model:
             self.model.model.layers[2].set_weights(weights)
 
         # Concatenate seqs and ys
-        train_sequences = np.hstack([self.model.input_seqs_ohe,
-                                     self.model.y_train])
+        train_sequences = np.hstack([self.input_seqs_ohe,
+                                     self.y_train])
 
         # Train neural network using TensorFlow
         history = self.model.model.fit(train_sequences,
@@ -427,7 +478,7 @@ class Model:
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
-        unfixed_phi = self._unfixed_gpmap([self.model.input_seqs_ohe])
+        unfixed_phi = self._unfixed_gpmap([self.input_seqs_ohe])
 
         # Set stats
         self.unfixed_phi_mean = np.mean(unfixed_phi)
@@ -540,7 +591,7 @@ class Model:
             theta /= self.unfixed_phi_std
 
             # Get feature names
-            names = self.model.feature_names
+            names = self.feature_names
             names = ['theta'+name[1:] for name in names]
 
             # Store all model parameters in dataframe
@@ -996,7 +1047,7 @@ class Model:
             y = y.astype(int)
 
             # Make sure all y values are valid
-            Y = self.model.y_train[0].shape[0]
+            Y = self.y_train[0].shape[0]
             check(np.all(y >= 0),
                   f"Negative values for y are invalid for MAP regression")
 
@@ -1241,7 +1292,7 @@ class Model:
                   'type(y), specifying bin number, must be of type int')
 
             # check that entered bin nnumber doesn't exceed max bins
-            check(y< self.model.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
+            check(y< self.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.y_train[0].shape[0])
 
 
             phi = self.x_to_phi(x)

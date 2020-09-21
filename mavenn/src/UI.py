@@ -11,7 +11,6 @@ from tensorflow.keras.layers \
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
 from mavenn.src.dev import x_to_features
 from mavenn.src.validate import validate_alphabet
@@ -26,12 +25,8 @@ class GlobalEpistasisModel:
     attributes
     ----------
 
-    x: (array-like of str)
-        Sequence inputs; can represent DNA, RNA, or protein sequences, as
-        specified by the alphabet attribute.
-
-    y: (array-like of float)
-        Measurement values corresponding to the sequences in X.
+    sequence_length: (int)
+        Integer specifying the length of a single training sequence.
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
@@ -66,8 +61,7 @@ class GlobalEpistasisModel:
 
     @handle_errors
     def __init__(self,
-                 x,
-                 y,
+                 sequence_length,
                  alphabet,
                  gpmap_type,
                  ge_nonlinearity_monotonic,
@@ -77,7 +71,6 @@ class GlobalEpistasisModel:
                  eta_regularization):
 
         # set class attributes
-        self.x, self.y = x, y
         self.gpmap_type = gpmap_type
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
@@ -98,21 +91,6 @@ class GlobalEpistasisModel:
         #self.num_nodes_hidden_measurement_layer = None
         self.theta_gf = None
         self.ge_model = None
-
-        check(isinstance(self.x, (list, np.ndarray)),
-              'type(X) = %s must be of type list or np.array' % type(self.x))
-        self.x = np.array(self.x)
-
-        check(isinstance(self.x[0], str),
-              'type(x_train) = %s must be of type str' % type(self.x))
-
-        check(isinstance(self.y, (list, np.ndarray)),
-              'type(y) = %s must be of type list or np.array' % type(self.y))
-        self.y = np.array(self.y)
-
-        check(len(self.x) == len(self.y),
-              'length of inputs (X, y) must be equal')
-        self.num_measurements = len(self.x)
 
         # check that ge_nonlinearity_monotonic is a boolean.
         check(isinstance(self.ge_nonlinearity_monotonic,
@@ -155,26 +133,8 @@ class GlobalEpistasisModel:
         check(self.ohe_batch_size > 0,
               'ohe_batch_size must be > 0')
 
-        # clarify that X and y are the training datasets
-        # (including validation sets)
-        self.x_train, self.y_train = self.x, self.y
-
         # record sequence length for convenience
-        self.L = len(self.x_train[0])
-
-        # Encode sequences as features
-        self.input_seqs_ohe, self.feature_names = \
-            x_to_features(x=self.x_train,
-                          alphabet=self.alphabet,
-                          model_type=self.gpmap_type)
-
-        # Leave out constant feature
-        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
-
-        # check if this is strictly required by tf
-        self.y_train = np.array(self.y_train).reshape(
-            np.shape(self.y_train)[0], 1)
-
+        self.L = sequence_length
 
     @handle_errors
     def define_model(self,
@@ -215,16 +175,25 @@ class GlobalEpistasisModel:
         check(ge_nonlinearity_hidden_nodes > 0,
               'ge_nonlinearity_hidden_nodes must be greater than 0.')
 
-        number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
+        # Compute number of sequence nodes. Useful for model construction below.
+        if self.gpmap_type=='additive':
+            number_x_nodes = int(self.L*self.C)
+        elif self.gpmap_type=='neighbor':
+            number_x_nodes = int(self.L*self.C)+int((self.L-1)*self.C*self.C/2)
+        elif self.gpmap_type=='pairwise':
+            number_x_nodes = int(self.L*self.C)+int((self.L*(self.L-1)*self.C*self.C)/2)
+
+        #number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
+        number_input_layer_nodes = number_x_nodes + 1
+
         inputTensor = Input((number_input_layer_nodes,),
                             name='Sequence_labels_input')
 
-        sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                output_shape=((len(self.input_seqs_ohe[0]),)),
+        sequence_input = Lambda(lambda x: x[:, 0:number_x_nodes],
+                                output_shape=((number_x_nodes,)),
                                 name='Sequence_only')(inputTensor)
         labels_input = Lambda(
-            lambda x: x[:, len(
-                self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
+            lambda x: x[:, number_x_nodes:number_x_nodes + 1],
             output_shape=((1, )),
             trainable=False, name='Labels_input')(inputTensor)
 
@@ -249,6 +218,8 @@ class GlobalEpistasisModel:
         likelihood_object = likelihood_class(self.ge_heteroskedasticity_order,
                                              self.eta_regularization)
         outputTensor = likelihood_object(yhat_y_concat)
+
+
 
         # create the model:
         model = Model(inputTensor, outputTensor)
@@ -299,17 +270,11 @@ class MeasurementProcessAgnosticModel:
 
     attributes
     ----------
+    sequence_length: (int)
+        Integer specifying the length of a single training sequence.
 
-    x: (array-like)
-        Input pandas DataFrame containing sequences. X are
-        DNA, RNA, or protein sequences to be regressed over
-
-    y: (array-like)
-        y represents counts in bins corresponding to the sequences X
-
-    ct_n: (array-like of ints)
-        List N counts, one for each (sequence,bin) pair.
-        If None, a value of 1 will be assumed for all observations
+    number_of_bins: (int)
+        Integer specifying the number of bins. (Only used for MPA regression).
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
@@ -331,23 +296,20 @@ class MeasurementProcessAgnosticModel:
 
     @handle_errors
     def __init__(self,
-                 x,
-                 y,
-                 ct_n,
+                 sequence_length,
+                 number_of_bins,
                  gpmap_type,
                  alphabet,
                  theta_regularization,
                  ohe_batch_size):
 
         # set class attributes
-        self.x = x
-        self.y = y
-        self.ct_n = ct_n
         self.gpmap_type = gpmap_type
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
         self.theta_regularization = theta_regularization
         self.ohe_batch_size = ohe_batch_size
+        self.number_of_bins = number_of_bins
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -361,24 +323,13 @@ class MeasurementProcessAgnosticModel:
         self.theta_gf = None
         self.na_model = None
 
-        # useful tuple to check if some value is a number
+        # check that sequence_length is an number
+        check(isinstance(sequence_length, numbers.Integral),
+              'sequence_length must be an integer')
 
-        check(isinstance(self.x, (list, np.ndarray, pd.DataFrame, pd.Series)),
-              'type(X) = %s must be of type list or np.array' % type(self.x))
-
-        # check(isinstance(self.x[0], str),
-        #      'type(x_train) = %s must be of type str' % type(self.x))
-
-        check(isinstance(self.y, (list, np.ndarray, pd.DataFrame, pd.Series)),
-              'type(y) = %s must be of type list or np.array' % type(self.y))
-
-        if self.ct_n is not None:
-            check(isinstance(self.ct_n,
-                             (list, np.ndarray, pd.DataFrame, pd.Series)),
-                  'type(ct_n) = %s; must be None or arrray,' % type(self.ct_n))
-
-        # check(len(self.x) == len(self.y),
-        #      'length of inputs (X, y) must be equal')
+        # check that number_of_bins is an number
+        check(isinstance(self.number_of_bins, numbers.Integral),
+              'number_of_bins must be an integer')
 
         # check that model type valid
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
@@ -401,31 +352,12 @@ class MeasurementProcessAgnosticModel:
         check(self.ohe_batch_size > 0,
               'ohe_batch_size must be > 0')
 
-        self.y, self.x = vec_data_to_mat_data(x_n=x,
-                                              y_n=y,
-                                              ct_n=ct_n)
-
         # record sequence length for convenience
-        self.L = len(self.x[0])
+        self.L = sequence_length
 
         # Record number of bins
-        self.Y = self.y.shape[1]
+        self.Y = number_of_bins
         self.all_y = np.arange(self.Y).astype(int)
-
-        self.x_train, self.y_train = self.x, self.y
-
-        # Encode sequences as features
-        self.input_seqs_ohe, self.feature_names = \
-            x_to_features(x=self.x_train,
-                          alphabet=self.alphabet,
-                          model_type=self.gpmap_type)
-
-        # Leave out constant feature
-        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
-
-        # check if this is strictly required by tf
-        self.y_train = np.array(self.y_train)
-
 
     def define_model(self,
                      na_hidden_nodes=10):
@@ -459,18 +391,24 @@ class MeasurementProcessAgnosticModel:
         check(na_hidden_nodes > 0,
               'na_hidden_nodes must be greater than 0.')
 
-        number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
+        # Compute number of sequence nodes. Useful for model construction below.
+        if self.gpmap_type=='additive':
+            number_x_nodes = int(self.L*self.C)
+        elif self.gpmap_type=='neighbor':
+            number_x_nodes = int(self.L*self.C)+int((self.L-1)*self.C*self.C/2)
+        elif self.gpmap_type=='pairwise':
+            number_x_nodes = int(self.L*self.C)+int((self.L*(self.L-1)*self.C*self.C)/2)
+
+        number_input_layer_nodes = number_x_nodes+self.number_of_bins
 
         inputTensor = Input((number_input_layer_nodes,),
                             name='Sequence_labels_input')
 
-        sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                output_shape=((len(self.input_seqs_ohe[0]),)),
+        sequence_input = Lambda(lambda x: x[:, 0:number_x_nodes],
+                                output_shape=((number_x_nodes,)),
                                 name='Sequence_only')(inputTensor)
         labels_input = Lambda(
-            lambda x: x[:, len(
-                self.input_seqs_ohe[0]):len(
-                self.input_seqs_ohe[0]) + self.y.shape[1]],
+            lambda x: x[:, number_x_nodes:number_x_nodes + self.number_of_bins],
             output_shape=((1, )),
             trainable=False,
             name='Labels_input')(inputTensor)
@@ -481,14 +419,14 @@ class MeasurementProcessAgnosticModel:
                     use_bias=True, name='phi')(sequence_input)
 
         intermediateTensor = Dense(na_hidden_nodes, activation='sigmoid')(phi)
-        yhat = Dense(np.shape(self.y_train[0])[0],
+        yhat = Dense(self.number_of_bins,
                      name='yhat',
                      activation='softmax')(intermediateTensor)
 
         concatenateLayer = Concatenate(
             name='yhat_and_y_to_ll')([yhat, labels_input])
         outputTensor = MPALikelihoodLayer(
-            number_bins=np.shape(self.y_train[0])[0])(concatenateLayer)
+            number_bins=self.number_of_bins)(concatenateLayer)
 
         #create the model:
         model = Model(inputTensor, outputTensor)

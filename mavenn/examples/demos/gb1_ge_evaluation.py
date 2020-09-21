@@ -38,6 +38,9 @@ ix = np.random.choice(N_test, size=N_sample, replace=False).astype(int)
 x = data_df['x_test'].values[ix]
 y = data_df['y_test'].values[ix]
 
+model.set_data(x=x,
+               y=y)
+
 # Compute phi and yhat values
 phi = model.x_to_phi(x)
 yhat = model.phi_to_yhat(phi)

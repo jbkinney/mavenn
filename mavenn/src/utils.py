@@ -666,6 +666,31 @@ def load(filename, verbose=True):
         with open(filename_pickle, 'rb') as f:
             config_dict = pickle.load(f)
 
+        # popping keys (and saving them) which
+        # are required for the method set data.
+        # this leaves the config_dict with the keys
+        # required to load the model. set_data is then
+        # called with the training data which was saved
+        # at the time of saving the model. This way the
+        # user doesn't have to call the set_data method
+        # after loading the model. Although they can if they want.
+        _x = config_dict['model_kwargs']['x']
+        _y = config_dict['model_kwargs']['y']
+
+        config_dict['model_kwargs'].pop('x', None)
+        config_dict['model_kwargs'].pop('y', None)
+
+        # set _ct_n to None in case regression is GE;
+        # this has to be set explicitly so it's not
+        # referenced before assigned in set_data below
+        _ct_n = None
+
+        # If regression is MPA, pop the ct_n key
+        # but retain temporary copy for set_data
+        if 'ct_n' in config_dict['model_kwargs']:
+            _ct_n = config_dict['model_kwargs']['ct_n']
+            config_dict['model_kwargs'].pop('ct_n', None)
+
         # Create model object
         loaded_model = mavenn.Model(**config_dict['model_kwargs'])
 
@@ -678,6 +703,11 @@ def load(filename, verbose=True):
         # Load and set weights
         filename_h5 = filename + '.h5'
         loaded_model.get_nn().load_weights(filename_h5)
+
+        # set_data to the loaded model as it was saved.
+        loaded_model.set_data(x=_x,
+                              y=_y,
+                              ct_n=_ct_n)
 
         # Provide feedback
         if verbose:
