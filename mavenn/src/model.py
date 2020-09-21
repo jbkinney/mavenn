@@ -394,20 +394,31 @@ class Model:
 
             # Do linear regression
             start_time = time.time()
-            x_sparse = csc_matrix(self.model.input_seqs_ohe)
-            self.theta_init = lsmr(x_sparse, y_targets, show=verbose)[0]
+            x_lc_vec = self.model.x_lc_ohe[:, 0:self.L * self.C]
+            x_sparse = csc_matrix(x_lc_vec)
+            self.theta_lc_init = lsmr(x_sparse, y_targets, show=verbose)[0]
             linear_regression_time = time.time() - start_time
             if verbose:
                 print(f'Linear regression time: '
                       f'{linear_regression_time:.4f} sec')
 
             # Set weights from linear regression result
-            theta_init = np.reshape(self.theta_init, [-1, 1])
-            weights = [theta_init, np.zeros(1)]
-            self.model.model.layers[2].set_weights(weights)
+            if self.gpmap_type == 'additive':
+                self.model.x_to_phi_layer.set_params(
+                    theta_0=0.,
+                    theta_lc=self.theta_lc_init)
+            elif self.gpmap_type == 'pairwise':
+                self.model.x_to_phi_layer.set_params(
+                    theta_0=0.,
+                    theta_lc=self.theta_lc_init,
+                    theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
+            # else:
+            #     theta_init = np.reshape(self.theta_init, [-1, 1])
+            #     weights = [theta_init, np.zeros(1)]
+            #     self.model.model.layers[2].set_weights(weights)
 
         # Concatenate seqs and ys
-        train_sequences = np.hstack([self.model.input_seqs_ohe,
+        train_sequences = np.hstack([self.model.x_lc_ohe,
                                      self.model.y_train])
 
         # Train neural network using TensorFlow
@@ -427,7 +438,7 @@ class Model:
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
-        unfixed_phi = self._unfixed_gpmap([self.model.input_seqs_ohe])
+        unfixed_phi = self._unfixed_gpmap([self.model.x_lc_ohe])
 
         # Set stats
         self.unfixed_phi_mean = np.mean(unfixed_phi)
@@ -529,19 +540,43 @@ class Model:
 
         # Otherwise, just report parameters
         else:
-            # Create vector of theta values
-            theta_0 = self.get_nn().layers[2].get_weights()[1]
-            theta_vec = self.get_nn().layers[2].get_weights()[0]
-            theta = np.insert(theta_vec, 0, theta_0)
+
+            # Get theta as vector without nans
+            param_dict = self.model.x_to_phi_layer.get_params()
+            theta_0 = param_dict['theta_0']
+            names_0 = ['theta_0']
+
+            theta_lc = param_dict['theta_lc']
+            names_lc = [f'theta_{l}:{c}'
+                        for l in range(self.L)
+                        for c in self.alphabet]
+
+            theta = np.concatenate([theta_0, theta_lc.ravel()])
+            names = names_0 + names_lc
+
+            if self.gpmap_type in ['pairwise', 'neighbor']:
+
+                def mask_func(l1,l2):
+                    if self.gpmap_type == 'neighbor':
+                        return l2 - l1 == 1
+                    else:
+                        return l2-l1 >= 1
+
+                theta_lclc = param_dict['theta_lclc'].ravel()
+                theta_lclc = theta_lclc[np.isfinite(theta_lclc)]
+                names_lclc = [f'theta_{l1}:{c1},{l2}:{c2}'
+                              for l1 in range(self.L)
+                              for c1 in self.alphabet
+                              for l2 in range(self.L)
+                              for c2 in self.alphabet
+                              if mask_func(l1, l2)]
+                theta = np.concatenate([theta, theta_lclc])
+                names = names + names_lclc
 
             # Fix diffeomorphic modes
             # Best to do immediately after extracting from network
             theta[0] -= self.unfixed_phi_mean
             theta /= self.unfixed_phi_std
-
-            # Get feature names
-            names = self.model.feature_names
-            names = ['theta'+name[1:] for name in names]
 
             # Store all model parameters in dataframe
             theta_df = pd.DataFrame({'name': names, 'value': theta})

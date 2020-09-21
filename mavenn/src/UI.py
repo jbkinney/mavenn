@@ -15,7 +15,8 @@ from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
 from mavenn.src.dev import x_to_features
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.dev import GlobalEpistasisLayer
+from mavenn.src.dev import GlobalEpistasisLayer, \
+                            AdditiveGPMapLayer, PairwiseGPMapLayer
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -163,13 +164,13 @@ class GlobalEpistasisModel:
         self.L = len(self.x_train[0])
 
         # Encode sequences as features
-        self.input_seqs_ohe, self.feature_names = \
+        self.x_lc_ohe, _ = \
             x_to_features(x=self.x_train,
                           alphabet=self.alphabet,
-                          model_type=self.gpmap_type)
+                          model_type="additive")
 
         # Leave out constant feature
-        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
+        self.x_lc_ohe = self.x_lc_ohe[:, 1:]
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train).reshape(
@@ -215,23 +216,34 @@ class GlobalEpistasisModel:
         check(ge_nonlinearity_hidden_nodes > 0,
               'ge_nonlinearity_hidden_nodes must be greater than 0.')
 
-        number_input_layer_nodes = len(self.input_seqs_ohe[0])+1
+        number_input_layer_nodes = len(self.x_lc_ohe[0]) + 1
         inputTensor = Input((number_input_layer_nodes,),
                             name='Sequence_labels_input')
 
-        sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                output_shape=((len(self.input_seqs_ohe[0]),)),
+        sequence_input = Lambda(lambda x: x[:, 0:len(self.x_lc_ohe[0])],
+                                output_shape=((len(self.x_lc_ohe[0]),)),
                                 name='Sequence_only')(inputTensor)
         labels_input = Lambda(
             lambda x: x[:, len(
-                self.input_seqs_ohe[0]):len(self.input_seqs_ohe[0]) + 1],
+                self.x_lc_ohe[0]):len(self.x_lc_ohe[0]) + 1],
             output_shape=((1, )),
             trainable=False, name='Labels_input')(inputTensor)
 
-        theta_regularizer = tf.keras.regularizers.l2(self.theta_regularization)
-        phi = Dense(1,
-                    name='phi',
-                    kernel_regularizer=theta_regularizer)(sequence_input)
+
+        # Create G-P map layer
+        if self.gpmap_type == 'additive':
+            self.x_to_phi_layer = AdditiveGPMapLayer(self.L,
+                                                     self.C,
+                                                     self.theta_regularization)
+        elif self.gpmap_type in ['pairwise', 'neighbor']:
+            self.x_to_phi_layer = PairwiseGPMapLayer(self.L,
+                                                     self.C,
+                                                     self.theta_regularization,
+                                                     mask_type=self.gpmap_type)
+        else:
+            assert False, "This should not happen."
+
+        phi = self.x_to_phi_layer(sequence_input)
 
         # Make global epistasis layer
         self.phi_to_yhat_layer = \
@@ -415,21 +427,19 @@ class MeasurementProcessAgnosticModel:
         self.x_train, self.y_train = self.x, self.y
 
         # Encode sequences as features
-        self.input_seqs_ohe, self.feature_names = \
+        self.x_lc_ohe, _ = \
             x_to_features(x=self.x_train,
                           alphabet=self.alphabet,
-                          model_type=self.gpmap_type)
+                          model_type="additive")
 
         # Leave out constant feature
-        self.input_seqs_ohe = self.input_seqs_ohe[:, 1:]
+        self.x_lc_ohe = self.x_lc_ohe[:, 1:]
 
         # check if this is strictly required by tf
         self.y_train = np.array(self.y_train)
 
-
     def define_model(self,
                      na_hidden_nodes=10):
-
         """
         Defines the architecture of the noise agnostic regression model.
         using the tensorflow.keras functional API. If custom_architecture is
@@ -459,26 +469,36 @@ class MeasurementProcessAgnosticModel:
         check(na_hidden_nodes > 0,
               'na_hidden_nodes must be greater than 0.')
 
-        number_input_layer_nodes = len(self.input_seqs_ohe[0])+self.y.shape[1]
+        number_input_layer_nodes = len(self.x_lc_ohe[0]) + self.y.shape[1]
 
         inputTensor = Input((number_input_layer_nodes,),
                             name='Sequence_labels_input')
 
-        sequence_input = Lambda(lambda x: x[:, 0:len(self.input_seqs_ohe[0])],
-                                output_shape=((len(self.input_seqs_ohe[0]),)),
+        sequence_input = Lambda(lambda x: x[:, 0:len(self.x_lc_ohe[0])],
+                                output_shape=((len(self.x_lc_ohe[0]),)),
                                 name='Sequence_only')(inputTensor)
         labels_input = Lambda(
             lambda x: x[:, len(
-                self.input_seqs_ohe[0]):len(
-                self.input_seqs_ohe[0]) + self.y.shape[1]],
+                self.x_lc_ohe[0]):len(
+                self.x_lc_ohe[0]) + self.y.shape[1]],
             output_shape=((1, )),
             trainable=False,
             name='Labels_input')(inputTensor)
 
-        phi = Dense(1,
-                    kernel_regularizer=tf.keras.regularizers.l2(
-                        self.theta_regularization),
-                    use_bias=True, name='phi')(sequence_input)
+        # Create G-P map layer
+        if self.gpmap_type == 'additive':
+            self.x_to_phi_layer = AdditiveGPMapLayer(self.L,
+                                                     self.C,
+                                                     self.theta_regularization)
+        elif self.gpmap_type in ['pairwise', 'neighbor']:
+            self.x_to_phi_layer = PairwiseGPMapLayer(self.L,
+                                                     self.C,
+                                                     self.theta_regularization,
+                                                     mask_type=self.gpmap_type)
+        else:
+            assert False, "This should not happen."
+
+        phi = self.x_to_phi_layer(sequence_input)
 
         intermediateTensor = Dense(na_hidden_nodes, activation='sigmoid')(phi)
         yhat = Dense(np.shape(self.y_train[0])[0],
@@ -495,7 +515,6 @@ class MeasurementProcessAgnosticModel:
         self.model = model
         self.na_hidden_nodes = na_hidden_nodes
         return model
-
 
     def p_of_all_y_given_phi(self,
                              phi):
