@@ -34,14 +34,17 @@ mavenn.set_seed(0)
 # Define a model with a pairwise G-P map
 # a heteroskedastic Gaussian GE measurement process,
 # and specify the training data.
-model = mavenn.Model(x=x_train,
-                     y=y_train,
+model = mavenn.Model(regression_type='GE',
+                     L=len(x[0]),
                      gpmap_type='pairwise',
                      alphabet='dna',
-                     regression_type='GE',
                      ge_noise_model_type='Gaussian',
                      ge_nonlinearity_monotonic=True,
                      ge_heteroskedasticity_order=0)
+
+# Set training data
+model.set_data(x=x_train,
+               y=y_train)
 
 # Fit model to training data
 start_time = time.time()

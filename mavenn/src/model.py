@@ -17,15 +17,17 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model as kerasFunctionalModel
 from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
 from tensorflow.keras.constraints import non_neg as nonneg
+from tensorflow.keras.callbacks import EarlyStopping
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
+from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
-from mavenn.src.dev import x_to_features
+from mavenn.src.dev import x_to_features, x_to_consensus
 from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
 from mavenn.src.utils import get_gpmap_params_in_cannonical_gauge
 
@@ -43,20 +45,16 @@ class Model:
     attributes
     ----------
 
-    x: (array-like)
-        DNA, RNA, or protein sequences to be regressed over.
+    regression_type: (str)
+        variable that choose type of regression, valid options
+        include 'GE', 'MPA'
 
-    y: (array-like)
-        y represents counts in bins, or continuous measurement values
-        corresponding to the sequences x
+    L: (int)
+        Integer specifying the length of a single training sequence.
 
     alphabet: (str)
         Specifies the type of input sequences. Three possible choices
         allowed: ['dna','rna','protein', 'protein*'].
-
-    regression_type: (str)
-        variable that choose type of regression, valid options
-        include 'GE', 'MPA'
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
@@ -95,20 +93,17 @@ class Model:
         but this may also take up a lot of memory and throw an exception
         if its too large. Currently for additive models only.
 
-    ct_n: (array-like of ints)
-        For MPA regression only. List N counts, one for each (sequence,bin) pair.
-        If None, a value of 1 will be assumed for all observations
+    Y: (int)
+        Integer specifying the number of bins.
+        Only used for MPA regression; set to None otherwise.
 
     """
 
-
     def __init__(self,
-                 x,
-                 y,
-                 alphabet,
                  regression_type,
+                 L,
+                 alphabet,
                  gpmap_type='additive',
-                 ct_n=None,
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
@@ -116,34 +111,13 @@ class Model:
                  na_hidden_nodes=50,
                  theta_regularization=0.1,
                  eta_regularization=0.1,
-                 ohe_batch_size=50000):
+                 ohe_batch_size=50000,
+                 Y=None):
 
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
         self.arg_dict = locals()
         self.arg_dict.pop('self')
-
-        # Validate and set alphabet
-        self.alphabet = validate_alphabet(alphabet)
-        self.C = len(self.alphabet)
-
-        # Validate x and set x
-        x = validate_1d_array(x)
-        x = validate_seqs(x, alphabet=alphabet)
-        check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
-        self.x = x
-
-        # Set sequence length
-        L = len(x[0])
-        check(L > 0,
-              f'len(x[0])={L}; must be > 0')
-        self.L = L
-
-        # Set N
-        self.N = len(x)
-
-        # Validate and set y
-        self.y = validate_1d_array(y)
 
         # Set regression_type
         check(regression_type in {'MPA', 'GE'},
@@ -151,24 +125,14 @@ class Model:
               f'must be "MPA", or "GE"')
         self.regression_type = regression_type
 
-        # If doing GE regression, compute y_norm, as well as y_mean and y_std
-        if self.regression_type == 'GE':
-            y_unique = np.unique(self.y)
-            check(len(y_unique),
-                  f'Only {len(y_unique)} unique y-values provided;'
-                  f'At least 2 are requied')
-            self.y_mean = self.y.mean()
-            self.y_std = self.y.std()
-            self.y_norm = (self.y - self.y_mean)/self.y_std
+        # Set sequence length
+        check(L > 0,
+              f'len(x[0])={L}; must be > 0')
+        self.L = L
 
-        # If doing MPA regression, just set y_norm = y
-        elif self.regression_type == 'MPA':
-            self.y_norm = self.y
-            self.y_mean = 0
-            self.y_std = 1
-
-        else:
-            assert False, "This shouldn't happen"
+        # Validate and set alphabet
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
 
         # Set other parameters
         self.gpmap_type = gpmap_type
@@ -180,7 +144,7 @@ class Model:
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
-        self.ct_n = ct_n
+        self.Y = Y
 
         # represents GE or MPA model object, depending which is chosen.
         # attribute value is set below
@@ -189,33 +153,110 @@ class Model:
         # choose model based on regression_type
         if regression_type == 'GE':
 
-            self.model = GlobalEpistasisModel(x=self.x,
-                                              y=self.y_norm,
-                                              gpmap_type=self.gpmap_type,
-                                              ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
-                                              alphabet=self.alphabet,
-                                              ohe_batch_size=self.ohe_batch_size,
-                                              ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
-                                              theta_regularization=self.theta_regularization,
-                                              eta_regularization=self.eta_regularization)
+            self.model = GlobalEpistasisModel(
+                            sequence_length=self.L,
+                            gpmap_type=self.gpmap_type,
+                            ge_nonlinearity_monotonic=
+                                self.ge_nonlinearity_monotonic,
+                            alphabet=self.alphabet,
+                            ohe_batch_size=self.ohe_batch_size,
+                            ge_heteroskedasticity_order=
+                                self.ge_heteroskedasticity_order,
+                            theta_regularization=self.theta_regularization,
+                            eta_regularization=self.eta_regularization)
 
-            self.define_model = self.model.define_model(ge_noise_model_type=self.ge_noise_model_type,
-                                                        ge_nonlinearity_hidden_nodes=
-                                                        self.ge_nonlinearity_hidden_nodes)
+            self.define_model = self.model.define_model(
+                                    ge_noise_model_type=
+                                        self.ge_noise_model_type,
+                                    ge_nonlinearity_hidden_nodes=
+                                        self.ge_nonlinearity_hidden_nodes)
 
         elif regression_type == 'MPA':
 
-            self.model = MeasurementProcessAgnosticModel(x=self.x,
-                                                         y=self.y_norm,
-                                                         ct_n = self.ct_n,
-                                                         alphabet=self.alphabet,
-                                                         gpmap_type=self.gpmap_type,
-                                                         theta_regularization=self.theta_regularization,
-                                                         ohe_batch_size=self.ohe_batch_size)
+            self.model = MeasurementProcessAgnosticModel(
+                            sequence_length=self.L,
+                            number_of_bins=self.Y,
+                            alphabet=self.alphabet,
+                            gpmap_type=self.gpmap_type,
+                            theta_regularization=self.theta_regularization,
+                            ohe_batch_size=self.ohe_batch_size)
             self.model.theta_init = None
 
-            self.define_model = self.model.define_model(na_hidden_nodes=self.na_hidden_nodes)
+            self.define_model = self.model.define_model(
+                                    na_hidden_nodes=
+                                    self.na_hidden_nodes)
 
+    @handle_errors
+    def set_data(self,
+                 x,
+                 y,
+                 ct_n=None,
+                 shuffle=True):
+
+        """
+        Method that feeds data into the mavenn model.
+
+        parameters
+        ----------
+
+        x: (array-like)
+            DNA, RNA, or protein sequences to be regressed over.
+
+        y: (array-like)
+            y represents counts in bins (for MPA regression), or
+            continuous measurement values (for GE regression) corresponding
+            to the sequences x.
+
+        ct_n: (array-like of ints)
+            For MPA regression only. List N counts, one for each (sequence,bin)
+            pair. If None, a value of 1 will be assumed for all observations.
+
+        shuffle: (bool)
+            Whether to shuffle the observations, e.g., to ensure similar
+            composition of training and validation sets.
+
+        returns
+        -------
+        None.
+        """
+
+        # Validate x and set x
+        x = validate_1d_array(x)
+        x = validate_seqs(x, alphabet=self.alphabet)
+        check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
+
+        # Validate y
+        y = validate_1d_array(y)
+
+        # check that lengths are the same
+        check(len(x) == len(y),
+              'length of inputs (x, y) must be equal')
+
+        # Pivot data if doing MPA regression
+        if self.regression_type == 'MPA':
+            self.y, self.x = vec_data_to_mat_data(x_n=x,
+                                                  y_n=y,
+                                                  ct_n=ct_n)
+        else:
+            self.x = x
+            self.y = y
+
+        # Set N
+        self.N = len(x)
+        print(f'N = {self.N} observations set as training data.')
+
+        # Shuffle data if requested
+        check(isinstance(shuffle, bool),
+              f"type(shuffle)={type(shuffle)}; must be bool.")
+        if shuffle:
+            ix = np.arange(self.N).astype(int)
+            ix = np.random.shuffle(ix)
+            self.x = self.x[ix].reshape(self.N,)
+            if self.regression_type == 'GE':
+                self.y = self.y[ix].reshape(self.N,)
+            else:
+                self.y = self.y[ix, :].reshape(self.N, self.Y)
+            print('Data shuffled.')
 
     @handle_errors
     def fit(self,
@@ -369,10 +410,46 @@ class Model:
                             optimizer_kwargs=optimizer_kwargs)
 
 
+        # Set early stopping if requested
         if early_stopping:
-            callbacks += [tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                  mode='auto',
-                                                                  patience=early_stopping_patience)]
+            callbacks.append(EarlyStopping(monitor='val_loss',
+                                           mode='auto',
+                                           patience=early_stopping_patience))
+
+        # Normalize self.y -> self.y_norm
+        if self.regression_type == 'GE':
+            y_unique = np.unique(self.y)
+            check(len(y_unique),
+                  f'Only {len(y_unique)} unique y-values provided;'
+                  f'At least 2 are requied')
+            self.y_mean = self.y.mean()
+            self.y_std = self.y.std()
+            self.y_norm = (self.y - self.y_mean)/self.y_std
+
+        elif self.regression_type == 'MPA':
+            self.y_norm = self.y
+            self.y_mean = 0
+            self.y_std = 1
+
+        else:
+            assert False, "This shouldn't happen"
+
+        # Encode sequences as features
+        self.x_lc_ohe, self.x_lc_feature_names = \
+            x_to_features(x=self.x,
+                          alphabet=self.alphabet,
+                          model_type="additive")
+        self.x_lc_ohe = self.x_lc_ohe[:, 1:]      # Remove constant feature
+
+        # Reshape self.y_norm to facilitate input creation
+        if self.regression_type == 'GE':
+            self.y_norm = np.array(self.y_norm).reshape(-1, 1)
+
+        elif self.regression_type == 'MPA':
+            self.y_norm = np.array(self.y_norm)
+
+        # Compute the consensus sequence
+        self.x_consensus = x_to_consensus(self.x)
 
         # Do linear regression if requested
         if self.linear_initialization:
@@ -380,23 +457,23 @@ class Model:
             # Set y targets for linear regression
             # If GE regression, use normalized y values
             if self.regression_type == 'GE':
-                y_targets = self.model.y_train
+                y_targets = self.y_norm
 
             # If MPA regression, use mean bin number
             elif self.regression_type == 'MPA':
-                bin_nums = np.arange(self.model.y_train.shape[1])
-                y_targets = (self.model.y_train
+                bin_nums = np.arange(self.Y)
+                y_targets = (self.y_norm
                              * bin_nums[np.newaxis, :]).sum(axis=1) / \
-                            self.model.y_train.sum(axis=1)
+                            self.y_norm.sum(axis=1)
 
             else:
                 assert False, "This should never happen."
 
             # Do linear regression
             start_time = time.time()
-            x_lc_vec = self.model.x_lc_ohe[:, 0:self.L * self.C]
-            x_sparse = csc_matrix(x_lc_vec)
+            x_sparse = csc_matrix(self.x_lc_ohe)
             self.theta_lc_init = lsmr(x_sparse, y_targets, show=verbose)[0]
+
             linear_regression_time = time.time() - start_time
             if verbose:
                 print(f'Linear regression time: '
@@ -407,19 +484,17 @@ class Model:
                 self.model.x_to_phi_layer.set_params(
                     theta_0=0.,
                     theta_lc=self.theta_lc_init)
-            elif self.gpmap_type == 'pairwise':
+            elif self.gpmap_type in ['neighbor', 'pairwise']:
                 self.model.x_to_phi_layer.set_params(
                     theta_0=0.,
                     theta_lc=self.theta_lc_init,
                     theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
-            # else:
-            #     theta_init = np.reshape(self.theta_init, [-1, 1])
-            #     weights = [theta_init, np.zeros(1)]
-            #     self.model.model.layers[2].set_weights(weights)
+            else:
+                assert False, "This should not happen."
 
         # Concatenate seqs and ys
-        train_sequences = np.hstack([self.model.x_lc_ohe,
-                                     self.model.y_train])
+        train_sequences = np.hstack([self.x_lc_ohe,
+                                     self.y_norm])
 
         # Train neural network using TensorFlow
         history = self.model.model.fit(train_sequences,
@@ -438,7 +513,7 @@ class Model:
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
-        unfixed_phi = self._unfixed_gpmap([self.model.x_lc_ohe])
+        unfixed_phi = self._unfixed_gpmap([self.x_lc_ohe])
 
         # Set stats
         self.unfixed_phi_mean = np.mean(unfixed_phi)
@@ -454,13 +529,13 @@ class Model:
 
         return history
 
-
     @handle_errors
     def phi_to_yhat(self,
                     phi):
 
         """
-        Evaluate the GE nonlinearity at specified values of phi (the latent phenotype).
+        Evaluate the GE nonlinearity at specified values of phi
+        (the latent phenotype).
 
         parameters
         ----------
@@ -495,7 +570,6 @@ class Model:
         yhat = _shape_for_output(yhat, phi_shape)
 
         return yhat
-
 
     @handle_errors
     def get_gpmap_parameters(self, which='all', fix_gauge=True):
@@ -556,7 +630,7 @@ class Model:
 
             if self.gpmap_type in ['pairwise', 'neighbor']:
 
-                def mask_func(l1,l2):
+                def mask_func(l1, l2):
                     if self.gpmap_type == 'neighbor':
                         return l2 - l1 == 1
                     else:
@@ -631,16 +705,13 @@ class Model:
 
         return theta_df
 
-
     @handle_errors
     def get_nn(self):
-
         """
         Returns the tf neural network used to represent the inferred model.
         """
 
         return self.model.model
-
 
     @handle_errors
     def _compile_model(self,
@@ -649,8 +720,7 @@ class Model:
                        optimizer_kwargs={},
                        compile_kwargs={}):
         """
-        This method will compile the model created in the constructor. The loss used will be
-        log_poisson_loss for MPA regression, or mean_squared_error for GE regression
+        This method will compile the model created in the constructor.
 
         parameters
         ----------
@@ -672,28 +742,17 @@ class Model:
             f'type(optimizer)={type(optimizer)}; must be on of ' \
             f'tf.keras.optimizers.Optimizer)'
 
-        if self.regression_type == 'GE':
-
-            # Note: this loss just returns the computed
-            # Likelihood in the custom likelihood layer
-            def likelihood_loss(y_true, y_pred):
-
+        # Note: this loss just returns the computed
+        # Likelihood in the custom likelihood layer
+        def likelihood_loss(y_true, y_pred):
+            if self.regression_type == 'GE':
                 return K.sum(y_pred)
-
-            self.model.model.compile(loss=likelihood_loss,
-                                     optimizer=optimizer,
-                                     **compile_kwargs)
-
-        elif self.regression_type == 'MPA':
-
-
-            def likelihood_loss(y_true, y_pred):
+            elif self.regression_type == 'MPA':
                 return y_pred
 
-            self.model.model.compile(loss=likelihood_loss,
-                                     optimizer=optimizer,
-                                     **compile_kwargs)
-
+        self.model.model.compile(loss=likelihood_loss,
+                                 optimizer=optimizer,
+                                 **compile_kwargs)
 
     @handle_errors
     def x_to_phi(self, x):
@@ -720,24 +779,22 @@ class Model:
 
         # Check seqs
         x = validate_seqs(x, alphabet=self.alphabet)
-        L = len(self.x[0])
-        check(len(x[0]) == L,
-              f'len(x[0])={len(x[0])}; should be L={L}')
+        check(len(x[0]) == self.L,
+              f'len(x[0])={len(x[0])}; should be L={self.L}')
 
         # Encode sequences as features
-        seqs_ohe, _ = x_to_features(x=x,
+        x_lc_ohe, _ = x_to_features(x=x,
                                     alphabet=self.alphabet,
-                                    model_type=self.gpmap_type)
-        seqs_ohe = seqs_ohe[:, 1:]
+                                    model_type="additive")
+        x_lc_ohe = x_lc_ohe[:, 1:]
 
-        # Form tf.keras function that will evaluate the value of
-        # gauge fixed latent phenotype
+        # Keras function that computes phi from x
         gpmap_function = K.function([self.model.model.layers[1].input],
                                     [self.model.model.layers[2].output])
 
         # Compute latent phenotype values
         # Note that these are NOT diffeomorphic-mode fixed
-        unfixed_phi = gpmap_function([seqs_ohe])
+        unfixed_phi = gpmap_function([x_lc_ohe])
 
         # Fix diffeomorphic models
         phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
@@ -752,10 +809,9 @@ class Model:
     @handle_errors
     def x_to_yhat(self,
                   x):
-
         """
-        Make predictions for arbitrary input sequences. Note that this returns the output of
-        the measurement process, not the latent phenotype.
+        Make predictions for arbitrary input sequences. Note that this returns
+        the output of the measurement process, not the latent phenotype.
 
         parameters
         ----------
@@ -771,7 +827,8 @@ class Model:
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
-        check(self.regression_type == 'GE', 'Regression type must be GE for this function.')
+        check(self.regression_type == 'GE',
+              'Regression type must be GE for this function.')
 
         yhat = self.phi_to_yhat(self.x_to_phi(x))
 
@@ -839,7 +896,6 @@ class Model:
             I = Mutual information estimate in bits.
             dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
             Not returned if uncertainty=False is set.
-
         """
 
         if self.regression_type=='GE':
@@ -852,19 +908,13 @@ class Model:
                                  verbose=verbose)
 
         elif self.regression_type=='MPA':
-
             phi = self.x_to_phi(x)
-
-            # The format of y needs to be integer bin numbers, like the input to mavenn
-            # for MPA regression
-
             return mi_mixed(phi,
                             y,
                             knn=knn,
                             uncertainty=uncertainty,
                             num_subsamples=num_subsamples,
                             verbose=verbose)
-
 
     def yhat_to_yq(self,
                    yhat,
@@ -915,7 +965,6 @@ class Model:
         yq = _shape_for_output(yq, yq_shape)
 
         return yq
-
 
     def p_of_y_given_phi(self, y, phi, paired=False):
         """
@@ -979,7 +1028,6 @@ class Model:
         p = _shape_for_output(p, p_shape)
         return p
 
-
     # TODO: Stated behavior won't work for MPA regression, only GE
     def _p_of_y_given_phi(self,
                          y,
@@ -1007,23 +1055,7 @@ class Model:
 
         """
 
-        # Reshape inputs for processing
-        #y, y_shape = _get_shape_and_return_1d_array(y)
-        #phi, phi_shape = _get_shape_and_return_1d_array(y)
-
         if self.regression_type == 'MPA':
-
-            # # check that entered y (specifying bin number) is an integer
-            # check(isinstance(y, int),
-            #       'type(y), specifying bin number, must be of type int')
-            #
-            # # check that entered bin nnumber doesn't exceed max bins
-            # check(y< self.model.y_train[0].shape[0],
-            #       "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
-            #
-            # # Give the probability of bin y given phi, note phi can be an array.
-            # p_of_y_given_phi = self.na_p_of_all_y_given_phi(phi)[:,y]
-            # #return p_of_y_given_phi
 
             in_shape = y.shape
 
@@ -1031,12 +1063,11 @@ class Model:
             y = y.astype(int)
 
             # Make sure all y values are valid
-            Y = self.model.y_train[0].shape[0]
             check(np.all(y >= 0),
                   f"Negative values for y are invalid for MAP regression")
 
-            check(np.all(y < Y),
-                  f"Some y values exceed the number of bins {Y}")
+            check(np.all(y < self.Y),
+                  f"Some y values exceed the number of bins {self.Y}")
 
             # Have to ravel
             y = y.ravel()
@@ -1053,35 +1084,23 @@ class Model:
             # Reshape
             p_of_y_given_phi = np.reshape(p_of_y_given_phi, in_shape)
 
-
         else:
             check(self.regression_type=='GE',
                   f'Invalid regression type {self.regression_type}.')
 
             # variable to store the shape of the returned object
-
             yhat = self.phi_to_yhat(np.array(phi).ravel())
-
-            if np.array(y).shape==np.array(phi).shape and (len(np.array(y).shape)>0 and len(np.array(phi).shape)>0):
-
+            if np.array(y).shape==np.array(phi).shape \
+                    and (len(np.array(y).shape)>0 \
+                         and len(np.array(phi).shape)>0):
                 shape = np.array(y).shape
-
-                p_of_y_given_phi = self._p_of_y_given_y_hat(y.ravel(), yhat.ravel()).reshape(shape)
-
-                #return p_of_y_given_phi
+                p_of_y_given_phi = self._p_of_y_given_y_hat(y.ravel(),
+                                       yhat.ravel()).reshape(shape)
 
             else:
-
                 p_of_y_given_phi = self._p_of_y_given_y_hat(y, yhat)
 
-                #return p_of_y_given_phi
-
-        # Reshape for output
-        #p_shape = y_shape + phi_shape
-        #p = _shape_for_output(p_of_y_given_phi, p_shape)
-        #return p
         return p_of_y_given_phi
-
 
     def p_of_y_given_yhat(self, y, yhat, paired=False):
         """
@@ -1142,7 +1161,6 @@ class Model:
         p = _shape_for_output(p, p_shape)
         return p
 
-
     def _p_of_y_given_y_hat(self,
                             y,
                             yhat):
@@ -1163,29 +1181,24 @@ class Model:
         p_of_y_given_yhat: (array-like of floats)
             Probability of y given sequence yhat. Shape of returned value will
             match shape of y_test, for a single yhat. For each value of yhat_i,
-            the distribution p(y|yhat_i), where i traverses the elements of yhat.
+            the distribution p(y|yhat_i), where i traverses the elements of
+            yhat.
 
         """
 
-        check(self.regression_type=='GE', "This method works on with GE regression.")
+        check(self.regression_type=='GE',
+              "This method works on with GE regression.")
+
         # Get GE noise model based on the users input.
-        ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self, yhat, None)
+        ge_noise_model = globals()[self.ge_noise_model_type +
+                                   'NoiseModel'](self, yhat, None)
 
         return ge_noise_model.p_of_y_given_yhat(y, yhat)
-
 
     def __p_of_y_given_y_hat(self,
                              y,
                              yhat):
-
         """
-        y: np.ndarray, shape=(n1,n2,...,nK)
-        phi: np.ndarray, shape=(n1,n2,...,nK)
-        returns
-        -------
-
-
-
         parameters
         ----------
         y: (array-like of floats)
@@ -1201,43 +1214,43 @@ class Model:
 
         """
 
-        check(self.regression_type=='GE', "This method works on with GE regression.")
-        # Get GE noise model based on the users input.
-        ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self, yhat, None)
+        check(self.regression_type=='GE',
+              "This method works on with GE regression.")
 
+        # Get GE noise model based on the users input.
+        ge_noise_model = globals()[self.ge_noise_model_type +
+                                   'NoiseModel'](self, yhat, None)
         vec_p_of_y_given_yhat = np.vectorize(ge_noise_model.p_of_y_given_yhat)
 
-        # store shape of return distribution
-
         return vec_p_of_y_given_yhat(y, yhat)
-
 
     def na_p_of_all_y_given_phi(self,
                                 phi):
 
         """
-        Evaluate the MPA measurement process at specified values of phi (the latent phenotype).
+        Evaluate the MPA measurement process at specified values of
+        phi (the latent phenotype).
 
         parameters
         ----------
-
         phi: (array-like)
-            Latent phenotype values at which to evaluate the measurement process.
+            Latent phenotype values at which to evaluate the measurement
+            process.
 
         returns
         -------
         p_of_dot_given_phi: (array-like)
-            Measurement process p(y|phi) for all possible values of y. Is of size
-            MxY where M=len(phi) and Y is the number of possible y values.
+            Measurement process p(y|phi) for all possible values of y. Is of
+            size MxY where M=len(phi) and Y is the number of possible y values.
 
         """
 
-        check(self.regression_type == 'MPA', 'regression type must be "MPA" for this function ')
+        check(self.regression_type == 'MPA',
+              'regression type must be "MPA" for this function ')
 
         p_of_dot_given_phi = self.model.p_of_all_y_given_phi(phi)
 
         return p_of_dot_given_phi
-
 
     def p_of_y_given_x(self, y, x):
 
@@ -1264,7 +1277,8 @@ class Model:
         if self.regression_type=='GE':
             yhat = self.x_to_yhat(x)
             # Get GE noise model based on the users input.
-            ge_noise_model = globals()[self.ge_noise_model_type + 'NoiseModel'](self,yhat)
+            ge_noise_model = globals()[self.ge_noise_model_type
+                                       + 'NoiseModel'](self,yhat)
 
             p_of_y_given_x = ge_noise_model.p_of_y_given_yhat(y, yhat)
             return p_of_y_given_x
@@ -1276,30 +1290,26 @@ class Model:
                   'type(y), specifying bin number, must be of type int')
 
             # check that entered bin nnumber doesn't exceed max bins
-            check(y< self.model.y_train[0].shape[0], "bin number cannot be larger than max bins = %d" %self.model.y_train[0].shape[0])
-
+            check(y < self.y_norm[0].shape[0],
+                  "bin number cannot be larger than max bins = %d" %
+                  self.y_norm[0].shape[0])
 
             phi = self.x_to_phi(x)
             p_of_y_given_x = self.p_of_y_given_phi(y, phi)
             return p_of_y_given_x
 
-
     def save(self,
              filename,
-             N_save=100,
              verbose=True):
 
         """
-        Method that will save the mave-nn model
+        Method that will save the MAVE-NN model. Note: this does NOT
+        save training data
 
         parameters
         ----------
         filename: (str)
             filename of the saved model.
-
-        N_save: (int)
-            Number of training observations to store. Set to np.inf
-            to store all training examples
 
         verbose: (bool)
             Whether to provide user feedback.
@@ -1310,24 +1320,14 @@ class Model:
 
         """
 
-        # Determinehow much data to keep
-        N_save = min(len(self.x), N_save)
-
-        # Subsample x and y
-        self.arg_dict['x'] = self.x[:N_save].copy()
-        self.arg_dict['y'] = self.y[:N_save].copy()
-
-        # Subsample ct_n if set
-        if isinstance(self.ct_n, np.ndarray):
-            self.arg_dict['ct_n'] = self.ct_n[:N_save].copy()
-
         # Create config_dict
         config_dict = {
             'model_kwargs': self.arg_dict,
             'unfixed_phi_mean': self.unfixed_phi_mean,
             'unfixed_phi_std': self.unfixed_phi_std,
             'y_std': self.y_std,
-            'y_mean': self.y_mean
+            'y_mean': self.y_mean,
+            'x_consensus': self.x_consensus
         }
 
         # Save config_dict as pickle file

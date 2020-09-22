@@ -105,6 +105,8 @@ def test_GlobalEpistasisModel():
     x = x[0:1000].copy()
     y = y[0:1000].copy()
 
+    L = len(x[0])
+
     # sequences arrays that fail when entered into mavenn.
     bad_x = 'x'
 
@@ -113,62 +115,53 @@ def test_GlobalEpistasisModel():
     bad_y = [1, 3, -2, 4.5]
     # also could check for nan's like np.isnan(bad_y).all()
 
-    # test sequences parameter X
-    test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_x], success_list=[x],
-                          gpmap_type='additive', y=y, regression_type='GE', alphabet='dna')
-
-    # test labels parameter y
-    test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-                          gpmap_type='additive', x=x, regression_type='GE', alphabet='dna')
+    # # test sequences parameter X
+    # test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_x], success_list=[x],
+    #                       gpmap_type='additive', y=y, regression_type='GE', alphabet='dna')
+    #
+    # # test labels parameter y
+    # test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
+    #                       gpmap_type='additive', x=x, regression_type='GE', alphabet='dna')
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['GE'],
-                          gpmap_type='additive', x=x, y=y, alphabet='dna')
+                          gpmap_type='additive', alphabet='dna', L=L)
 
     # test labels parameter ge_nonlinearity_monotonic
     test_parameter_values(func=mavenn.Model, var_name='ge_nonlinearity_monotonic', fail_list=['True', -1],
                           success_list=[True,False], regression_type='GE',
-                          gpmap_type='additive', x=x, y=y, alphabet='dna')
+                          gpmap_type='additive', alphabet='dna', L=L)
 
     # test labels parameter ge_nonlinearity_hidden_nodes
     test_parameter_values(func=mavenn.Model, var_name='ge_nonlinearity_hidden_nodes', fail_list=[0.6,-1,0],
-                          success_list=[1,10,100],  regression_type='GE',
-                          gpmap_type='additive', x=x, y=y, alphabet='dna')
+                          success_list=[1,10,100], regression_type='GE',
+                          gpmap_type='additive', alphabet='dna', L=L)
 
     # test parameter gpmap_type
     test_parameter_values(func=mavenn.Model, var_name='gpmap_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
-                          regression_type='GE', x=x, y=y, alphabet='dna')
+                          regression_type='GE', alphabet='dna', L=L)
 
     # test parameter ge_heteroskedasticity_order
     test_parameter_values(func=mavenn.Model, var_name='ge_heteroskedasticity_order', fail_list=['0', 0.1, -1],
                           success_list=[0, 1, 10], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='dna')
+                          regression_type='GE', alphabet='dna', L=L)
 
     # test parameter theta_regularization
     test_parameter_values(func=mavenn.Model, var_name='theta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='dna')
+                          regression_type='GE', alphabet='dna', L=L)
 
     # test parameter eta_regularization
     test_parameter_values(func=mavenn.Model, var_name='eta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='dna')
+                          regression_type='GE',alphabet='dna', L=L)
 
     # test parameter ohe_batch_size
     test_parameter_values(func=mavenn.Model, var_name='ohe_batch_size', fail_list=['0', -1, -0.1, 0],
                           success_list=[20000], gpmap_type='additive',
-                          regression_type='GE', x=x, y=y, alphabet='dna')
+                          regression_type='GE', alphabet='dna', L=L)
 
-
-    '''
-    # TODO: need to implement alphabet_dict checks in UI for GE and NA.
-    # the following needs to be fixed in UI
-    # test labels parameter alphabet
-    test_parameter_values(func=mavenn.Model, var_name='alphabet', fail_list=['dna, protein'],
-                          success_list=['rna'], model_type='additive',
-                          regression_type='GE', x=x, y=y)
-    '''
 
 def test_NoiseAgnosticModel():
 
@@ -184,6 +177,9 @@ def test_NoiseAgnosticModel():
     y = y[0:1000].copy()
     ct_n = ct_n[0:1000].copy()
 
+    L = len(x[0])
+    Y = 10
+
     # sequences arrays that fail when entered into mavenn.
     bad_X = 'x'
 
@@ -193,8 +189,8 @@ def test_NoiseAgnosticModel():
     # Need to check for nans in y
 
     # test sequences parameter X
-    test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_X], success_list=[x],
-                          gpmap_type='additive', y=y, regression_type='MPA', alphabet='dna', ct_n=ct_n)
+    # test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_X], success_list=[x],
+    #                       gpmap_type='additive', y=y, regression_type='MPA', alphabet='dna', ct_n=ct_n)
 
     # TODO: need to fix vec_data_to_mat_data to work with one example before using this test.
     # # test labels parameter y
@@ -203,27 +199,32 @@ def test_NoiseAgnosticModel():
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['MPA'],
-                          gpmap_type='additive', x=x, y=y, alphabet='dna', ct_n=ct_n)
+                          gpmap_type='additive', alphabet='dna', L=L,
+                          Y=Y)
 
     # test labels parameter gpmap_type
     test_parameter_values(func=mavenn.Model, var_name='gpmap_type', fail_list=['standard'],
                           success_list=['additive', 'neighbor', 'pairwise'],
-                          regression_type='MPA', x=x, y=y, alphabet='dna', ct_n=ct_n)
+                          regression_type='MPA', alphabet='dna', L=L,
+                          Y=Y)
 
     # test parameter na_hidden_nodes
     test_parameter_values(func=mavenn.Model, var_name='na_hidden_nodes', fail_list=['0', 0.1, -1, 0],
-                          success_list=[1, 10], gpmap_type='additive', ct_n=ct_n,
-                          regression_type='MPA', x=x, y=y, alphabet='dna')
+                          success_list=[1, 10], gpmap_type='additive',
+                          regression_type='MPA', alphabet='dna', L=L,
+                          Y=Y)
 
     # test parameter theta_regularization
     test_parameter_values(func=mavenn.Model, var_name='theta_regularization', fail_list=['0', -1, -0.1],
-                          success_list=[0, 0.1, 10], gpmap_type='additive', ct_n=ct_n,
-                          regression_type='MPA', x=x, y=y, alphabet='dna')
+                          success_list=[0, 0.1, 10], gpmap_type='additive',
+                          regression_type='MPA', alphabet='dna', L=L,
+                          Y=Y)
 
     # test parameter ohe_batch_size
     test_parameter_values(func=mavenn.Model, var_name='ohe_batch_size', fail_list=['0', -1, -0.1, 0],
-                          success_list=[20000], gpmap_type='additive', ct_n=ct_n,
-                          regression_type='MPA', x=x, y=y, alphabet='dna')
+                          success_list=[20000], gpmap_type='additive',
+                          regression_type='MPA', alphabet='dna', L=L,
+                          Y=Y)
 
 
 def test_load():
@@ -402,7 +403,7 @@ def _test_phi_calculation(model_file):
     model = mavenn.load(model_file[:-3])
 
     # Get sequence
-    seq = model.x[0]
+    seq = model.x_consensus
 
     # Get alphabet
     alphabet = model.model.alphabet

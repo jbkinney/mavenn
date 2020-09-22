@@ -669,11 +669,12 @@ def load(filename, verbose=True):
         # Create model object
         loaded_model = mavenn.Model(**config_dict['model_kwargs'])
 
-        # Add in diffeomorphic mode fixing params
+        # Add in diffeomorphic mode fixing and standardization params
         loaded_model.unfixed_phi_mean = config_dict['unfixed_phi_mean']
         loaded_model.unfixed_phi_std = config_dict['unfixed_phi_std']
         loaded_model.y_mean = config_dict['y_mean']
         loaded_model.y_std = config_dict['y_std']
+        loaded_model.x_consensus = config_dict['x_consensus']
 
         # Load and set weights
         filename_h5 = filename + '.h5'
