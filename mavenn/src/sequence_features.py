@@ -1,9 +1,51 @@
 # Standard imports
 import numpy as np
+import time
 
 # MAVE-NN imports
-from mavenn.src.validate import validate_seqs
+from mavenn.src.validate import validate_seqs, validate_alphabet
 from mavenn.src.error_handling import handle_errors, check
+
+@handle_errors
+def x_to_x_lc(x, alphabet, check_seqs=True, check_alphabet=True):
+    """
+    parameters
+    ----------
+    x: (array)
+        (N,) array of input sequences, each of length L
+
+    alphabet: (array)
+        (C,) array describing the alphabet sequences are drawn from.
+
+    check_seqs: (bool)
+        Whether to validate the sequences
+
+    check_alphabet: (bool)
+        Whether to validate the alphabet
+
+    returns
+    -------
+    x_lc: (array)
+        (N,C,L) array of one-hot encoded sequence features.
+    """
+
+    # Validate alphabet as (C,) array
+    if check_alphabet:
+        alphabet = validate_alphabet(alphabet)
+
+    # Validate sequences as (N,) array
+    if check_seqs:
+        x = validate_seqs(x, alphabet=alphabet)
+
+    # Get (N,L) matrix of sequence characters
+    # Note: I think this is a major bottleneck.
+    seq_mat = np.array([list(seq) for seq in x])
+
+    # Compute (N,L,C) grid of one-hot encoded values
+    x_lc = (seq_mat[:, :, np.newaxis] == alphabet[np.newaxis, np.newaxis, :])
+
+    return x_lc
+
 
 @handle_errors
 def _seqs_to_x_lc(seqs, alphabet,

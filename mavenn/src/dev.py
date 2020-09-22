@@ -6,6 +6,7 @@ import tempfile
 import os
 import tensorflow as tf
 import pdb
+import time
 
 # Scipy imports
 from scipy.stats import expon
@@ -25,7 +26,8 @@ from mavenn.src.validate import alphabet_dict
 from mavenn.src.reshape import _get_shape_and_return_1d_array
 from mavenn.src.sequence_features import additive_model_features, \
                                          neighbor_model_features, \
-                                         pairwise_model_features
+                                         pairwise_model_features, \
+                                         x_to_x_lc
 
 
 abreviation_dict = {
@@ -460,7 +462,7 @@ def x_to_alphabet(x, return_name=False):
 
 
 @handle_errors
-def x_to_consensus(x, weights=None):
+def x_to_stats(x, alphabet, weights=None, verbose=False):
     """
     Identify the consensus sequence from a sequence alignment.
 
@@ -469,9 +471,15 @@ def x_to_consensus(x, weights=None):
     x: (np.ndarray)
         List of sequences. Sequences must all be the same length.
 
+    alphabet: (np.ndarray)
+        Alphabet from which sequences are drawn.
+
     weights: (None, np.ndarray)
         Weights for each sequence. E.g., count values, or numerical y values.
         If None, a value of 1 will be assumed for each sequence.
+
+    verbose: (bool)
+        Whether to print computation time.
 
     returns
     -------
@@ -479,10 +487,16 @@ def x_to_consensus(x, weights=None):
         Consensus sequence.
     """
 
+    # Start timer
+    start_time = time.time()
+
+    # Validate alphabet
+    alphabet = validate_alphabet(alphabet)
+
     # Validate sequences
     x = validate_seqs(seqs=x,
-                      alphabet=None,
-                      restrict_seqs_to_alphabet=False)
+                      alphabet=alphabet,
+                      restrict_seqs_to_alphabet=True)
 
     # Check weights and set if not provided
     if weights is None:
@@ -493,75 +507,67 @@ def x_to_consensus(x, weights=None):
         check(len(weights) == len(x),
               f"len(weights)={len(weights)} does not match len(x)={len(x)}")
 
-    # Split strings, creating a matrix of individual characters
-    seqs = np.array([list(s) for s in x])
+    # Do one-hot encoding of sequences
+    t = time.time()
+    x_nlc = x_to_x_lc(x,
+                      alphabet,
+                      check_seqs=False,
+                      check_alphabet=False).astype(float)
+    #print(f'Time for x_to_x_lc: {time.time()-t:.3f} sec.')
+    N, L, C = x_nlc.shape
 
-    # For each position, identify the most common character and store in list
-    L = seqs.shape[1]
-    poss = [l for l in range(L)]
-    df = pd.DataFrame(data=seqs, columns=poss)
-    df["weights"] = weights
-    consensus_chars = []
-    for l in poss:
-        sub_cols = [l, "weights"]
-        char_df = df[sub_cols].groupby(l).sum()
-        char_df = char_df.sort_values("weights", ascending=False)
-        consensus_chars.append(char_df.index[0])
+    # Multiply by weights
+    x_nlc = x_nlc * weights[:, np.newaxis, np.newaxis]
 
-    # Convert from list to seq
-    consensus_seq = ''.join(consensus_chars)
+    # Compute lc encoding of consensus sequence
+    x_sum_lc = x_nlc.sum(axis=0)
+    x_sum_lc = x_sum_lc.reshape([L, C])
+    x_support_lc = (x_sum_lc != 0)
 
-    return consensus_seq
+    # Dictionary to hold results
+    stats = {}
 
+    # Compute x_lc
+    stats['x_ohe'] = x_nlc.reshape([N, L*C])
 
-@handle_errors
-def x_to_missing(x, alphabet=None):
-    """
-    Identify the missing characters at each position within a set
-    of sequences.
+    # Set number of sequences
+    stats['N'] = N
 
-    parameters
-    ----------
-    x: (np.ndarray)
-        List of sequences. Sequences must all be the same length.
+    # Set sequence length
+    stats['L'] = L
 
-    alphabet: (str or list-like of characters)
-        The alphabet from which characters in x are expected to be drawn.
-        If None, the alphabet will be assumed to comprise the unique characters
-        at all positions in all sequences in x.
+    # Set number of characters
+    stats['C'] = C
 
-    returns
-    -------
-    missing_dict: (dict)
-        Keys denote positions, values are strings comprised of missing
-        characters.
-    """
+    # Set alphabet
+    stats['alphabet'] = alphabet
 
-    # If alphabet is not specified, determine automatically.
-    if alphabet is None:
-        alphabet = x_to_alphabet(x)
+    # Compute probability matrix
+    p_lc = x_sum_lc / x_sum_lc.sum(axis=1)[:, np.newaxis]
+    stats['probability_df'] = pd.DataFrame(index=range(L),
+                                           columns=alphabet,
+                                           data=p_lc)
 
-    # Validate alphabet
-    alphabet = validate_alphabet(alphabet)
+    # Compute the consensus sequence
+    stats['consensus_seq'] = \
+        ''.join([alphabet[np.argmax(x_sum_lc[l, :])] for l in range(L)])
 
-    # Validate sequences
-    x = validate_seqs(seqs=x,
-                      alphabet=alphabet,
-                      restrict_seqs_to_alphabet=False)
-
-    # Split strings, creating a matrix of individual characters
-    seqs = np.array([list(s) for s in x])
-
-    # For each position, identify missing characters and use to make mask_dict
-    L = seqs.shape[1]
+    # Compute mask dict
     missing_dict = {}
     for l in range(L):
-        missing_chars = list(set(alphabet) - set(seqs[:, l]))
-        missing_chars.sort()
-        if len(missing_chars) > 0:
-            missing_dict[l] = ''.join(missing_chars)
+        if any(~x_support_lc[l, :]):
+            missing_dict[l] = ''.join(alphabet[~x_support_lc[l, :]])
+    stats['missing_char_dict'] = missing_dict
 
-    return missing_dict
+    # Compute sparsity factor
+    stats['sparsity_factor'] = (x_nlc != 0).sum().sum() / x_nlc.size
+
+    # Provide feedback if requested
+    duration_time = time.time() - start_time
+    if verbose:
+        print(f'Stats computation time: {duration_time:.5f} sec.')
+
+    return stats
 
 
 @handle_errors

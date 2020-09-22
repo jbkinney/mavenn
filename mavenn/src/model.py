@@ -27,10 +27,9 @@ from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
-from mavenn.src.dev import x_to_features, x_to_consensus
+from mavenn.src.dev import x_to_features, x_to_stats
 from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
 from mavenn.src.utils import get_gpmap_params_in_cannonical_gauge
-
 
 @handle_errors
 class Model:
@@ -191,7 +190,8 @@ class Model:
                  x,
                  y,
                  ct_n=None,
-                 shuffle=True):
+                 shuffle=True,
+                 verbose=True):
 
         """
         Method that feeds data into the mavenn model.
@@ -215,10 +215,16 @@ class Model:
             Whether to shuffle the observations, e.g., to ensure similar
             composition of training and validation sets.
 
+        verbose: (bool)
+            Whether to provide printed feedback.
+
         returns
         -------
         None.
         """
+
+        # Start timer
+        set_data_start = time.time()
 
         # Validate x and set x
         x = validate_1d_array(x)
@@ -243,7 +249,8 @@ class Model:
 
         # Set N
         self.N = len(x)
-        print(f'N = {self.N:,} observations set as training data.')
+        if verbose:
+            print(f'N = {self.N:,} observations set as training data.')
 
         # Shuffle data if requested
         check(isinstance(shuffle, bool),
@@ -256,7 +263,42 @@ class Model:
                 self.y = self.y[ix]
             else:
                 self.y = self.y[ix, :].reshape(self.N, self.Y)
-            print('Data shuffled.')
+            if verbose:
+                print('Data shuffled.')
+
+        # Normalize self.y -> self.y_norm
+        self.y_stats = {}
+        if self.regression_type == 'GE':
+            y_unique = np.unique(self.y)
+            check(len(y_unique),
+                  f'Only {len(y_unique)} unique y-values provided;'
+                  f'At least 2 are requied')
+            self.y_stats['y_mean'] = self.y.mean()
+            self.y_stats['y_std'] = self.y.std()
+
+        elif self.regression_type == 'MPA':
+            self.y_stats['y_mean'] = 0
+            self.y_stats['y_std'] = 1
+
+        else:
+            assert False, "This shouldn't happen"
+
+        # Set normalized y and relevant parameters
+        self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
+
+        # Reshape self.y_norm to facilitate input creation
+        if self.regression_type == 'GE':
+            self.y_norm = np.array(self.y_norm).reshape(-1, 1)
+
+        elif self.regression_type == 'MPA':
+            self.y_norm = np.array(self.y_norm)
+
+        # Compute the consensus sequence
+        self.x_stats = x_to_stats(self.x, self.alphabet)
+        self.x_lc_ohe = self.x_stats.pop('x_ohe')
+        self.x_consensus = self.x_stats['consensus_seq']
+        if verbose:
+            print(f'Time to set data: {time.time() - set_data_start:.3} sec.')
 
     @handle_errors
     def fit(self,
@@ -416,59 +458,20 @@ class Model:
             'This not happen. optimizer should be ' \
             'tf.keras.optimizers.Optimizer instance by now.'
 
+        # Compile model
         self._compile_model(optimizer=optimizer,
                             lr=self.learning_rate,
                             optimizer_kwargs=optimizer_kwargs)
 
-
-        # Set early stopping if requested
+        # Set early stopping callback if requested
         if early_stopping:
             callbacks.append(EarlyStopping(monitor='val_loss',
                                            mode='auto',
                                            patience=early_stopping_patience))
 
-        # Normalize self.y -> self.y_norm
-        if self.regression_type == 'GE':
-            y_unique = np.unique(self.y)
-            check(len(y_unique),
-                  f'Only {len(y_unique)} unique y-values provided;'
-                  f'At least 2 are requied')
-            self.y_mean = self.y.mean()
-            self.y_std = self.y.std()
-            self.y_norm = (self.y - self.y_mean)/self.y_std
-
-        elif self.regression_type == 'MPA':
-            self.y_norm = self.y
-            self.y_mean = 0
-            self.y_std = 1
-
-        else:
-            assert False, "This shouldn't happen"
-
-        # Encode sequences as features
-        self.x_lc_ohe, self.x_lc_feature_names = \
-            x_to_features(x=self.x,
-                          alphabet=self.alphabet,
-                          model_type="additive")
-        self.x_lc_ohe = self.x_lc_ohe[:, 1:]      # Remove constant feature
-
-        # Reshape self.y_norm to facilitate input creation
-        if self.regression_type == 'GE':
-            self.y_norm = np.array(self.y_norm).reshape(-1, 1)
-
-        elif self.regression_type == 'MPA':
-            self.y_norm = np.array(self.y_norm)
-
-        # Compute the consensus sequence
-        self.x_consensus = x_to_consensus(self.x)
-        self.x_cons_ohe, _ =x_to_features(x=self.x_consensus,
-                                         alphabet=self.alphabet,
-                                         model_type="additive")
-        self.x_cons_ohe = self.x_cons_ohe[1:]
-
-        # Set consensus values to zero in ohe if requested
-        # if zero_consensus:
-        #     self.x_lc_ohe[:, self.x_cons_ohe.astype(bool)] = 0
+        # Set parameters that affect models
+        self.y_mean = self.y_stats['y_mean']
+        self.y_std = self.y_stats['y_std']
 
         # Do linear regression if requested
         if self.linear_initialization:
@@ -489,11 +492,11 @@ class Model:
                 assert False, "This should never happen."
 
             # Do linear regression
-            start_time = time.time()
+            t = time.time()
             x_sparse = csc_matrix(self.x_lc_ohe)
             self.theta_lc_init = lsmr(x_sparse, y_targets, show=verbose)[0]
 
-            linear_regression_time = time.time() - start_time
+            linear_regression_time = time.time() - t
             if verbose:
                 print(f'Linear regression time: '
                       f'{linear_regression_time:.4f} sec')
@@ -544,7 +547,7 @@ class Model:
         # Compute training time
         self.training_time = time.time() - start_time
         if verbose:
-            print(f'training time: {self.training_time:.1f} seconds')
+            print(f'Training time: {self.training_time:.1f} seconds')
 
         return history
 
@@ -802,10 +805,8 @@ class Model:
               f'len(x[0])={len(x[0])}; should be L={self.L}')
 
         # Encode sequences as features
-        x_lc_ohe, _ = x_to_features(x=x,
-                                    alphabet=self.alphabet,
-                                    model_type="additive")
-        x_lc_ohe = x_lc_ohe[:, 1:]
+        stats = x_to_stats(x=x, alphabet=self.alphabet)
+        x_lc_ohe = stats.pop('x_ohe')
 
         # Keras function that computes phi from x
         gpmap_function = K.function([self.model.model.layers[1].input],
@@ -1346,7 +1347,8 @@ class Model:
             'unfixed_phi_std': self.unfixed_phi_std,
             'y_std': self.y_std,
             'y_mean': self.y_mean,
-            'x_consensus': self.x_consensus
+            'x_stats': self.x_stats,
+            'y_stats': self.y_stats
         }
 
         # Save config_dict as pickle file

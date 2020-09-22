@@ -403,7 +403,7 @@ def _test_phi_calculation(model_file):
     model = mavenn.load(model_file[:-3])
 
     # Get sequence
-    seq = model.x_consensus
+    seq = model.x_stats['consensus_seq']
 
     # Get alphabet
     alphabet = model.model.alphabet

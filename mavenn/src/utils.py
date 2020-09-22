@@ -674,7 +674,7 @@ def load(filename, verbose=True):
         loaded_model.unfixed_phi_std = config_dict['unfixed_phi_std']
         loaded_model.y_mean = config_dict['y_mean']
         loaded_model.y_std = config_dict['y_std']
-        loaded_model.x_consensus = config_dict['x_consensus']
+        loaded_model.x_stats = config_dict['x_stats']
 
         # Load and set weights
         filename_h5 = filename + '.h5'
