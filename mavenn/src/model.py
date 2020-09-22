@@ -8,7 +8,7 @@ import time
 from collections.abc import Iterable
 
 # Scipy imports
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse.linalg import lsmr
 
 # Tensorflow imports
@@ -243,17 +243,17 @@ class Model:
 
         # Set N
         self.N = len(x)
-        print(f'N = {self.N} observations set as training data.')
+        print(f'N = {self.N:,} observations set as training data.')
 
         # Shuffle data if requested
         check(isinstance(shuffle, bool),
               f"type(shuffle)={type(shuffle)}; must be bool.")
         if shuffle:
             ix = np.arange(self.N).astype(int)
-            ix = np.random.shuffle(ix)
-            self.x = self.x[ix].reshape(self.N,)
+            np.random.shuffle(ix)
+            self.x = self.x[ix]
             if self.regression_type == 'GE':
-                self.y = self.y[ix].reshape(self.N,)
+                self.y = self.y[ix]
             else:
                 self.y = self.y[ix, :].reshape(self.N, self.Y)
             print('Data shuffled.')
@@ -267,6 +267,7 @@ class Model:
             early_stopping=True,
             early_stopping_patience=20,
             batch_size=50,
+            zero_consensus=True,
             linear_initialization=True,
             callbacks=[],
             optimizer='Adam',
@@ -303,6 +304,10 @@ class Model:
 
         linear_initialization: (bool)
             Whether to initialize model with linear regression results.
+
+        zero_consensus: (bool)
+            Whether to zero out the consensus sequence ohe in order to try
+            and speed training. [NOT IMPLEMENTED]
 
         callbacks: (list)
             List of tf.keras.callbacks.Callback instances.
@@ -379,6 +384,12 @@ class Model:
               f'must be bool.')
         self.linear_initialization = linear_initialization
 
+        # Check zero_consensus
+        check(isinstance(zero_consensus, bool),
+              f'type(zero_consensus)={type(zero_consensus)};'
+              f'must be bool.')
+        self.zero_consensus = zero_consensus
+
         # Check callbacks
         check(isinstance(callbacks, list),
               f'type(callbacks)={type(callbacks)}; must be list.')
@@ -450,6 +461,14 @@ class Model:
 
         # Compute the consensus sequence
         self.x_consensus = x_to_consensus(self.x)
+        self.x_cons_ohe, _ =x_to_features(x=self.x_consensus,
+                                         alphabet=self.alphabet,
+                                         model_type="additive")
+        self.x_cons_ohe = self.x_cons_ohe[1:]
+
+        # Set consensus values to zero in ohe if requested
+        # if zero_consensus:
+        #     self.x_lc_ohe[:, self.x_cons_ohe.astype(bool)] = 0
 
         # Do linear regression if requested
         if self.linear_initialization:
