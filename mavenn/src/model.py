@@ -295,7 +295,7 @@ class Model:
 
         # Compute the consensus sequence
         self.x_stats = x_to_stats(self.x, self.alphabet)
-        self.x_lc_ohe = self.x_stats.pop('x_ohe')
+        self.x_ohe = self.x_stats.pop('x_ohe')
         self.x_consensus = self.x_stats['consensus_seq']
         if verbose:
             print(f'Time to set data: {time.time() - set_data_start:.3} sec.')
@@ -348,7 +348,7 @@ class Model:
             Whether to initialize model with linear regression results.
 
         zero_consensus: (bool)
-            Whether to zero out the consensus sequence ohe in order to try
+            Whether to zero out the consensus sequence x_ohe in order to try
             and speed training. [NOT IMPLEMENTED]
 
         callbacks: (list)
@@ -493,7 +493,7 @@ class Model:
 
             # Do linear regression
             t = time.time()
-            x_sparse = csc_matrix(self.x_lc_ohe)
+            x_sparse = csc_matrix(self.x_ohe)
             self.theta_lc_init = lsmr(x_sparse, y_targets, show=verbose)[0]
 
             linear_regression_time = time.time() - t
@@ -515,7 +515,7 @@ class Model:
                 assert False, "This should not happen."
 
         # Concatenate seqs and ys
-        train_sequences = np.hstack([self.x_lc_ohe,
+        train_sequences = np.hstack([self.x_ohe,
                                      self.y_norm])
 
         # Train neural network using TensorFlow
@@ -535,7 +535,7 @@ class Model:
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
-        unfixed_phi = self._unfixed_gpmap([self.x_lc_ohe])
+        unfixed_phi = self._unfixed_gpmap([self.x_ohe])
 
         # Set stats
         self.unfixed_phi_mean = np.mean(unfixed_phi)
@@ -806,7 +806,7 @@ class Model:
 
         # Encode sequences as features
         stats = x_to_stats(x=x, alphabet=self.alphabet)
-        x_lc_ohe = stats.pop('x_ohe')
+        x_ohe = stats.pop('x_ohe')
 
         # Keras function that computes phi from x
         gpmap_function = K.function([self.model.model.layers[1].input],
@@ -814,7 +814,7 @@ class Model:
 
         # Compute latent phenotype values
         # Note that these are NOT diffeomorphic-mode fixed
-        unfixed_phi = gpmap_function([x_lc_ohe])
+        unfixed_phi = gpmap_function([x_ohe])
 
         # Fix diffeomorphic models
         phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std

@@ -24,10 +24,7 @@ from mavenn.src.validate import validate_seqs, \
 from mavenn.src.error_handling import check, handle_errors
 from mavenn.src.validate import alphabet_dict
 from mavenn.src.reshape import _get_shape_and_return_1d_array
-from mavenn.src.sequence_features import additive_model_features, \
-                                         neighbor_model_features, \
-                                         pairwise_model_features, \
-                                         x_to_x_lc
+from mavenn.src.sequence_features import x_to_ohe
 
 
 abreviation_dict = {
@@ -509,26 +506,27 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
 
     # Do one-hot encoding of sequences
     t = time.time()
-    x_nlc = x_to_x_lc(x,
-                      alphabet,
-                      check_seqs=False,
-                      check_alphabet=False).astype(float)
-    #print(f'Time for x_to_x_lc: {time.time()-t:.3f} sec.')
+    x_nlc = x_to_ohe(x,
+                     alphabet,
+                     check_seqs=False,
+                     check_alphabet=False,
+                     ravel_seqs=False)
+    #print(f'Time for x_to_ohe: {time.time()-t:.3f} sec.')
     N, L, C = x_nlc.shape
 
+    # Dictionary to hold results
+    stats = {}
+
+    # Compute x_ohe
+    stats['x_ohe'] = x_nlc.reshape([N, L*C]).astype(np.int8)
+
     # Multiply by weights
-    x_nlc = x_nlc * weights[:, np.newaxis, np.newaxis]
+    x_nlc = x_nlc.astype(float) * weights[:, np.newaxis, np.newaxis]
 
     # Compute lc encoding of consensus sequence
     x_sum_lc = x_nlc.sum(axis=0)
     x_sum_lc = x_sum_lc.reshape([L, C])
     x_support_lc = (x_sum_lc != 0)
-
-    # Dictionary to hold results
-    stats = {}
-
-    # Compute x_lc
-    stats['x_ohe'] = x_nlc.reshape([N, L*C])
 
     # Set number of sequences
     stats['N'] = N
