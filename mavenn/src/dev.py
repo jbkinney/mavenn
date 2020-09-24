@@ -7,6 +7,7 @@ import os
 import tensorflow as tf
 import pdb
 import time
+import logomaker
 
 # Scipy imports
 from scipy.stats import expon
@@ -546,7 +547,12 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
                                            columns=alphabet,
                                            data=p_lc)
 
-    # Compute the consensus sequence
+    # Compute sparsity factor
+    stats['sparsity_factor'] = (x_nlc != 0).sum().sum() / x_nlc.size
+
+    # Compute the consensus sequence and corresponding matrix.
+    # Adding noise prevents ties
+    x_sum_lc += 1E-1 * np.random.rand(*x_sum_lc.shape)
     stats['consensus_seq'] = \
         ''.join([alphabet[np.argmax(x_sum_lc[l, :])] for l in range(L)])
 
@@ -556,9 +562,6 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
         if any(~x_support_lc[l, :]):
             missing_dict[l] = ''.join(alphabet[~x_support_lc[l, :]])
     stats['missing_char_dict'] = missing_dict
-
-    # Compute sparsity factor
-    stats['sparsity_factor'] = (x_nlc != 0).sum().sum() / x_nlc.size
 
     # Provide feedback if requested
     duration_time = time.time() - start_time

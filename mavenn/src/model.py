@@ -5,6 +5,7 @@ import re
 import pdb
 import pickle
 import time
+import numbers
 from collections.abc import Iterable
 
 # Scipy imports
@@ -592,6 +593,184 @@ class Model:
         yhat = _shape_for_output(yhat, phi_shape)
 
         return yhat
+
+    from mavenn.src.error_handling import handle_errors, check
+
+    @handle_errors
+    def get_theta(self,
+                  gauge="hierarchichal",
+                  p_lc=None,
+                  x_wt=None,
+                  unobserved_value=None):
+        """
+        Returns the parameters of the G-P map and a dictionary
+        of np.ndarrays.
+
+        parameters
+        ----------
+
+        gauge: ("wildtype", "hierarchichal", None)
+            Gauge to use for model parameters. If None, parameter
+            values will be returned unfixed
+
+        p_lc: (array, None)
+            An (L,C) array listing the probability of each base
+            at each position. This is used when choosing the
+            hierarchichal gauge. If None, the base composition
+            in the training data will be used.
+
+        x_wt: (str, None)
+            Wild type sequence to use for gauge fixing. If None, the
+            consensus sequence from the training data will be used.
+
+        unobserved_value: (float, None)
+            Value to use for theta parameters when no corresponding
+            sequences were present in the training data. If None,
+            these parameters will be left alone.
+
+        returns
+        -------
+
+        theta: (dict)
+            Model parmaeters, provided as a dict of np.arrays.
+        """
+
+        # Check gauge
+        choices = ("wildtype", "hierarchichal", None)
+        check(gauge in choices,
+              f"Invalid choice for gauge={repr(gauge)}; "
+              f"must be one of {choices}")
+
+        # Check p_lc
+        check((p_lc is None) or isinstance(p_lc, np.ndarray),
+              f"Invalid type(p_lc)={type(p_lc)}")
+
+        # Check x_wt
+        check((x_wt is None) or isinstance(x_wt, str),
+              f"Invalid type(x_wt)={type(x_wt)}")
+
+        # Check unobserved_value
+        check((unobserved_value is None)
+              or isinstance(unobserved_value, numbers.Number),
+              f"Invalid type(unobserved_value)={type(unobserved_value)}")
+
+        # Get parameters from layer
+        theta_dict = self.model.x_to_phi_layer.get_params()
+
+        # Copy all parameters just to be safe
+        for key, value in theta_dict.items():
+            theta_dict[key] = value.copy()
+
+        # Make theta_0 a () array.
+        theta_dict['theta_0'] = theta_dict['theta_0'].squeeze()
+
+        # End here if not fixing the gauge
+        if gauge is None:
+            return theta_dict
+
+        # Unpack useful x_stats
+        x_stats = self.x_stats
+        L = x_stats['L']
+        C = x_stats['C']
+        alphabet = x_stats['alphabet']
+
+        # Useful alias
+        _ = np.newaxis
+
+        # Assign p_lc
+        if gauge == "wildtype":
+
+            # If x_wt is not set, set to training consensus seq
+            if x_wt is None:
+                x_wt = x_stats['consensus_seq']
+
+            # Otherwise, check that user-provided x_wt is valid
+            else:
+                check(isinstance(x_wt, str),
+                      f'type(x_wt)={type(x_wt)}; must be str.')
+                check(len(x_wt) == L,
+                      f'len(x_wt)={len(x_wt)}; must match L={L}.')
+                check(set(x_wt) <= set(alphabet),
+                      f'x_wt contains characters {set(x_wt) - set(alphabet)}'
+                      f'that are not in alphabet.')
+
+            # Compute p_lc
+            p_lc = (np.array(list(x_wt))[:, _] == alphabet[_, :]).astype(float)
+
+        elif gauge == "hierarchichal":
+
+            # If p_lc is not set, set to factorized training dist
+            if p_lc is None:
+                p_lc = x_stats['probability_df'].values
+
+            # Otherwise, check that user-provided p_lc is valid
+            else:
+                check(isinstance(p_lc, np.ndarray),
+                      f'type(p_lc)={type(p_lc)}; must be str.')
+                check(p_lc.shape == (L, C),
+                      f'p_lc.shape={p_lc.shape}; must be (L,C)={(L,C)}.')
+                check(np.all(p_lc >= 0) & np.all(p_lc <= 1),
+                      f'Not all p_lc values are within [0,1].')
+        else:
+            assert False, 'This should not happen'
+
+        # Extract parameter arrays. Get masks and replace masked values with 0
+        theta_0 = theta_dict['theta_0'].copy()
+        theta_lc = theta_dict['theta_lc'].copy()
+        theta_lclc = theta_dict.get('theta_lclc',
+                                    np.full(shape=(L, C, L, C),
+                                            fill_value=np.nan)).copy()
+
+        # Record nan masks and then set nan values to zero.
+        nan_mask_lclc = np.isnan(theta_lclc)
+        theta_lclc[nan_mask_lclc] = 0
+
+        # Create unobserved_lc
+        unobserved_lc = (x_stats['probability_df'].values == 0)
+
+        # Fix 0th order parameter
+        fixed_theta_0 = theta_0 \
+            + np.sum(p_lc * theta_lc) \
+            + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :])
+
+        # Fix 1st order parameters
+        fixed_theta_lc = theta_lc \
+            - np.sum(theta_lc * p_lc, axis=1)[:, _] \
+            + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                     axis=(2, 3)) \
+            - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                     axis=(1, 2, 3))[:, _]
+
+        # Fix 2nd order parameters
+        fixed_theta_lclc = theta_lclc \
+            - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                     axis=1)[:, _, :, :] \
+            - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                     axis=3)[:, :, :,_] \
+            + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                     axis=(1, 3))[:, _, :, _]
+
+        # Set unobserved values if requested
+        if unobserved_value is not None:
+            # Set unobserved additive parameters
+            fixed_theta_lc[unobserved_lc] = unobserved_value
+
+            # Set unobserved pairwise parameters
+            ix = unobserved_lc[:, :, _, _] | unobserved_lc[_, _, :, :]
+            fixed_theta_lclc[ix] = unobserved_value
+
+        # Set masked values back to nan
+        fixed_theta_lclc[nan_mask_lclc] = np.nan
+
+        # Set and return output
+        theta_dict = {
+            'theta_0': fixed_theta_0,
+            'theta_lc': fixed_theta_lc,
+            'theta_lclc': fixed_theta_lclc
+        }
+
+        # pdb.set_trace
+        return theta_dict
 
     @handle_errors
     def get_gpmap_parameters(self, which='all', fix_gauge=True):
