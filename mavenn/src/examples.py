@@ -185,53 +185,18 @@ def load_example_dataset(name=None):
     dataset_names = ['mpsa', 'sortseq', 'gb1']
     dataset_names.sort()
 
+    # Set dataset_dir
+    dataset_dir = mavenn.__path__[0] + '/examples/datasets/'
+
     # If no input, list valid names
     if name is None:
         print("Please enter a dataset name. Valid choices are:")
         print("\n".join([f'"{name}"' for name in dataset_names]))
         return None
 
-    elif name == 'mpsa':
-
-        mpsa_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/mpsa/brca2_lib1_rep1.csv')
-
-        data_df = pd.DataFrame()
-        data_df['y'] = mpsa_df['log_psi'].values
-        data_df['x'] = mpsa_df['ss'].values
-
+    elif name in dataset_names:
+        data_df = pd.read_csv(dataset_dir + f'{name}_data.csv.gz')
         return data_df
-
-    elif name == 'sortseq':
-
-        # sequences = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/rnap_sequences.txt',
-        #                        dtype='str')
-        # bin_counts = np.loadtxt(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/bin_counts.txt')
-        #
-        # return sequences, bin_counts
-
-        data_df = pd.read_csv(mavenn.__path__[0] + '/examples/datafiles/sort_seq/full-wt/full-wt-sort_seq.csv', index_col=[0])
-
-        sequences = data_df['seq'].values
-        bins = data_df['bin'].values
-        ct = data_df['ct'].values
-
-        #return sequences, bin_counts, ct_n
-
-        data_df = pd.DataFrame()
-        data_df['y'] = bins
-        data_df['ct'] = ct
-        data_df['x'] = sequences
-        return data_df
-
-    elif name == 'gb1':
-
-        gb1_df = _load_olson_data_GB1()
-        #return gb1_df['sequence'].values, gb1_df['values'].values
-
-        # data_df = pd.DataFrame()
-        # data_df['y'] = gb1_df['values'].values
-        # data_df['x'] = gb1_df['sequence'].values
-        return gb1_df
 
     # Otherwise
     else:
@@ -239,128 +204,128 @@ def load_example_dataset(name=None):
                      f"Please enter None or one of {dataset_names}")
 
 
-@handle_errors
-def _load_olson_data_GB1():
+# @handle_errors
+# def _load_olson_data_GB1():
+#
+#     """
+#     Helper function to turn data provided by Olson et al.
+#     into sequence-values arrays. This method is used in the
+#     GB1 GE run_demo.
+#
+#
+#     return
+#     ------
+#     gb1_df: (pd dataframe)
+#         dataframe containing sequences (single and double mutants)
+#         and their corresponding log enrichment values
+#
+#     """
+#
+#     gb1_df = pd.read_csv(mavenn.__path__[0]+'/examples/datasets/gb1/gb1_data.csv.gz')
+#
+#     return gb1_df
 
-    """
-    Helper function to turn data provided by Olson et al.
-    into sequence-values arrays. This method is used in the
-    GB1 GE run_demo.
-
-
-    return
-    ------
-    gb1_df: (pd dataframe)
-        dataframe containing sequences (single and double mutants)
-        and their corresponding log enrichment values
-
-    """
-
-    gb1_df = pd.read_csv(mavenn.__path__[0]+'/examples/datafiles/gb1/gb1_data.csv.gz')
-
-    return gb1_df
-
-@handle_errors
-def load_example(which=None,
-                 name=None):
-    """
-
-    Method that returns either a model or an example dataset
-    based on the parameter "which".
-
-    parameters
-    ----------
-    which: (str)
-        String which specifies whether to load example model or
-        example dataset. Valid choice include ['model', 'dataset'].
-
-    name: (str)
-        Name of example model or example dataset. If None, a list
-        of valid choices will be printed.
-
-    returns
-    -------
-    if which == "model":
-        mavenn-model
-    else:
-        return data_df with either training or test data.
-
-    """
-
-    valid_which_list = ['model', 'training_data', 'test_data']
-
-    # if which is none, list valid choices of model/datasets names that can be loaded.
-    if which is None:
-
-        print(f"Valid choices for parameter which must be one of {valid_which_list}")
-        return None
-
-    elif which == 'model':
-
-        if name is None:
-            # call example model which would list out valid model names
-            load_example_model()
-            return None
-        else:
-            return load_example_model(name=name)
-
-    elif which == 'training_data':
-
-        if name is None:
-            # call example dataset which would list out valid dataset names
-            load_example_dataset()
-            return None
-
-        # TODO: change this snippet when the dataset formats for all experiments are the same.
-        elif name == 'gb1':
-
-            data_df = load_example_dataset(name=name)
-
-            gb1_df_training = data_df[data_df['training_set'] == True].copy()
-
-            return gb1_df_training
-
-        else:
-            data_df = load_example_dataset(name=name)
-
-            # Extract x and y as Numpy arrays
-            x = data_df['x'].values
-            y = data_df['y'].values
-
-            # Split data 80/20 into training / test sets.
-
-            x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
-
-            return pd.DataFrame({"x": x_train, "y": y_train})
-
-    elif which == 'test_data':
-
-        if name is None:
-            # call example dataset which would list out valid dataset names
-            load_example_dataset()
-            return None
-
-        # TODO: change this snippet when the dataset formats for all experiments are the same.
-        elif name == 'gb1':
-
-            data_df = load_example_dataset(name=name)
-            gb1_df_test = data_df[data_df['training_set'] == False].copy()
-
-            return gb1_df_test
-
-        else:
-            data_df = load_example_dataset(name=name)
-
-            # Extract x and y as Numpy arrays
-            x = data_df['x'].values
-            y = data_df['y'].values
-
-            # Split data into training / test sets.
-
-            x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
-
-            return pd.DataFrame({"x": x_test, "y": y_test})
-
-    else:
-        check(which in valid_which_list, f"parameter which = {which}, "
-                                         f"needs to be one of {valid_which_list}.")
+# @handle_errors
+# def load_example(which=None,
+#                  name=None):
+#     """
+#
+#     Method that returns either a model or an example dataset
+#     based on the parameter "which".
+#
+#     parameters
+#     ----------
+#     which: (str)
+#         String which specifies whether to load example model or
+#         example dataset. Valid choice include ['model', 'dataset'].
+#
+#     name: (str)
+#         Name of example model or example dataset. If None, a list
+#         of valid choices will be printed.
+#
+#     returns
+#     -------
+#     if which == "model":
+#         mavenn-model
+#     else:
+#         return data_df with either training or test data.
+#
+#     """
+#
+#     valid_which_list = ['model', 'training_data', 'test_data']
+#
+#     # if which is none, list valid choices of model/datasets names that can be loaded.
+#     if which is None:
+#
+#         print(f"Valid choices for parameter which must be one of {valid_which_list}")
+#         return None
+#
+#     elif which == 'model':
+#
+#         if name is None:
+#             # call example model which would list out valid model names
+#             load_example_model()
+#             return None
+#         else:
+#             return load_example_model(name=name)
+#
+#     elif which == 'training_data':
+#
+#         if name is None:
+#             # call example dataset which would list out valid dataset names
+#             load_example_dataset()
+#             return None
+#
+#         # TODO: change this snippet when the dataset formats for all experiments are the same.
+#         elif name == 'gb1':
+#
+#             data_df = load_example_dataset(name=name)
+#
+#             gb1_df_training = data_df[data_df['training_set'] == True].copy()
+#
+#             return gb1_df_training
+#
+#         else:
+#             data_df = load_example_dataset(name=name)
+#
+#             # Extract x and y as Numpy arrays
+#             x = data_df['x'].values
+#             y = data_df['y'].values
+#
+#             # Split data 80/20 into training / test sets.
+#
+#             x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
+#
+#             return pd.DataFrame({"x": x_train, "y": y_train})
+#
+#     elif which == 'test_data':
+#
+#         if name is None:
+#             # call example dataset which would list out valid dataset names
+#             load_example_dataset()
+#             return None
+#
+#         # TODO: change this snippet when the dataset formats for all experiments are the same.
+#         elif name == 'gb1':
+#
+#             data_df = load_example_dataset(name=name)
+#             gb1_df_test = data_df[data_df['training_set'] == False].copy()
+#
+#             return gb1_df_test
+#
+#         else:
+#             data_df = load_example_dataset(name=name)
+#
+#             # Extract x and y as Numpy arrays
+#             x = data_df['x'].values
+#             y = data_df['y'].values
+#
+#             # Split data into training / test sets.
+#
+#             x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
+#
+#             return pd.DataFrame({"x": x_test, "y": y_test})
+#
+#     else:
+#         check(which in valid_which_list, f"parameter which = {which}, "
+#                                          f"needs to be one of {valid_which_list}.")

@@ -200,15 +200,15 @@ class Model:
         parameters
         ----------
 
-        x: (array-like)
+        x: (np.ndarray)
             DNA, RNA, or protein sequences to be regressed over.
 
-        y: (array-like)
+        y: (np.ndarray)
             y represents counts in bins (for MPA regression), or
             continuous measurement values (for GE regression) corresponding
             to the sequences x.
 
-        ct_n: (array-like of ints)
+        ct_n: (np.ndarray)
             For MPA regression only. List N counts, one for each (sequence,bin)
             pair. If None, a value of 1 will be assumed for all observations.
 
@@ -248,8 +248,11 @@ class Model:
             self.x = x
             self.y = y
 
+        # Make real sure xs are strings
+        self.x = validate_seqs(self.x, alphabet=self.alphabet)
+
         # Set N
-        self.N = len(x)
+        self.N = len(self.x)
         if verbose:
             print(f'N = {self.N:,} observations set as training data.')
 
@@ -263,9 +266,17 @@ class Model:
             if self.regression_type == 'GE':
                 self.y = self.y[ix]
             else:
-                self.y = self.y[ix, :].reshape(self.N, self.Y)
+                self.y = self.y[ix, :]
             if verbose:
                 print('Data shuffled.')
+
+        # Check that none of the y-rows sum to zero
+        # Throw an error if there are.
+        if self.regression_type == 'MPA':
+            num_zero_ct_rows = sum(self.y.sum(axis=1) == 0)
+            check(num_zero_ct_rows == 0,
+                  f'Found {num_zero_ct_rows} sequences that have no counts.'
+                  f'There cannot be any such sequences.')
 
         # Normalize self.y -> self.y_norm
         self.y_stats = {}

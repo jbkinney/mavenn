@@ -25,7 +25,7 @@ theta_dict = model.get_theta(gauge='user',
                              x_wt=gb1_seq)
 
 # Load data as dataframe
-data_file = mavenn.__path__[0] + '/examples/datafiles/gb1/GB1_test_data.csv'
+data_file = mavenn.__path__[0] + '/examples/datasets/gb1/GB1_test_data.csv'
 data_df = pd.read_csv(data_file, index_col=[0])
 
 # Subsample test data, just to make plotting faster

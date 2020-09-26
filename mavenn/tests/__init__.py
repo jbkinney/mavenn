@@ -3,8 +3,7 @@ from mavenn.tests.specific_tests import \
     test_NoiseAgnosticModel, \
     test_validate_alphabet, \
     test_load, \
-    test_x_to_phi_or_yhat, \
-    test_load_example
+    test_x_to_phi_or_yhat
 
 def run_tests():
     """
@@ -16,4 +15,3 @@ def run_tests():
     test_validate_alphabet()
     test_load()
     test_x_to_phi_or_yhat()
-    test_load_example()

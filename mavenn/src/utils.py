@@ -14,6 +14,7 @@ from scipy.special import erfinv
 
 # Imports from MAVE-NN
 from mavenn.src.error_handling import handle_errors, check
+from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
 
 
 class SkewedTNoiseModel:
@@ -615,14 +616,14 @@ def vec_data_to_mat_data(y_n,
     parameters
     ----------
 
-    y_n: (array-like of ints)
-        List of N bin numbers y. Must be set by user.
+    y_n: (np.ndarray)
+        Array of N bin numbers y. Must be set by user.
 
-    ct_n: (array-like of ints)
-        List N counts, one for each (sequence,bin) pair.
+    ct_n: (np.ndarray)
+        Array N counts, one for each (sequence,bin) pair.
         If None, a value of 1 will be assumed for all observations
 
-    x_n: (array-like)
+    x_n: (np.ndarray)
         List of N sequences. If None, each y_n will be
         assumed to come from a unique sequence.
 
@@ -636,22 +637,24 @@ def vec_data_to_mat_data(y_n,
         Corresponding list of x-values.
     """
 
+    # Note: this use of validate_1d_array is needed to avoid a subtle
+    # bug that occurs when inputs are pandas series with non-continguous
+    # indices
+    y_n = validate_1d_array(y_n).astype(int)
+    N = len(y_n)
+    if x_n is not None:
+        x_n = validate_1d_array(x_n)
+    else:
+        x_n = np.arange(N)
+
+    if ct_n is not None:
+        ct_n = validate_1d_array(ct_n).astype(int)
+    else:
+        ct_n = np.ones(N).astype(int)
+
     # Cast y as array of ints
     y_n = np.array(y_n).astype(int)
     N = len(x_n)
-
-    # Cast x as array and get length
-    if x_n is None:
-        x_n = np.arange(N)
-    else:
-       x_n = np.array(x_n)
-       #assert len(x_n) == N, f'len(y_n)={len(y_n)} and len(x_n)={N} do not match.'
-
-    # Get ct
-    if ct_n is None:
-        ct_n = np.ones(N).astype(int)
-    #else:
-        #assert len(ct_n) == N, f'len(ct_n)={len(ct_n)} and len(x_n)={N} do not match.'
 
     # This case is only for loading data. Should be tested/made more robust
     if N == 1:
@@ -666,7 +669,7 @@ def vec_data_to_mat_data(y_n,
     data_df['ct'] = ct_n
 
     # Sum over repeats
-    data_df = data_df.groupby(['x','y']).sum().reset_index()
+    data_df = data_df.groupby(['x', 'y']).sum().reset_index()
 
     # Pivot dataframe
     data_df = data_df.pivot(index='x', columns='y', values='ct')
