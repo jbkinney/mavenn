@@ -21,9 +21,8 @@ model = mavenn.load_example_model('gb1_ge_additive')
 gb1_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
 
 # Get effects of all single-point mutations on phi
-dphi_df = mavenn.get_1pt_effects(func=model.x_to_phi,
-                                 wt_seq=gb1_seq,
-                                 alphabet='protein')
+theta_dict = model.get_theta(gauge='user',
+                             x_wt=gb1_seq)
 
 # Load data as dataframe
 data_file = mavenn.__path__[0] + '/examples/datafiles/gb1/GB1_test_data.csv'
@@ -53,12 +52,11 @@ fig, axs = plt.subplots(1, 2, figsize=[12, 4])
 
 # Left panel: draw heatmap illustrating 1pt mutation effects
 ax = axs[0]
-ax, cb = mavenn.heatmap(dphi_df,
-                        c_col='c_mut',
-                        l_col='l',
-                        value_col='dphi',
+ax, cb = mavenn.heatmap(theta_dict['theta_lc'],
+                        alphabet=theta_dict['alphabet'],
                         seq=gb1_seq,
                         cmap='PiYG',
+                        ccenter=0,
                         ax=ax)
 ax.set_xlabel('position ($l$)')
 ax.set_ylabel('amino acid ($c$)')

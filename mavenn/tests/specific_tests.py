@@ -7,7 +7,7 @@ import glob
 import mavenn
 from mavenn.src.examples import load_example, load_example_dataset
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.landscape import get_1pt_variants
+#from mavenn.src.landscape import get_1pt_variants
 from mavenn.src.utils import load
 from mavenn.src.error_handling import check, handle_errors
 from mavenn.tests.testing_utils import test_parameter_values, \
@@ -49,49 +49,49 @@ def test_validate_alphabet():
                           success_list=success_list)
 
 
-def test_get_1pt_variants():
-    """20.09.01 JBK"""
-
-    # Tests with alphabet='protein'
-    test_parameter_values(func=get_1pt_variants,
-                          var_name='wt_seq',
-                          success_list=['QYKL'],
-                          fail_list=['ACGU', 'QYKL*', '',
-                                     0, ['A', 'C', 'G', 'T']],
-                          alphabet='protein')
-
-    # Tests with wt_seq='QYKL'
-    test_parameter_values(func=get_1pt_variants,
-                          var_name='alphabet',
-                          success_list=['protein','protein*',
-                                        ['Q', 'Y', 'K', 'L']],
-                          fail_list=['dna','rna','ACGU','',0,
-                                     ['Q', 'Y', 'K'], ['A', 'C', 'G', 'T']],
-                          wt_seq='QYKL')
-
-    # Test include_wt
-    test_parameter_values(func=get_1pt_variants,
-                          var_name='include_wt',
-                          success_list=[True, False],
-                          fail_list=[0, None],
-                          wt_seq='QYKL', alphabet='protein')
-
-    # Singleton tests
-    test_parameter_values(func=get_1pt_variants,
-                          var_name='wt_seq',
-                          success_list=['ACGT'],
-                          fail_list=['ACGU'],
-                          alphabet='dna')
-    test_parameter_values(func=get_1pt_variants,
-                          var_name='wt_seq',
-                          success_list=['ACGU'],
-                          fail_list=['ACGT'],
-                          alphabet='rna')
-    test_parameter_values(func=get_1pt_variants,
-                          var_name='wt_seq',
-                          success_list=['QYKL*', 'QYKL'],
-                          fail_list=['ACGU'],
-                          alphabet='protein*')
+# def test_get_1pt_variants():
+#     """20.09.01 JBK"""
+#
+#     # Tests with alphabet='protein'
+#     test_parameter_values(func=get_1pt_variants,
+#                           var_name='wt_seq',
+#                           success_list=['QYKL'],
+#                           fail_list=['ACGU', 'QYKL*', '',
+#                                      0, ['A', 'C', 'G', 'T']],
+#                           alphabet='protein')
+#
+#     # Tests with wt_seq='QYKL'
+#     test_parameter_values(func=get_1pt_variants,
+#                           var_name='alphabet',
+#                           success_list=['protein','protein*',
+#                                         ['Q', 'Y', 'K', 'L']],
+#                           fail_list=['dna','rna','ACGU','',0,
+#                                      ['Q', 'Y', 'K'], ['A', 'C', 'G', 'T']],
+#                           wt_seq='QYKL')
+#
+#     # Test include_wt
+#     test_parameter_values(func=get_1pt_variants,
+#                           var_name='include_wt',
+#                           success_list=[True, False],
+#                           fail_list=[0, None],
+#                           wt_seq='QYKL', alphabet='protein')
+#
+#     # Singleton tests
+#     test_parameter_values(func=get_1pt_variants,
+#                           var_name='wt_seq',
+#                           success_list=['ACGT'],
+#                           fail_list=['ACGU'],
+#                           alphabet='dna')
+#     test_parameter_values(func=get_1pt_variants,
+#                           var_name='wt_seq',
+#                           success_list=['ACGU'],
+#                           fail_list=['ACGT'],
+#                           alphabet='rna')
+#     test_parameter_values(func=get_1pt_variants,
+#                           var_name='wt_seq',
+#                           success_list=['QYKL*', 'QYKL'],
+#                           fail_list=['ACGU'],
+#                           alphabet='protein*')
 
 
 def test_GlobalEpistasisModel():
@@ -398,93 +398,93 @@ def test_x_to_phi_or_yhat():
                           model=mpa_model)
 
 
-@handle_errors
-def _test_phi_calculation(model_file):
-    # Load model (assumes .h5 extension)
-    model = mavenn.load(model_file[:-3])
+# @handle_errors
+# def _test_phi_calculation(model_file):
+#     # Load model (assumes .h5 extension)
+#     model = mavenn.load(model_file[:-3])
+#
+#     # Get sequence
+#     seq = model.x_stats['consensus_seq']
+#
+#     # Get alphabet
+#     alphabet = model.model.alphabet
+#     alphabet = validate_alphabet(alphabet)
+#
+#     # Explain test to user
+#     print(
+# f"""\nTesting phi calcluation
+# model     : {model_file}
+# gpmap_type: {model.gpmap_type}
+# alphabet  : {model.alphabet}
+# seq       : {seq}""")
+#
+#     # Get MPA model parameters
+#     tmp_df = model.get_gpmap_parameters()
+#
+#     # Create theta_df
+#     theta_df = pd.DataFrame()
+#     theta_df['id'] = [name.split('_')[1] for name in tmp_df['name']]
+#     theta_df['theta'] = tmp_df['value']
+#     theta_df.set_index('id', inplace=True)
+#     theta_df.head()
+#
+#     # Get model type
+#     if model.gpmap_type == 'additive':
+#         f = additive_model_features
+#     elif model.gpmap_type in ['pairwise', 'neighbor']:
+#         f = pairwise_model_features
+#     else:
+#         check(model.gpmap_type in ['additive', 'neighbor', 'pairwise'],
+#               'Unrecognized model.gpmap_type: {model.gpmap_type}')
+#
+#     # Encode sequence features
+#     x, names = f([seq], alphabet=alphabet)
+#
+#     # Create dataframe
+#     x_df = pd.DataFrame()
+#     x_df['id'] = [name.split('_')[1] for name in names]
+#     x_df['x'] = x[0, :]
+#     x_df.set_index('id', inplace=True)
+#     x_df.head()
+#
+#     # Make sure theta_df and x_df have the same indices
+#     x_ids = set(x_df.index)
+#     theta_ids = set(theta_df.index)
+#     check(x_ids >= theta_ids, f"theta features are not contained within x features.")
+#
+#     # Merge theta_df and x_df into one dataframe
+#     df = pd.merge(left=theta_df, right=x_df, left_index=True, right_index=True,
+#                   how='left')
+#
+#     # Make sure there are no nan entries
+#     num_null_entries = df.isnull().sum().sum()
+#     check(num_null_entries == 0,
+#           f'x_df and theta_df do not agree; found {num_null_entries} null entries.')
+#
+#     # Compute phi from manual calculation
+#     phi_check = np.sum(df['theta'] * df['x'])
+#
+#     # Compute phi using model method
+#     phi_model = model.x_to_phi(seq)
+#
+#     check(np.isclose(phi_check, phi_model, atol=1E-5),
+#           f'phi_check: {phi_check} != phi_model: {phi_model} for gpmap_type: {model.gpmap_type}')
+#     print(
+# f"""phi_model : {phi_model}
+# phi_check : {phi_check}""")
 
-    # Get sequence
-    seq = model.x_stats['consensus_seq']
 
-    # Get alphabet
-    alphabet = model.model.alphabet
-    alphabet = validate_alphabet(alphabet)
-
-    # Explain test to user
-    print(
-f"""\nTesting phi calcluation
-model     : {model_file}
-gpmap_type: {model.gpmap_type}
-alphabet  : {model.alphabet}
-seq       : {seq}""")
-
-    # Get MPA model parameters
-    tmp_df = model.get_gpmap_parameters()
-
-    # Create theta_df
-    theta_df = pd.DataFrame()
-    theta_df['id'] = [name.split('_')[1] for name in tmp_df['name']]
-    theta_df['theta'] = tmp_df['value']
-    theta_df.set_index('id', inplace=True)
-    theta_df.head()
-
-    # Get model type
-    if model.gpmap_type == 'additive':
-        f = additive_model_features
-    elif model.gpmap_type in ['pairwise', 'neighbor']:
-        f = pairwise_model_features
-    else:
-        check(model.gpmap_type in ['additive', 'neighbor', 'pairwise'],
-              'Unrecognized model.gpmap_type: {model.gpmap_type}')
-
-    # Encode sequence features
-    x, names = f([seq], alphabet=alphabet)
-
-    # Create dataframe
-    x_df = pd.DataFrame()
-    x_df['id'] = [name.split('_')[1] for name in names]
-    x_df['x'] = x[0, :]
-    x_df.set_index('id', inplace=True)
-    x_df.head()
-
-    # Make sure theta_df and x_df have the same indices
-    x_ids = set(x_df.index)
-    theta_ids = set(theta_df.index)
-    check(x_ids >= theta_ids, f"theta features are not contained within x features.")
-
-    # Merge theta_df and x_df into one dataframe
-    df = pd.merge(left=theta_df, right=x_df, left_index=True, right_index=True,
-                  how='left')
-
-    # Make sure there are no nan entries
-    num_null_entries = df.isnull().sum().sum()
-    check(num_null_entries == 0,
-          f'x_df and theta_df do not agree; found {num_null_entries} null entries.')
-
-    # Compute phi from manual calculation
-    phi_check = np.sum(df['theta'] * df['x'])
-
-    # Compute phi using model method
-    phi_model = model.x_to_phi(seq)
-
-    check(np.isclose(phi_check, phi_model, atol=1E-5),
-          f'phi_check: {phi_check} != phi_model: {phi_model} for gpmap_type: {model.gpmap_type}')
-    print(
-f"""phi_model : {phi_model}
-phi_check : {phi_check}""")
-
-
-def test_phi_calculations():
-    mavenn_dir = mavenn.__path__[0]
-    model_dir = f'{mavenn_dir}/examples/models/'
-
-    # Get list of models in directory
-    model_files = glob.glob(model_dir + '*.h5')
-
-    test_parameter_values(func=_test_phi_calculation,
-                          var_name='model_file',
-                          success_list=model_files,
-                          fail_list=[])
+# def test_phi_calculations():
+#     mavenn_dir = mavenn.__path__[0]
+#     model_dir = f'{mavenn_dir}/examples/models/'
+#
+#     # Get list of models in directory
+#     model_files = glob.glob(model_dir + '*.h5')
+#
+#     test_parameter_values(func=_test_phi_calculation,
+#                           var_name='model_file',
+#                           success_list=model_files,
+#                           fail_list=[])
 
 
 def test_load_example():

@@ -12,9 +12,9 @@ from tensorflow.keras.layers \
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
-from mavenn.src.dev import x_to_features
+from mavenn.src.misc_jbk import x_to_features
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.dev import GlobalEpistasisLayer, \
+from mavenn.src.misc_jbk import GlobalEpistasisLayer, \
                             AdditiveGPMapLayer, PairwiseGPMapLayer
 
 @handle_errors

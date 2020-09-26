@@ -28,9 +28,9 @@ from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
-from mavenn.src.dev import x_to_features, x_to_stats
+from mavenn.src.misc_jbk import x_to_features, x_to_stats
 from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
-from mavenn.src.utils import get_gpmap_params_in_cannonical_gauge
+#from mavenn.src.utils import get_gpmap_params_in_cannonical_gauge
 
 @handle_errors
 class Model:
@@ -310,7 +310,6 @@ class Model:
             early_stopping=True,
             early_stopping_patience=20,
             batch_size=50,
-            zero_consensus=True,
             linear_initialization=True,
             callbacks=[],
             optimizer='Adam',
@@ -347,10 +346,6 @@ class Model:
 
         linear_initialization: (bool)
             Whether to initialize model with linear regression results.
-
-        zero_consensus: (bool)
-            Whether to zero out the consensus sequence x_ohe in order to try
-            and speed training. [NOT IMPLEMENTED]
 
         callbacks: (list)
             List of tf.keras.callbacks.Callback instances.
@@ -426,12 +421,6 @@ class Model:
               f'type(linear_initialization)={type(linear_initialization)};'
               f'must be bool.')
         self.linear_initialization = linear_initialization
-
-        # Check zero_consensus
-        check(isinstance(zero_consensus, bool),
-              f'type(zero_consensus)={type(zero_consensus)};'
-              f'must be bool.')
-        self.zero_consensus = zero_consensus
 
         # Check callbacks
         check(isinstance(callbacks, list),
@@ -596,12 +585,13 @@ class Model:
 
     from mavenn.src.error_handling import handle_errors, check
 
+
     @handle_errors
     def get_theta(self,
-                  gauge="hierarchichal",
+                  gauge="uniform",
                   p_lc=None,
                   x_wt=None,
-                  unobserved_value=None):
+                  unobserved_value=np.nan):
         """
         Returns the parameters of the G-P map and a dictionary
         of np.ndarrays.
@@ -609,19 +599,24 @@ class Model:
         parameters
         ----------
 
-        gauge: ("wildtype", "hierarchichal", None)
-            Gauge to use for model parameters. If None, parameter
-            values will be returned unfixed
+        gauge: (str)
+            Must be one of the following strings:
+            "none" -> No gauge fixing.
+            "uniform" -> Hierarchichal gauge with uniform sequence distribution.
+            "empirical" -> Hierarchichal gauge with empirical sequence
+                distribution from training data.
+            "consensus" -> Wild-type gauge with empirical consensus sequence
+                from training data.
+            "user" -> Gauge set using either p_lc or x_wt supplied by user.
 
-        p_lc: (array, None)
+        p_lc: (None, array)
             An (L,C) array listing the probability of each base
             at each position. This is used when choosing the
-            hierarchichal gauge. If None, the base composition
-            in the training data will be used.
+            hierarchichal gauge. If set, must have gauge="user".
 
         x_wt: (str, None)
-            Wild type sequence to use for gauge fixing. If None, the
-            consensus sequence from the training data will be used.
+            Wild type sequence to use for gauge fixing. If set,
+            must have gauge="user".
 
         unobserved_value: (float, None)
             Value to use for theta parameters when no corresponding
@@ -635,87 +630,49 @@ class Model:
             Model parmaeters, provided as a dict of np.arrays.
         """
 
+        # Useful alias
+        _ = np.newaxis
+
+        # Get parameters from layer
+        x_stats = self.x_stats
+        L = x_stats['L']
+        C = x_stats['C']
+        alphabet = x_stats['alphabet']
+        theta_dict = self.model.x_to_phi_layer.get_params()
+
         # Check gauge
-        choices = ("wildtype", "hierarchichal", None)
+        choices = ("none", "uniform", "empirical", "consensus", "user")
         check(gauge in choices,
               f"Invalid choice for gauge={repr(gauge)}; "
               f"must be one of {choices}")
 
-        # Check p_lc
-        check((p_lc is None) or isinstance(p_lc, np.ndarray),
-              f"Invalid type(p_lc)={type(p_lc)}")
+        # Check that p_lc is valid
+        if p_lc is not None:
+            check(isinstance(p_lc, np.ndarray),
+                  f'type(p_lc)={type(p_lc)}; must be str.')
+            check(p_lc.shape == (L, C),
+                  f'p_lc.shape={p_lc.shape}; must be (L,C)={(L,C)}.')
+            check(np.all(p_lc >= 0) & np.all(p_lc <= 1),
+                  f'Not all p_lc values are within [0,1].')
+            p_lc = p_lc / p_lc.sum(axis=1)[:, _]
 
-        # Check x_wt
-        check((x_wt is None) or isinstance(x_wt, str),
-              f"Invalid type(x_wt)={type(x_wt)}")
+        # Check that x_wt is valid
+        if x_wt is not None:
+            check(isinstance(x_wt, str),
+                  f'type(x_wt)={type(x_wt)}; must be str.')
+            check(len(x_wt) == L,
+                  f'len(x_wt)={len(x_wt)}; must match L={L}.')
+            check(set(x_wt) <= set(alphabet),
+                  f'x_wt contains characters {set(x_wt) - set(alphabet)}'
+                  f'that are not in alphabet.')
 
         # Check unobserved_value
         check((unobserved_value is None)
               or isinstance(unobserved_value, numbers.Number),
               f"Invalid type(unobserved_value)={type(unobserved_value)}")
 
-        # Get parameters from layer
-        theta_dict = self.model.x_to_phi_layer.get_params()
-
-        # Copy all parameters just to be safe
-        for key, value in theta_dict.items():
-            theta_dict[key] = value.copy()
-
-        # Make theta_0 a () array.
-        theta_dict['theta_0'] = theta_dict['theta_0'].squeeze()
-
-        # End here if not fixing the gauge
-        if gauge is None:
-            return theta_dict
-
-        # Unpack useful x_stats
-        x_stats = self.x_stats
-        L = x_stats['L']
-        C = x_stats['C']
-        alphabet = x_stats['alphabet']
-
-        # Useful alias
-        _ = np.newaxis
-
-        # Assign p_lc
-        if gauge == "wildtype":
-
-            # If x_wt is not set, set to training consensus seq
-            if x_wt is None:
-                x_wt = x_stats['consensus_seq']
-
-            # Otherwise, check that user-provided x_wt is valid
-            else:
-                check(isinstance(x_wt, str),
-                      f'type(x_wt)={type(x_wt)}; must be str.')
-                check(len(x_wt) == L,
-                      f'len(x_wt)={len(x_wt)}; must match L={L}.')
-                check(set(x_wt) <= set(alphabet),
-                      f'x_wt contains characters {set(x_wt) - set(alphabet)}'
-                      f'that are not in alphabet.')
-
-            # Compute p_lc
-            p_lc = (np.array(list(x_wt))[:, _] == alphabet[_, :]).astype(float)
-
-        elif gauge == "hierarchichal":
-
-            # If p_lc is not set, set to factorized training dist
-            if p_lc is None:
-                p_lc = x_stats['probability_df'].values
-
-            # Otherwise, check that user-provided p_lc is valid
-            else:
-                check(isinstance(p_lc, np.ndarray),
-                      f'type(p_lc)={type(p_lc)}; must be str.')
-                check(p_lc.shape == (L, C),
-                      f'p_lc.shape={p_lc.shape}; must be (L,C)={(L,C)}.')
-                check(np.all(p_lc >= 0) & np.all(p_lc <= 1),
-                      f'Not all p_lc values are within [0,1].')
-        else:
-            assert False, 'This should not happen'
-
         # Extract parameter arrays. Get masks and replace masked values with 0
-        theta_0 = theta_dict['theta_0'].copy()
+        theta_0 = theta_dict['theta_0'].squeeze().copy()
         theta_lc = theta_dict['theta_lc'].copy()
         theta_lclc = theta_dict.get('theta_lclc',
                                     np.full(shape=(L, C, L, C),
@@ -728,27 +685,58 @@ class Model:
         # Create unobserved_lc
         unobserved_lc = (x_stats['probability_df'].values == 0)
 
-        # Fix 0th order parameter
-        fixed_theta_0 = theta_0 \
-            + np.sum(p_lc * theta_lc) \
-            + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :])
+        # Set p_lc
+        if gauge == "none":
+            pass
 
-        # Fix 1st order parameters
-        fixed_theta_lc = theta_lc \
-            - np.sum(theta_lc * p_lc, axis=1)[:, _] \
-            + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
-                     axis=(2, 3)) \
-            - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
-                     axis=(1, 2, 3))[:, _]
+        elif gauge == "uniform":
+            p_lc = (1 / C) * np.ones((L, C))
 
-        # Fix 2nd order parameters
-        fixed_theta_lclc = theta_lclc \
-            - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
-                     axis=1)[:, _, :, :] \
-            - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
-                     axis=3)[:, :, :,_] \
-            + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
-                     axis=(1, 3))[:, _, :, _]
+        elif gauge == "empirical":
+            p_lc = x_stats['probability_df'].values
+
+        elif gauge == "consensus":
+            p_lc = _x_to_mat(x_stats['consensus_seq'], alphabet)
+
+        elif gauge == "user" and x_wt is not None:
+            p_lc = _x_to_mat(x_wt, alphabet)
+
+        elif gauge == "user" and p_lc is not None:
+            pass
+
+        else:
+            assert False, 'This should not happen'
+
+        # Fix gauge if requested
+        if gauge != "none":
+
+            # Fix 0th order parameter
+            fixed_theta_0 = theta_0 \
+                + np.sum(p_lc * theta_lc) \
+                + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :])
+
+            # Fix 1st order parameters
+            fixed_theta_lc = theta_lc \
+                - np.sum(theta_lc * p_lc, axis=1)[:, _] \
+                + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=(2, 3)) \
+                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=(1, 2, 3))[:, _]
+
+            # Fix 2nd order parameters
+            fixed_theta_lclc = theta_lclc \
+                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=1)[:, _, :, :] \
+                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=3)[:, :, :, _] \
+                + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=(1, 3))[:, _, :, _]
+
+        # Otherwise, just copy over parameters
+        else:
+            fixed_theta_0 = theta_0
+            fixed_theta_lc = theta_lc
+            fixed_theta_lclc = theta_lclc
 
         # Set unobserved values if requested
         if unobserved_value is not None:
@@ -762,149 +750,24 @@ class Model:
         # Set masked values back to nan
         fixed_theta_lclc[nan_mask_lclc] = np.nan
 
+        # Create dataframe for logomaker
+        logomaker_df = pd.DataFrame(index=range(L),
+                                    columns=alphabet,
+                                    data=fixed_theta_lc)
+
         # Set and return output
         theta_dict = {
+            'L': L,
+            'C': C,
+            'alphabet': alphabet,
             'theta_0': fixed_theta_0,
             'theta_lc': fixed_theta_lc,
-            'theta_lclc': fixed_theta_lclc
+            'theta_lclc': fixed_theta_lclc,
+            'logomaker_df': logomaker_df
         }
 
         # pdb.set_trace
         return theta_dict
-
-    @handle_errors
-    def get_gpmap_parameters(self, which='all', fix_gauge=True):
-        """
-        Returns the G-P map parameters theta.
-
-        parameters
-        ----------
-
-        which: ("all", "constant", "additive", "pairwise")
-            Which subset of parameters to return. If "additive"
-            or "pairwise", additional columns will be added indicating
-            the position(s) and character(s) associated with each
-            parameter.
-
-        fix_gauge: (bool)
-            Whether or not to fix the gauge.
-
-        returns
-        -------
-
-        theta_df: (pd.DataFrame)
-            Dataframe containing theta values and other
-            information.
-        """
-
-        # Check which option
-        which_options = ("all", "constant", "additive", "pairwise")
-        check(which in which_options,
-              f"which={repr(which)}; must be one of {which_options}.")
-
-        # Check gauge fix
-        check(isinstance(fix_gauge, bool),
-              f"type(fix_gauge)={type(fix_gauge)}; must be bool.")
-
-
-        # Do gauge-fixing if requested
-        if fix_gauge:
-
-            # Defer to utils function
-            theta_df = get_gpmap_params_in_cannonical_gauge(self)
-
-        # Otherwise, just report parameters
-        else:
-
-            # Get theta as vector without nans
-            param_dict = self.model.x_to_phi_layer.get_params()
-            theta_0 = param_dict['theta_0']
-            names_0 = ['theta_0']
-
-            theta_lc = param_dict['theta_lc']
-            names_lc = [f'theta_{l}:{c}'
-                        for l in range(self.L)
-                        for c in self.alphabet]
-
-            theta = np.concatenate([theta_0, theta_lc.ravel()])
-            names = names_0 + names_lc
-
-            if self.gpmap_type in ['pairwise', 'neighbor']:
-
-                def mask_func(l1, l2):
-                    if self.gpmap_type == 'neighbor':
-                        return l2 - l1 == 1
-                    else:
-                        return l2-l1 >= 1
-
-                theta_lclc = param_dict['theta_lclc'].ravel()
-                theta_lclc = theta_lclc[np.isfinite(theta_lclc)]
-                names_lclc = [f'theta_{l1}:{c1},{l2}:{c2}'
-                              for l1 in range(self.L)
-                              for c1 in self.alphabet
-                              for l2 in range(self.L)
-                              for c2 in self.alphabet
-                              if mask_func(l1, l2)]
-                theta = np.concatenate([theta, theta_lclc])
-                names = names + names_lclc
-
-            # Fix diffeomorphic modes
-            # Best to do immediately after extracting from network
-            theta[0] -= self.unfixed_phi_mean
-            theta /= self.unfixed_phi_std
-
-            # Store all model parameters in dataframe
-            theta_df = pd.DataFrame({'name': names, 'value': theta})
-
-        # If "all", just return all model parameters
-        if which == "all":
-            pass
-
-        # If "constant", return only the constant parameter
-        # Don't create any new columns
-        elif which == "constant":
-            # Set pattern for matching and parsing constant parameter
-            pattern = re.compile('^theta_0$')
-            matches = [pattern.match(name) for name in theta_df['name']]
-            ix = [bool(m) for m in matches]
-            theta_df = theta_df[ix]
-
-        # If "additive", remove non-additive parameters and
-        # create columns "l" and "c"
-        elif which == "additive":
-            # Set pattern for matching and parsing additive params
-            pattern = re.compile('^theta_([0-9]+):([A-Za-z]+)$')
-
-            # Set pos and char cols, and remove non-additive params
-            matches = [pattern.match(name) for name in theta_df['name']]
-            ix = [bool(m) for m in matches]
-            theta_df['l'] = [int(m.group(1) if m else '-1') for m in matches]
-            theta_df['c'] = [(m.group(2) if m else ' ') for m in matches]
-            theta_df = theta_df[ix]
-
-        # If "additive", remove non-additive parameters and
-        # create columns "l1","c1","l2","c2"
-        elif which == "pairwise":
-            # Set pattern for matching and parsing additive params
-            pattern = re.compile(
-                '^theta_([0-9]+):([A-Za-z]+),([0-9]+):([A-Za-z]+)$')
-
-            # Set pos and char cols, and remove non-additive params
-            matches = [pattern.match(name) for name in theta_df['name']]
-            ix = [bool(m) for m in matches]
-            theta_df['l1'] = [int(m.group(1) if m else '-1') for m in matches]
-            theta_df['c1'] = [(m.group(2) if m else ' ') for m in matches]
-            theta_df['l2'] = [int(m.group(3) if m else '-1') for m in matches]
-            theta_df['c2'] = [(m.group(4) if m else ' ') for m in matches]
-            theta_df = theta_df[ix]
-
-        else:
-            assert False, 'This should not happen.'
-
-        # Reset index
-        theta_df.reset_index(inplace=True, drop=True)
-
-        return theta_df
 
     @handle_errors
     def get_nn(self):
@@ -1035,7 +898,6 @@ class Model:
         yhat = _shape_for_output(yhat, x_shape)
 
         return yhat
-
 
     def I_predictive(self,
                      x,
@@ -1543,3 +1405,8 @@ class Model:
             print(f'Model saved to these files:\n'
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
+
+# Converts sequences to matrices
+def _x_to_mat(x, alphabet):
+    return (np.array(list(x))[:, np.newaxis] ==
+            alphabet[np.newaxis, :]).astype(float)

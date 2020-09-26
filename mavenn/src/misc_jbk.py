@@ -584,7 +584,7 @@ def mutations_to_dataset(wt_seq,
     Compute an array of sequences (x) from a wild-type sequence (wt_seq) and a
     list of mutations (mut_df). mut_df is a dataframe that should have three
     columns:
-     - l_col lists the poistions of 1pt mutations,
+     - l_col lists the positions of 1pt mutations,
      - c_col lists the mutant characters at those positions,
      - id_col lists numbers from 0 to N-1 that identifying each of the N variant
        sequences in which the mutations occur.

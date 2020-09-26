@@ -16,11 +16,11 @@ import logomaker
 # Load model
 model = mavenn.load_example_model('sortseq_mpa_additive')
 
-# Get G-P map parameters in matrix form
-theta_df = model.get_gpmap_parameters(which="additive")
+# Get G-P map parameters
+theta_dict = model.get_theta(gauge='uniform')
 
-# Change theta_df to a matrix format compatible with logomaker
-theta_logomaker_df = mavenn.tidy_df_to_logomaker_df(theta_df)
+# Get additive parameters suitable for logomaker
+theta_logomaker_df = theta_dict['logomaker_df']
 
 # Create grid in phi space
 phi_lim = [-5, 3]

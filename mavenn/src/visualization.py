@@ -12,7 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
-
+from mavenn.src.validate import validate_alphabet, validate_seqs
 
 @handle_errors
 def _get_45deg_mesh(mat):
@@ -40,36 +40,32 @@ def _get_45deg_mesh(mat):
 
     return X_rot, Y_rot
 
-@handle_errors
-def tidy_df_to_logomaker_df(df,
-                            l_col="l",
-                            c_col="c",
-                            value_col="value"):
-    """
-    Converts a tidy dataframe of additive params to matrix format.
-    df must be a pd.DataFrame that contains columns "l","c","values".
-    """
-    df = df.copy()
-    check(isinstance(df, pd.DataFrame),
-          f'type(df)={type(df)}; must be pd.DataFrame.')
-    check(l_col in df.columns,
-          f'df.columns={df.columns} does not contain "{l_col}".')
-    check(c_col in df.columns,
-          f'df.columns={df.columns} does not contain "{c_col}".')
-    check(value_col in df.columns,
-          f'df.columns={df.columns} does not contain "{value_col}".')
-    df = df.pivot(index=l_col, columns=c_col, values=value_col)
-    df.columns.name = None
-    return df
+# @handle_errors
+# def tidy_df_to_logomaker_df(df,
+#                             l_col="l",
+#                             c_col="c",
+#                             value_col="value"):
+#     """
+#     Converts a tidy dataframe of additive params to matrix format.
+#     df must be a pd.DataFrame that contains columns "l","c","values".
+#     """
+#     df = df.copy()
+#     check(isinstance(df, pd.DataFrame),
+#           f'type(df)={type(df)}; must be pd.DataFrame.')
+#     check(l_col in df.columns,
+#           f'df.columns={df.columns} does not contain "{l_col}".')
+#     check(c_col in df.columns,
+#           f'df.columns={df.columns} does not contain "{c_col}".')
+#     check(value_col in df.columns,
+#           f'df.columns={df.columns} does not contain "{value_col}".')
+#     df = df.pivot(index=l_col, columns=c_col, values=value_col)
+#     df.columns.name = None
+#     return df
 
 
 @handle_errors
-def heatmap(df,
-            l_col="l",
-            c_col="c",
-            value_col="value",
-            missing_values=np.nan,
-            mask_dict=None,
+def heatmap(values,
+            alphabet,
             seq=None,
             seq_kwargs=None,
             ax=None,
@@ -88,27 +84,11 @@ def heatmap(df,
     parameters
     ----------
 
-    df: (pd.DataFrame)
-        A dataframe specifying additive values, eg 1pt effects
-        or additive parameters.
+    values: (np.ndarray)
+        Array sized (L,C) that contains values to plot
 
-    l_col: (str)
-        Name of df column containing sequence positions. Values must be
-        0,...,L-1.
-
-    c_col: (str)
-        Name of df column containing sequence characters.
-
-    value_col: (str)
-        Name of df column containing values to illustrate.
-
-    missing_values: (bool)
-        Value to use when (l,c) pairs are not observed.
-
-    mask_dict: (dict)
-        Specifies which characters to mask at specific positions.
-        For example, to mask ACGT at position 3 and AG at position 4, set
-        mask_dict={3:'ACGT',4:'AG'}
+    alphabet: (np.ndarray)
+        1D array containing characters in alphabet.
 
     seq: (str)
         The sequence to show, if any. Must have length len(df)
@@ -166,73 +146,20 @@ def heatmap(df,
         Colorbar object linked to Axes.
     """
 
-    # Copy dataframe
-    df = df.copy()
-
-    # Rename columns
-    df = df.rename(columns={l_col: "l",
-                            c_col: "c",
-                            value_col: "value"})
-
-    # Remove indices with missing characters
-    ix = [len(c) > 0 for c in df["c"]]
-    df = df[ix]
-
-    # Convert to matrix
-    df = tidy_df_to_logomaker_df(df)
-
-    # Fill in missing values
-    df = df.fillna(missing_values)
-
-    # Flip
-    df = df.loc[:, ::-1]
+    alphabet = validate_alphabet(alphabet)
+    L, C = values.shape
 
     # Set extent
-    C = df.shape[1]
-    L = df.shape[0]
     xlim = [-.5, L - .5]
     ylim = [-.5, C - .5]
 
-    # If wt_seq is set
+    # If wt_seq is set, validate it.
     if seq:
-
-        # Verify wt_seq is valid
-        assert isinstance(seq,
-                          str), f'type(wt_seq)={type(seq)} is not str.'
-
-        # Verify wt_seq is composed of valid characters
-        wt_seq_set = set(seq)
-        char_set = set(df.columns)
-        assert wt_seq_set <= char_set, f'wt_seq contains the following invalid characters: {wt_seq_set - char_set}'
-
-    # If there is a mask, set values to nan
-    if mask_dict is not None:
-
-        # Make sure mask_dict is a dictionary
-        check(isinstance(mask_dict, dict),
-              f'type(mask_dict)={type(mask_dict)}; must be dict')
-
-        # Check that mask_dict has valid positions
-        mask_ls = mask_dict.keys()
-        positions = list(range(L))
-        check(set(mask_ls) <= set(positions),
-              f'mask_dict={mask_dict} contains positions not compatible with length L={L}.')
-
-        # Check that mask_dict has valid characters
-        mask_cs = ''.join(mask_dict.values())
-        alphabet = df.columns.values
-        check(set(mask_cs) <= set(alphabet),
-              f'mask_dict={mask_dict} contains characters not compatible with alphabet={alphabet}.')
-
-        # Set masked values of dataframe to np.nan
-        for l, cs in mask_dict.items():
-            for c in cs:
-                df.loc[l,c] = np.nan
-
+        seq = validate_seqs(seq, alphabet)
 
     # Set color lims to central 95% quantile
     if clim is None:
-        vals = df.values.ravel()
+        vals = values.ravel()
         vals = vals[np.isfinite(vals)]
         clim = np.quantile(vals, q=[(1 - clim_quantile) / 2,
                                     1 - (1 - clim_quantile) / 2])
@@ -261,28 +188,34 @@ def heatmap(df,
     y_edges = np.arange(C + 1) - .5
     im = ax.pcolormesh(x_edges,
                        y_edges,
-                       df.T,
+                       values.T,
                        shading='flat',
                        cmap=cmap,
                        clim=clim,
                        norm=norm)
 
     # Mark wt sequence
+    _ = np.newaxis
     if seq:
 
+        # Set marker style
         if seq_kwargs is None:
             seq_kwargs = {'marker': '.', 'color': 'k', 's': 2}
 
-        chars = list(df.columns)
-        x = range(len(seq))
-        y = [chars.index(c) for c in seq]
-        ax.scatter(x, y, **seq_kwargs)
+        # Get xy coords to plot
+        seq_arr = np.array(list(seq[0]))
+        xy = np.argwhere(seq_arr[:, _] == alphabet[_, :])
+
+        # Mark sequence
+        ax.scatter(xy[:, 0], xy[:, 1], **seq_kwargs)
+        #pdb.set_trace()
 
     # Style plot
     ax.set_ylim(ylim)
     ax.set_xlim(xlim)
     ax.set_yticks(range(C))
-    ax.set_yticklabels(df.columns, ha='center')
+    ax.set_yticklabels(alphabet, ha='center')
+    ax.invert_yaxis()
 
     if not show_spines:
         for loc, spine in ax.spines.items():
@@ -304,18 +237,12 @@ def heatmap(df,
 
 
 @handle_errors
-def heatmap_pairwise(df,
-                     l1_col="l1",
-                     c1_col="c1",
-                     l2_col="l2",
-                     c2_col="c2",
-                     value_col="value",
-                     missing_values=np.nan,
-                     mask_dict=None,
+def heatmap_pairwise(values,
+                     alphabet,
                      seq=None,
                      seq_kwargs=None,
                      ax=None,
-                     gpmap_type="auto",
+                     gpmap_type="pairwise",
                      show_position=False,
                      position_size=None,
                      position_pad=1,
@@ -354,40 +281,13 @@ def heatmap_pairwise(df,
     parameters
     ----------
 
-    df: (pd.DataFrame)
-        A dataframe listing pairwise model parameters. This can be
-        obtained using Model.get_gpmap_parameters(which="pairwise").
-        Must contain the following columns:
-            "l1": position 1; values are 0,...,L-2.
-            "c1": character 1.
-            "l2": position 2 > position 1; values are 1,...,L-1.
-            "c2": character 2.
-            "value": indicates value of $\theta_{l1:c1,l2:c2}$
+    values: (np.array)
+        An array, shape (L,C,L,C), containing pairwise parameters.
+        Note that only values at coordinates [l1,c1,l2,c2] with l2 > l1
+        will be plotted. NaN values will not be plotted.
 
-    l1_col: (str)
-        Name of df column containing sequence positions 1. Values must be
-        0,...,L-1.
-
-    c1_col: (str)
-        Name of df column containing sequence characters at position 1.
-
-    l2_col: (str)
-        Name of df column containing sequence positions 2. Values must be
-        1,...,L.
-
-    c2_col: (str)
-        Name of df column containing sequence characters at position 2.
-
-    value_col: (str)
-        Name of df column containing values to illustrate.
-
-    missing_values: (bool)
-        Value to use when not provided in df.
-
-    mask_dict: (dict)
-        Specifies which characters to mask at specific positions.
-        For example, to mask ACGT at position 3 and AG at position 4, set
-        mask_dict={3:'ACGT',4:'AG'}
+    alphabet: (np.array)
+        Array of shape (C,) containing alphabet characters.
 
     seq: (str)
         The sequence to show, if any. Must have length len(df)
@@ -404,11 +304,8 @@ def heatmap_pairwise(df,
 
     gpmap_type: (str)
         Determines how many pairwise parameters are plotted.
-        Must be "pairwise", "neighbor", or "auto". If
-        "pairwise", a B2-shape will be plotted. If "neighbor",
-        a string of diamonds will be plotted. If "auto", this
-        will be set automatically depending on the contents of
-        df.
+        Must be "pairwise", "neighbor". If "pairwise", a B2-bomber shape
+        will be plotted. If "neighbor", a string of diamonds will be plotted.
 
     show_position: (bool)
         Whether to draw position labels on the plot.
@@ -486,141 +383,57 @@ def heatmap_pairwise(df,
         Colorbar object linked to Axes.
     """
 
-    # Rename columns
-    df = df.rename(columns={
-        l1_col: "l1",
-        c1_col: "c1",
-        l2_col: "l2",
-        c2_col: "c2",
-        value_col: "value"
-    })
-    df = df[["l1", "c1", "l2", "c2", "value"]].copy()
+    # Validate values
+    check(isinstance(values, np.ndarray),
+          f'type(values)={type(values)}; must be np.ndarray.')
+    check(values.ndim==4,
+          f'values.ndim={values.ndim}; must be 4.')
+    L, C, L2, C2 = values.shape
+    check(L2 == L and C2 == C,
+          f'values.shape={values.shape} is invalid; must be of form (L,C,L,C.')
+    values = values.copy()
 
-    # If user specifies gpmap_type="auto", automatically determine which
-    # type of plot to make
-    if gpmap_type == "auto":
-        if any(df['l2'] - df['l1'] > 1):
-            gpmap_type = "pairwise"
-        else:
-            gpmap_type = "neighbor"
-        print(f'Automatically determined gpmap_type={gpmap_type}.')
+    # Validate alphabet
+    alphabet = validate_alphabet(alphabet)
+    check(len(alphabet) == C,
+          f'len(alphabet)={len(alphabet)} does not match C={C}')
+
+    ls = np.arange(L).astype(int)
+    l1_grid = np.tile(np.reshape(ls, (L, 1, 1, 1)),
+                      (1, C, L, C))
+    l2_grid = np.tile(np.reshape(ls, (1, 1, L, 1)),
+                      (L, C, 1, C))
 
     # If user specifies gpmap_type="neighbor", remove non-neighbor entries
-    # from df
-    elif gpmap_type == "neighbor":
-        ix = (df['l2'] == df['l1']+1)
-        df = df[ix].copy()
+    if gpmap_type == "neighbor":
+        nan_ix = ~(l2_grid - l1_grid == 1)
 
     # Don't do anything if gpmap_type="pairwise"
     elif gpmap_type == "pairwise":
-        pass
+        nan_ix = ~(l2_grid - l1_grid >= 1)
 
     else:
         check(False, f'Unrecognized gpmap_type={repr(gpmap_type)}.')
 
-    # Get dims
-    L = len(set(list(df['l1']) + list(df['l2'])))
-    alphabet = list(set(list(df['c1']) + list(df['c2'])))
-    alphabet.sort()
-    C = len(alphabet)
+    # Set values at invalid positions to nan
+    values[nan_ix] = np.nan
+
+    # Reshape values into a matrix
+    mat = values.reshape((L*C, L*C))
+    mat = mat[:-C, :]
+    mat = mat[:, C:]
     K = (L - 1) * C
 
-    # Create new dataframe with all entries
-    pos = np.arange(L).astype(int)
-    new_df = pd.DataFrame()
-    new_df["l1"] = np.tile(np.reshape(pos, [L, 1, 1, 1]),
-                           [1, C, L, C]).ravel()
-    new_df["c1"] = np.tile(np.reshape(alphabet, [1, C, 1, 1]),
-                           [L, 1, L, C]).ravel()
-    new_df["l2"] = np.tile(np.reshape(pos, [1, 1, L, 1]),
-                           [L, C, 1, C]).ravel()
-    new_df["c2"] = np.tile(np.reshape(alphabet, [1, 1, 1, C]),
-                           [L, C, L, 1]).ravel()
-    df = new_df.merge(right=df, on=["l1", "c1", "l2", "c2"], how='outer')
-
-    # Remove invalid pairs of positions
-    ix = df["l1"] < df["l2"]
-    df = df[ix]
-
-    # Fill in missing values if requested
-    if gpmap_type == 'pairwise':
-        df = df.fillna(missing_values)
-    elif gpmap_type == 'neighbor':
-        ix = (df["l2"] == df["l1"] + 1)
-        df[ix] = df[ix].fillna(missing_values)
-    else:
-        assert False, 'This should not happen.'
-
-    # Create subscript columns
-    df['sub1'] = df['l1'].astype(str) + ':' + df['c1']
-    df['sub2'] = df['l2'].astype(str) + ':' + df['c2']
-
-    # Sort rows
-    df.sort_values(by=['l1', 'c1', 'l2', 'c2'], inplace=True)
-
-    # Determine if neighbor or pairwise if gpmap_type is not set.
-    l1 = df['l1'].values
-    l2 = df['l2'].values
-    c1 = df['c1'].values
-    c2 = df['c2'].values
-    assert np.all(l2 > l1), 'Strange; l2 <= l1 sometimes. Shouldnt happen'
-
-    # If wt_seq is set
-    if seq:
-
-        # Verify wt_seq is valid
-        assert isinstance(seq,
-                          str), f'type(wt_seq)={type(seq)} is not str.'
-
-        # Verify wt_seq is composed of valid characters
-        wt_seq_set = set(seq)
-        char_set = set(alphabet)
-        assert wt_seq_set <= char_set, f'wt_seq contains the following invalid characters: {wt_seq_set - char_set}'
-
-    # If there is a mask, set corresponding values to nan
-    if mask_dict is not None:
-
-        # Make sure mask_dict is a dictionary
-        check(isinstance(mask_dict, dict),
-              f'type(mask_dict)={type(mask_dict)}; must be dict')
-
-        # Check that mask_dict has valid positions
-        mask_ls = mask_dict.keys()
-        positions = list(range(L))
-        check(set(mask_ls) <= set(positions),
-              f'mask_dict={mask_dict} contains positions not compatible with length L={L}.')
-
-        # Check that mask_dict has valid characters
-        mask_cs = ''.join(mask_dict.values())
-        check(set(mask_cs) <= set(alphabet),
-              f'mask_dict={mask_dict} contains characters not compatible with alphabet={alphabet}.')
-
-        # Set masked values of dataframe to np.nan
-        for l, cs in mask_dict.items():
-            for c in cs:
-                ix1 = (l1 == l) & (c1 == c)
-                ix2 = (l2 == l) & (c2 == c)
-                ix1or2 = ix1 | ix2
-                df.loc[ix1or2, 'value'] = np.nan
-
-    # # Otherwise, throw an error
-    # else:
-    #     check(False, f"Invalid gpmap_type={gpmap_type}")
-
-    # Pivot to matrix LCxLC in size
-    mat_df = df.pivot(index="sub1", columns="sub2", values="value")
-    mat = mat_df.values
-
     # Verify that mat is the right size
-    assert mat.shape == (K, K), f'mat.shape={mat.shape}; expected{(K,K)}'
+    assert mat.shape == (K, K), \
+        f'mat.shape={mat.shape}; expected{(K,K)}. Should never happen.'
 
     # Get indices of finite elements of mat
     ix = np.isfinite(mat)
 
     # Set color lims to central 95% quantile
     if clim is None:
-        vals = mat[ix]
-        clim = np.quantile(vals, q=[(1 - clim_quantile) / 2,
+        clim = np.quantile(mat[ix], q=[(1 - clim_quantile) / 2,
                                     1 - (1 - clim_quantile) / 2])
 
     # Create axis if none already exists

@@ -97,7 +97,6 @@ ax.legend()
 ax = axs[1]
 ys = np.vstack([y_test])
 ax.scatter(yhat_test, y_test, color='C0', s=5, alpha=.2, label='test data')
-#ax.set_autoscale_on(False)
 lims = ax.get_xlim()
 ax.plot(lims, lims, linestyle=':', color='k', label='$y=\hat{y}$')
 ax.set_xlabel('model prediction ($\hat{y}$)')
