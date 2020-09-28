@@ -18,13 +18,11 @@ from mavenn.src.examples import load_example_model
 from mavenn.src.utils import load
 
 # For estimating the intrinsic information in a dataset
-from mavenn.src.entropy import estimate_instrinsic_information
+from mavenn.src.entropy import I_intrinsic
 
 # For visualizing G-P maps
 from mavenn.src.visualization import heatmap
 from mavenn.src.visualization import heatmap_pairwise
 
 # Development
-from mavenn.src.misc_jbk import x_to_alphabet
-from mavenn.src.misc_jbk import x_to_stats
 from mavenn.src.misc_jbk import set_seed

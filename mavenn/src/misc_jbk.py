@@ -458,6 +458,58 @@ def x_to_alphabet(x, return_name=False):
     else:
         return alphabet
 
+@handle_errors
+def p_lc_to_x(N, p_lc, alphabet):
+    """
+    Generate an array of N sequences given a probability_df
+
+    parameters
+    ----------
+    N: (int > 0)
+        Number of sequences to generate
+
+    p_lc: (np.array)
+        An (L,C) array  listing the probability of each base (columns) for each
+        position (rows).
+
+    alphabet: (np.array)
+        The alphabet, length C, from which sequences will be generated
+    """
+
+    # Validate N
+    check(isinstance(N, int),
+          f'type(N)={type(N)}; must be int')
+    check(N > 0,
+          f'N={N}; must be > 0')
+
+    # Validate p_lc
+    check(isinstance(p_lc, np.ndarray),
+          f'type(p_lc)={type(p_lc)}; must be np.ndarray.')
+    check(p_lc.ndim == 2,
+          f'p_lc.ndim={p_lc.ndim}; must be 2.')
+    check(np.all(p_lc.ravel() >= 0),
+          f'some elements of p_lc are negative.')
+    check(np.all(p_lc.ravel() <= 1),
+          f'some elements of p_lc are greater than 1.')
+    L, C = p_lc.shape
+
+    # Validate alphabet
+    alphabet = validate_alphabet(alphabet)
+    check(len(alphabet) == C,
+          f'len(alphabet)={len(alphabet)} does not match p_lc.shape[1]={C}')
+
+    # Create function to fill in a set of characters given p_l
+    def fill_x_arr_col(p_l):
+        return np.random.choice(a=alphabet,
+                                size=N,
+                                replace=True,
+                                p=p_l)
+
+    # Create seqs
+    x_arr = np.apply_along_axis(fill_x_arr_col, axis=1, arr=p_lc).T
+    x = np.apply_along_axis(''.join, axis=1, arr=x_arr)
+
+    return x
 
 @handle_errors
 def x_to_stats(x, alphabet, weights=None, verbose=False):

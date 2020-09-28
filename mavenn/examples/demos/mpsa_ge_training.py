@@ -73,9 +73,8 @@ yhat_grid = model.phi_to_yhat(phi_grid)
 yqs_grid = model.yhat_to_yq(yhat_grid, q=[0.16, 0.84])
 
 # Extract training loss and validation loss
-history_dict = model.model.history.history
-loss_training = history_dict['loss']
-loss_validation = history_dict['val_loss']
+loss_training = model.history['loss']
+loss_validation = model.history['val_loss']
 
 # Create figure and axes
 fig, axs = plt.subplots(1, 3, figsize=[12, 4])

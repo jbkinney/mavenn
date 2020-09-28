@@ -27,7 +27,7 @@ Loading models
 Information estimation
 -----------------------
 
-.. autofunction:: mavenn.estimate_instrinsic_information
+.. autofunction:: mavenn.I_intrinsic
 
 
 Sequence variant utils

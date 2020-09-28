@@ -26,11 +26,14 @@ from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
 from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.likelihood_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
-from mavenn.src.entropy import mi_continuous, mi_mixed
+from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
-from mavenn.src.misc_jbk import x_to_features, x_to_stats
+from mavenn.src.misc_jbk import x_to_stats, p_lc_to_x
 from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
-#from mavenn.src.utils import get_gpmap_params_in_cannonical_gauge
+
+_noise_model_dict = {'Gaussian':GaussianNoiseModel,
+                     'Cauchy':CauchyNoiseModel,
+                     'SkewedT':SkewedTNoiseModel}
 
 @handle_errors
 class Model:
@@ -73,9 +76,10 @@ class Model:
         The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
 
     ge_heteroskedasticity_order: (int)
-        Order of the exponentiated polynomials used to make noise model parameters
-        dependent on y_hat, and thus render the noise model heteroskedastic. Set
-        to zero for a homoskedastic noise model. (Only used for GE regression).
+        Order of the exponentiated polynomials used to make noise model
+        parameters dependent on y_hat, and thus render the noise model
+        heteroskedastic. Set to zero for a homoskedastic noise model.
+        (Only used for GE regression).
 
     na_hidden_nodes:
         Number of hidden nodes (i.e. sigmoidal contributions) to use in the
@@ -146,6 +150,20 @@ class Model:
         self.ohe_batch_size = ohe_batch_size
         self.Y = Y
 
+        # Variables needed for saving
+        self.unfixed_phi_mean = np.nan
+        self.unfixed_phi_std = np.nan
+        self.y_std = np.nan
+        self.y_mean = np.nan
+        self.x_stats = {}
+        self.y_stats = {}
+        self.history = {}
+
+        # Dictionary to pass information to layers
+        self.info_for_layers_dict = {'H_y': np.nan,
+                                     'H_y_norm': np.nan,
+                                     'dH_y': np.nan}
+
         # represents GE or MPA model object, depending which is chosen.
         # attribute value is set below
         self.model = None
@@ -154,6 +172,7 @@ class Model:
         if regression_type == 'GE':
 
             self.model = GlobalEpistasisModel(
+                            info_for_layers_dict=self.info_for_layers_dict,
                             sequence_length=self.L,
                             gpmap_type=self.gpmap_type,
                             ge_nonlinearity_monotonic=
@@ -174,11 +193,13 @@ class Model:
         elif regression_type == 'MPA':
 
             self.model = MeasurementProcessAgnosticModel(
+                            info_for_layers_dict=self.info_for_layers_dict,
                             sequence_length=self.L,
                             number_of_bins=self.Y,
                             alphabet=self.alphabet,
                             gpmap_type=self.gpmap_type,
                             theta_regularization=self.theta_regularization,
+                            eta_regularization=self.eta_regularization,
                             ohe_batch_size=self.ohe_batch_size)
             self.model.theta_init = None
 
@@ -285,12 +306,16 @@ class Model:
             check(len(y_unique),
                   f'Only {len(y_unique)} unique y-values provided;'
                   f'At least 2 are requied')
-            self.y_stats['y_mean'] = self.y.mean()
-            self.y_stats['y_std'] = self.y.std()
+            self.y_std = self.y.std()
+            self.y_mean = self.y.mean()
+            self.y_stats['y_mean'] = self.y_mean
+            self.y_stats['y_std'] = self.y_std
 
         elif self.regression_type == 'MPA':
-            self.y_stats['y_mean'] = 0
-            self.y_stats['y_std'] = 1
+            self.y_std = 1
+            self.y_mean = 0
+            self.y_stats['y_mean'] = self.y_mean
+            self.y_stats['y_std'] = self.y_std
 
         else:
             assert False, "This shouldn't happen"
@@ -302,8 +327,33 @@ class Model:
         if self.regression_type == 'GE':
             self.y_norm = np.array(self.y_norm).reshape(-1, 1)
 
+            # Add some noise to y_norm
+            # Note: this noise addition is absolutely necessary!
+            y_norm = self.y_norm + 1E-3 * np.random.randn(*self.y_norm.shape)
+
+            # Compute entropy
+            H_y_norm, dH_y = entropy_continuous(y_norm, knn=7)
+            H_y = H_y_norm + np.log2(self.y_std)
+
+            self.info_for_layers_dict['H_y'] = H_y
+            self.info_for_layers_dict['H_y_norm'] = H_y_norm
+            self.info_for_layers_dict['dH_y'] = dH_y
+
         elif self.regression_type == 'MPA':
             self.y_norm = np.array(self.y_norm)
+
+            # Compute naive entropy estimate
+            # Should probably be OK in most cases
+            # Ideally we'd use the NSB estimator
+            c_y = self.y_norm.sum(axis=0).squeeze()
+            p_y = c_y / c_y.sum()
+            ix = p_y > 0
+            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix]))
+            H_y = H_y_norm + np.log2(self.y_std)
+            dH_y = 0 # Need NSB to estimate this well
+            self.info_for_layers_dict['H_y'] = H_y
+            self.info_for_layers_dict['H_y_norm'] = H_y_norm
+            self.info_for_layers_dict['dH_y'] = dH_y
 
         # Compute the consensus sequence
         self.x_stats = x_to_stats(self.x, self.alphabet)
@@ -543,7 +593,8 @@ class Model:
         self.unfixed_phi_std = np.std(unfixed_phi)
 
         # update history attribute
-        self.model.history = history
+        #self.model.history = history
+        self.history = history.history
 
         # Compute training time
         self.training_time = time.time() - start_time
@@ -817,13 +868,10 @@ class Model:
             f'type(optimizer)={type(optimizer)}; must be on of ' \
             f'tf.keras.optimizers.Optimizer)'
 
-        # Note: this loss just returns the computed
-        # Likelihood in the custom likelihood layer
+        # Returns the sum of negative log likelihood contributions
+        # from each sequence, which is provided as y_pred
         def likelihood_loss(y_true, y_pred):
-            if self.regression_type == 'GE':
-                return K.sum(y_pred)
-            elif self.regression_type == 'MPA':
-                return y_pred
+            return K.sum(y_pred)
 
         self.model.model.compile(loss=likelihood_loss,
                                  optimizer=optimizer,
@@ -910,9 +958,213 @@ class Model:
 
         return yhat
 
+    @handle_errors
+    def simulate_dataset(self,
+                         N,
+                         training_frac=.8):
+        """
+        Simulate a dataset
+
+        parameters
+        ----------
+        N: (int > 0)
+            The number of observations to simulate.
+
+        training_frac: (float in [0,1])
+            The fraction of sequences to label for training.
+
+        returns
+        -------
+        data_df: (pd.DataFrame)
+            Simulated dataset formatted as a dataframe. Columns include
+            'training_set', 'phi', 'y', 'x'. If model is GE, an additional
+            column 'yhat' is added. If model is MPA, an additional column
+            'ct' is added. Note that, under MPA regression, N will be the
+            sum of values in the 'ct' column, not the number of rows in the
+            dataframe.
+        """
+
+        # Validate N
+        check(isinstance(N, int),
+              f'type(N)={type(N)}; must be int.')
+        check(N > 0,
+              f'N={N}; must be > 0')
+
+        # Validate training_frac
+        check(isinstance(training_frac, float),
+                         f'type(training_frac)={type(training_frac)};'
+                         'must be float.')
+        check(0 <= training_frac <= 1,
+              f'training_frac={training_frac}; must be in [0,1]')
+
+        # Generate sequences
+        x = p_lc_to_x(N=N,
+                      p_lc=self.x_stats['probability_df'].values,
+                      alphabet=self.x_stats['alphabet'])
+
+        # Compute phi values
+        phi = self.x_to_phi(x)
+
+        if self.regression_type == 'MPA':
+
+            # Compute grid of p(y|\phi) values over all y for all phi
+            all_y = np.arange(self.Y).astype(int)
+            p_all_y_given_phi = self.p_of_y_given_phi(all_y,
+                                                      phi,
+                                                      paired=False).T
+
+            # Create function to choose y
+            def choose_y(p_all_y):
+                return np.random.choice(a=all_y,
+                                        size=1,
+                                        replace=True,
+                                        p=p_all_y)
+
+            # Choose y values
+            y = np.apply_along_axis(choose_y, axis=1, arr=p_all_y_given_phi)
+
+        elif self.regression_type == 'GE':
+
+            # Compute yhat
+            yhat = self.phi_to_yhat(phi)
+
+            # Normalize yhat
+            yhat_norm = (yhat - self.y_mean)/self.y_std
+
+            # Get GE noise model class
+            noise_model_class = _noise_model_dict[self.ge_noise_model_type]
+
+            # Create noise model object and pass yhat_norm
+            noise_model = noise_model_class(model=self, yhat_GE=yhat_norm)
+
+            # Draw y_norm values from noise model
+            y_norm = noise_model.draw_y_values()
+
+            # Compute y from y_norm
+            y = self.y_mean + self.y_std * y_norm
+
+        else:
+            assert False, 'This should not happen.'
+
+        # Store results in dataframe and return
+        data_df = pd.DataFrame()
+        data_df['phi'] = phi
+        data_df['y'] = y
+        data_df['x'] = x
+
+        # If doing MPA regression, collapse by sequence and add ct col
+        if self.regression_type == 'MPA':
+            data_df['ct'] = 1
+            data_df = data_df.groupby(['x', 'phi', 'y']).sum()
+            data_df.reset_index(inplace=True)
+            data_df = data_df[['phi', 'y', 'ct', 'x']]
+            data_df.sort_values(by='ct', inplace=True, ascending=False)
+            data_df.reset_index(inplace=True, drop=True)
+
+        elif self.regression_type == 'GE':
+            data_df.insert(0, column='yhat', value=yhat)
+
+        # Choose training frac
+        train_ix = np.random.rand(len(data_df)) < training_frac
+        data_df.insert(0, column='training_set', value=train_ix)
+
+        return data_df
+
+    @handle_errors
+    def I_likelihood(self,
+                     x,
+                     y,
+                     ct=None,
+                     uncertainty=True):
+        """
+        Estimate the likelihood information I_like[y;phi] on user-provided data.
+
+        parameters
+        ----------
+
+        x: (np.ndarray)
+            Sequences to use for computing phi in I[y;phi].
+
+        y: (np.ndarray)
+            Measurements to use for computing I[y;phi]. Must be the same
+            size as x.
+
+        ct: (np.ndarray)
+            Counts corresponding to y-values. Must be the same size as x.
+
+        uncertainty: (bool)
+            Whether to estimate the uncertainty of the MI estimate.
+
+        returns
+        -------
+
+        (I, dI): (float, float)
+            I = Mutual information estimate in bits.
+            dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
+        """
+
+        # Retrieve H_y
+        H_y = self.info_for_layers_dict['H_y']
+        dH_y = self.info_for_layers_dict['dH_y']
+
+        if self.regression_type == 'GE':
+
+            # Compute phi
+            phi = self.x_to_phi(x)
+
+            # Compute p_y_give_phi
+            p_y_given_phi = self.p_of_y_given_phi(y,
+                                                  phi,
+                                                  paired=True)
+
+            # Compute H_y_given_phi
+            H_y_given_phi_n = -np.log2(p_y_given_phi)
+
+        elif self.regression_type == 'MPA':
+
+            # Remove zero entries
+            ix = (ct > 0)
+            x = x[ix]
+            y = y[ix]
+            ct = ct[ix]
+
+            # Compute phi
+            phi = self.x_to_phi(x)
+
+            # Expand
+            phi_expanded = np.concatenate(
+                [[phi_n]*ct_n for phi_n, ct_n in zip(phi, ct)])
+            y_expanded = np.concatenate(
+                [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
+
+            p_y_given_phi = self.p_of_y_given_phi(y_expanded,
+                                                  phi_expanded,
+                                                  paired=True)
+            H_y_given_phi_n = -np.log2(p_y_given_phi)
+
+        # Get total number of independent observations
+        N = len(H_y_given_phi_n)
+
+        # Compute H_y_given_phi
+        H_y_given_phi = np.mean(H_y_given_phi_n)
+
+        # Compute uncertainty
+        dH_y_given_phi = np.std(H_y_given_phi_n, ddof=1)/np.sqrt(N)
+
+        # Compute I_like and dI_fit
+        I_like = H_y - H_y_given_phi
+        if uncertainty:
+            dI_like = np.sqrt(dH_y**2 + dH_y_given_phi**2)
+        else:
+            dI_like = 0
+
+        return I_like, dI_like
+
+    @handle_errors
     def I_predictive(self,
                      x,
                      y,
+                     ct=None,
                      knn=5,
                      uncertainty=True,
                      num_subsamples=25,
@@ -920,22 +1172,20 @@ class Model:
                      alpha_LNC=.5,
                      verbose=False):
         """
-        Estimate the predictive information I[y;phi] on supplied data.
+        Estimate the predictive information I_pre[y;phi] on user-provided data.
 
         parameters
         ----------
 
-        x: (array-like of strings)
-            Array of sequences for which to comptue phi values.
+        x: (np.ndarray)
+            Sequences to use for computing phi in I[y;phi].
 
-        y: (array-like of floats)
-            Array of measurements y to use when computing I[y;phi].
-            If measurements are continuous, y must be the same shape as
-            x. If measurements are discrete, y can have two formats.
-            If y_format="list", y should be a list of discrete values,
-            one for each x. If y_format="matrix", y should be a
-            MxY matrix, where M=len(x) and Y is the number of possible
-            values for Y.
+        y: (np.ndarray)
+            Measurements to use for computing I[y;phi]. Must be the same
+            size as x.
+
+        ct: (np.ndarray)
+            Counts corresponding to y-values. Must be the same size as x.
 
         knn: (int>0)
             Number of nearest neighbors to use in the KSG estimator.
@@ -967,10 +1217,10 @@ class Model:
         (I, dI): (float, float)
             I = Mutual information estimate in bits.
             dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
-            Not returned if uncertainty=False is set.
         """
 
         if self.regression_type=='GE':
+
             return mi_continuous(self.x_to_phi(x),
                                  y,
                                  knn=knn,
@@ -979,10 +1229,27 @@ class Model:
                                  alpha_LNC=alpha_LNC,
                                  verbose=verbose)
 
+
         elif self.regression_type=='MPA':
+
+            # Remove zero entries
+            ix = (ct > 0)
+            x = x[ix]
+            y = y[ix]
+            ct = ct[ix]
+
+            # Compute phi
             phi = self.x_to_phi(x)
-            return mi_mixed(phi,
-                            y,
+
+            # Expand
+            phi_expanded = np.concatenate(
+                [[phi_n]*ct_n for phi_n, ct_n in zip(phi, ct)])
+            y_expanded = np.concatenate(
+                [[y_n] * ct_n for y_n, ct_n in zip(y, ct)])
+
+            # Compute mi_mixed on expanded y and phi
+            return mi_mixed(phi_expanded,
+                            y_expanded,
                             knn=knn,
                             uncertainty=uncertainty,
                             num_subsamples=num_subsamples,
@@ -1064,20 +1331,11 @@ class Model:
         y, y_shape = _get_shape_and_return_1d_array(y)
         phi, phi_shape = _get_shape_and_return_1d_array(phi)
 
-        # Normalize y values
-        y_norm = (y - self.y_mean)/self.y_std
-
-        # Unfix phi value
-        unfixed_phi = self.unfixed_phi_mean + self.unfixed_phi_std * phi
-
         # If inputs are paired, use as is
         if paired:
             # Check that dimensions match
             check(y_shape == phi_shape,
                   f"y shape={y_shape} does not match phi shape={phi_shape}")
-
-            # Do computation
-            p_norm = self._p_of_y_given_phi(y_norm, unfixed_phi)
 
             # Use y_shape as output shape
             p_shape = y_shape
@@ -1085,51 +1343,26 @@ class Model:
         # Otherwise, broadcast inputs
         else:
             # Broadcast y and phi
-            y_norm, unfixed_phi = _broadcast_arrays(y_norm, unfixed_phi)
-
-            # Do computation
-            p_norm = self._p_of_y_given_phi(y_norm, unfixed_phi)
+            y, phi = _broadcast_arrays(y, phi)
 
             # Set output shape
             p_shape = y_shape + phi_shape
 
-        # De-normalize probability
-        p = p_norm / self.y_std
+        # Ravel arrays
+        y = y.ravel()
+        phi = phi.ravel()
 
-        # Shape for output
-        p = _shape_for_output(p, p_shape)
-        return p
+        # If GE, compute yhat, then p
+        if self.regression_type == 'GE':
 
-    # TODO: Stated behavior won't work for MPA regression, only GE
-    def _p_of_y_given_phi(self,
-                         y,
-                         phi):
+            # Compute y_hat
+            yhat = self.phi_to_yhat(phi)
 
-        """
-        Method that computes the p(y|phi) for both GE and MPA regression.
+            # Comptue p_y_given_phi using yhat
+            p = self.p_of_y_given_yhat(y, yhat, paired=True)
 
-        Note that if y is and np.ndarray with shape=(n1,n2,...,nK) and
-        phi is an np.ndarray with shape=(n1,n2,...,nK), the returned value
-        p_of_y_given_phi will also have shape=(n1,n2,...,nK). In other
-        cases, the appropriate broadcasting will occur.
-
-        y: (float (GE) or int (MPA))
-            Specifies continuous target value for GE regression or an integer
-            specifying bin number for MPA regression.
-
-        phi: (float)
-            Latent phenotype on which probability is conditioned.
-
-        returns
-        -------
-        p_of_y_given_phi: (float)
-            Probaility of y given phi.
-
-        """
-
-        if self.regression_type == 'MPA':
-
-            in_shape = y.shape
+        # Otherwise, just compute p
+        elif self.regression_type == 'MPA':
 
             # Cast y as integers
             y = y.astype(int)
@@ -1141,38 +1374,24 @@ class Model:
             check(np.all(y < self.Y),
                   f"Some y values exceed the number of bins {self.Y}")
 
-            # Have to ravel
-            y = y.ravel()
-            phi = phi.ravel()
+            # Unfix phi
+            phi_unfixed = self.unfixed_phi_mean + phi * self.unfixed_phi_std
 
             # Get values for all bins
-            p_of_all_y_given_phi = self.na_p_of_all_y_given_phi(phi)
+            p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
 
-            # There has to be a better way to do this
-            p_of_y_given_phi = np.zeros(len(y))
-            for i, _y in enumerate(y):
-                p_of_y_given_phi[i] = p_of_all_y_given_phi[i, _y]
-
-            # Reshape
-            p_of_y_given_phi = np.reshape(p_of_y_given_phi, in_shape)
+            # Extract y-specific elements
+            _ = np.newaxis
+            all_y = np.arange(self.Y).astype(int)
+            y_ix = (y[:, _] == all_y[_, :])
+            p = p_of_all_y_given_phi[y_ix]
 
         else:
-            check(self.regression_type=='GE',
-                  f'Invalid regression type {self.regression_type}.')
+            assert False, 'This should not happen.'
 
-            # variable to store the shape of the returned object
-            yhat = self.phi_to_yhat(np.array(phi).ravel())
-            if np.array(y).shape==np.array(phi).shape \
-                    and (len(np.array(y).shape)>0 \
-                         and len(np.array(phi).shape)>0):
-                shape = np.array(y).shape
-                p_of_y_given_phi = self._p_of_y_given_y_hat(y.ravel(),
-                                       yhat.ravel()).reshape(shape)
-
-            else:
-                p_of_y_given_phi = self._p_of_y_given_y_hat(y, yhat)
-
-        return p_of_y_given_phi
+        # Shape for output
+        p = _shape_for_output(p, p_shape)
+        return p
 
     def p_of_y_given_yhat(self, y, yhat, paired=False):
         """
@@ -1195,13 +1414,12 @@ class Model:
                 Probability of y given yhat.
         """
 
+        check(self.regression_type == 'GE',
+              f'Only works for GE models.')
+
         # Prepare inputs
         y, y_shape = _get_shape_and_return_1d_array(y)
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
-
-        # Normalize y values
-        y_norm = (y - self.y_mean)/self.y_std
-        yhat_norm = (yhat - self.y_mean)/self.y_std
 
         # If inputs are paired, use as is
         if paired:
@@ -1209,120 +1427,36 @@ class Model:
             check(y_shape == yhat_shape,
                   f"y shape={y_shape} does not match yhat shape={yhat_shape}")
 
-            # Do computation
-            p_norm = self._p_of_y_given_y_hat(y_norm, yhat_norm)
-
             # Use y_shape as output shape
             p_shape = y_shape
 
         # Otherwise, broadcast inputs
         else:
-            # Broadcast y and yhat
-            y_norm, yhat_norm = _broadcast_arrays(y_norm, yhat_norm)
-
-            # Do computation
-            p_norm = self._p_of_y_given_y_hat(y_norm, yhat_norm)
+            # Broadcast y and phi
+            y, yhat = _broadcast_arrays(y, yhat)
 
             # Set output shape
             p_shape = y_shape + yhat_shape
 
-        # De-normalize probability
+        # Ravel arrays
+        y = y.ravel()
+        yhat = yhat.ravel()
+
+        # Normalize
+        y_norm = (y - self.y_mean)/self.y_std
+        yhat_norm = (yhat - self.y_mean)/self.y_std
+
+        # Get GE noise model based on the users input.
+        ge_noise_model = globals()[self.ge_noise_model_type +
+                                   'NoiseModel'](self, yhat_norm, None)
+
+        # Compute p
+        p_norm = ge_noise_model.p_of_y_given_yhat(y_norm, yhat_norm)
         p = p_norm / self.y_std
 
         # Shape for output
         p = _shape_for_output(p, p_shape)
         return p
-
-    def _p_of_y_given_y_hat(self,
-                            y,
-                            yhat):
-
-        """
-        Method that returns computes.
-
-        parameters
-        ----------
-        y: (array-like of floats)
-            The y values for which the conditional probability will be computed.
-
-        yhat: (float)
-            The value on which the computed probability will be conditioned.
-
-        returns
-        -------
-        p_of_y_given_yhat: (array-like of floats)
-            Probability of y given sequence yhat. Shape of returned value will
-            match shape of y_test, for a single yhat. For each value of yhat_i,
-            the distribution p(y|yhat_i), where i traverses the elements of
-            yhat.
-
-        """
-
-        check(self.regression_type=='GE',
-              "This method works on with GE regression.")
-
-        # Get GE noise model based on the users input.
-        ge_noise_model = globals()[self.ge_noise_model_type +
-                                   'NoiseModel'](self, yhat, None)
-
-        return ge_noise_model.p_of_y_given_yhat(y, yhat)
-
-    def __p_of_y_given_y_hat(self,
-                             y,
-                             yhat):
-        """
-        parameters
-        ----------
-        y: (array-like of floats)
-            The y values for which the conditional probability will be computed.
-            y: np.ndarray, shape=(n1,n2,...,nK
-
-        yhat: (array-like of floats)
-            The value on which the computed probability will be conditioned.
-
-        returns
-        -------
-        p: np.ndarray, shape=(n1,n2,...,nK)
-
-        """
-
-        check(self.regression_type=='GE',
-              "This method works on with GE regression.")
-
-        # Get GE noise model based on the users input.
-        ge_noise_model = globals()[self.ge_noise_model_type +
-                                   'NoiseModel'](self, yhat, None)
-        vec_p_of_y_given_yhat = np.vectorize(ge_noise_model.p_of_y_given_yhat)
-
-        return vec_p_of_y_given_yhat(y, yhat)
-
-    def na_p_of_all_y_given_phi(self,
-                                phi):
-
-        """
-        Evaluate the MPA measurement process at specified values of
-        phi (the latent phenotype).
-
-        parameters
-        ----------
-        phi: (array-like)
-            Latent phenotype values at which to evaluate the measurement
-            process.
-
-        returns
-        -------
-        p_of_dot_given_phi: (array-like)
-            Measurement process p(y|phi) for all possible values of y. Is of
-            size MxY where M=len(phi) and Y is the number of possible y values.
-
-        """
-
-        check(self.regression_type == 'MPA',
-              'regression type must be "MPA" for this function ')
-
-        p_of_dot_given_phi = self.model.p_of_all_y_given_phi(phi)
-
-        return p_of_dot_given_phi
 
     def p_of_y_given_x(self, y, x):
 
@@ -1400,7 +1534,9 @@ class Model:
             'y_std': self.y_std,
             'y_mean': self.y_mean,
             'x_stats': self.x_stats,
-            'y_stats': self.y_stats
+            'y_stats': self.y_stats,
+            'history': self.history,
+            'info_for_layers_dict': self.info_for_layers_dict
         }
 
         # Save config_dict as pickle file
@@ -1416,6 +1552,7 @@ class Model:
             print(f'Model saved to these files:\n'
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
+
 
 # Converts sequences to matrices
 def _x_to_mat(x, alphabet):

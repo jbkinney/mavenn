@@ -9,34 +9,49 @@ eps = 1E-10
 pi = np.pi
 e = np.exp(1)
 
-class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
 
+class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
     """
-    Inputs consit of y and y_hat -> they are contained in a single array called inputs
-    Outputs consist of negative log likelihood values.
+    Inputs consit of y and y_hat -> they are contained in a single array called
+    inputs. Outputs consist of negative log likelihood values.
     Computes likelihood using the Gaussian distribution.
     Layer includes 4 trainable scalar weights: w, a, b, c.
     """
 
-    def __init__(self, polynomial_order=2, eta_regularization=0.01, **kwargs):
+    def __init__(self,
+                 info_for_layers_dict,
+                 polynomial_order=2,
+                 eta_regularization=0.01,
+                 **kwargs):
 
         # order of polynomial which defines log_sigma's dependence on y_hat
         self.polynomial_order = polynomial_order
         self.eta_regularization = eta_regularization
+        self.info_for_layers_dict = info_for_layers_dict
 
         super(GaussianLikelihoodLayer, self).__init__(**kwargs)
 
-    # def get_config(self):
-    #     base_config = super().get_config()
-    #     return {**base_config, "w": self.w, "a": self.a,
-    #                            "b": self.b, "c": self.c}
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config, "a": self.a}
 
     def build(self, input_shape):
-
         self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
                                  initializer="TruncatedNormal", trainable=True)
 
     def call(self, inputs):
+        """
+        parameters
+        ----------
+
+        inputs: (tf.Tensor)
+            A (B,2) tensor containing both yhat and ytrue, where B is batch
+            size.
+
+        returns
+        -------
+            A (B,) tensor containing negative log likelihood contributions
+        """
 
         # this is yhat
         yhat = inputs[:, 0:1]
@@ -44,11 +59,7 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
         # these are the labels
         ytrue = inputs[:, 1:]
 
-        # replace the tensors where nans in ytrue occur with zeros, so that likelihood for
-        # that yhat, ypred pair is also zero.
-        # yhat = tf.where(tf.is_nan(ytrue), tf.zeros_like(yhat), yhat)
-        # ytrue = tf.where(tf.is_nan(ytrue), tf.zeros_like(ytrue), ytrue)
-
+        # Compute logsigma from a coefficients
         self.logsigma = 0
         for poly_coeff_index in range(self.polynomial_order+1):
             if poly_coeff_index == 0:
@@ -57,58 +68,59 @@ class GaussianLikelihoodLayer(tensorflow.keras.layers.Layer):
                 self.logsigma += self.a[poly_coeff_index] * \
                                  K.pow(yhat, poly_coeff_index)
 
-        # regularize parameters of the polynomials
+        # Regularize parameters of the polynomials
         self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
 
-        # JBK: This is missing a + 0.5*np.log(2*pi) term within the sum
-        # negative_log_likelihood = 0.5 * K.sum(
-        #    K.square((ytrue - yhat) / K.exp(self.logsigma)) + self.logsigma,
-        #    axis=1)
-
-        negative_log_likelihood = K.sum(
-            0.5 * K.square((ytrue - yhat) / K.exp(self.logsigma))
-            + self.logsigma
+        # Compute negative log likelihood
+        negative_log_likelihood = \
+            0.5 * K.square((ytrue - yhat) / K.exp(self.logsigma)) \
+            + self.logsigma \
             + 0.5*np.log(2*pi)
-            , axis=1)
 
-        #self.add_loss(negative_log_likelihood)
+        # Add I_like metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = K.mean(np.log2(e)*negative_log_likelihood)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_like", aggregation="mean")
 
         return negative_log_likelihood
 
 
 class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
-    """
-    Inputs consit of y and y_hat -> they are contained in a single array called inputs
-    Outputs consist of negative log likelihood values.
-    Computes likelihood using the Cauchy distribution.
-    Layer includes 4 trainable scalar weights: w, a, b, c.
-    """
 
-    def __init__(self, polynomial_order=2, eta_regularization=0.01, **kwargs):
+    def __init__(self,
+                 info_for_layers_dict,
+                 polynomial_order=2,
+                 eta_regularization=0.01,
+                 **kwargs):
 
         self.polynomial_order = polynomial_order
         self.eta_regularization = eta_regularization
-
-        # # For NaN surveillance
-        # self.everything_ok = True
-        # self.first_bad_vals_ok = None
-        # self.first_bad_nll_contributions = None
+        self.info_for_layers_dict = info_for_layers_dict
 
         super(CauchyLikelihoodLayer, self).__init__(**kwargs)
 
-    # def get_config(self):
-    #     base_config = super().get_config()
-    #     return {**base_config, "w": self.w, "a": self.a,
-    #                            "b": self.b, "c": self.c}
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config, "a": self.a}
 
     def build(self, input_shape):
-
         self.a = self.add_weight(name='a', shape=(self.polynomial_order+1, 1),
                                  initializer="TruncatedNormal", trainable=True)
 
     def call(self, inputs):
+        """
+        parameters
+        ----------
 
-        # compute negative ll here
+        inputs: (tf.Tensor)
+            A (B,2) tensor containing both yhat and ytrue, where B is batch
+            size.
+
+        returns
+        -------
+            A (B,) tensor containing negative log likelihood contributions
+        """
 
         # this is yhat
         yhat = inputs[:, 0:1]
@@ -127,84 +139,72 @@ class CauchyLikelihoodLayer(tensorflow.keras.layers.Layer):
         # regularize parameters of the polynomials
         self.add_loss(self.eta_regularization * tf.norm(self.a) ** 2)
 
-        # Negative log Cauchy likelihood
-        # JBK: This is missing the pi contribution
-        # negative_log_likelihood = \
-        #     K.sum(K.log(K.square((ytrue - yhat)) +
-        #           K.square(K.exp(self.log_gamma))) - self.log_gamma, axis=1)
-
-        # Makes min of log_gamma -max_exp_arg and max of log_gamma +max_exp_arg
-        # Supposed to prevent NaNs from occurring in the exponential.
-        #reg_log_gamma = K.tanh(self.log_gamma/max_exp_arg)*max_exp_arg
-        # reg_log_gamma = tf.clip_by_value(self.log_gamma,
-        #                                  -max_exp_arg,
-        #                                  max_exp_arg)
-
         # Compute contributions to negative log likelihood
-        nll_contributions = \
+        negative_log_likelihood = \
             K.log(K.exp(2*self.log_gamma) + K.square(ytrue - yhat) + eps) \
             - self.log_gamma \
             + np.log(pi)
 
-        # Regularize log likelihood contributions
-        # reg_nll_contributions = tf.clip_by_value(nll_contributions,
-        #                                          -max_exp_arg,
-        #                                          max_exp_arg)
-
-        # # Make sure all values are ok
-        # vals_ok = tf.math.is_finite(nll_contributions)
-        #
-        # # If this is the first time where they are not, store stuff
-        # if self.everything_ok and (not all(vals_ok)):
-        #     self.everything_ok = False
-        #     self.first_bad_vals_ok = vals_ok
-        #     self.first_bad_nll_contributions = nll_contributions
-        #
-        # # Remove contributions to negative log likelihood that are not finite
-        # nll_contributions = tf.where(vals_ok, nll_contributions, nan_penalty)
-
-        # Compute total negative log likelihood
-        negative_log_likelihood = K.sum(nll_contributions, axis=1)
+        # Add I_like metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = K.mean(np.log2(e)*negative_log_likelihood)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_like", aggregation="mean")
 
         return negative_log_likelihood
 
 
 class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
-    """
-    Inputs consit of y and y_hat -> they are contained in a single array called inputs
-    Outputs consist of negative log likelihood values.
-    Computes likelihood using the skewed t-distribution proposed by Jones and Faddy (2003).
-    Layer includes three trainable scalar weights: log_a, log_b, and log_scale.
-    """
 
-    def __init__(self, polynomial_order=2, eta_regularization=0.01, **kwargs):
+    def __init__(self,
+                 info_for_layers_dict,
+                 polynomial_order=2,
+                 eta_regularization=0.01,
+                 **kwargs):
 
-        # order of polynomial which defines the spatial parameters' dependence on y_hat
         self.polynomial_order = polynomial_order
         self.eta_regularization = eta_regularization
+        self.info_for_layers_dict = info_for_layers_dict
 
         super(SkewedTLikelihoodLayer, self).__init__(**kwargs)
 
-    # def get_config(self):
-    #     base_config = super().get_config()
-    #     return {**base_config, "log_a": self.log_a, "log_b": self.log_b, "log_scale": self.log_scale}
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config, "w_a": self.w_a,
+                "w_b": self.w_b, "w_s": self.w_s}
 
     def build(self, input_shape):
+        self.w_a = self.add_weight(name='w_a',
+                                   shape=(self.polynomial_order+1, 1),
+                                   initializer="random_normal",
+                                   trainable=True)
 
+        self.w_b = self.add_weight(name='w_b',
+                                   shape=(self.polynomial_order+1, 1),
+                                   initializer="random_normal",
+                                   trainable=True)
 
-        self.w_a = self.add_weight(name='w_a', shape=(self.polynomial_order+1, 1),
-                                 initializer="random_normal", trainable=True)
-
-        self.w_b = self.add_weight(name='w_b', shape=(self.polynomial_order+1, 1),
-                                 initializer="random_normal", trainable=True)
-
-        self.w_s = self.add_weight(name='w_s', shape=(self.polynomial_order+1, 1),
-                                 initializer="random_normal", trainable=True)
+        self.w_s = self.add_weight(name='w_s',
+                                   shape=(self.polynomial_order+1, 1),
+                                   initializer="random_normal",
+                                   trainable=True)
 
         # Continue building keras.laerys.Layer class
-        # super.build(batch_input_shape)
+        # super.build(input_shape)
 
     def call(self, inputs):
+        """
+        parameters
+        ----------
+
+        inputs: (tf.Tensor)
+            A (B,2) tensor containing both yhat and ytrue, where B is batch
+            size.
+
+        returns
+        -------
+            A (B,) tensor containing negative log likelihood contributions
+        """
 
         # To clarify equations
         Log = K.log
@@ -213,9 +213,12 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
         Sqrt = K.sqrt
         Square = K.square
 
-        # TODO: this is throwing a warning with tensorflow 2.1.0, but not with tf versions > 2.1.0
-        # disabling eager_execution tf.compat.v1.disable_eager_execution() may make it work in future
-        # versions as a hack, but may have to use tf.gather_nd() rather than sliciing manually to remove warning.
+        # TODO: this is throwing a warning with tensorflow 2.1.0,
+        # but not with tf versions > 2.1.0
+        # disabling eager_execution tf.compat.v1.disable_eager_execution()
+        # may make it work in future
+        # versions as a hack, but may have to use tf.gather_nd() rather than
+        # sliciing manually to remove warning.
 
         y_hat = inputs[:, 0:1] # this is yhat
 
@@ -245,7 +248,8 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
         ytrue = inputs[:, 1:]
 
         # Compute the mode of the unscaled, unshifted t-distribution
-        self.t_mode = (self.a - self.b) * Sqrt(self.a + self.b) / (Sqrt(2 * self.a + 1) * Sqrt(2 * self.b + 1))
+        self.t_mode = ((self.a - self.b) * Sqrt(self.a + self.b)) \
+                      / (Sqrt(2 * self.a + 1) * Sqrt(2 * self.b + 1))
 
         # Compute the t value corresponding to y, assuming the mode is at y_hat
         t = self.t_mode + (ytrue - y_hat) / self.scale
@@ -267,31 +271,49 @@ class SkewedTLikelihoodLayer(tensorflow.keras.layers.Layer):
                          -LogGamma(self.a) + \
                          -LogGamma(self.b) + \
                          -self.log_scale
+        negative_log_likelihood = -log_likelihood
 
-        return -log_likelihood
+        # Add I_like metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = K.mean(np.log2(e)*negative_log_likelihood)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_like", aggregation="mean")
+
+        return negative_log_likelihood
 
 
 class MPALikelihoodLayer(tensorflow.keras.layers.Layer):
-    """
-    Inputs consit of y and y_hat -> they are contained in a single array called inputs
-    Outputs consist of negative log likelihood values.
-    Computes likelihood for NAR.
-    """
 
-    def __init__(self, number_bins, **kwargs):
+    def __init__(self,
+                 info_for_layers_dict,
+                 number_bins,
+                 **kwargs):
 
         self.number_bins = number_bins
+        self.info_for_layers_dict = info_for_layers_dict
         super(MPALikelihoodLayer, self).__init__(**kwargs)
 
     def get_config(self):
-
         pass
 
     def build(self, input_shape):
-
         pass
 
     def call(self, inputs):
+        """
+        parameters
+        ----------
+
+        inputs: (tf.Tensor)
+            A (B,2*Y) tensor containing counts, where B is batch
+            size and Y is the number of bins.
+            inputs[:, 0:Y] is p(y|phi)
+            inputs[:, Y:2Y] is c_my
+
+        returns
+        -------
+            A (B,) tensor containing negative log likelihood contributions
+        """
 
         # this is yhat
         p_y_given_phi = inputs[:, 0:self.number_bins]
@@ -299,8 +321,18 @@ class MPALikelihoodLayer(tensorflow.keras.layers.Layer):
         # these are the labels
         c_my = inputs[:, self.number_bins:]
 
-        # one sum over y, other sum over m
-        return -K.sum(K.sum(c_my * K.log(p_y_given_phi), axis=1), axis=0)
-        #return -K.sum(c_my * K.log(p_y_given_phi))
+        negative_log_likelihood = -K.sum(c_my * K.log(p_y_given_phi), axis=1)
+        c_m = K.sum(c_my, axis=1)
+
+        # Add I_like metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = np.log2(e) * \
+                        K.sum(negative_log_likelihood) / K.sum(c_m)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_like", aggregation="mean")
+
+        return negative_log_likelihood
+
+
 
 

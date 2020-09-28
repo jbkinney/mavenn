@@ -5,6 +5,7 @@ import numbers
 from collections.abc import Iterable
 
 from mavenn.src import _npeet as ee
+from mavenn.src.validate import validate_1d_array
 from mavenn.src.error_handling import handle_errors, check
 
 
@@ -41,10 +42,10 @@ def entropy_continuous(x,
     returns
     -------
 
-    I: (float)
-        Mutual information estimate in bits
+    H: (float)
+        Entropy estimate in bits
 
-    dI: (float >= 0)
+    dH: (float >= 0)
         Uncertainty estimate in bits. Zero if uncertainty=False is set.
 
     """
@@ -58,30 +59,39 @@ def entropy_continuous(x,
     x = np.array(x).reshape(N, 1)
 
     # Get best H estimate
-    H = ee.entropy(x, k=knn)
+    H = ee.entropy(x, k=knn, base=2)
 
-    # TODO: Impelment uncertainty=False (turns off subsampling)
-    # Do subsampling to get I_subs
-    H_subs = np.zeros(num_subsamples)
-    for k in range(num_subsamples):
-        N_half = int(np.floor(N / 2))
-        ix = np.random.choice(N, size=N_half, replace=False).astype(int)
-        x_k = x[ix, :]
-        H_subs[k] = ee.entropy(x_k, k=knn)
+    # If user does not want uncertainty, end here.
+    if not uncertainty:
+        if verbose:
+            print(f'Arguments: knn={knn}, num_subsamples={num_subsamples}')
+            print(f'Execution time: {t:.4f} sec')
+            print(f'Results: H={H:.4f} bits')
 
-    # Estimate dI
-    dH = np.std(H_subs, ddof=1) / np.sqrt(2)
+        return H
 
-    # If verbose, print results:
-    if verbose:
-        print(f'Arguments: knn={knn}, num_subsamples={num_subsamples}')
-        print(f'Execution time: {t:.4f} sec')
-        print(f'Results: H={H:.4f} bits, dH={dH:.4f} bits')
+    # If user does request uncertainty, do computations
+    else:
+        H_subs = np.zeros(num_subsamples)
+        for k in range(num_subsamples):
+            N_half = int(np.floor(N / 2))
+            ix = np.random.choice(N, size=N_half, replace=False).astype(int)
+            x_k = x[ix, :]
+            H_subs[k] = ee.entropy(x_k, k=knn, base=2)
 
-    # Return results
-    return H, dH
+        # Estimate dI
+        dH = np.std(H_subs, ddof=1) / np.sqrt(2)
 
+        if verbose:
+            print(f'Arguments: knn={knn}, num_subsamples={num_subsamples}')
+            print(f'Execution time: {t:.4f} sec')
+            print(f'Results: H={H:.4f} bits, dH={dH:.4f} bits')
 
+        return H, dH
+
+# TODO: Write function to compute MI for MPA regression
+
+# This isn't actually what we need.
 def mi_mixed(x,
              y,
              knn=5,
@@ -177,7 +187,6 @@ def mi_mixed(x,
 
     # Return results
     return I, dI
-
 
 def mi_continuous(x,
                   y,
@@ -281,9 +290,9 @@ def mi_continuous(x,
     # Return results
     return I, dI
 
-def estimate_instrinsic_information(y_values,
-                                    dy_values,
-                                    verbose=False):
+def I_intrinsic(y_values,
+                dy_values,
+                verbose=False):
     """
 
     Helper method used to compute instrinsic information.
@@ -311,15 +320,15 @@ def estimate_instrinsic_information(y_values,
     e = np.exp(1)
     pi = np.pi
 
-    # Compute y and dy values to do the estimation on
-    y = y_values
-    dy = dy_values / y_values
+    y_values = validate_1d_array(y_values)
+    dy_values = validate_1d_array(dy_values)
 
-    # Use DEFT to compute H[y]
-    p = suftware.DensityEstimator(y, num_grid_points=200)
-    stats_df = p.get_stats()
-    H_y = -stats_df.loc['posterior mean', 'entropy']
-    dH_y = stats_df.loc['posterior RMSD', 'entropy']
+    # Compute y and dy values to do the estimation on
+    y = y_values / np.std(y_values) + 1E-3 * np.random.randn(*y_values.shape)
+    dy = dy_values / np.std(y_values)
+
+    # Compute entropy
+    H_y, dH_y = entropy_continuous(y, knn=7)
     if verbose:
         print(f'H[y]   = {H_y:+.4f} +- {dH_y:.4f} bits')
 

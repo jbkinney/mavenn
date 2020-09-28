@@ -256,7 +256,7 @@ def corexdc(xs, ys, k=3, base=2, warning=True):
 
 # UTILITY FUNCTIONS
 
-def add_noise(x, intens=1e-10):
+def add_noise(x, intens=1e-5):
     # small noise to break degeneracy, see doc.
     return x + intens * np.random.random_sample(x.shape)
 

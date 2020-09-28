@@ -6,6 +6,7 @@ import time
 # Tensorflow imports
 import tensorflow as tf
 from tensorflow.keras.models import Model
+from tensorflow.keras import regularizers
 from tensorflow.keras.layers \
     import Dense, Activation, Input, Lambda, Concatenate
 
@@ -16,6 +17,7 @@ from mavenn.src.misc_jbk import x_to_features
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.misc_jbk import GlobalEpistasisLayer, \
                             AdditiveGPMapLayer, PairwiseGPMapLayer
+from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -25,6 +27,9 @@ class GlobalEpistasisModel:
 
     attributes
     ----------
+
+    parent_model: (mavenn.Model)
+        Parent model.
 
     sequence_length: (int)
         Integer specifying the length of a single training sequence.
@@ -62,6 +67,7 @@ class GlobalEpistasisModel:
 
     @handle_errors
     def __init__(self,
+                 info_for_layers_dict,
                  sequence_length,
                  alphabet,
                  gpmap_type,
@@ -72,6 +78,7 @@ class GlobalEpistasisModel:
                  eta_regularization):
 
         # set class attributes
+        self.info_for_layers_dict = info_for_layers_dict
         self.gpmap_type = gpmap_type
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
@@ -219,12 +226,27 @@ class GlobalEpistasisModel:
             [yhat, labels_input])
 
         # Compute likelihood
-        likelihood_class = globals()[ge_noise_model_type + 'LikelihoodLayer']
-        likelihood_object = likelihood_class(self.ge_heteroskedasticity_order,
-                                             self.eta_regularization)
+        if ge_noise_model_type == 'Gaussian':
+            likelihood_object = GaussianLikelihoodLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization)
+
+        elif ge_noise_model_type == 'Cauchy':
+            likelihood_object = CauchyLikelihoodLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization)
+
+        elif ge_noise_model_type == 'SkewedT':
+            likelihood_object = SkewedTLikelihoodLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization)
+        else:
+            assert False, 'This should not happen.'
+
         outputTensor = likelihood_object(yhat_y_concat)
-
-
 
         # create the model:
         model = Model(inputTensor, outputTensor)
@@ -232,7 +254,6 @@ class GlobalEpistasisModel:
         self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
 
         return model
-
 
     @handle_errors
     def phi_to_yhat(self,
@@ -297,22 +318,29 @@ class MeasurementProcessAgnosticModel:
 
     theta_regularization: (float >= 0)
         Regularization strength for G-P map parameters $\theta$.
+
+    eta_regularization: (float >= 0)
+        Regularization strength for measurement process parameters $\eta$.
     """
 
     @handle_errors
     def __init__(self,
+                 info_for_layers_dict,
                  sequence_length,
                  number_of_bins,
                  gpmap_type,
                  alphabet,
                  theta_regularization,
+                 eta_regularization,
                  ohe_batch_size):
 
         # set class attributes
+        self.info_for_layers_dict = info_for_layers_dict
         self.gpmap_type = gpmap_type
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
         self.theta_regularization = theta_regularization
+        self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
         self.number_of_bins = number_of_bins
 
@@ -423,18 +451,32 @@ class MeasurementProcessAgnosticModel:
                                                      mask_type=self.gpmap_type)
         else:
             assert False, "This should not happen."
-
         phi = self.x_to_phi_layer(sequence_input)
 
-        intermediateTensor = Dense(na_hidden_nodes, activation='sigmoid')(phi)
+        # TODO: Replace these two layers by a custom layer
+        eta_regularizer = regularizers.l2(self.eta_regularization)
+        intermediateTensor = Dense(
+                    na_hidden_nodes,
+                    activation='sigmoid',
+                    kernel_regularizer=eta_regularizer,
+                    bias_regularizer=eta_regularizer
+                    )(phi)
         yhat = Dense(self.number_of_bins,
                      name='yhat',
-                     activation='softmax')(intermediateTensor)
+                     activation='softmax',
+                     kernel_regularizer=eta_regularizer,
+                     bias_regularizer=eta_regularizer
+                     )(intermediateTensor)
 
+        # Define concatenation layer
         concatenateLayer = Concatenate(
             name='yhat_and_y_to_ll')([yhat, labels_input])
-        outputTensor = MPALikelihoodLayer(
-            number_bins=self.number_of_bins)(concatenateLayer)
+
+        # Define likelihood layer
+        likelihood_object = MPALikelihoodLayer(
+            info_for_layers_dict=self.info_for_layers_dict,
+            number_bins=self.number_of_bins)
+        outputTensor = likelihood_object(concatenateLayer)
 
         #create the model:
         model = Model(inputTensor, outputTensor)
@@ -478,7 +520,6 @@ class MeasurementProcessAgnosticModel:
         na_model = Model(inputs=na_model_input, outputs=next_input)
 
         # compute the value of the nonlinearity for a given phi
-
         p_of_dot_given_phi = na_model.predict([phi])
 
         return p_of_dot_given_phi
