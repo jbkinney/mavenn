@@ -167,13 +167,11 @@ def test_NoiseAgnosticModel():
     #x, y, ct_n = load_example_dataset(name='Sort-Seq')
     data_df = load_example_dataset('sortseq')
     x = data_df['x'].values
-    y = data_df['y'].values
-    ct_n = data_df['ct'].values
+    y = data_df.filter(regex='ct_*').values
 
     # test on subset of sequences
     x = x[0:1000].copy()
     y = y[0:1000].copy()
-    ct_n = ct_n[0:1000].copy()
 
     L = len(x[0])
     Y = 10
