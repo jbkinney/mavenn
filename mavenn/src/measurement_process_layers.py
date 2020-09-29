@@ -223,7 +223,7 @@ class GlobalEpistasisLayer(Layer):
 class NoiseModelLayer(Layer):
     """
     Custom Keras Layer representing a GE noise model.
-    Specific noise model layers inheret from this class.
+    Specific noise model layers inherit from this class.
     """
 
     def __init__(self,
@@ -282,9 +282,9 @@ class NoiseModelLayer(Layer):
         return nlls
 
     @handle_arrays
-    def compute_p_of_y_given_yhat(self,
-                                  y,
-                                  yhat):
+    def p_of_y_given_yhat(self,
+                          y,
+                          yhat):
         """
         Compute p(y|yhat).
         """
@@ -299,22 +299,29 @@ class NoiseModelLayer(Layer):
         return p_y_given_yhat
 
     @handle_arrays
-    def compute_nlls(self, yhat, ytrue):
-        """
-        Compute negative log likelihood array.
-        Must be overridden.
-        """
-        assert False, 'Class must be overridden'
-        return np.nan
-
-    @handle_arrays
     def sample_y_given_yhat(self, yhat):
-        """
-        Sample y ~ p(y|yhat).
-        Must be overridden
-        """
-        assert False, 'Class must be overridden'
-        return np.nan
+        # Draw random quantiles
+        q = tf.constant(np.random.rand(*yhat.shape))
+
+        # Compute corresponding quantiles and return
+        y = self.yhat_to_yq(yhat, q)
+        return y
+
+    ### The following functions must be overridden
+    def compute_params(self, yhat, ytrue):
+        assert False, 'Function must be overridden'
+
+    def compute_nlls(self, yhat, ytrue):
+        assert False, 'Function must be overridden'
+
+    def yhat_to_yq(self, yhat, q):
+        assert False, 'Function must be overridden'
+
+    def yhat_to_ymean(self, yhat):
+        assert False, 'Function must be overridden'
+
+    def yhat_to_ystd(self, yhat):
+        assert False, 'Function must be overridden'
 
 
 class GaussianNoiseModelLayer(NoiseModelLayer):
@@ -338,9 +345,20 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         return {**base_config, "a": self.a}
 
     @handle_arrays
+    def compute_params(self, yhat):
+        # Have to treat 0'th order term separately because of NaN bug.
+        logsigma = self.a[0]
+
+        # Add higher order terms and return
+        for k in range(1, self.K + 1):
+            logsigma += self.a[k] * K.pow(yhat, k)
+
+        return logsigma
+
+    @handle_arrays
     def compute_nlls(self, yhat, ytrue, use_arrays=False):
         # Compute logsigma and sigma
-        logsigma = self.compute_logsigma(yhat)
+        logsigma = self.compute_params(yhat)
         sigma = K.exp(logsigma)
 
         # Compute nlls
@@ -352,29 +370,19 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         return nlls
 
     @handle_arrays
-    def sample_y_given_yhat(self, yhat):
-        # Compute sigma
-        logsigma = self.compute_logsigma(yhat)
-        sigma = K.exp(logsigma)
-
-        # Generate random quantiles q (as scalars)
-        q = np.random.rand(len(yhat))
-
-        # Compute and return y
-        y = yhat + sigma * np.sqrt(2) * erfinv(2 * q - 1)
-
-        return y
+    def yhat_to_yq(self, yhat, q):
+        sigma = K.exp(self.compute_params(yhat))
+        yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
+        return yq
 
     @handle_arrays
-    def compute_logsigma(self, yhat):
-        # Have to treat 0'th order term separately because of NaN bug.
-        logsigma = self.a[0]
+    def yhat_to_ymean(self, yhat):
+        return yhat
 
-        # Add higher order terms and return
-        for k in range(1, self.K + 1):
-            logsigma += self.a[k] * K.pow(yhat, k)
-
-        return logsigma
+    @handle_arrays
+    def yhat_to_ystd(self, yhat):
+        sigma = K.exp(self.compute_params(yhat))
+        return sigma
 
 
 class CauchyNoiseModelLayer(NoiseModelLayer):
@@ -397,11 +405,23 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
         base_config = super().get_config()
         return {**base_config, "a": self.a}
 
+    ### Overloading functions
+    @handle_arrays
+    def compute_params(self, yhat):
+        # Have to treat 0'th order term separately because of NaN bug.
+        loggamma = self.a[0]
+
+        # Add higher order terms and return
+        for k in range(1, self.K + 1):
+            loggamma += self.a[k] * K.pow(yhat, k)
+
+        return loggamma
+
     @handle_arrays
     def compute_nlls(self, yhat, ytrue):
 
         # Compute loggamma
-        loggamma = self.compute_loggamma(yhat)
+        loggamma = self.compute_params(yhat)
 
         # Compute nlls
         nlls = \
@@ -412,30 +432,19 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
         return nlls
 
     @handle_arrays
-    def sample_y_given_yhat(self, yhat):
-        # Compute  gamma
-        loggamma = self.compute_loggamma(yhat)
-        gamma = K.exp(loggamma)
-
-        # Draw random quantiles
-        N = len(self.yhat)
-        q = tf.constant(np.random.rand(N))
-
-        # Compute and return y
-        y = yhat + gamma * tf.math.tan(np.pi * (q - 0.5))
-
-        return y
+    def yhat_to_yq(self, yhat, q):
+        gamma = K.exp(self.compute_params(yhat))
+        yq = yhat + gamma * tf.math.tan(np.pi * (q - 0.5))
+        return yq
 
     @handle_arrays
-    def compute_loggamma(self, yhat):
-        # Have to treat 0'th order term separately because of NaN bug.
-        loggamma = self.a[0]
+    def yhat_to_ymean(self, yhat):
+        return yhat
 
-        # Add higher order terms and return
-        for k in range(1, self.K + 1):
-            loggamma += self.a[k] * K.pow(yhat, k)
-
-        return loggamma
+    @handle_arrays
+    def yhat_to_ystd(self, yhat):
+        sigma = K.exp(self.compute_params(yhat))
+        return sigma
 
 
 class SkewedTNoiseModelLayer(NoiseModelLayer):
@@ -471,6 +480,38 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         return {**base_config, "w_a": self.w_a,
                 "w_b": self.w_b, "w_s": self.w_s}
 
+    # Compute the mode as a function of a and b
+    @handle_arrays
+    def t_mode(self, a, b):
+        t_mode = (a - b) * K.sqrt(a + b) \
+                 / (K.sqrt(2 * a + 1) * K.sqrt(2 * b + 1))
+        return t_mode
+
+    # Compute mean
+    @handle_arrays
+    def t_mean(self, a, b):
+        return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
+            tf.math.lgamma(a - 0.5)
+            + tf.math.lgamma(b - 0.5)
+            - tf.math.lgamma(a)
+            - tf.math.lgamma(b)
+            )
+
+    @handle_arrays
+    def t_std(self, a, b):
+        t_expected = self.t_mean(a, b)
+        tsq_expected = 0.25 * (a + b) * \
+                       ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
+        return K.sqrt(tsq_expected - t_expected ** 2)
+
+
+    @handle_arrays
+    def t_quantile(self, q, a, b):
+        x_q = betaincinv(a.numpy(), b.numpy(), q.numpy())
+        t_q = (2 * x_q - 1) * K.sqrt(a + b) / K.sqrt(1 - (2 * x_q - 1) ** 2)
+        return t_q
+
+    ### Overloading functions
     @handle_arrays
     def compute_params(self, yhat):
         # Have to treat 0'th order term separately because of NaN bug.
@@ -520,95 +561,43 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         return nlls
 
     @handle_arrays
-    def sample_y_given_yhat(self, yhat):
-        # Compute  gamma
-        loggamma = self.compute_loggamma(yhat)
-        gamma = K.exp(loggamma)
-
-        # Generate random quantiles q
-        q = tf.random.uniform(yhat.shape)
-
-        # Compute and return y
-        y = yhat + gamma * tf.math.tan(np.pi * (q - 0.5))
-
-        return y
-
-    @handle_arrays
-    def draw_y_values(self, yhat):
-        """Draws y values, one for each value in yhat_GE"""
+    def yhat_to_yq(self, yhat, q):
         # Compute distribution parameters at yhat values
         a, b, s = self.compute_params(yhat)
 
         # Compute t_mode
         t_mode = self.t_mode(a, b)
 
-        # Draw random quantiles
-        N = len(self.yhat)
-        q = tf.constant(np.random.rand(N))
-
         # Compute random t values
         t_q = self.t_quantile(q, a, b)
 
         # Compute and return y
-        y = (t_q - t_mode) * s + yhat
-        return y
-
-    # First compute log PDF to avoid overflow problems
-    @handle_arrays
-    def log_f(self, t, a, b):
-        arg = t / K.sqrt(a + b + t ** 2)
-        return (1 - a - b) * K.log(2) + \
-               -0.5 * K.log(a + b) + \
-               tf.math.lgamma(a + b) + \
-               -tf.math.lgamma(a) + \
-               -tf.math.lgamma(b) + \
-               (a + 0.5) * K.log(1 + arg) + \
-               (b + 0.5) * K.log(1 - arg)
-
-    # Exponentiate to get true distribution
-    @handle_arrays
-    def f(self, t, a, b):
-        return K.exp(self.log_f(t, a, b))
-
-    # Compute the mode as a function of a and b
-    @handle_arrays
-    def t_mode(self, a, b):
-        t_mode = (a - b) * K.sqrt(a + b) \
-                 / (K.sqrt(2 * a + 1) * K.sqrt(2 * b + 1))
-        return t_mode
-
-    # Compute mean
-    @handle_arrays
-    def t_mean(self, a, b):
-        return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
-            tf.math.lgamma(a - 0.5)
-            + tf.math.lgamma(b - 0.5)
-            - tf.math.lgamma(a)
-            - tf.math.lgamma(b)
-            )
-
-    # Compute variance
-    @handle_arrays
-    def t_std(self, a, b):
-        t_expected = self.t_mean(a, b)
-        tsq_expected = 0.25 * (a + b) * \
-                       ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
-        return K.sqrt(tsq_expected - t_expected ** 2)
+        yq = (t_q - t_mode) * s + yhat
+        return yq
 
     @handle_arrays
-    def p_mean_std(self, y_mode, y_scale, a, b):
-        y_mean = self.t_mean(a, b) * y_scale + y_mode
-        y_std = self.t_std(a, b) * y_scale
-        return y_mean, y_std
+    def yhat_to_ymean(self, yhat):
+        # Compute distribution parameters at yhat values
+        a, b, s = self.compute_params(yhat)
+
+        # Compute mean and mode of t distribution
+        t_mean = self.t_mean(a, b)
+        t_mode = self.t_mode(a, b)
+
+        # Compute ymean
+        ymean = s * (t_mean - t_mode) + yhat
+
+        return ymean
 
     @handle_arrays
-    def t_quantile(self, q, a, b):
-        x_q = betaincinv(a.numpy(), b.numpy(), q.numpy())
-        t_q = (2 * x_q - 1) * K.sqrt(a + b) / K.sqrt(1 - (2 * x_q - 1) ** 2)
-        return t_q
+    def yhat_to_ystd(self, yhat):
+        # Compute distribution parameters at yhat values
+        a, b, s = self.compute_params(yhat)
 
-    @handle_arrays
-    def y_quantile(self, q, y_hat, s, a, b):
-        t_q = self.t_quantile(q, a, b)
-        y_q = (t_q - self.t_mode(a, b)) * s + y_hat
-        return y_q
+        # Compute tstd
+        tstd = self.t_std(a, b)
+
+        # Compute and return ystd
+        ystd = s * tstd
+
+        return ystd
