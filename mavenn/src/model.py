@@ -211,7 +211,6 @@ class Model:
     def set_data(self,
                  x,
                  y,
-                 ct_n=None,
                  shuffle=True,
                  verbose=True):
 
@@ -253,21 +252,19 @@ class Model:
         x = validate_seqs(x, alphabet=self.alphabet)
         check(len(x) > 0, f'len(x)=={len(x)}; must be > 0')
 
-        # Validate y
-        y = validate_1d_array(y)
+        # Validate y, note that this doesn't
+        # apply for MPA regression since y
+        # is not a 1-d array in MPAR.
+        if self.regression_type == 'GE':
+            y = validate_1d_array(y)
 
         # check that lengths are the same
-        check(len(x) == len(y),
-              'length of inputs (x, y) must be equal')
 
-        # Pivot data if doing MPA regression
-        if self.regression_type == 'MPA':
-            self.y, self.x = vec_data_to_mat_data(x_n=x,
-                                                  y_n=y,
-                                                  ct_n=ct_n)
-        else:
-            self.x = x
-            self.y = y
+        if self.regression_type == 'GE':
+            check(len(x) == len(y), 'length of inputs (x, y) must be equal')
+
+        self.x = x
+        self.y = y
 
         # Make real sure xs are strings
         self.x = validate_seqs(self.x, alphabet=self.alphabet)
