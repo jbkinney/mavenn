@@ -484,6 +484,7 @@ class MeasurementProcessAgnosticModel:
             info_for_layers_dict=self.info_for_layers_dict,
             number_bins=self.number_of_bins)
         outputTensor = likelihood_object(concatenateLayer)
+        self.measurement_process_layer = likelihood_object
 
         #create the model:
         model = Model(inputTensor, outputTensor)

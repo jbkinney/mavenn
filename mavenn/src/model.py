@@ -190,6 +190,11 @@ class Model:
                                     ge_nonlinearity_hidden_nodes=
                                         self.ge_nonlinearity_hidden_nodes)
 
+            # Set layers
+            self.layer_gpmap = self.model.x_to_phi_layer
+            self.layer_nonlinearity = self.model.phi_to_yhat_layer
+            self.layer_noise_model = self.model.noise_model_layer
+
         elif regression_type == 'MPA':
 
             self.model = MeasurementProcessAgnosticModel(
@@ -206,6 +211,12 @@ class Model:
             self.define_model = self.model.define_model(
                                     na_hidden_nodes=
                                     self.na_hidden_nodes)
+
+            # Set layers
+            self.layer_gpmap = self.model.x_to_phi_layer
+            self.layer_measurement_process = \
+                self.model.measurement_process_layer
+
 
     @handle_errors
     def set_data(self,
