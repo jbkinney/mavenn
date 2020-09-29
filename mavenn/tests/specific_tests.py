@@ -150,7 +150,7 @@ def test_GlobalEpistasisModel():
                           success_list=[0, 0.1, 10], gpmap_type='additive',
                           regression_type='GE', alphabet='dna', L=L)
 
-    # test parameter eta_regularization
+    # test parameter eta
     test_parameter_values(func=mavenn.Model, var_name='eta_regularization', fail_list=['0', -1, -0.1],
                           success_list=[0, 0.1, 10], gpmap_type='additive',
                           regression_type='GE',alphabet='dna', L=L)

@@ -24,7 +24,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
 from mavenn.src.utils import vec_data_to_mat_data
-from mavenn.src.likelihood_layers import *
+from mavenn.src.measurement_process_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
@@ -327,12 +327,20 @@ class Model:
         if self.regression_type == 'GE':
             self.y_norm = np.array(self.y_norm).reshape(-1, 1)
 
-            # Add some noise to y_norm
-            # Note: this noise addition is absolutely necessary!
-            y_norm = self.y_norm + 1E-3 * np.random.randn(*self.y_norm.shape)
+            # Subsample y_norm for entropy estimation if necessary
+            N_max = int(1E4)
+            if self.N > N_max:
+                z = np.random.choice(a=self.y_norm.squeeze(),
+                                     size=N_max,
+                                     replace=False)
+            else:
+                z = self.y_norm.squeeze()
+
+            # Add some noise to aid in entropy estimation
+            z += 1E-3 * np.random.randn(z.size)
 
             # Compute entropy
-            H_y_norm, dH_y = entropy_continuous(y_norm, knn=7)
+            H_y_norm, dH_y = entropy_continuous(z, knn=7)
             H_y = H_y_norm + np.log2(self.y_std)
 
             self.info_for_layers_dict['H_y'] = H_y

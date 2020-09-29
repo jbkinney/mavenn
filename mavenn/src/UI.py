@@ -11,13 +11,19 @@ from tensorflow.keras.layers \
     import Dense, Activation, Input, Lambda, Concatenate
 
 # MAVE-NN imports
+#from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.likelihood_layers import *  #TODO: List specific imports instead
+# TODO: List specific imports instead
 from mavenn.src.misc_jbk import x_to_features
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.misc_jbk import GlobalEpistasisLayer, \
-                            AdditiveGPMapLayer, PairwiseGPMapLayer
-from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
+from mavenn.src.gpmap_layers import AdditiveGPMapLayer, PairwiseGPMapLayer
+from mavenn.src.measurement_process_layers \
+    import GlobalEpistasisLayer, \
+        GaussianNoiseModelLayer, \
+        CauchyNoiseModelLayer, \
+        SkewedTNoiseModelLayer, \
+        MPAMeasurementProcessLayer
+
 
 @handle_errors
 class GlobalEpistasisModel:
@@ -127,11 +133,11 @@ class GlobalEpistasisModel:
 
         # check that eta regularization is a number
         check(isinstance(self.eta_regularization, numbers.Real),
-              'eta_regularization must be a number')
+              'eta must be a number')
 
         # check that theta regularization is greater than 0
         check(self.eta_regularization >= 0,
-              'eta_regularization must be >= 0')
+              'eta must be >= 0')
 
         # check that ohe_batch_size is an number
         check(isinstance(self.ohe_batch_size, numbers.Integral),
@@ -225,28 +231,28 @@ class GlobalEpistasisModel:
         yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
             [yhat, labels_input])
 
-        # Compute likelihood
+        # Create noise model layer
         if ge_noise_model_type == 'Gaussian':
-            likelihood_object = GaussianLikelihoodLayer(
+            self.noise_model_layer = GaussianNoiseModelLayer(
                 info_for_layers_dict=self.info_for_layers_dict,
                 polynomial_order=self.ge_heteroskedasticity_order,
                 eta_regularization=self.eta_regularization)
 
         elif ge_noise_model_type == 'Cauchy':
-            likelihood_object = CauchyLikelihoodLayer(
+            self.noise_model_layer = CauchyNoiseModelLayer(
                 info_for_layers_dict=self.info_for_layers_dict,
                 polynomial_order=self.ge_heteroskedasticity_order,
                 eta_regularization=self.eta_regularization)
 
         elif ge_noise_model_type == 'SkewedT':
-            likelihood_object = SkewedTLikelihoodLayer(
+            self.noise_model_layer = SkewedTNoiseModelLayer(
                 info_for_layers_dict=self.info_for_layers_dict,
                 polynomial_order=self.ge_heteroskedasticity_order,
                 eta_regularization=self.eta_regularization)
         else:
             assert False, 'This should not happen.'
 
-        outputTensor = likelihood_object(yhat_y_concat)
+        outputTensor = self.noise_model_layer(yhat_y_concat)
 
         # create the model:
         model = Model(inputTensor, outputTensor)
@@ -288,6 +294,7 @@ class GlobalEpistasisModel:
         return yhat
 
 
+@handle_errors
 class MeasurementProcessAgnosticModel:
 
     """
@@ -473,7 +480,7 @@ class MeasurementProcessAgnosticModel:
             name='yhat_and_y_to_ll')([yhat, labels_input])
 
         # Define likelihood layer
-        likelihood_object = MPALikelihoodLayer(
+        likelihood_object = MPAMeasurementProcessLayer(
             info_for_layers_dict=self.info_for_layers_dict,
             number_bins=self.number_of_bins)
         outputTensor = likelihood_object(concatenateLayer)

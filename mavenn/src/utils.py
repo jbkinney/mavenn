@@ -92,12 +92,6 @@ class SkewedTNoiseModel:
                                                                  np.exp(self.log_a),
                                                                  np.exp(self.log_b)).ravel())
 
-            # self.user_quantile_values = self.y_quantile(self.q,
-            #                                             self.yhat_GE,
-            #                                             np.exp(log_scale),
-            #                                             np.exp(log_a),
-            #                                             np.exp(log_b))
-
 
     # First compute log PDF to avoid overflow problems
     def log_f(self, t, a, b):
@@ -203,61 +197,6 @@ class SkewedTNoiseModel:
         return y
 
 
-    # def estimate_predictive_information(self,
-    #                                     y,
-    #                                     yhat,
-    #                                     y_scale,
-    #                                     a,
-    #                                     b):
-    #     """
-    #     Method that estimates predictive information, i.e.
-    #     I[y;y_hat] = I[y;phi].
-    #
-    #     parameters
-    #     ----------
-    #     y: (array-like of floats)
-    #         y values for which the probability will be computed
-    #
-    #     y_hat: (array-like of float)
-    #         The y-hat values on which the probability distribution
-    #         will be conditioned on.
-    #
-    #     returns
-    #     -------
-    #     I: (float)
-    #         Mutual information between I[y;y_hat], or equivalently
-    #         I[y;phi]
-    #
-    #     dI: (float)
-    #         Error in the estimated, mutual information I
-    #     """
-    #
-    #     # compute log_2 of p_y_given_yhat for all values and take mean:
-    #     mean_log_2_p_y_given_yhat = np.mean(np.log2(self.p_of_y_given_yhat(y, yhat, y_scale, a, b)))
-    #     N = len(np.log2(self.p_of_y_given_yhat(y, yhat, y_scale, a, b)))
-    #     std_log_2_p_y_given_yhat = np.std(np.log2(self.p_of_y_given_yhat(y, yhat, y_scale, a, b)))/np.sqrt(N)
-    #
-    #     p_y = []
-    #     for _ in range(len(y)):
-    #         '''
-    #         form p_y by averaging over y_hat for every value of y_test
-    #         i.e.
-    #         # p(y_1|y_hat_1), p(y_1|y_hat_1), ... ,p(y_1|y_hat_N), the mean of this is p(y_1)
-    #         # p(y_2|y_hat_1), p(y_2|y_hat_1), ... ,p(y_2|y_hat_N), the mean of this is p(y_2), and so on.
-    #         '''
-    #         p_y.append(np.mean(self.p_of_y_given_yhat(y[_], yhat, y_scale, a, b).ravel()))
-    #
-    #     p_y = np.array(p_y)
-    #     mean_log_2_p_y = np.mean(np.log2(p_y))
-    #
-    #     std_log_2_p_y = np.std(np.log2(p_y))/np.sqrt(N)
-    #
-    #     dI = np.sqrt(std_log_2_p_y_given_yhat ** 2 + std_log_2_p_y ** 2)
-    #     I = mean_log_2_p_y_given_yhat-mean_log_2_p_y
-    #
-    #     return I, dI
-
-
 @handle_errors
 class GaussianNoiseModel:
     """
@@ -353,57 +292,6 @@ class GaussianNoiseModel:
         q = np.random.rand(N)
         y = self.yhat_GE + self.sigma * np.sqrt(2) * erfinv(2 * q - 1)
         return y
-
-    # def estimate_predictive_information(self,
-    #                                     y,
-    #                                     yhat):
-    #     """
-    #     Method that estimates predictive information, i.e.
-    #     I[y;y_hat] = I[y;phi].
-    #
-    #     parameters
-    #     ----------
-    #     y: (array-like of floats)
-    #         y values for which the probability will be computed
-    #
-    #     y_hat: (array-like of float)
-    #         The y-hat values on which the probability distribution
-    #         will be conditioned on.
-    #
-    #     returns
-    #     -------
-    #     I: (float)
-    #         Mutual information between I[y;y_hat], or equivalently
-    #         I[y;phi]
-    #
-    #     dI: (float)
-    #         Error in the estimated, mutual information I
-    #     """
-    #
-    #     # compute log_2 of p_y_given_yhat for all values and take mean:
-    #     mean_log_2_p_y_given_yhat = np.mean(np.log2(self.p_of_y_given_yhat(y, yhat)))
-    #     N = len(np.log2(self.p_of_y_given_yhat(y, yhat)))
-    #     std_log_2_p_y_given_yhat = np.std(np.log2(self.p_of_y_given_yhat(y, yhat)))/np.sqrt(N)
-    #
-    #     p_y = []
-    #     for _ in range(len(y)):
-    #         '''
-    #         form p_y by averaging over y_hat for every value of y_test
-    #         i.e.
-    #         # p(y_1|y_hat_1), p(y_1|y_hat_1), ... ,p(y_1|y_hat_N), the mean of this is p(y_1)
-    #         # p(y_2|y_hat_1), p(y_2|y_hat_1), ... ,p(y_2|y_hat_N), the mean of this is p(y_2), and so on.
-    #         '''
-    #         p_y.append(np.mean(self.p_of_y_given_yhat(y[_], yhat).ravel()))
-    #
-    #     p_y = np.array(p_y)
-    #     mean_log_2_p_y = np.mean(np.log2(p_y))
-    #
-    #     std_log_2_p_y = np.std(np.log2(p_y))/np.sqrt(N)
-    #     dI = np.sqrt(std_log_2_p_y_given_yhat ** 2 + std_log_2_p_y ** 2)
-    #
-    #     I = mean_log_2_p_y_given_yhat-mean_log_2_p_y
-    #
-    #     return I, dI
 
 
 @handle_errors
@@ -513,66 +401,12 @@ class CauchyNoiseModel:
 
         return cauchy(loc=yhat, scale=np.exp(log_gamma)).ppf(user_quantile)
 
-
     def draw_y_values(self):
         """Draws y values, one for each value in yhat_GE"""
         N = len(self.yhat)
         q = np.random.rand(N)
         y = self.yhat + self.gamma * np.tan(np.pi * (q - 0.5))
         return y
-
-
-    # def estimate_predictive_information(self,
-    #                                     y,
-    #                                     yhat):
-    #     """
-    #     Method that estimates predictive information, i.e.
-    #     I[y;y_hat] = I[y;phi].
-    #
-    #     parameters
-    #     ----------
-    #     y: (array-like of floats)
-    #         y values for which the probability will be computed
-    #
-    #     y_hat: (array-like of float)
-    #         The y-hat values on which the probability distribution
-    #         will be conditioned on.
-    #
-    #     returns
-    #     -------
-    #     I: (float)
-    #         Mutual information between I[y;y_hat], or equivalently
-    #         I[y;phi]
-    #
-    #     dI: (float)
-    #         Error in the estimated, mutual information I
-    #     """
-    #
-    #     # compute log_2 of p_y_given_yhat for all values and take mean:
-    #     mean_log_2_p_y_given_yhat = np.mean(np.log2(self.p_of_y_given_yhat(y, yhat)))
-    #
-    #     N = len(np.log2(self.p_of_y_given_yhat(y, yhat)))
-    #     std_log_2_p_y_given_yhat = np.std(np.log2(self.p_of_y_given_yhat(y, yhat)))/np.sqrt(N)
-    #
-    #     p_y = []
-    #     for _ in range(len(y)):
-    #         '''
-    #         form p_y by averaging over y_hat for every value of y_test
-    #         i.e.
-    #         # p(y_1|y_hat_1), p(y_1|y_hat_1), ... ,p(y_1|y_hat_N), the mean of this is p(y_1)
-    #         # p(y_2|y_hat_1), p(y_2|y_hat_1), ... ,p(y_2|y_hat_N), the mean of this is p(y_2), and so on.
-    #         '''
-    #         p_y.append(np.mean(self.p_of_y_given_yhat(y[_], yhat).ravel()))
-    #
-    #     p_y = np.array(p_y)
-    #     mean_log_2_p_y = np.mean(np.log2(p_y))
-    #     std_log_2_p_y = np.std(np.log2(p_y))/np.sqrt(N)
-    #
-    #     dI = np.sqrt(std_log_2_p_y_given_yhat ** 2 + std_log_2_p_y ** 2)
-    #
-    #     I = mean_log_2_p_y_given_yhat-mean_log_2_p_y
-    #
-    #     return I, dI
 
 
 @handle_errors
