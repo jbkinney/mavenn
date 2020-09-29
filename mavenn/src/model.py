@@ -20,10 +20,12 @@ from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenat
 from tensorflow.keras.constraints import non_neg as nonneg
 from tensorflow.keras.callbacks import EarlyStopping
 
+# sklearn import
+import sklearn.preprocessing
+
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
-from mavenn.src.utils import vec_data_to_mat_data
 from mavenn.src.measurement_process_layers import *
 from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
@@ -1039,6 +1041,11 @@ class Model:
             # Choose y values
             y = np.apply_along_axis(choose_y, axis=1, arr=p_all_y_given_phi)
 
+            # Get counts in bins. LabelBinarizer is efficient, e.g. N = 10^5 takes ~ 0.01 seconds.
+            label_binarizer = sklearn.preprocessing.LabelBinarizer()
+            label_binarizer.fit(range(self.Y))
+            ct_ = label_binarizer.transform(y)
+
         elif self.regression_type == 'GE':
 
             # Compute yhat
@@ -1065,17 +1072,18 @@ class Model:
         # Store results in dataframe and return
         data_df = pd.DataFrame()
         data_df['phi'] = phi
-        data_df['y'] = y
+        if self.regression_type == 'GE':
+            data_df['y'] = y
         data_df['x'] = x
 
         # If doing MPA regression, collapse by sequence and add ct col
         if self.regression_type == 'MPA':
-            data_df['ct'] = 1
-            data_df = data_df.groupby(['x', 'phi', 'y']).sum()
-            data_df.reset_index(inplace=True)
-            data_df = data_df[['phi', 'y', 'ct', 'x']]
-            data_df.sort_values(by='ct', inplace=True, ascending=False)
-            data_df.reset_index(inplace=True, drop=True)
+
+            # merge the y counts array with the dataframe created above
+            # and name bin columns with prefix 'ct_*'
+            data_df = pd.concat([data_df,
+                                pd.DataFrame(data=ct_, columns=['ct_' + str(n) for n in range(self.Y)])],
+                                axis=1)
 
         elif self.regression_type == 'GE':
             data_df.insert(0, column='yhat', value=yhat)
@@ -1235,7 +1243,7 @@ class Model:
             dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
         """
 
-        if self.regression_type=='GE':
+        if self.regression_type == 'GE':
 
             return mi_continuous(self.x_to_phi(x),
                                  y,
@@ -1245,8 +1253,7 @@ class Model:
                                  alpha_LNC=alpha_LNC,
                                  verbose=verbose)
 
-
-        elif self.regression_type=='MPA':
+        elif self.regression_type == 'MPA':
 
             # Remove zero entries
             ix = (ct > 0)
