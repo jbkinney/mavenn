@@ -60,6 +60,7 @@ def handle_arrays(func):
         if use_arrays:
 
             # Convert positional arguments
+            args = list(args)
             for i, arg in enumerate(args):
                 if isinstance(arg, input_types):
                     args[i] = tf.constant(arg, dtype=tf.float32)
@@ -144,6 +145,56 @@ class MPAMeasurementProcessLayer(Layer):
         self.add_metric(I_y_phi, name="I_like", aggregation="mean")
 
         return negative_log_likelihood
+
+
+class AffineLayer(Layer):
+    """
+    Represents an affine map from phi to yhat.
+    """
+
+    @handle_errors
+    def __init__(self,
+                 eta_regularization,
+                 monotonic,
+                 **kwargs):
+
+        # Whether to make monotonic function
+        self.monotonic = monotonic
+
+        # Create function that returns a kernel constraint
+        # based on self.monotonic
+        self.constraint = lambda: non_neg() if self.monotonic else None
+
+        # Set regularizer
+        self.eta = eta_regularization
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        # Call superclass constructor
+        super(GlobalEpistasisLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        self.a = self.add_weight(name='a',
+                                 shape=(1,),
+                                 initializer=Constant(0.),
+                                 trainable=True,
+                                 regularizer=self.regularizer)
+
+        self.b = self.add_weight(name='b',
+                                   shape=(1,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+        super().build(input_shape)
+
+    # Just an alias for phi_to_yhat, for tensors only
+    def call(self, phi):
+        return self.phi_to_yhat(phi)
+
+    # yhat as function of phi
+    @handle_arrays
+    def phi_to_yhat(self, phi):
+        yhat = self.a + self.b * phi
+        return yhat
 
 
 class GlobalEpistasisLayer(Layer):
@@ -301,7 +352,7 @@ class NoiseModelLayer(Layer):
     @handle_arrays
     def sample_y_given_yhat(self, yhat):
         # Draw random quantiles
-        q = tf.constant(np.random.rand(*yhat.shape))
+        q = tf.constant(np.random.rand(*yhat.shape), dtype=tf.float32)
 
         # Compute corresponding quantiles and return
         y = self.yhat_to_yq(yhat, q)
@@ -507,7 +558,8 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def t_quantile(self, q, a, b):
-        x_q = betaincinv(a.numpy(), b.numpy(), q.numpy())
+        x_q = tf.constant(betaincinv(a.numpy(), b.numpy(), q.numpy()),
+                          dtype=tf.float32)
         t_q = (2 * x_q - 1) * K.sqrt(a + b) / K.sqrt(1 - (2 * x_q - 1) ** 2)
         return t_q
 

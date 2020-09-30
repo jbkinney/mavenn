@@ -1,23 +1,19 @@
 # Standard imports
 import numpy as np
 import pandas as pd
-import re
+#import re
 import pdb
 import pickle
 import time
 import numbers
-from collections.abc import Iterable
 
 # Scipy imports
-from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import lsmr
 
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.models import Model as kerasFunctionalModel
-from tensorflow.keras.layers import Dense, Activation, Input, Lambda, Concatenate
-from tensorflow.keras.constraints import non_neg as nonneg
 from tensorflow.keras.callbacks import EarlyStopping
 
 # sklearn import
@@ -26,16 +22,15 @@ import sklearn.preprocessing
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
-from mavenn.src.measurement_process_layers import *
-from mavenn.src.utils import GaussianNoiseModel, CauchyNoiseModel, SkewedTNoiseModel
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
-from mavenn.src.reshape import _shape_for_output, _get_shape_and_return_1d_array, _broadcast_arrays
+from mavenn.src.reshape import _shape_for_output, \
+                               _get_shape_and_return_1d_array, \
+                               _broadcast_arrays
 from mavenn.src.misc_jbk import x_to_stats, p_lc_to_x
-from mavenn.src.validate import validate_seqs, validate_1d_array, validate_alphabet
+from mavenn.src.validate import validate_seqs, validate_1d_array, \
+                                validate_alphabet, validate_nd_array
+from mavenn.src.utils import mat_data_to_vec_data, vec_data_to_mat_data
 
-_noise_model_dict = {'Gaussian':GaussianNoiseModel,
-                     'Cauchy':CauchyNoiseModel,
-                     'SkewedT':SkewedTNoiseModel}
 
 @handle_errors
 class Model:
@@ -224,6 +219,7 @@ class Model:
     def set_data(self,
                  x,
                  y,
+                 ct=None,
                  shuffle=True,
                  verbose=True):
 
@@ -234,16 +230,21 @@ class Model:
         ----------
 
         x: (np.ndarray)
-            DNA, RNA, or protein sequences to be regressed over.
+            1D array of N sequences, each of the same length.
 
         y: (np.ndarray)
-            y represents counts in bins (for MPA regression), or
-            continuous measurement values (for GE regression) corresponding
-            to the sequences x.
+            Array of measurements.
+            For GE regression, y must be a 1D array of floats, length N.
+            For MPA regression, y must be a 1D or 2D array of nonnegative ints.
+                - If 1D, will be interpretd as listing bin numbers, and
+                    must be of length N.
+                - If 2D, will be interpreted as listing counts across all bins,
+                    and must be of shape (N,Y) where Y is the number of bins
 
-        ct_n: (np.ndarray)
-            For MPA regression only. List N counts, one for each (sequence,bin)
-            pair. If None, a value of 1 will be assumed for all observations.
+        ct: (np.ndarray or None)
+            Only used for MPA regression when y is 1D. In this case, represents
+            the number of observations of each sequence in each bin. Must
+            then be 1D array, length N, of nonnegative ints.
 
         shuffle: (bool)
             Whether to shuffle the observations, e.g., to ensure similar
@@ -270,11 +271,14 @@ class Model:
         # is not a 1-d array in MPAR.
         if self.regression_type == 'GE':
             y = validate_1d_array(y)
-
-        # check that lengths are the same
-
-        if self.regression_type == 'GE':
             check(len(x) == len(y), 'length of inputs (x, y) must be equal')
+
+        elif self.regression_type == 'MPA':
+            if y.ndim == 1:
+                y, x = vec_data_to_mat_data(y_n=y, ct_n=ct, x_n=x)
+            else:
+                check(y.ndim == 2,
+                      f'y.ndim={y.ndim}; must be 1 or 2.')
 
         self.x = x
         self.y = y
@@ -944,7 +948,6 @@ class Model:
         # Return latent phenotype values
         return phi
 
-
     @handle_errors
     def x_to_yhat(self,
                   x):
@@ -1041,7 +1044,8 @@ class Model:
             # Choose y values
             y = np.apply_along_axis(choose_y, axis=1, arr=p_all_y_given_phi)
 
-            # Get counts in bins. LabelBinarizer is efficient, e.g. N = 10^5 takes ~ 0.01 seconds.
+            # Get counts in bins. LabelBinarizer is efficient,
+            # e.g. N = 10^5 takes ~ 0.01 seconds.
             label_binarizer = sklearn.preprocessing.LabelBinarizer()
             label_binarizer.fit(range(self.Y))
             ct_ = label_binarizer.transform(y)
@@ -1054,14 +1058,11 @@ class Model:
             # Normalize yhat
             yhat_norm = (yhat - self.y_mean)/self.y_std
 
-            # Get GE noise model class
-            noise_model_class = _noise_model_dict[self.ge_noise_model_type]
+            # Get layer
+            layer = self.layer_noise_model
 
-            # Create noise model object and pass yhat_norm
-            noise_model = noise_model_class(model=self, yhat_GE=yhat_norm)
-
-            # Draw y_norm values from noise model
-            y_norm = noise_model.draw_y_values()
+            # Sample values
+            y_norm = layer.sample_y_given_yhat(yhat_norm)
 
             # Compute y from y_norm
             y = self.y_mean + self.y_std * y_norm
@@ -1081,9 +1082,9 @@ class Model:
 
             # merge the y counts array with the dataframe created above
             # and name bin columns with prefix 'ct_*'
-            data_df = pd.concat([data_df,
-                                pd.DataFrame(data=ct_, columns=['ct_' + str(n) for n in range(self.Y)])],
-                                axis=1)
+            y_df = pd.DataFrame(data=ct_,
+                                columns=['ct_' + str(n) for n in range(self.Y)])
+            data_df = pd.concat([data_df, y_df], axis=1)
 
         elif self.regression_type == 'GE':
             data_df.insert(0, column='yhat', value=yhat)
@@ -1107,14 +1108,21 @@ class Model:
         ----------
 
         x: (np.ndarray)
-            Sequences to use for computing phi in I[y;phi].
+            1D array of N sequences, each of the same length.
 
         y: (np.ndarray)
-            Measurements to use for computing I[y;phi]. Must be the same
-            size as x.
+            Array of measurements.
+            For GE regression, y must be a 1D array of floats, length N.
+            For MPA regression, y must be a 1D or 2D array of nonnegative ints.
+                - If 1D, will be interpretd as listing bin numbers, and
+                    must be of length N.
+                - If 2D, will be interpreted as listing counts across all bins,
+                    and must be of shape (N,Y) where Y is the number of bins
 
-        ct: (np.ndarray)
-            Counts corresponding to y-values. Must be the same size as x.
+        ct: (np.ndarray or None)
+            Only used for MPA regression when y is 1D. In this case, represents
+            the number of observations of each sequence in each bin. Must
+            then be 1D array, length N, of nonnegative ints.
 
         uncertainty: (bool)
             Whether to estimate the uncertainty of the MI estimate.
@@ -1127,11 +1135,29 @@ class Model:
             dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
         """
 
-        # Retrieve H_y
-        H_y = self.info_for_layers_dict['H_y']
-        dH_y = self.info_for_layers_dict['dH_y']
-
         if self.regression_type == 'GE':
+
+            # Number of datapoints
+            N = len(y)
+
+            # Normalize y values
+            y_norm = (y - self.y_mean) / self.y_std
+
+            # Subsample y_norm for entropy estimation if necessary
+            N_max = int(1E4)
+            if N > N_max:
+                z = np.random.choice(a=y_norm.squeeze(),
+                                     size=N_max,
+                                     replace=False)
+            else:
+                z = y_norm.squeeze()
+
+            # Add some noise to aid in entropy estimation
+            z += 1E-3 * np.random.randn(z.size)
+
+            # Compute entropy
+            H_y_norm, dH_y = entropy_continuous(z, knn=7)
+            H_y = H_y_norm + np.log2(self.y_std)
 
             # Compute phi
             phi = self.x_to_phi(x)
@@ -1146,24 +1172,32 @@ class Model:
 
         elif self.regression_type == 'MPA':
 
-            # Remove zero entries
-            ix = (ct > 0)
-            x = x[ix]
-            y = y[ix]
-            ct = ct[ix]
+            # If y is 2D, convert from mat data to vec data
+            if y.ndim == 2:
+                y, ct, x = mat_data_to_vec_data(ct_my=y, x_m=x)
+
+            # If ct is not set, set to ones
+            if ct is None:
+                ct = np.ones(y.size)
+
+            # Expand x and y based on ct values
+            y = np.concatenate(
+                        [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
+            x = np.concatenate(
+                        [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
+
+            # Number of datapoints
+            ct_y = np.array([(y==i).sum() for i in range(self.Y)])
+            p_y = ct_y / ct_y.sum()
+            ix = p_y > 0
+            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix]))
+            H_y = H_y_norm + np.log2(self.y_std)
+            dH_y = 0  # Need NSB to estimate this well
 
             # Compute phi
             phi = self.x_to_phi(x)
 
-            # Expand
-            phi_expanded = np.concatenate(
-                [[phi_n]*ct_n for phi_n, ct_n in zip(phi, ct)])
-            y_expanded = np.concatenate(
-                [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
-
-            p_y_given_phi = self.p_of_y_given_phi(y_expanded,
-                                                  phi_expanded,
-                                                  paired=True)
+            p_y_given_phi = self.p_of_y_given_phi(y, phi, paired=True)
             H_y_given_phi_n = -np.log2(p_y_given_phi)
 
         # Get total number of independent observations
@@ -1202,14 +1236,21 @@ class Model:
         ----------
 
         x: (np.ndarray)
-            Sequences to use for computing phi in I[y;phi].
+            1D array of N sequences, each of the same length.
 
         y: (np.ndarray)
-            Measurements to use for computing I[y;phi]. Must be the same
-            size as x.
+            Array of measurements.
+            For GE regression, y must be a 1D array of floats, length N.
+            For MPA regression, y must be a 1D or 2D array of nonnegative ints.
+                - If 1D, will be interpretd as listing bin numbers, and
+                    must be of length N.
+                - If 2D, will be interpreted as listing counts across all bins,
+                    and must be of shape (N,Y) where Y is the number of bins
 
-        ct: (np.ndarray)
-            Counts corresponding to y-values. Must be the same size as x.
+        ct: (np.ndarray or None)
+            Only used for MPA regression when y is 1D. In this case, represents
+            the number of observations of each sequence in each bin. Must
+            then be 1D array, length N, of nonnegative ints.
 
         knn: (int>0)
             Number of nearest neighbors to use in the KSG estimator.
@@ -1255,24 +1296,29 @@ class Model:
 
         elif self.regression_type == 'MPA':
 
-            # Remove zero entries
-            ix = (ct > 0)
-            x = x[ix]
-            y = y[ix]
-            ct = ct[ix]
+            # If y is 2D, convert from mat data to vec data
+            if y.ndim == 2:
+                y, ct, x = mat_data_to_vec_data(ct_my=y, x_m=x)
+
+            # If ct is not set, set to ones
+            if ct is None:
+                ct = np.ones(y.size)
+
+            # Expand x and y based on ct values
+            y = np.concatenate(
+                        [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
+            x = np.concatenate(
+                        [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
 
             # Compute phi
             phi = self.x_to_phi(x)
 
-            # Expand
-            phi_expanded = np.concatenate(
-                [[phi_n]*ct_n for phi_n, ct_n in zip(phi, ct)])
-            y_expanded = np.concatenate(
-                [[y_n] * ct_n for y_n, ct_n in zip(y, ct)])
+            # Add random component to phi to regularize information estimate
+            phi += (1.0E-3) * np.random.randn(len(x))
 
             # Compute mi_mixed on expanded y and phi
-            return mi_mixed(phi_expanded,
-                            y_expanded,
+            return mi_mixed(phi,
+                            y,
                             knn=knn,
                             uncertainty=uncertainty,
                             num_subsamples=num_subsamples,
@@ -1280,7 +1326,7 @@ class Model:
 
     def yhat_to_yq(self,
                    yhat,
-                   q=[0.16, 0.84]):
+                   q=[0.16, 0.84], paired=False):
         """
         Returns quantile values of p(y|yhat) given yhat and the quantiles q.
         Reserved only for GE models
@@ -1294,6 +1340,11 @@ class Model:
         q: (array of floats in [0,1])
             Quantile specifications
 
+        paired: (bool)
+            Whether yhat, q values should be treated as pairs.
+            If so, yhat and q must have the same number of elements.
+            The shape of yhat will be used as output.
+
         returns
         -------
 
@@ -1301,29 +1352,46 @@ class Model:
             Array of quantile values.
         """
 
-        # Shape yhat for processing
+        # Prepare inputs
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
-        yhat_norm = (yhat - self.y_mean)/self.y_std
-
-        # Shape x for processing
         q, q_shape = _get_shape_and_return_1d_array(q)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(yhat_shape == q_shape,
+                  f"yhat shape={yhat_shape} does not "
+                  f"match q shape={q_shape}")
+
+            # Use y_shape as output shape
+            yq_shape = yhat_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            yhat, q = _broadcast_arrays(yhat, q)
+
+            # Set output shape
+            yq_shape = yhat_shape + q_shape
+
 
         # Make sure this is the right type of model
         check(self.regression_type=='GE',
               'regression type must be GE for this methdd')
 
-        # Get GE noise model based on the users input.
-        yq_norm = globals()[self.ge_noise_model_type + 'NoiseModel']\
-            (self, yhat_norm, q=q).user_quantile_values
+        # Normalize yhat
+        yhat_norm = (yhat - self.y_mean) / self.y_std
 
-        # This seems to be needed
-        yq_norm = np.array(yq_norm).T
+        # Get layer
+        layer = self.layer_noise_model
+
+        # Use layer to compute normalized quantile
+        yq_norm = layer.yhat_to_yq(yhat=yhat_norm, q=q, use_arrays=True)
 
         # Restore scale and shift
         yq = self.y_mean + self.y_std * yq_norm
 
         # Shape yqs for output
-        yq_shape = yhat_shape + q_shape
         yq = _shape_for_output(yq, yq_shape)
 
         return yq
@@ -1469,12 +1537,13 @@ class Model:
         y_norm = (y - self.y_mean)/self.y_std
         yhat_norm = (yhat - self.y_mean)/self.y_std
 
-        # Get GE noise model based on the users input.
-        ge_noise_model = globals()[self.ge_noise_model_type +
-                                   'NoiseModel'](self, yhat_norm, None)
+        # Get layer
+        layer = self.layer_noise_model
 
-        # Compute p
-        p_norm = ge_noise_model.p_of_y_given_yhat(y_norm, yhat_norm)
+        # Compute p_norm using layer
+        p_norm = layer.p_of_y_given_yhat(y_norm, yhat_norm, use_arrays=True)
+
+        # Unnormalize p
         p = p_norm / self.y_std
 
         # Shape for output
@@ -1504,13 +1573,10 @@ class Model:
 
 
         if self.regression_type=='GE':
-            yhat = self.x_to_yhat(x)
-            # Get GE noise model based on the users input.
-            ge_noise_model = globals()[self.ge_noise_model_type
-                                       + 'NoiseModel'](self,yhat)
-
-            p_of_y_given_x = ge_noise_model.p_of_y_given_yhat(y, yhat)
-            return p_of_y_given_x
+            phi = self.x_to_phi(x)
+            yhat = self.phi_to_yhat(phi)
+            p = self.p_of_y_given_yhat(y, yhat)
+            return p
 
         elif self.regression_type=='MPA':
 
@@ -1518,7 +1584,7 @@ class Model:
             check(isinstance(y, int),
                   'type(y), specifying bin number, must be of type int')
 
-            # check that entered bin nnumber doesn't exceed max bins
+            # check that entered bin number doesn't exceed max bins
             check(y < self.y_norm[0].shape[0],
                   "bin number cannot be larger than max bins = %d" %
                   self.y_norm[0].shape[0])

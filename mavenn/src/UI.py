@@ -460,7 +460,8 @@ class MeasurementProcessAgnosticModel:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)
 
-        # TODO: Replace these two layers by a custom layer
+        # TODO: Replace these two layers by a custom layer:
+        # GlobalEpistasisLayer or AffineLayer
         eta_regularizer = regularizers.l2(self.eta_regularization)
         intermediateTensor = Dense(
                     na_hidden_nodes,
