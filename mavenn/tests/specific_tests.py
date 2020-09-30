@@ -392,6 +392,242 @@ def test_x_to_phi_or_yhat():
                           fail_list=[mpa_seq],
                           model=mpa_model)
 
+@handle_errors
+def test_for_nan_in_model_methods(model, seqs, y, regression_type):
+
+    """
+    Method that evaluates model methods and checks
+    if are any NANs in the output.
+
+    parameters
+    ----------
+    model: (mavenn model)
+        Mavenn model object whose methods will be used
+        to compute various outputs.
+
+    seqs: (array-like of strings)
+        Sequences which will be input to the methods x_to_*.
+
+    y: (array-like of floats)
+        Observations/y-values corresponding to the seqs parameter.
+
+    regression_type: (str)
+        String specifying 'GE' or 'MPA' regression.
+
+    returns
+    -------
+    None.
+    """
+
+    # sum the arrays produced by the following Model
+    # methods and then use np.isnan together with check.
+    check(np.isnan(np.sum(model.x_to_phi(seqs))) == False,
+          'x_to_phi produced a NAN')
+
+    check(np.isnan(np.sum(model.p_of_y_given_phi(y=y,
+                                                 phi=model.x_to_phi(seqs)).ravel())) == False,
+          'p_of_y_given_phi produce a NAN')
+
+    I, dI = model.I_predictive(x=seqs, y=y)
+    check(np.isnan(I) == False, 'Predictive information computed to NAN')
+    check(np.isnan(dI) == False, 'Error predictive information computed to NAN')
+    check(I >= 0, 'Predictive information is negative.')
+
+    if regression_type == 'MPA':
+
+        # TODO: this method's broadcasting doesn't work as in GE.
+        # This should be updated to work with the new MPA format
+        # For now, pick a specific bin_number to test for NANs.
+        bin_number = 5
+        check(np.isnan(np.sum(model.p_of_y_given_x(y=bin_number, x=seqs).ravel())) == False,
+              'p_of_y_given_x produce a NAN')
+
+    # method applicable only for GE regression.
+    elif regression_type == 'GE':
+        check(np.isnan(np.sum(model.x_to_yhat(seqs))) == False,
+              'x_to_yhat produced a NAN')
+
+        check(np.isnan(np.sum(model.yhat_to_yq(model.x_to_yhat(seqs)).ravel())) == False,
+              'yhat_to_yq produce a NAN')
+
+        check(np.isnan(np.sum(model.phi_to_yhat(model.x_to_phi(seqs)).ravel())) == False,
+              'phi to yhat produced a NAN')
+
+        check(np.isnan(np.sum(model.p_of_y_given_yhat(y=y, yhat=model.x_to_yhat(seqs)).ravel())) == False,
+              'p_of_y_given_yhat produced a NAN')
+
+        check(np.isnan(np.sum(model.p_of_y_given_x(y=y, x=seqs).ravel())) == False,
+              'p_of_y_given_x produce a NAN')
+
+
+
+
+@handle_errors
+def test_GE_fit():
+
+    """
+    Method that tests the fit method of the Model class
+    for GE regression. Small subsets of data are used for
+    training, for all combinations of gpmap_type(s) and
+    GE noise models. Models are trained for one epoch
+    and all Model method outputs are subsequently checked
+    for NANs.
+
+    parameters
+    ----------
+    None
+
+    returns
+    -------
+    None
+
+    """
+
+    # Turn off warnings/retracing just for testing,
+    # however need to figure out how to properly
+    # handle these warnings.
+    import tensorflow as tf
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+    GE_datasets = ['mpsa', 'gb1']
+
+    GE_noise_model_types = ['Gaussian', 'Cauchy', 'SkewedT']
+    gpmap_types = ['additive', 'neighbor', 'pairwise']
+
+    # loop over GE datasets for testing fit.
+    for ge_dataset in GE_datasets:
+
+        data_df = mavenn.load_example_dataset(ge_dataset)
+
+        # use small subset of data for quick training
+        data_df = data_df.loc[0:100].copy()
+
+        # get training set from data_df
+        ix = data_df['training_set']
+        L = len(data_df['x'][0])
+        train_df = data_df[ix]
+        test_df = data_df[~ix]
+
+        # Set seed for reproducibility.
+        mavenn.set_seed(0)
+
+        # set alpbabet according to dataset.
+        if ge_dataset == 'mpsa':
+            alphabet = 'dna'
+        elif ge_dataset == 'gb1':
+            alphabet = 'protein'
+
+        # loop over different gpmap_types
+        for gpmap_type in gpmap_types:
+
+            # loop over different GE noise model types
+            for GE_noise_model_type in GE_noise_model_types:
+                # Define model
+                model = mavenn.Model(regression_type='GE',
+                                     L=L,
+                                     alphabet=alphabet,
+                                     gpmap_type=gpmap_type,
+                                     ge_noise_model_type=GE_noise_model_type,
+                                     ge_heteroskedasticity_order=2)
+
+                # Set training data
+                model.set_data(x=train_df['x'],
+                               y=train_df['y'],
+                               shuffle=True,
+                               verbose=True)
+
+                # Fit model to data
+                _history = model.fit(epochs=1,
+                                    batch_size=200,
+                                    verbose=True)
+
+                # check model methods for NANs
+                print('Check for NANs in the output of model methods')
+                print(f'gpmap_type = {gpmap_type}, dataset ='
+                      f' {ge_dataset}, GE = noise_model = {GE_noise_model_type}')
+
+                test_parameter_values(test_for_nan_in_model_methods,
+                                      var_name='seqs',
+                                      success_list=[test_df['x'].values],
+                                      fail_list=[[np.nan]],
+                                      model=model,
+                                      y=test_df['y'],
+                                      regression_type='GE')
+
+
+@handle_errors
+def test_MPA_fit():
+
+    """
+    Method that tests the fit method of the Model class
+    for MPA regression. Small subsets of data are used for
+    training, for all combinations of gpmap_type(s).
+    Models are trained for one epoch and all Model
+    method outputs are subsequently checked for NANs.
+
+    parameters
+    ----------
+    None
+
+    returns
+    -------
+    None
+
+    """
+
+    # turn off warnings/retracing just for testing
+    import tensorflow as tf
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+    gpmap_types = ['additive', 'neighbor', 'pairwise']
+
+    data_df = mavenn.load_example_dataset('sortseq')
+
+    # use small subset of data for quick training
+    data_df = data_df.loc[0:100].copy()
+
+    # Comptue sequence length and number of bins
+    L = len(data_df['x'][0])
+    y_cols = [c for c in data_df.columns if 'ct_' in c]
+    Y = len(y_cols)
+    print(f'L={L}, Y={Y}')
+
+    # Split into trianing and test data
+    ix = data_df['training_set']
+    L = len(data_df['x'][0])
+    train_df = data_df[ix]
+    test_df = data_df[~ix]
+
+    # Set seed for reproducibility.
+    mavenn.set_seed(0)
+
+    # loop over different gpmap_types
+    for gpmap_type in gpmap_types:
+
+        # Define model
+        model = mavenn.Model(regression_type='MPA',
+                             L=L,
+                             Y=Y,
+                             alphabet='dna',
+                             gpmap_type=gpmap_type)
+
+        model.set_data(x=train_df['x'].values,
+                       y=train_df[y_cols].values)
+
+        # Fit model to data
+        history = model.fit(epochs=1,
+                            batch_size=250)
+        # check model methods for NANs
+        print('Check for NANs in the output of model methods')
+        print(f'gpmap_type = {gpmap_type}, dataset = sortseq')
+
+        test_parameter_values(test_for_nan_in_model_methods,
+                              var_name='seqs',
+                              success_list=[test_df['x'].values],
+                              fail_list=[[np.nan]],
+                              model=model,
+                              y=test_df[y_cols].values,
+                              regression_type='MPA')
 
 # @handle_errors
 # def _test_phi_calculation(model_file):
