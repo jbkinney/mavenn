@@ -154,7 +154,7 @@ class AffineLayer(Layer):
 
     @handle_errors
     def __init__(self,
-                 eta_regularization,
+                 eta,
                  monotonic,
                  **kwargs):
 
@@ -166,11 +166,11 @@ class AffineLayer(Layer):
         self.constraint = lambda: non_neg() if self.monotonic else None
 
         # Set regularizer
-        self.eta = eta_regularization
+        self.eta = eta
         self.regularizer = tf.keras.regularizers.L2(self.eta)
 
         # Call superclass constructor
-        super(GlobalEpistasisLayer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def build(self, input_shape):
         self.a = self.add_weight(name='a',
@@ -205,7 +205,7 @@ class GlobalEpistasisLayer(Layer):
     @handle_errors
     def __init__(self,
                  K,
-                 eta_regularization,
+                 eta,
                  monotonic,
                  **kwargs):
 
@@ -220,11 +220,11 @@ class GlobalEpistasisLayer(Layer):
         self.K = K
 
         # Set regularizer
-        self.eta = eta_regularization
+        self.eta = eta
         self.regularizer = tf.keras.regularizers.L2(self.eta)
 
         # Call superclass constructor
-        super(GlobalEpistasisLayer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def build(self, input_shape):
 

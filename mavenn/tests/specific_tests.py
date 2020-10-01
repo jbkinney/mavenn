@@ -522,6 +522,8 @@ def test_GE_fit():
 
             # loop over different GE noise model types
             for GE_noise_model_type in GE_noise_model_types:
+                print(f'======= {gpmap_type} : {GE_noise_model_type}========')
+
                 # Define model
                 model = mavenn.Model(regression_type='GE',
                                      L=L,
@@ -538,8 +540,9 @@ def test_GE_fit():
 
                 # Fit model to data
                 _history = model.fit(epochs=1,
-                                    batch_size=200,
-                                    verbose=True)
+                                     linear_initialization=True,
+                                     batch_size=200,
+                                     verbose=True)
 
                 # check model methods for NANs
                 print('Check for NANs in the output of model methods')

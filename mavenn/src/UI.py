@@ -19,6 +19,7 @@ from mavenn.src.validate import validate_alphabet
 from mavenn.src.gpmap_layers import AdditiveGPMapLayer, PairwiseGPMapLayer
 from mavenn.src.measurement_process_layers \
     import GlobalEpistasisLayer, \
+        AffineLayer, \
         GaussianNoiseModelLayer, \
         CauchyNoiseModelLayer, \
         SkewedTNoiseModelLayer, \
@@ -47,6 +48,11 @@ class GlobalEpistasisModel:
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
         Three possible choices allowed: ['additive','neighbor','pairwise']
+
+    ge_nonlinearity_type: (str)
+        Specifies the form of the GE nonlinearity. Options:
+        "linear": An affine transformation from phi to yhat.
+        "nonlinear": Allow and arbitrary nonlinear map from phi to yhat.
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to use a monotonicity constraint in GE regression.
@@ -78,6 +84,7 @@ class GlobalEpistasisModel:
                  alphabet,
                  gpmap_type,
                  ge_nonlinearity_monotonic,
+                 ge_nonlinearity_type,
                  ohe_batch_size,
                  ge_heteroskedasticity_order,
                  theta_regularization,
@@ -93,6 +100,7 @@ class GlobalEpistasisModel:
         self.ohe_batch_size = ohe_batch_size
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
+        self.ge_nonlinearity_type = ge_nonlinearity_type
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -122,6 +130,12 @@ class GlobalEpistasisModel:
         check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
               f'gpmap_type = {self.gpmap_type};'
               'must be "additive", "neighbor", or "pairwise"')
+
+        # check that ge_nonlinearity_type valid
+        allowed_types = ['linear', 'nonlinear']
+        check(self.ge_nonlinearity_type in allowed_types,
+              f'gpmap_type = {self.gpmap_type};'
+              f'must be in {allowed_types}')
 
         # check that theta regularization is a number
         check(isinstance(self.theta_regularization, numbers.Real),
@@ -221,10 +235,18 @@ class GlobalEpistasisModel:
         phi = self.x_to_phi_layer(sequence_input)
 
         # Make global epistasis layer
-        self.phi_to_yhat_layer = \
-            GlobalEpistasisLayer(K=ge_nonlinearity_hidden_nodes,
-                                 eta_regularization=self.eta_regularization,
-                                 monotonic=self.ge_nonlinearity_monotonic)
+        if self.ge_nonlinearity_type=='linear':
+            self.phi_to_yhat_layer = \
+                AffineLayer(eta=self.eta_regularization,
+                            monotonic=self.ge_nonlinearity_monotonic)
+        elif self.ge_nonlinearity_type=='nonlinear':
+            self.phi_to_yhat_layer = \
+                GlobalEpistasisLayer(K=ge_nonlinearity_hidden_nodes,
+                                     eta=self.eta_regularization,
+                                     monotonic=self.ge_nonlinearity_monotonic)
+        else:
+            assert False, 'This shouldnt happen'
+
         yhat = self.phi_to_yhat_layer(phi)
 
         # Concatenate yhat and training labels

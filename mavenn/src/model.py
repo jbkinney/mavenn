@@ -105,6 +105,7 @@ class Model:
                  L,
                  alphabet,
                  gpmap_type='additive',
+                 ge_nonlinearity_type='nonlinear',
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
@@ -137,6 +138,7 @@ class Model:
 
         # Set other parameters
         self.gpmap_type = gpmap_type
+        self.ge_nonlinearity_type = ge_nonlinearity_type
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
         self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
         self.ge_noise_model_type = ge_noise_model_type
@@ -172,6 +174,7 @@ class Model:
                             info_for_layers_dict=self.info_for_layers_dict,
                             sequence_length=self.L,
                             gpmap_type=self.gpmap_type,
+                            ge_nonlinearity_type=self.ge_nonlinearity_type,
                             ge_nonlinearity_monotonic=
                                 self.ge_nonlinearity_monotonic,
                             alphabet=self.alphabet,
