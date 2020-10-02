@@ -283,38 +283,6 @@ class GlobalEpistasisModel:
 
         return model
 
-    @handle_errors
-    def phi_to_yhat(self,
-                    phi):
-
-        """
-        Compute the GE nonlinearity at specified values of phi.
-
-        parameters
-        ----------
-
-        phi: (float or array-like)
-            Latent phenotype value(s) on which the GE nonlinearity
-            wil be evaluated.
-
-        returns
-        -------
-        yhat: (float or array-like)
-            The nonlinear GE function evaluated at phi.
-
-        """
-
-        # Create phi_to_yhat function
-        phi_input = Input((1,))
-        yhat_output = self.phi_to_yhat_layer(phi_input)
-        self.phi_to_yhat_func = Model(inputs=phi_input,
-                                      outputs=yhat_output)
-
-        # Predict yhat values
-        yhat = self.phi_to_yhat_func.predict(phi)
-
-        return yhat
-
 
 @handle_errors
 class MeasurementProcessAgnosticModel:

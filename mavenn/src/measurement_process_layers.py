@@ -264,11 +264,13 @@ class GlobalEpistasisLayer(Layer):
     # yhat as function of phi
     @handle_arrays
     def phi_to_yhat(self, phi):
+        b_k = tf.reshape(self.b_k, [1, -1])
+        c_k = tf.reshape(self.c_k, [1, -1])
+        d_k = tf.reshape(self.d_k, [1, -1])
+        phi = tf.reshape(phi, [-1, 1])
         yhat = self.a_0 + tf.reshape(
-                    K.sum(self.b_k * tanh(self.c_k * phi + self.d_k), axis=1),
-                    shape=[-1, 1])
+            K.sum(b_k * tanh(c_k * phi + d_k), axis=1), shape=[-1, 1])
         return yhat
-
 
 
 class NoiseModelLayer(Layer):

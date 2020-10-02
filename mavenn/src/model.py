@@ -659,8 +659,9 @@ class Model:
         check(self.regression_type == 'GE',
               'regression type must be "GE" for this function')
 
-        # Compute normalized prediciton
-        yhat_norm = self.model.phi_to_yhat(unfixed_phi)
+        # Compute normalized phi using nonlinearity layer
+        yhat_norm = self.layer_nonlinearity.phi_to_yhat(unfixed_phi,
+                                                        use_arrays=True)
 
         # Restore shift and scale
         yhat = self.y_mean + self.y_std * yhat_norm
