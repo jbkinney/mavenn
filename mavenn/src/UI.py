@@ -450,32 +450,18 @@ class MeasurementProcessAgnosticModel:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)
 
-        # TODO: Replace these two layers by a custom layer:
-        # GlobalEpistasisLayer or AffineLayer
-        eta_regularizer = regularizers.l2(self.eta_regularization)
-        intermediateTensor = Dense(
-                    na_hidden_nodes,
-                    activation='sigmoid',
-                    kernel_regularizer=eta_regularizer,
-                    bias_regularizer=eta_regularizer
-                    )(phi)
-        yhat = Dense(self.number_of_bins,
-                     name='yhat',
-                     activation='softmax',
-                     kernel_regularizer=eta_regularizer,
-                     bias_regularizer=eta_regularizer
-                     )(intermediateTensor)
+        # Create concatenation layer
+        self.layer_concatenate_phi_ct = Concatenate(name='phi_and_ct')
+        phi_ct = self.layer_concatenate_phi_ct([phi, labels_input])
 
-        # Define concatenation layer
-        concatenateLayer = Concatenate(
-            name='yhat_and_y_to_ll')([yhat, labels_input])
-
-        # Define likelihood layer
-        likelihood_object = MPAMeasurementProcessLayer(
+        # Create measurement process layer
+        self.layer_measurement_process = MPAMeasurementProcessLayer(
             info_for_layers_dict=self.info_for_layers_dict,
-            number_bins=self.number_of_bins)
-        outputTensor = likelihood_object(concatenateLayer)
-        self.measurement_process_layer = likelihood_object
+            Y=self.number_of_bins,
+            K=na_hidden_nodes,
+            eta=self.eta_regularization
+            )
+        outputTensor = self.layer_measurement_process(phi_ct)
 
         #create the model:
         model = Model(inputTensor, outputTensor)
@@ -483,42 +469,3 @@ class MeasurementProcessAgnosticModel:
         self.na_hidden_nodes = na_hidden_nodes
         return model
 
-    def p_of_all_y_given_phi(self,
-                             phi):
-
-        """
-        Method used to evaluate MPA noise model.
-
-        parameters
-        ----------
-
-        phi: (float)
-            Latent phenotype value(s) on which the MPA noise model
-            wil be evaluated.
-
-        returns
-        -------
-        pi: (array-like)
-            The nonlinear MPA function evaluated for input phi.
-
-        """
-
-        na_model_input = Input((1,))
-        next_input = na_model_input
-
-        # TODO: Replace these with layer names
-        phi_index = 3
-        yhat_index = 5
-
-        # Form model using functional API in a loop, starting from
-        # phi input, and ending on network output
-        for layer in self.model.layers[phi_index:yhat_index]:
-            next_input = layer(next_input)
-
-        # Form gauge fixed GE_nonlinearity model
-        na_model = Model(inputs=na_model_input, outputs=next_input)
-
-        # compute the value of the nonlinearity for a given phi
-        p_of_dot_given_phi = na_model.predict([phi])
-
-        return p_of_dot_given_phi

@@ -10,6 +10,7 @@ import numbers
 # Scipy imports
 from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import lsmr
+from scipy.stats import spearmanr
 
 # Tensorflow imports
 import tensorflow as tf
@@ -215,7 +216,7 @@ class Model:
             # Set layers
             self.layer_gpmap = self.model.x_to_phi_layer
             self.layer_measurement_process = \
-                self.model.measurement_process_layer
+                self.model.layer_measurement_process
 
 
     @handle_errors
@@ -516,28 +517,27 @@ class Model:
         check(isinstance(optimizer, str),
               f'type(optimizer)={type(optimizer)}; must be str')
 
+        # Check optimizer_kwargs
+        check(isinstance(optimizer_kwargs, dict),
+              f'type(optimizer_kwargs)={type(optimizer_kwargs)}; must be dict.')
+
         # Make Optimizer instance with specified name and learning rate
         optimizer_kwargs['learning_rate'] = learning_rate
         optimizer = tf.keras.optimizers.get({"class_name": optimizer,
                                              "config": optimizer_kwargs})
 
         # Check optimizer_kwargs
-        check(isinstance(optimizer_kwargs, dict),
-              f'type(optimizer_kwargs)={type(optimizer_kwargs)}; must be dict.')
-
-        # Check optimizer_kwargs
         check(isinstance(fit_kwargs, dict),
               f'type(fit_kwargs)={type(fit_kwargs)}; must be dict.')
 
-        assert isinstance(optimizer, tf.keras.optimizers.Optimizer), \
-            f'optimizer = {repr(optimizer)}' \
-            'This not happen. optimizer should be ' \
-            'tf.keras.optimizers.Optimizer instance by now.'
 
-        # Compile model
-        self._compile_model(optimizer=optimizer,
-                            lr=self.learning_rate,
-                            optimizer_kwargs=optimizer_kwargs)
+        # Returns the sum of negative log likelihood contributions
+        # from each sequence, which is provided as y_pred
+        def likelihood_loss(y_true, y_pred):
+            return K.sum(y_pred)
+
+        self.model.model.compile(loss=likelihood_loss,
+                                 optimizer=optimizer)
 
         # Set early stopping callback if requested
         if early_stopping:
@@ -549,23 +549,22 @@ class Model:
         self.y_mean = self.y_stats['y_mean']
         self.y_std = self.y_stats['y_std']
 
+        # Set y targets for linear regression and sign assignment
+        if self.regression_type == 'GE':
+            y_targets = self.y_norm
+
+        # If MPA regression, use mean bin number
+        elif self.regression_type == 'MPA':
+            bin_nums = np.arange(self.Y)
+            y_targets = (self.y_norm
+                         * bin_nums[np.newaxis, :]).sum(axis=1) / \
+                        self.y_norm.sum(axis=1)
+
+        else:
+            assert False, "This should never happen."
+
         # Do linear regression if requested
         if self.linear_initialization:
-
-            # Set y targets for linear regression
-            # If GE regression, use normalized y values
-            if self.regression_type == 'GE':
-                y_targets = self.y_norm
-
-            # If MPA regression, use mean bin number
-            elif self.regression_type == 'MPA':
-                bin_nums = np.arange(self.Y)
-                y_targets = (self.y_norm
-                             * bin_nums[np.newaxis, :]).sum(axis=1) / \
-                            self.y_norm.sum(axis=1)
-
-            else:
-                assert False, "This should never happen."
 
             # Do linear regression
             t = time.time()
@@ -594,6 +593,7 @@ class Model:
         train_sequences = np.hstack([self.x_ohe,
                                      self.y_norm])
 
+
         # Train neural network using TensorFlow
         history = self.model.model.fit(train_sequences,
                                        self.y_norm,
@@ -611,14 +611,18 @@ class Model:
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
-        unfixed_phi = self._unfixed_gpmap([self.x_ohe])
+        unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
 
         # Set stats
         self.unfixed_phi_mean = np.mean(unfixed_phi)
         self.unfixed_phi_std = np.std(unfixed_phi)
 
+        # Flip sign if correlation of phi with y_targets is negative
+        r, p_val = spearmanr(unfixed_phi, y_targets)
+        if r < 0:
+            self.unfixed_phi_std *= -1.
+
         # update history attribute
-        #self.model.history = history
         self.history = history.history
 
         # Compute training time
@@ -854,7 +858,6 @@ class Model:
             'logomaker_df': logomaker_df
         }
 
-        # pdb.set_trace
         return theta_dict
 
     @handle_errors
@@ -864,44 +867,6 @@ class Model:
         """
 
         return self.model.model
-
-    @handle_errors
-    def _compile_model(self,
-                       optimizer,
-                       lr,
-                       optimizer_kwargs={},
-                       compile_kwargs={}):
-        """
-        This method will compile the model created in the constructor.
-
-        parameters
-        ----------
-
-        optimizer: (tf.keras.optimizers.Optimizer)
-            Which optimizer to use
-
-        lr: (float)
-            Learning rate of the optimizer.
-
-        returns
-        -------
-        None
-
-        """
-
-        # Check optimizer
-        assert isinstance(optimizer, tf.keras.optimizers.Optimizer), \
-            f'type(optimizer)={type(optimizer)}; must be on of ' \
-            f'tf.keras.optimizers.Optimizer)'
-
-        # Returns the sum of negative log likelihood contributions
-        # from each sequence, which is provided as y_pred
-        def likelihood_loss(y_true, y_pred):
-            return K.sum(y_pred)
-
-        self.model.model.compile(loss=likelihood_loss,
-                                 optimizer=optimizer,
-                                 **compile_kwargs)
 
     @handle_errors
     def x_to_phi(self, x):
@@ -1473,7 +1438,11 @@ class Model:
             phi_unfixed = self.unfixed_phi_mean + phi * self.unfixed_phi_std
 
             # Get values for all bins
-            p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
+            #p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
+            p_of_all_y_given_phi = \
+                self.layer_measurement_process.p_of_all_y_given_phi(
+                    phi_unfixed,
+                    use_arrays=True)
 
             # Extract y-specific elements
             _ = np.newaxis

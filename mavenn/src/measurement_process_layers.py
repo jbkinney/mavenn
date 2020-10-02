@@ -20,7 +20,7 @@ from tensorflow.keras.layers import Layer
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
 
-eps = 1E-10
+eps = 1E-6
 pi = np.pi
 e = np.exp(1)
 
@@ -97,10 +97,20 @@ def handle_arrays(func):
 class MPAMeasurementProcessLayer(Layer):
     def __init__(self,
                  info_for_layers_dict,
-                 number_bins,
+                 Y,
+                 K,
+                 eta,
                  **kwargs):
-        self.number_bins = number_bins
+
+        # Set attributes
+        self.Y = Y
+        self.K = K
+        self.eta = eta
         self.info_for_layers_dict = info_for_layers_dict
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
         super().__init__(**kwargs)
 
     def get_config(self):
@@ -110,6 +120,35 @@ class MPAMeasurementProcessLayer(Layer):
                 "number_bins": self.number_bins}
 
     def build(self, input_shape):
+        self.a_y = self.add_weight(name='a_y',
+                                   dtype=tf.float32,
+                                   shape=(self.Y,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+
+        # Need to randomly initialize b_k
+        b_yk0 = expon(scale=1/self.K).rvs([self.Y, self.K])
+        self.b_yk = self.add_weight(name='b_yk',
+                                    dtype=tf.float32,
+                                    shape=(self.Y, self.K),
+                                    initializer=Constant(b_yk0),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+
+        self.c_yk = self.add_weight(name='c_yk',
+                                    dtype=tf.float32,
+                                    shape=(self.Y, self.K),
+                                    initializer=Constant(1.),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+
+        self.d_yk = self.add_weight(name='d_yk',
+                                    dtype=tf.float32,
+                                    shape=(self.Y, self.K),
+                                    initializer=Constant(0.),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
         super().build(input_shape)
 
     def call(self, inputs):
@@ -118,34 +157,57 @@ class MPAMeasurementProcessLayer(Layer):
         ----------
 
         inputs: (tf.Tensor)
-            A (B,2*Y) tensor containing counts, where B is batch
+            A (B,Y+1) tensor containing counts, where B is batch
             size and Y is the number of bins.
-            inputs[:, 0:Y] is p(y|phi)
-            inputs[:, Y:2Y] is c_my
+            inputs[:,1] is phi
+            inputs[:,1:Y+1] is c_my
 
         returns
         -------
             A (B,) tensor containing negative log likelihood contributions
         """
 
-        # this is yhat
-        p_y_given_phi = inputs[:, 0:self.number_bins]
+        # Extract and shape inputs
+        phi = inputs[:,0]
+        ct_my = inputs[:,1:]
 
-        # these are the labels
-        c_my = inputs[:, self.number_bins:]
+        # Compute p(y|phi)
+        p_my = self.p_of_all_y_given_phi(phi)
 
-        negative_log_likelihood = -K.sum(c_my * K.log(p_y_given_phi), axis=1)
-        c_m = K.sum(c_my, axis=1)
+        # Compute negative log likelihood
+        negative_log_likelihood = -K.sum(ct_my * K.log(p_my), axis=1)
+        ct_m = K.sum(ct_my, axis=1)
 
         # Add I_like metric
         H_y = self.info_for_layers_dict['H_y_norm']
         H_y_given_phi = np.log2(e) * \
-                        K.sum(negative_log_likelihood) / K.sum(c_m)
+                        K.sum(negative_log_likelihood) / K.sum(ct_m)
         I_y_phi = H_y - H_y_given_phi
         self.add_metric(I_y_phi, name="I_like", aggregation="mean")
 
         return negative_log_likelihood
 
+    @handle_arrays
+    def p_of_all_y_given_phi(self, phi):
+
+        # Shape phi
+        phi = tf.reshape(phi, [-1, 1, 1])
+
+        # Reshape parameters
+        a_y  = tf.reshape(self.a_y, [-1, self.Y])
+        b_yk = tf.reshape(self.b_yk, [-1, self.Y, self.K])
+        c_yk = tf.reshape(self.c_yk, [-1, self.Y, self.K])
+        d_yk = tf.reshape(self.d_yk, [-1, self.Y, self.K])
+
+        # Compute weights
+        w_my = K.exp(a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk),
+                                 axis=2))
+        w_my = tf.reshape(w_my, [-1, self.Y])
+
+        # Compute and return distribution
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        return p_my
 
 class AffineLayer(Layer):
     """
