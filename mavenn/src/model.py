@@ -33,7 +33,6 @@ from mavenn.src.utils import mat_data_to_vec_data, vec_data_to_mat_data, \
                                 x_to_stats, p_lc_to_x
 
 
-@handle_errors
 class Model:
 
     """

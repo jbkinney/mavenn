@@ -12,7 +12,7 @@ import mavenn
 print(mavenn.__path__)
 
 # Get list of valid names
-demo_names = mavenn.list_demos(print_names=False)
+demo_names = mavenn.run_demo(print_names=False)
 
 # Get list of names entered by user
 args = sys.argv

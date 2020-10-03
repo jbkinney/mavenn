@@ -47,7 +47,7 @@ For a quick demonstration of MAVE-NN's capabilities, execute the following
 within Python::
 
    import mavenn
-   mavenn.list_demos()
+   mavenn.run_demo()
 
 This will produce a list of names for multiple built-in demos. Then choose
 whichever demo you like. For example, try running the "mpsa_ge_training" demo::

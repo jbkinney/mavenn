@@ -15,13 +15,10 @@ def entropy_continuous(x,
                        num_subsamples=25,
                        verbose=False):
     """
-    Estimate the entropy of a continuous univariate variable
-    using the k'th nearest neighbor estimator.
-    Wrapper for methods in the NPEET package.
+    Estimate the entropy of a continuous univariate variable.
 
-    parameters
+    Parameters
     ----------
-
     x: (array-like of floats)
         Continuous x-values. Must be castable as a
         Nx1 numpy array where N=len(x).
@@ -39,17 +36,14 @@ def entropy_continuous(x,
     verbose: (bool)
         Whether to print results and execution time.
 
-    returns
+    Returns
     -------
-
     H: (float)
         Entropy estimate in bits
 
     dH: (float >= 0)
         Uncertainty estimate in bits. Zero if uncertainty=False is set.
-
     """
-
     # TODO: Implement input checks
 
     # Get number of datapoints
@@ -101,13 +95,10 @@ def mi_mixed(x,
              verbose=False,
              warning=False):
     """
-    Estimate mutual information between one continuous
-    variable and one discrete variable using the k'th nearest neighbor estimator.
-    Wrapper for methods in the NPEET package.
+    Estimate mutual information between a continuous and discrete variable.
 
-    parameters
+    Parameters
     ----------
-
     x: (array-like)
         Continuous or discrete x-values. Must be castable as a
         Nx1 numpy array where N=len(x).
@@ -132,23 +123,21 @@ def mi_mixed(x,
     verbose: (bool)
         Whether to print results and execution time.
 
-    returns
+    Returns
     -------
-
     I: (float)
         Mutual information estimate in bits
 
     dI: (float >= 0)
         Uncertainty estimate in bits. Zero if uncertainty=False is set.
-
     """
-
     # TODO: Input checks
 
     # Deal with choice of discrete_var
-    assert discrete_var in ['x', 'y'], f'Invalid value for discrete_var={discrete_var}'
+    check(discrete_var in ['x', 'y'],
+          f'Invalid value for discrete_var={discrete_var}')
     if discrete_var == 'x':
-        return mi_mixed(y, x, discrete_var='y', **kwargs)
+        return mi_mixed(y, x, discrete_var='y')
 
     N = len(x)
     assert len(y) == N
@@ -197,11 +186,12 @@ def mi_continuous(x,
                   alpha_LNC=.5,
                   verbose=False):
     """
-    Estimate mutual information between two continuous
-    variables using the KSG estimator, with optional LNC correction.
+    Estimate mutual information between two continuous variables.
+
+    Uses the KSG estimator, with optional LNC correction.
     Wrapper for methods in the NPEET package.
 
-    parameters
+    Parameters
     ----------
 
     x: (array-like of floats)
@@ -234,7 +224,7 @@ def mi_continuous(x,
     verbose: (bool)
         Whether to print results and execution time.
 
-    returns
+    Returns
     -------
 
     I: (float)
@@ -294,26 +284,23 @@ def I_intrinsic(y_values,
                 dy_values,
                 verbose=False):
     """
+    Compute instrinsic information in a dataset.
 
-    Helper method used to compute instrinsic information.
-
-    parameters
+    Parameters
     ----------
-
     y_values: (array-like of floats)
         y values for which mutual information will be computed
 
     dy_values: (array-like of floats)
         Represents errors in the y-values.
 
-    returns
+    Returns
     -------
     I_y_x: (float)
         Mutual information of y given x
     dI_y_x: (float)
         Error in the estimated ,mutual information I_y_x
     """
-
     #TODO: Input checks
 
     # useful constants

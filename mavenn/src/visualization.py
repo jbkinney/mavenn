@@ -1,3 +1,4 @@
+"""visualization.py: Functions for visualizing MAVE-NN models."""
 # Standard imports
 import numpy as np
 import pandas as pd
@@ -57,11 +58,10 @@ def heatmap(values,
             cmap_size="5%",
             cmap_pad=0.1):
     """
-    Draws a heatmap illustrating a matrix of values.
+    Draw a heatmap illustrating a matrix of values.
 
-    parameters
+    Parameters
     ----------
-
     values: (np.ndarray)
         Array sized (L,C) that contains values to plot
 
@@ -80,6 +80,9 @@ def heatmap(values,
         If None, one will be created. If specified, cbar=True,
         and cax=None, ax will be split in two to make room for
         colorbar.
+
+    show_spines: (bool)
+        Whether to show axes spines.
 
     cbar: (bool)
         Whether to draw a colorbar.
@@ -114,16 +117,14 @@ def heatmap(values,
         See documentation for
             mpl_toolkits.axes_grid1.make_axes_locatable().
 
-    returns
+    Returns
     -------
-
     ax: (matplotlib.axes.Axes)
         Axes containing the heatmap.
 
     cb: (matplotlib.colorbar.Colorbar)
         Colorbar object linked to Axes.
     """
-
     alphabet = validate_alphabet(alphabet)
     L, C = values.shape
 
@@ -240,9 +241,7 @@ def heatmap_pairwise(values,
                      cmap_size="5%",
                      cmap_pad=0.1):
     """
-    Draws a triangular heatmap illustrating the pairwise
-    parameters of a model. Can be used for pairwise or
-    neighbor models.
+    Draw a triangular heatmap illustrating the pairwise or neighbor parameters.
 
     Note: The resulting plot has aspect ratio of 1 and
     is scaled so that pixels have half-diagonal lengths given by
@@ -256,9 +255,8 @@ def heatmap_pairwise(values,
     This is done so that the horizontal distance between positions
     (as indicated by x ticks) is 1.
 
-    parameters
+    Parameters
     ----------
-
     values: (np.array)
         An array, shape (L,C,L,C), containing pairwise parameters.
         Note that only values at coordinates [l1,c1,l2,c2] with l2 > l1
@@ -351,16 +349,14 @@ def heatmap_pairwise(values,
         See documentation for
             mpl_toolkits.axes_grid1.make_axes_locatable().
 
-    returns
+    Returns
     -------
-
     ax: (matplotlib.axes.Axes)
         Axes containing the heatmap.
 
     cb: (matplotlib.colorbar.Colorbar)
         Colorbar object linked to Axes.
     """
-
     # Validate values
     check(isinstance(values, np.ndarray),
           f'type(values)={type(values)}; must be np.ndarray.')

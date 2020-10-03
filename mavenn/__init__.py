@@ -9,13 +9,14 @@ from mavenn.tests import run_tests
 
 # Examples
 from mavenn.src.examples import list_tutorials
-from mavenn.src.examples import list_demos
 from mavenn.src.examples import run_demo
 from mavenn.src.examples import load_example_dataset
 from mavenn.src.examples import load_example_model
 
 # For loading models
 from mavenn.src.utils import load
+
+# For reproducible model inference
 from mavenn.src.utils import set_seed
 
 # For estimating the intrinsic information in a dataset

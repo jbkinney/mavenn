@@ -1,3 +1,5 @@
+"""utils.py: Utility functions for MAVE-NN."""
+
 # Standard imports
 import numpy as np
 import pandas as pd
@@ -16,11 +18,10 @@ from mavenn.src.validate import validate_1d_array, validate_nd_array, \
 
 @handle_errors
 def load(filename, verbose=True):
-
         """
-        Method that will load a mave-nn model
+        Load a pre-trained model.
 
-        parameters
+        Parameters
         ----------
         filename: (str)
             Filename of saved model.
@@ -28,13 +29,11 @@ def load(filename, verbose=True):
         verbose: (bool)
             Whether to provide user feedback.
 
-        returns
+        Returns
         -------
-        loaded_model (mavenn-Model object)
+        loaded_model: (mavenn-Model object)
             The model object that can be used to make predictions etc.
-
         """
-
         # Load model
         filename_pickle = filename + '.pickle'
         with open(filename_pickle, 'rb') as f:
@@ -72,13 +71,10 @@ def vec_data_to_mat_data(y_n,
                          ct_n=None,
                          x_n=None):
     """
+    Transform from vector data format to matrix data format.
 
-    Function to transform from vector to matrix format for MPA
-    regression and MPA model evaluation.
-
-    parameters
+    Parameters
     ----------
-
     y_n: (np.ndarray)
         Array of N bin numbers y. Must be set by user.
 
@@ -90,16 +86,14 @@ def vec_data_to_mat_data(y_n,
         List of N sequences. If None, each y_n will be
         assumed to come from a unique sequence.
 
-    returns
+    Returns
     -------
-
     ct_my: (2D array of ints)
         Matrix of counts.
 
     x_m: (array)
         Corresponding list of x-values.
     """
-
     # Note: this use of validate_1d_array is needed to avoid a subtle
     # bug that occurs when inputs are pandas series with non-continguous
     # indices
@@ -156,22 +150,18 @@ def vec_data_to_mat_data(y_n,
 def mat_data_to_vec_data(ct_my,
                          x_m=None):
     """
+    Transform from matrix data format to vector data format.
 
-    Function to transform from matrix format to vector format for MPA
-    regression and MPA model evaluation.
-
-    parameters
+    Parameters
     ----------
-
     ct_my: (2D array of ints)
         Matrix of counts.
 
     x_m: (array)
         Corresponding list of x-values.
 
-    parameters
-    ----------
-
+    Returns
+    -------
     y_n: (np.ndarray)
         Array of N bin numbers y. Must be set by user.
 
@@ -182,9 +172,7 @@ def mat_data_to_vec_data(ct_my,
     x_n: (np.ndarray)
         List of N sequences. If None, each y_n will be
         assumed to come from a unique sequence.
-
     """
-
     # Note: this use of validate_1d_array is needed to avoid a subtle
     # bug that occurs when inputs are pandas series with non-continguous
     # indices
@@ -228,7 +216,7 @@ def x_to_alphabet(x, return_name=False):
     """
     Return the alphabet from which a set of sequences are drawn.
 
-    parameters
+    Parameters
     ----------
     x: (array of str)
         Array of sequences (equal-length strings).
@@ -237,7 +225,7 @@ def x_to_alphabet(x, return_name=False):
         Whether to return the name of the alphabet, as opposed to an np.array
         of characters.
 
-    returns
+    Returns
     -------
     alphabet: (np.array or str)
         If return_name=False, is an np.array of the characters in the identified
@@ -246,7 +234,6 @@ def x_to_alphabet(x, return_name=False):
         is a str representing the name of the alphabet. If no pre-defined
         alphabet match exists, will be set to 'unknown'.
     """
-
     # Validate set of sequences with unknown alphabet
     x = validate_seqs(x, alphabet=None)
 
@@ -274,9 +261,9 @@ def x_to_alphabet(x, return_name=False):
 @handle_errors
 def p_lc_to_x(N, p_lc, alphabet):
     """
-    Generate an array of N sequences given a probability_df
+    Generate an array of N sequences given a probability matrix.
 
-    parameters
+    Parameters
     ----------
     N: (int > 0)
         Number of sequences to generate
@@ -286,9 +273,13 @@ def p_lc_to_x(N, p_lc, alphabet):
         position (rows).
 
     alphabet: (np.array)
-        The alphabet, length C, from which sequences will be generated
-    """
+        The alphabet, length C, from which sequences will be generated.
 
+    Returns
+    -------
+    x: (np.array)
+        An (N,) array of sequences drawn from p_lc
+    """
     # Validate N
     check(isinstance(N, int),
           f'type(N)={type(N)}; must be int')
@@ -330,7 +321,7 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
     """
     Identify the consensus sequence from a sequence alignment.
 
-    parameters
+    Parameters
     ----------
     x: (np.ndarray)
         List of sequences. Sequences must all be the same length.
@@ -345,12 +336,11 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
     verbose: (bool)
         Whether to print computation time.
 
-    returns
+    Returns
     -------
     consensus_seq: (str)
         Consensus sequence.
     """
-
     # Start timer
     start_time = time.time()
 
@@ -440,20 +430,18 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
 @handle_errors
 def set_seed(seed):
     """
-    Set seed in order to make results reproducible.
+    Set random number generator seed; use to make training reproducible.
 
-    parameters
-    -------
+    Parameters
+    ----------
     seed: (int)
         The value provided is used in both np.random.seed()
         and tf.random.set_seed().
 
-    returns
+    Returns
     -------
-    None
-
+    None.
     """
-
     # Check seed
     check(isinstance(seed, int),
           f'type(seed)={type(seed)}; must be int')
@@ -470,7 +458,9 @@ def x_to_ohe(x,
              check_alphabet=True,
              ravel_seqs=True):
     """
-    parameters
+    Convert a sequence array to a one-hot encoded matrix.
+
+    Parameters
     ----------
     x: (np.ndarray)
         (N,) array of input sequences, each of length L
@@ -487,12 +477,11 @@ def x_to_ohe(x,
     ravel_seqs: (bool)
         Whether to return an (N, L*C) array, as opposed to an (N, L, C) array.
 
-    returns
+    Returns
     -------
     x_ohe: (np.ndarray)
         Array of one-hot encoded sequences, stored as np.int8 values.
     """
-
     # Validate alphabet as (C,) array
     if check_alphabet:
         alphabet = validate_alphabet(alphabet)
@@ -525,7 +514,3 @@ def x_to_ohe(x,
         x_ohe = x_nlc
 
     return x_ohe
-
-
-
-
