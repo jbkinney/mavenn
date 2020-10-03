@@ -1,23 +1,16 @@
+# Standard imports
 import numpy as np
-import pandas as pd
 import numbers
-import time
 
 # Tensorflow imports
-import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers \
-    import Dense, Activation, Input, Lambda, Concatenate
+from tensorflow.keras.layers import Input, Lambda, Concatenate
 
 # MAVE-NN imports
-#from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.error_handling import handle_errors, check
-# TODO: List specific imports instead
-from mavenn.src.misc_jbk import x_to_features
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.gpmap_layers import AdditiveGPMapLayer, PairwiseGPMapLayer
-from mavenn.src.measurement_process_layers \
+from mavenn.src.layers.gpmap import AdditiveGPMapLayer, PairwiseGPMapLayer
+from mavenn.src.layers.measurement_process_layers \
     import GlobalEpistasisLayer, \
         AffineLayer, \
         GaussianNoiseModelLayer, \
@@ -222,13 +215,13 @@ class GlobalEpistasisModel:
 
         # Create G-P map layer
         if self.gpmap_type == 'additive':
-            self.x_to_phi_layer = AdditiveGPMapLayer(self.L,
-                                                     self.C,
-                                                     self.theta_regularization)
+            self.x_to_phi_layer = AdditiveGPMapLayer(L=self.L,
+                                                     C=self.C,
+                                                     theta_regularization=self.theta_regularization)
         elif self.gpmap_type in ['pairwise', 'neighbor']:
-            self.x_to_phi_layer = PairwiseGPMapLayer(self.L,
-                                                     self.C,
-                                                     self.theta_regularization,
+            self.x_to_phi_layer = PairwiseGPMapLayer(L=self.L,
+                                                     C=self.C,
+                                                     theta_regularization=self.theta_regularization,
                                                      mask_type=self.gpmap_type)
         else:
             assert False, "This should not happen."

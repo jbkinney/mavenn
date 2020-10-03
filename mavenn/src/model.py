@@ -22,15 +22,15 @@ import sklearn.preprocessing
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.UI import GlobalEpistasisModel, MeasurementProcessAgnosticModel
+from mavenn.src.regression_types import GlobalEpistasisModel, MeasurementProcessAgnosticModel
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, \
                                _get_shape_and_return_1d_array, \
                                _broadcast_arrays
-from mavenn.src.misc_jbk import x_to_stats, p_lc_to_x
 from mavenn.src.validate import validate_seqs, validate_1d_array, \
                                 validate_alphabet, validate_nd_array
-from mavenn.src.utils import mat_data_to_vec_data, vec_data_to_mat_data
+from mavenn.src.utils import mat_data_to_vec_data, vec_data_to_mat_data, \
+                                x_to_stats, p_lc_to_x
 
 
 @handle_errors
@@ -381,9 +381,14 @@ class Model:
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
             self.info_for_layers_dict['dH_y'] = dH_y
 
-        # Compute the consensus sequence
+        # Compute sequence statistics
         self.x_stats = x_to_stats(self.x, self.alphabet)
+
+        # Extract one-hot encoding of sequences
+        # This is what is passed to the network.
         self.x_ohe = self.x_stats.pop('x_ohe')
+
+        # Extract consensus sequence
         self.x_consensus = self.x_stats['consensus_seq']
         if verbose:
             print(f'Time to set data: {time.time() - set_data_start:.3} sec.')

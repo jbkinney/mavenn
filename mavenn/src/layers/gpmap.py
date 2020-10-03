@@ -10,10 +10,10 @@ from tensorflow.keras.layers import Layer
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
 
-
-class AdditiveGPMapLayer(Layer):
+class GPMapLayer(Layer):
     """
-    Represents and additive G-P map
+    Represents a G-P map. Specific functional forms for G-P maps should be
+    represented by derived classes of this layer.
     """
 
     @handle_errors
@@ -21,7 +21,7 @@ class AdditiveGPMapLayer(Layer):
                  L,
                  C,
                  theta_regularization,
-                 **kwargs):
+                 mask_type=None):
 
         # Set sequence length
         self.L = L
@@ -32,9 +32,48 @@ class AdditiveGPMapLayer(Layer):
         # Set regularization contribution
         self.theta_regularization = theta_regularization
 
-        # Call superclass constructor
-        super(AdditiveGPMapLayer, self).__init__(**kwargs)
+        # Set mask type
+        self.mask_type = mask_type
 
+        # Call superclass constructor
+        super().__init__()
+
+    @handle_errors
+    def get_config(self):
+        base_config = super(Layer, self).get_config()
+        return {'L': self.L,
+                'C': self.C,
+                'theta_regularization': self.theta_regularization,
+                **base_config}
+
+    @handle_errors
+    def build(self, input_shape):
+        super().build(input_shape)
+
+    ### The following methods must be fully overridden
+
+    def call(self, inputs):
+        assert False
+        return np.nan
+
+    def set_params(self, **kwargs):
+        assert False
+
+    def get_params(self):
+        assert False
+        return {}
+
+
+class AdditiveGPMapLayer(GPMapLayer):
+    """
+    Represents and additive G-P map
+    """
+
+    @handle_errors
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @handle_errors
     def build(self, input_shape):
 
         # Define theta_0
@@ -50,6 +89,8 @@ class AdditiveGPMapLayer(Layer):
                                         shape=theta_lc_shape,
                                         initializer=Constant(theta_lc_init),
                                         trainable=True)
+        # Call superclass build
+        super().build(input_shape)
 
     def call(self, x_lc):
 
@@ -129,33 +170,19 @@ class AdditiveGPMapLayer(Layer):
         return param_dict
 
 
-class PairwiseGPMapLayer(Layer):
+class PairwiseGPMapLayer(GPMapLayer):
     """
     Represents a pairwise G-P map
     """
 
     @handle_errors
-    def __init__(self,
-                 L,
-                 C,
-                 theta_regularization,
-                 mask_type,
-                 **kwargs):
-
-        # Set sequence length
-        self.L = L
-
-        # Set alphabet length
-        self.C = C
-
-        # Set regularization contribution
-        self.theta_regularization = theta_regularization
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # Set mask type
-        check(mask_type in ['neighbor', 'pairwise'],
-              f'mask_type={repr(mask_type)}; must be'
+        check(self.mask_type in ['neighbor', 'pairwise'],
+              f'self.mask_type={repr(self.mask_type)}; must be'
               f'one of ["neighbor","pairwise"]')
-        self.mask_type = mask_type
 
         # Create mask
         ls = np.arange(self.L).astype(int)
@@ -170,9 +197,13 @@ class PairwiseGPMapLayer(Layer):
         else:
             assert False, "This should not work"
 
-        # Call superclass constructor
-        super(PairwiseGPMapLayer, self).__init__(**kwargs)
+    @handle_errors
+    def get_config(self):
+        base_config = super().get_config()
+        return {'mask_type': self.mask_type,
+                **base_config}
 
+    @handle_errors
     def build(self, input_shape):
 
         # Define theta_0
@@ -197,6 +228,9 @@ class PairwiseGPMapLayer(Layer):
                                           shape=theta_lclc_shape,
                                           initializer=Constant(theta_lclc_init),
                                           trainable=True)
+
+        # Call superclass build
+        super().build(input_shape)
 
     def call(self, x_lc):
 
