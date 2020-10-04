@@ -43,4 +43,7 @@ Model class
 -----------
 
 .. autoclass:: mavenn.Model
-    :members:
+    :members: set_data, fit, get_theta, get_nn,
+        x_to_phi, phi_to_yhat, simulate_dataset, I_likelihood,
+        I_predictive, yhat_to_yq, p_of_y_given_phi, p_of_y_given_yhat,
+        save, p_of_y_given_x, x_to_yhat
