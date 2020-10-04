@@ -36,7 +36,7 @@ def get_mask_dict(x, alphabet):
     alphabet = validate_alphabet(alphabet)
 
     # Validate sequences
-    x = validate_seqs(seqs=x,
+    x = validate_seqs(x=x,
                       alphabet=alphabet,
                       restrict_seqs_to_alphabet=False)
 

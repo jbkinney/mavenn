@@ -1,14 +1,12 @@
+"""entropy.py: Utilities to estimate information-theoretic quantities."""
 import numpy as np
-import pandas as pd
 import pdb
-import numbers
-from collections.abc import Iterable
 
 from mavenn.src import _npeet as ee
 from mavenn.src.validate import validate_1d_array
 from mavenn.src.error_handling import handle_errors, check
 
-
+@handle_errors
 def entropy_continuous(x,
                        knn=5,
                        uncertainty=True,
@@ -83,9 +81,8 @@ def entropy_continuous(x,
 
         return H, dH
 
-# TODO: Write function to compute MI for MPA regression
 
-# This isn't actually what we need.
+@handle_errors
 def mi_mixed(x,
              y,
              knn=5,
@@ -177,6 +174,7 @@ def mi_mixed(x,
     # Return results
     return I, dI
 
+@handle_errors
 def mi_continuous(x,
                   y,
                   knn=5,
@@ -193,7 +191,6 @@ def mi_continuous(x,
 
     Parameters
     ----------
-
     x: (array-like of floats)
         Continuous x-values. Must be castable as a
         Nx1 numpy array where N=len(x).
@@ -226,15 +223,12 @@ def mi_continuous(x,
 
     Returns
     -------
-
     I: (float)
         Mutual information estimate in bits
 
     dI: (float >= 0)
         Uncertainty estimate in bits. Zero if uncertainty=False is set.
-
     """
-
     # TODO: input checks
 
     N = len(x)
@@ -280,6 +274,7 @@ def mi_continuous(x,
     # Return results
     return I, dI
 
+@handle_errors
 def I_intrinsic(y_values,
                 dy_values,
                 verbose=False):

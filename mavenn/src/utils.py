@@ -348,7 +348,7 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
     alphabet = validate_alphabet(alphabet)
 
     # Validate sequences
-    x = validate_seqs(seqs=x,
+    x = validate_seqs(x=x,
                       alphabet=alphabet,
                       restrict_seqs_to_alphabet=True)
 
@@ -514,3 +514,8 @@ def x_to_ohe(x,
         x_ohe = x_nlc
 
     return x_ohe
+
+# Converts sequences to matrices
+def _x_to_mat(x, alphabet):
+    return (np.array(list(x))[:, np.newaxis] ==
+            alphabet[np.newaxis, :]).astype(float)

@@ -1,3 +1,5 @@
+"""validate.py: Utilities for validating input."""
+
 # Standard imports
 import numpy as np
 import pandas as pd
@@ -21,7 +23,7 @@ alphabet_dict = {
                           'S', 'T', 'V', 'W', 'Y', '*'])
 }
 
-
+# Translate from amino acid abbreviations to single letter symbols.
 abreviation_dict = {
     'Ala': 'A',
     'Arg': 'R',
@@ -48,10 +50,7 @@ abreviation_dict = {
 
 @handle_errors
 def validate_1d_array(x):
-    """
-    Casts x as a 1d numpy array
-    """
-
+    """Cast x as a 1d numpy array."""
     # Get shape and cast as 1d
     x, shape = _get_shape_and_return_1d_array(x)
 
@@ -60,10 +59,7 @@ def validate_1d_array(x):
 
 @handle_errors
 def validate_nd_array(x):
-    """
-    Casts x as a numpy array of the original input shape.
-    """
-
+    """Casts x as a numpy array of the original input shape."""
     # Get shape and cast as 1d
     x, shape = _get_shape_and_return_1d_array(x)
 
@@ -77,14 +73,15 @@ def validate_nd_array(x):
 @handle_errors
 def validate_alphabet(alphabet):
     """
-    Returns a validated alphabet. String inputs are interpreted
+    Return a validated alphabet.
+
+    String inputs are interpreted
     as the name of one of four alphabets:
         ['dna','rna','protein','protein*'].
     Otherwise alphabet must be one of
         [set, list, np.ndarray, pd.Series],
     containing only unique characters.
     """
-
     valid_types = (str, list, set, np.ndarray, pd.Series)
     check(isinstance(alphabet, valid_types),
           f'type(alphabet)={type(alphabet)} is invalid. '
@@ -135,46 +132,52 @@ def validate_alphabet(alphabet):
 
 
 @handle_errors
-def validate_seqs(seqs,
+def validate_seqs(x,
                   alphabet=None,
                   restrict_seqs_to_alphabet=True):
     """
+    Validate sequences for use in MAVE-NN.
+
     Makes sure that seqs is an array of equal-length sequences
     drawn from the set of characters in alphabet. Returns
     a version of seqs cast as a numpy array of strings. Note that
     alphabet must be set when setting restrict_seqs_to_alphabet=True.
 
-    parameters
+    Parameters
     ----------
-    seqs: (array of seqs)
+    x: (array-like)
         Array of equal-length sequences.
 
-    alphabet: (str or array)
+    alphabet: (str, array-like)
         Alphabet from which strings are drawn.
 
-    restrict_seqs_to_alphabet:
+    restrict_seqs_to_alphabet: (bool)
         Whether to restrict sequences to the specified alphabet.
-    """
 
+    Returns
+    -------
+    x: (np.array)
+        Nrray of validated sequences
+    """
     # Cast as np.array
-    if isinstance(seqs, str):
-        seqs = np.array([seqs])
-    elif isinstance(seqs, (list, np.ndarray)):
-        seqs = np.array(seqs).astype(str)
-    elif isinstance(seqs, pd.Series):
-        seqs = seqs.values.astype(str)
+    if isinstance(x, str):
+        x = np.array([x])
+    elif isinstance(x, (list, np.ndarray)):
+        x = np.array(x).astype(str)
+    elif isinstance(x, pd.Series):
+        x = x.values.astype(str)
     else:
-        check(False, f'type(seqs)={type(seqs)} is invalid.')
+        check(False, f'type(x)={type(x)} is invalid.')
 
     # Make sure array is 1D
-    check(len(seqs.shape) == 1, f'seqs should be 1D; seqs.shape={seqs.shape}')
+    check(len(x.shape) == 1, f'x should be 1D; x.shape={x.shape}')
 
     # Get N and make sure its >= 1
-    N = len(seqs)
+    N = len(x)
     check(N >= 1, f'N={N} must be >= 1')
 
-    # Make sure all seqs are the same length
-    lengths = np.unique([len(seq) for seq in seqs])
+    # Make sure all x are the same length
+    lengths = np.unique([len(seq) for seq in x])
     check(len(lengths) == 1,
           f"Sequences should all be the same length"
           "; found multiple lengths={lengths}")
@@ -190,10 +193,10 @@ def validate_seqs(seqs,
         alphabet = validate_alphabet(alphabet)
 
         # Make sure all sequences are in alphabet
-        seq_chars = set(''.join(seqs))
+        seq_chars = set(''.join(x))
         alphabet_chars = set(alphabet)
         check(seq_chars <= alphabet_chars,
-              f"seqs contain the following characters not in alphabet:"
+              f"x contain the following characters not in alphabet:"
               "{seq_chars-alphabet_chars}")
 
-    return seqs
+    return x

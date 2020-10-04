@@ -1,3 +1,4 @@
+"""MAVE-NN software package."""
 # The functions imported here are the ONLY "maven.xxx()" functions that
 # users are expected to interact with
 

@@ -1,7 +1,7 @@
+"""model.py: Define the Model() class, which represents all MAVE-NN models."""
 # Standard imports
 import numpy as np
 import pandas as pd
-#import re
 import pdb
 import pickle
 import time
@@ -22,29 +22,27 @@ import sklearn.preprocessing
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
-from mavenn.src.regression_types import GlobalEpistasisModel, MeasurementProcessAgnosticModel
+from mavenn.src.regression_types import GlobalEpistasisModel, \
+                                        MeasurementProcessAgnosticModel
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, \
                                _get_shape_and_return_1d_array, \
                                _broadcast_arrays
-from mavenn.src.validate import validate_seqs, validate_1d_array, \
-                                validate_alphabet, validate_nd_array
-from mavenn.src.utils import mat_data_to_vec_data, vec_data_to_mat_data, \
-                                x_to_stats, p_lc_to_x
+from mavenn.src.validate import validate_seqs, \
+                                validate_1d_array, \
+                                validate_alphabet
+from mavenn.src.utils import mat_data_to_vec_data, \
+                             vec_data_to_mat_data, \
+                             x_to_stats, \
+                             p_lc_to_x, _x_to_mat
 
 
 class Model:
-
     """
-    Mavenn's model class that lets the user choose either
-    global epistasis regression or noise agnostic regression
+    Represents a MAVE-NN model.
 
-    If regerssion_type == 'MPA', than ge_* parameters are not used.
-
-
-    attributes
+    Parameters
     ----------
-
     regression_type: (str)
         variable that choose type of regression, valid options
         include 'GE', 'MPA'
@@ -83,10 +81,10 @@ class Model:
         definition of the MPA measurement process.
 
     theta_regularization: (float >= 0)
-        Regularization strength for G-P map parameters $\theta$.
+        Regularization strength for G-P map parameters theta.
 
     eta_regularization: (float >= 0)
-        Regularization strength for measurement process parameters $\eta$.
+        Regularization strength for measurement process parameters eta.
 
     ohe_batch_size: (int)
         Integer specifying how many sequences to one-hot encode at a time.
@@ -97,9 +95,9 @@ class Model:
     Y: (int)
         Integer specifying the number of bins.
         Only used for MPA regression; set to None otherwise.
-
     """
 
+    @handle_errors
     def __init__(self,
                  regression_type,
                  L,
@@ -115,7 +113,7 @@ class Model:
                  eta_regularization=0.1,
                  ohe_batch_size=50000,
                  Y=None):
-
+        """Model() class constructor."""
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
         self.arg_dict = locals()
@@ -225,13 +223,11 @@ class Model:
                  ct=None,
                  shuffle=True,
                  verbose=True):
-
         """
-        Method that feeds data into the mavenn model.
+        Set training data.
 
-        parameters
+        Parameters
         ----------
-
         x: (np.ndarray)
             1D array of N sequences, each of the same length.
 
@@ -256,11 +252,10 @@ class Model:
         verbose: (bool)
             Whether to provide printed feedback.
 
-        returns
+        Returns
         -------
-        None.
+        None
         """
-
         # Start timer
         set_data_start = time.time()
 
@@ -406,12 +401,10 @@ class Model:
             optimizer='Adam',
             optimizer_kwargs={},
             fit_kwargs={}):
-
         """
-        Infers parameters, from data, for both the G-P map and the
-        measurement process.
+        Infer values for model parameters.
 
-        parameters
+        Parameters
         ----------
         epochs: (int>0)
             Maximum number of epochs to complete during training.
@@ -452,13 +445,11 @@ class Model:
         fit_kwargs: (dict):
             Additional keyword arguments to pass to tf.keras.model.fit()
 
-        returns
+        Returns
         -------
         history: (tf.keras.callbacks.History object)
             Standard TensorFlow record of the optimization session.
-
         """
-
         # Start timer
         start_time = time.time()
 
@@ -639,24 +630,21 @@ class Model:
     @handle_errors
     def phi_to_yhat(self,
                     phi):
-
         """
-        Evaluate the GE nonlinearity at specified values of phi
-        (the latent phenotype).
+        Map latent phenotype (phi) values to observable (yhat) values.
 
-        parameters
+        Only used for GE regression models.
+
+        Parameters
         ----------
-
         phi: (array-like)
-            Latent phenotype values at which to evaluate the GE nonlinearity
+            Latent phenotype values at which to evaluate the GE nonlinearity.
 
-        returns
+        Returns
         -------
         y_hat: (array-like)
-            GE nonlinearity evaluated on phi values
-
+            Observable values.
         """
-
         # Shape phi for processing
         phi, phi_shape = _get_shape_and_return_1d_array(phi)
 
@@ -689,12 +677,10 @@ class Model:
                   x_wt=None,
                   unobserved_value=np.nan):
         """
-        Returns the parameters of the G-P map and a dictionary
-        of np.ndarrays.
+        Get parameters (theta) of the G-P map.
 
-        parameters
+        Parameters
         ----------
-
         gauge: (str)
             Must be one of the following strings:
             "none" -> No gauge fixing.
@@ -719,13 +705,11 @@ class Model:
             sequences were present in the training data. If None,
             these parameters will be left alone.
 
-        returns
+        Returns
         -------
-
         theta: (dict)
             Model parmaeters, provided as a dict of np.arrays.
         """
-
         # Useful alias
         _ = np.newaxis
 
@@ -866,32 +850,26 @@ class Model:
 
     @handle_errors
     def get_nn(self):
-        """
-        Returns the tf neural network used to represent the inferred model.
-        """
-
+        """Return the model's TensorFlow neural network backend."""
         return self.model.model
 
     @handle_errors
     def x_to_phi(self, x):
         """
+        Compute the latent phenotype (phi) from sequences (x).
 
-        Evaluates the latent phenotype phi on input sequences.
-
-        parameters
+        Parameters
         ----------
         x: (array-like of str)
             Sequence inputs representing DNA, RNA, or protein (whichever
             type of sequence the model was trained on). Input can must be
             an array of str, all the proper length.
 
-        returns
+        Returns
         -------
         phi: (array-like of float)
             Array of latent phenotype values.
-
         """
-
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
@@ -925,20 +903,18 @@ class Model:
     def x_to_yhat(self,
                   x):
         """
-        Make predictions for arbitrary input sequences. Note that this returns
-        the output of the measurement process, not the latent phenotype.
+        Map sequences (x) to observables (yhat).
 
-        parameters
+        Parameters
         ----------
         x: (array-like)
             Sequence data on which to make predictions.
 
-        returns
+        Returns
         -------
         predictions: (array-like)
             An array of predictions for GE regression.
         """
-
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
@@ -957,9 +933,9 @@ class Model:
                          N,
                          training_frac=.8):
         """
-        Simulate a dataset
+        Simulate a dataset based on the MAVE-NN model.
 
-        parameters
+        Parameters
         ----------
         N: (int > 0)
             The number of observations to simulate.
@@ -967,7 +943,7 @@ class Model:
         training_frac: (float in [0,1])
             The fraction of sequences to label for training.
 
-        returns
+        Returns
         -------
         data_df: (pd.DataFrame)
             Simulated dataset formatted as a dataframe. Columns include
@@ -977,7 +953,6 @@ class Model:
             sum of values in the 'ct' column, not the number of rows in the
             dataframe.
         """
-
         # Validate N
         check(isinstance(N, int),
               f'type(N)={type(N)}; must be int.')
@@ -1075,11 +1050,10 @@ class Model:
                      ct=None,
                      uncertainty=True):
         """
-        Estimate the likelihood information I_like[y;phi] on user-provided data.
+        Estimate the likelihood information (I_like) on user-provided data.
 
-        parameters
+        Parameters
         ----------
-
         x: (np.ndarray)
             1D array of N sequences, each of the same length.
 
@@ -1100,14 +1074,12 @@ class Model:
         uncertainty: (bool)
             Whether to estimate the uncertainty of the MI estimate.
 
-        returns
+        Returns
         -------
-
         (I, dI): (float, float)
             I = Mutual information estimate in bits.
             dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
         """
-
         if self.regression_type == 'GE':
 
             # Number of datapoints
@@ -1203,11 +1175,10 @@ class Model:
                      alpha_LNC=.5,
                      verbose=False):
         """
-        Estimate the predictive information I_pre[y;phi] on user-provided data.
+        Estimate the predictive information I_pred on user-provided data.
 
-        parameters
+        Parameters
         ----------
-
         x: (np.ndarray)
             1D array of N sequences, each of the same length.
 
@@ -1249,14 +1220,13 @@ class Model:
         verbose: (bool)
             Whether to print results and execution time.
 
-        returns
+        Returns
         -------
-
-        (I, dI): (float, float)
-            I = Mutual information estimate in bits.
-            dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
+        I: (float)
+            Mutual information estimate in bits.
+        dI: (float)
+            Uncertainty estimate in bits. Zero if uncertainty=False is set.
         """
-
         if self.regression_type == 'GE':
 
             return mi_continuous(self.x_to_phi(x),
@@ -1301,12 +1271,10 @@ class Model:
                    yhat,
                    q=[0.16, 0.84], paired=False):
         """
-        Returns quantile values of p(y|yhat) given yhat and the quantiles q.
-        Reserved only for GE models
+        Return quantile values of p(y|yhat). Used only for GE models.
 
-        parameters
+        Parameters
         ----------
-
         yhat: (array of floats)
             Values from which p(y|yhat) is computed.
 
@@ -1318,13 +1286,11 @@ class Model:
             If so, yhat and q must have the same number of elements.
             The shape of yhat will be used as output.
 
-        returns
+        Returns
         -------
-
         yq: (array of floats)
             Array of quantile values.
         """
-
         # Prepare inputs
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
         q, q_shape = _get_shape_and_return_1d_array(q)
@@ -1371,13 +1337,13 @@ class Model:
 
     def p_of_y_given_phi(self, y, phi, paired=False):
         """
-        Computes the p(y|phi) for both GE and MPA regression.
+        Compute p(y|phi).
 
-        y: (number or array-like of numbers)
+        y: (np.ndarray)
             Measurement values. Note that these are cast as integers for
             MPA regression.
 
-        phi: (float or array-like of floats)
+        phi: (np.ndarray)
             Latent phenotype values.
 
         paired: (bool)
@@ -1385,12 +1351,11 @@ class Model:
             If so, y and phi must have the same number of elements.
             The shape of y will be used as output.
 
-        returns
+        Returns
         -------
-            p: (float or array-like of floats)
+            p: (np.ndarray)
                 Probability of y given phi.
         """
-
         # Prepare inputs
         y, y_shape = _get_shape_and_return_1d_array(y)
         phi, phi_shape = _get_shape_and_return_1d_array(phi)
@@ -1463,8 +1428,10 @@ class Model:
 
     def p_of_y_given_yhat(self, y, yhat, paired=False):
         """
-        Computes the p(y|yhat) for GE only.
+        Compute p(y|yhat); for GE models only.
 
+        Parameters
+        ----------
         y: (float or array-like of floats)
             Measurement values.
 
@@ -1476,12 +1443,11 @@ class Model:
             If so, y and yhat must have the same number of elements.
             The shape of y will be used as output.
 
-        returns
+        Returns
         -------
             p: (float or array-like of floats)
                 Probability of y given yhat.
         """
-
         check(self.regression_type == 'GE',
               f'Only works for GE models.')
 
@@ -1528,9 +1494,8 @@ class Model:
         return p
 
     def p_of_y_given_x(self, y, x):
-
         """
-        Method that computes p_of_y_given_x.
+        Compute p(y|x).
 
         parameters
         ----------
@@ -1545,10 +1510,7 @@ class Model:
         p_of_y_given_x: (array-like of floats)
             Probability of y given sequence x. Shape of returned value will
             match shape of y_test.
-
         """
-
-
         if self.regression_type=='GE':
             phi = self.x_to_phi(x)
             yhat = self.phi_to_yhat(phi)
@@ -1573,12 +1535,13 @@ class Model:
     def save(self,
              filename,
              verbose=True):
-
         """
-        Method that will save the MAVE-NN model. Note: this does NOT
-        save training data
+        Save the trained MAVE-NN model.
 
-        parameters
+        Note: This does not save the training data, only training data
+        statistics.
+
+        Parameters
         ----------
         filename: (str)
             filename of the saved model.
@@ -1586,12 +1549,10 @@ class Model:
         verbose: (bool)
             Whether to provide user feedback.
 
-        returns
+        Returns
         -------
-        None
-
+        None.
         """
-
         # Create config_dict
         config_dict = {
             'model_kwargs': self.arg_dict,
@@ -1620,7 +1581,4 @@ class Model:
                   f'\t{filename_h5}')
 
 
-# Converts sequences to matrices
-def _x_to_mat(x, alphabet):
-    return (np.array(list(x))[:, np.newaxis] ==
-            alphabet[np.newaxis, :]).astype(float)
+

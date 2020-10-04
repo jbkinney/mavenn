@@ -17,11 +17,7 @@ from mavenn.src.validate import validate_alphabet, validate_seqs
 
 @handle_errors
 def _get_45deg_mesh(mat):
-    """
-    Helper function for heatmap_pairwise. Creates X and Y
-    grids, based on mat, rotated -45 degrees.
-    """
-
+    """Create X and Y grids rotated -45 degreees."""
     # Define rotation matrix
     theta = -np.pi / 4
     R = np.array([[np.cos(theta), -np.sin(theta)],

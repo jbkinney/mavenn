@@ -1,3 +1,4 @@
+"""mavedb.py: Utilities for working with data from MaveDB."""
 # Standard imports
 import numpy as np
 import pandas as pd
@@ -5,7 +6,6 @@ import re
 import tempfile
 import os
 import pdb
-
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
@@ -22,9 +22,9 @@ def mavedb_to_dataset(df,
                       seed=0,
                       dropna_y=True):
     """
-    Converts a variants dataset from MaveDB to a MAVE-NN compatible datset.
+    Convert variants dataset from MaveDB format to a MAVE-NN compatible dataset.
 
-    parameters
+    Parameters
     ----------
     df: (pd.DataFrame)
         A pandas dataframe containing by-variant data from MaveDB.
@@ -48,9 +48,16 @@ def mavedb_to_dataset(df,
 
     dropna_y: (bool)
         Remove rows that contain NA values in y_col.
-    """
 
-    ### Perform checks
+    Returns
+    -------
+    data_df: (pd.DataFrame)
+        MAVE-NN compatible dataset.
+
+    info_dict: (dict)
+        Metadata pertaining to dataset.
+    """
+    # TODO: Write checks
 
     # Check hgvs_col
     check(isinstance(hgvs_col, str),
@@ -138,7 +145,6 @@ def mavedb_to_dataset(df,
     cs = list(mut_df['c']) + list(mut_df['c_wt'])
     if max([len(c) for c in cs]) == 3:
 
-
         # Remove all unrecognized 'c'
         ix = mut_df['c'].isin(abreviation_dict.keys())
         ix_wt = mut_df['c_wt'].isin(abreviation_dict.keys())
@@ -215,6 +221,8 @@ def mutations_to_dataset(wt_seq,
                          y_id_col=None,
                          y_keep_cols=None):
     """
+    Generate dataset from a wildetype sequence and list of mutations.
+
     Compute an array of sequences (x) from a wild-type sequence (wt_seq) and a
     list of mutations (mut_df). mut_df is a dataframe that should have three
     columns:
@@ -227,7 +235,7 @@ def mutations_to_dataset(wt_seq,
     to create a MAVE-NN compatible dataset data_df, the indices of which are
     the variant ids.
 
-    parameters
+    Parameters
     ----------
     wt_seq: (str)
         The wild-type sequence
@@ -258,15 +266,13 @@ def mutations_to_dataset(wt_seq,
         Columns in y_df to include in output. If None, all columns in y_df will
         be kept.
 
-    returns
+    Returns
     -------
     data_df: (pd.DataFrame)
         Dataframe that list the full sequences of all variants (in column 'x'),
         as well as correpsonding measurements from y_df. Variant id numbers
         are used as index values.
-
     """
-
     # Check wt_seq is a string
     check(isinstance(wt_seq, str),
           f"type(wt_seq)={type(wt_seq)}; wt_seq must be of type str.")
@@ -377,4 +383,3 @@ def mutations_to_dataset(wt_seq,
     data_df.index.name = 'id'
 
     return data_df
-

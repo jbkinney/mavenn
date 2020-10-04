@@ -1,3 +1,4 @@
+"""gpmap.py: Defines layers representing G-P maps."""
 # Standard imports
 import numpy as np
 
@@ -12,7 +13,9 @@ from mavenn.src.error_handling import check, handle_errors
 
 class GPMapLayer(Layer):
     """
-    Represents a G-P map. Specific functional forms for G-P maps should be
+    Represents a general genotype-phenotype map.
+
+    Specific functional forms for G-P maps should be
     represented by derived classes of this layer.
     """
 
@@ -22,7 +25,7 @@ class GPMapLayer(Layer):
                  C,
                  theta_regularization,
                  mask_type=None):
-
+        """Construct layer instance."""
         # Set sequence length
         self.L = L
 
@@ -40,6 +43,7 @@ class GPMapLayer(Layer):
 
     @handle_errors
     def get_config(self):
+        """Return configuration dictionary."""
         base_config = super(Layer, self).get_config()
         return {'L': self.L,
                 'C': self.C,
@@ -48,34 +52,37 @@ class GPMapLayer(Layer):
 
     @handle_errors
     def build(self, input_shape):
+        """Build layer."""
         super().build(input_shape)
 
     ### The following methods must be fully overridden
 
     def call(self, inputs):
+        """Process layer input and return output."""
         assert False
         return np.nan
 
     def set_params(self, **kwargs):
+        """Set values of layer parameters."""
         assert False
 
     def get_params(self):
+        """Get values of layer parameters."""
         assert False
         return {}
 
 
 class AdditiveGPMapLayer(GPMapLayer):
-    """
-    Represents and additive G-P map
-    """
+    """Represents an additive G-P map."""
 
     @handle_errors
     def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
         super().__init__(*args, **kwargs)
 
     @handle_errors
     def build(self, input_shape):
-
+        """Build layer."""
         # Define theta_0
         self.theta_0 = self.add_weight(name='theta_0',
                                        shape=(1,),
@@ -93,7 +100,7 @@ class AdditiveGPMapLayer(GPMapLayer):
         super().build(input_shape)
 
     def call(self, x_lc):
-
+        """Process layer input and return output."""
         # Shape input
         x_lc = tf.reshape(x_lc, [-1, self.L, self.C])
 
@@ -110,20 +117,19 @@ class AdditiveGPMapLayer(GPMapLayer):
     @handle_errors
     def set_params(self, theta_0=None, theta_lc=None):
         """
-        Sets layer parameters
+        Set values of layer parameters.
 
-        parameters
+        Parameters
         ----------
         theta_0: (float)
 
         theta_lc: (np.ndarray)
             Shape (L,C)
 
-        returns
+        Returns
         -------
         None
         """
-
         # Check theta_0
         if theta_0 is not None:
             check(isinstance(theta_0, float),
@@ -144,21 +150,19 @@ class AdditiveGPMapLayer(GPMapLayer):
     @handle_errors
     def get_params(self):
         """
-        Returns layer parameters as dictionary
+        Get values of layer parameters.
 
-        parameters
+        Parameters
         ----------
         None.
 
-        returns
+        Returns
         -------
         param_dict: (dict)
             Dictionary containing model parameters. Model parameters are
             returned as matrices, NOT as individual named parameters, and are
             NOT gauge-fixed.
-
         """
-
         # Get list of weights
         param_list = self.get_weights()
 
@@ -171,12 +175,11 @@ class AdditiveGPMapLayer(GPMapLayer):
 
 
 class PairwiseGPMapLayer(GPMapLayer):
-    """
-    Represents a pairwise G-P map
-    """
+    """Represents a pairwise G-P map."""
 
     @handle_errors
     def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
         super().__init__(*args, **kwargs)
 
         # Set mask type
@@ -199,13 +202,14 @@ class PairwiseGPMapLayer(GPMapLayer):
 
     @handle_errors
     def get_config(self):
+        """Return configuration dictionary."""
         base_config = super().get_config()
         return {'mask_type': self.mask_type,
                 **base_config}
 
     @handle_errors
     def build(self, input_shape):
-
+        """Build layer."""
         # Define theta_0
         self.theta_0 = self.add_weight(name='theta_0',
                                        shape=(1,),
@@ -233,7 +237,7 @@ class PairwiseGPMapLayer(GPMapLayer):
         super().build(input_shape)
 
     def call(self, x_lc):
-
+        """Process layer input and return output."""
         # Compute phi
         phi = self.theta_0
         phi = phi + tf.reshape(K.sum(self.theta_lc *
@@ -260,9 +264,9 @@ class PairwiseGPMapLayer(GPMapLayer):
     @handle_errors
     def set_params(self, theta_0=None, theta_lc=None, theta_lclc=None):
         """
-        Sets layer parameters
+        Set values of layer parameters.
 
-        parameters
+        Parameters
         ----------
         theta_0: (float)
 
@@ -272,11 +276,10 @@ class PairwiseGPMapLayer(GPMapLayer):
         theta_lclc: (np.ndarray)
             Shape (L,C,L,C)
 
-        returns
+        Returns
         -------
         None
         """
-
         # Check theta_0
         if theta_0 is not None:
             check(isinstance(theta_0, float),
@@ -306,21 +309,19 @@ class PairwiseGPMapLayer(GPMapLayer):
     @handle_errors
     def get_params(self):
         """
-        Returns layer parameters as dictionary
+        Get values of layer parameters.
 
-        parameters
+        Parameters
         ----------
         None.
 
-        returns
+        Returns
         -------
         param_dict: (dict)
             Dictionary containing model parameters. Model parameters are
             returned as matrices, NOT as individual named parameters, and are
             NOT gauge-fixed.
-
         """
-
         # Get list of weights
         param_list = self.get_weights()
 
@@ -334,4 +335,3 @@ class PairwiseGPMapLayer(GPMapLayer):
             masked_theta_lclc.reshape([self.L, self.C, self.L, self.C])
 
         return param_dict
-

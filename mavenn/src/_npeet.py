@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+"""NPEET package, adapted for use in MAVE-NN."""
 # Written by Greg Ver Steeg
 # See readme.pdf for documentation
 # Or go to http://www.isi.edu/~gregv/npeet.html
@@ -16,9 +16,12 @@ from sklearn.neighbors import BallTree, KDTree
 
 
 def entropy(x, k=3, base=2):
-    """ The classic K-L k-nearest neighbor continuous entropy estimator
-        x should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
-        if x is a one-dimensional scalar and we have four samples
+    """
+    Estimate entropy from continuous data.
+
+    The classic K-L k-nearest neighbor continuous entropy estimator
+    x should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
+    if x is a one-dimensional scalar and we have four samples
     """
     assert k <= len(x) - 1, "Set k smaller than num. samples - 1"
     x = np.asarray(x)
@@ -31,8 +34,11 @@ def entropy(x, k=3, base=2):
 
 
 def centropy(x, y, k=3, base=2):
-    """ The classic K-L k-nearest neighbor continuous entropy estimator for the
-        entropy of X conditioned on Y.
+    """
+    Estimate conditional entropy from continuous data.
+
+    The classic K-L k-nearest neighbor continuous entropy estimator for the
+    entropy of X conditioned on Y.
     """
     xy = np.c_[x, y]
     entropy_union_xy = entropy(xy, k=k, base=base)
@@ -41,12 +47,14 @@ def centropy(x, y, k=3, base=2):
 
 
 def tc(xs, k=3, base=2):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     entropy_features = [entropy(col, k=k, base=base) for col in xs_columns]
     return np.sum(entropy_features) - entropy(xs, k, base)
 
 
 def ctc(xs, y, k=3, base=2):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     centropy_features = [centropy(col, y, k=k, base=base)
                          for col in xs_columns]
@@ -54,15 +62,19 @@ def ctc(xs, y, k=3, base=2):
 
 
 def corex(xs, ys, k=3, base=2):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     cmi_features = [mi(col, ys, k=k, base=base) for col in xs_columns]
     return np.sum(cmi_features) - mi(xs, ys, k=k, base=base)
 
 
 def mi(x, y, z=None, k=3, base=2, alpha=0):
-    """ Mutual information of x and y (conditioned on z if z is not None)
-        x, y should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
-        if x is a one-dimensional scalar and we have four samples
+    """
+    Estimate mutual information between two continuous variables.
+
+    Mutual information of x and y (conditioned on z if z is not None)
+    x, y should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
+    if x is a one-dimensional scalar and we have four samples.
     """
     assert len(x) == len(y), "Arrays should have same length"
     assert k <= len(x) - 1, "Set k smaller than num. samples - 1"
@@ -93,16 +105,22 @@ def mi(x, y, z=None, k=3, base=2, alpha=0):
 
 
 def cmi(x, y, z, k=3, base=2):
-    """ Mutual information of x and y, conditioned on z
-        Legacy function. Use mi(x, y, z) directly.
+    """
+    Estimate conditional mutual information.
+
+    Mutual information of x and y, conditioned on z
+    Legacy function. Use mi(x, y, z) directly.
     """
     return mi(x, y, z=z, k=k, base=base)
 
 
 def kldiv(x, xp, k=3, base=2):
-    """ KL Divergence between p and q for x~p(x), xp~q(x)
-        x, xp should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
-        if x is a one-dimensional scalar and we have four samples
+    """
+    Estimate KL divergence.
+
+    KL Divergence between p and q for x~p(x), xp~q(x)
+    x, xp should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
+    if x is a one-dimensional scalar and we have four samples
     """
     assert k < min(len(x), len(xp)), "Set k smaller than num. samples - 1"
     assert len(x[0]) == len(xp[0]), "Two distributions must have same dim."
@@ -120,6 +138,7 @@ def kldiv(x, xp, k=3, base=2):
 
 
 def lnc_correction(tree, points, k, alpha):
+    """Compute LNC correction."""
     e = 0
     n_sample = points.shape[0]
     for point in points:
@@ -144,8 +163,10 @@ def lnc_correction(tree, points, k, alpha):
 
 # DISCRETE ESTIMATORS
 def entropyd(sx, base=2):
-    """ Discrete entropy estimator
-        sx is a list of samples
+    """
+    Compute discrete entropy.
+
+    Discrete entropy estimator sx is a list of samples
     """
     unique, count = np.unique(sx, return_counts=True, axis=0)
     # Convert to float as otherwise integer division results in all 0 for proba.
@@ -156,16 +177,22 @@ def entropyd(sx, base=2):
 
 
 def midd(x, y, base=2):
-    """ Discrete mutual information estimator
-        Given a list of samples which can be any hashable object
+    """
+    Compute mutual information between two discrete variables.
+
+    Discrete mutual information estimator. Given a list of samples which
+    can be any hashable object
     """
     assert len(x) == len(y), "Arrays should have same length"
     return entropyd(x, base) - centropyd(x, y, base)
 
 
 def cmidd(x, y, z, base=2):
-    """ Discrete mutual information estimator
-        Given a list of samples which can be any hashable object
+    """
+    Compute conditional mutual information between two discrete variables.
+
+    Discrete mutual information estimator.
+    Given a list of samples which can be any hashable object.
     """
     assert len(x) == len(y) == len(z), "Arrays should have same length"
     xz = np.c_[x, z]
@@ -175,26 +202,32 @@ def cmidd(x, y, z, base=2):
 
 
 def centropyd(x, y, base=2):
-    """ The classic K-L k-nearest neighbor continuous entropy estimator for the
-        entropy of X conditioned on Y.
+    """
+    Estimate conditional entropy.
+
+    The classic K-L k-nearest neighbor continuous entropy estimator for the
+    entropy of X conditioned on Y.
     """
     xy = np.c_[x, y]
     return entropyd(xy, base) - entropyd(y, base)
 
 
 def tcd(xs, base=2):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     entropy_features = [entropyd(col, base=base) for col in xs_columns]
     return np.sum(entropy_features) - entropyd(xs, base)
 
 
 def ctcd(xs, y, base=2):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     centropy_features = [centropyd(col, y, base=base) for col in xs_columns]
     return np.sum(centropy_features) - centropyd(xs, y, base)
 
 
 def corexd(xs, ys, base=2):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     cmi_features = [midd(col, ys, base=base) for col in xs_columns]
     return np.sum(cmi_features) - midd(xs, ys, base)
@@ -202,8 +235,7 @@ def corexd(xs, ys, base=2):
 
 # MIXED ESTIMATORS
 def micd(x, y, k=3, base=2, warning=True):
-    """ If x is continuous and y is discrete, compute mutual information
-    """
+    """Estimate mutual information between a continous and discrete variable."""
     assert len(x) == len(y), "Arrays should have same length"
     entropy_x = entropy(x, k, base)
 
@@ -224,18 +256,22 @@ def micd(x, y, k=3, base=2, warning=True):
 
 
 def midc(x, y, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     return micd(y, x, k, base, warning)
 
 
 def centropycd(x, y, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     return entropy(x, base) - micd(x, y, k, base, warning)
 
 
 def centropydc(x, y, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     return centropycd(y, x, k=k, base=base, warning=warning)
 
 
 def ctcdc(xs, y, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     xs_columns = np.expand_dims(xs, axis=0).T
     centropy_features = [centropydc(
         col, y, k=k, base=base, warning=warning) for col in xs_columns]
@@ -243,33 +279,39 @@ def ctcdc(xs, y, k=3, base=2, warning=True):
 
 
 def ctccd(xs, y, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     return ctcdc(y, xs, k=k, base=base, warning=warning)
 
 
 def corexcd(xs, ys, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     return corexdc(ys, xs, k=k, base=base, warning=warning)
 
 
 def corexdc(xs, ys, k=3, base=2, warning=True):
+    """Assist NPEET computations."""
     return tcd(xs, base) - ctcdc(xs, ys, k, base, warning)
 
 
 # UTILITY FUNCTIONS
 
 def add_noise(x, intens=1e-5):
-    # small noise to break degeneracy, see doc.
+    """Add small noise to break degeneracy. See doc."""
     return x + intens * np.random.random_sample(x.shape)
 
 
 def query_neighbors(tree, x, k):
+    """Assist NPEET computations."""
     return tree.query(x, k=k + 1)[0][:, k]
 
 
 def count_neighbors(tree, x, r):
+    """Assist NPEET computations."""
     return tree.query_radius(x, r, count_only=True)
 
 
 def avgdigamma(points, dvec):
+    """Assist NPEET computations."""
     # This part finds number of neighbors in some radius in the marginal space
     # returns expectation value of <psi(nx)>
     tree = build_tree(points)
@@ -279,6 +321,7 @@ def avgdigamma(points, dvec):
 
 
 def build_tree(points):
+    """Assist NPEET computations."""
     if points.shape[1] >= 20:
         return BallTree(points, metric='chebyshev')
     return KDTree(points, metric='chebyshev')
@@ -287,11 +330,13 @@ def build_tree(points):
 
 
 def shuffle_test(measure, x, y, z=False, ns=200, ci=0.95, **kwargs):
-    """ Shuffle test
-        Repeatedly shuffle the x-values and then estimate measure(x, y, [z]).
-        Returns the mean and conf. interval ('ci=0.95' default) over 'ns' runs.
-        'measure' could me mi, cmi, e.g. Keyword arguments can be passed.
-        Mutual information and CMI should have a mean near zero.
+    """
+    Perform shuffle test.
+
+    Repeatedly shuffle the x-values and then estimate measure(x, y, [z]).
+    Returns the mean and conf. interval ('ci=0.95' default) over 'ns' runs.
+    'measure' could me mi, cmi, e.g. Keyword arguments can be passed.
+    Mutual information and CMI should have a mean near zero.
     """
     x_clone = np.copy(x)  # A copy that we can shuffle
     outputs = []
@@ -303,11 +348,3 @@ def shuffle_test(measure, x, y, z=False, ns=200, ci=0.95, **kwargs):
             outputs.append(measure(x_clone, y, **kwargs))
     outputs.sort()
     return np.mean(outputs), (outputs[int((1. - ci) / 2 * ns)], outputs[int((1. + ci) / 2 * ns)])
-
-
-if __name__ == "__main__":
-    print("MI between two independent continuous random variables X and Y:")
-    np.random.seed(0)
-    x = np.random.randn(1000, 10)
-    y = np.random.randn(1000, 3)
-    print(mi(x, y, base=2, alpha=0))

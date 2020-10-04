@@ -1,3 +1,5 @@
+"""reshape.py: Utilities for reshaping input into np.arrays."""
+
 # Standard imports
 import numpy as np
 from collections.abc import Iterable
@@ -5,9 +7,9 @@ from collections.abc import Iterable
 # Imports from MAVE-NN
 from mavenn.src.error_handling import handle_errors, check
 
-
 @handle_errors
 def _broadcast_arrays(x, y):
+    """Broadcast arrays."""
     # Cast inputs as numpy arrays
     # with nonzero dimension
     x = np.atleast_1d(x)
@@ -31,6 +33,7 @@ def _broadcast_arrays(x, y):
 
 @handle_errors
 def _get_shape_and_return_1d_array(x):
+    """Get shape and return 1D array."""
     if not isinstance(x, Iterable):
         shape = []
     else:
@@ -42,6 +45,7 @@ def _get_shape_and_return_1d_array(x):
 
 @handle_errors
 def _shape_for_output(x, shape=None):
+    """Shape array for output."""
     if shape is not None:
         x = np.array(x)
         x = np.reshape(x, shape)

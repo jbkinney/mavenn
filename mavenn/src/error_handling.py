@@ -1,14 +1,13 @@
-from __future__ import division
+"""error_handling.py: Utilities for handling expected errors."""
 from functools import wraps
 
 
 class MavennError(Exception):
     """
-    Class used by mavenn to handle errors.
+    Represents an anticipated error in MAVE-NN execution.
 
-    parameters
+    Parameters
     ----------
-
     message: (str)
         The message passed to check(). This only gets passed to the
         MavennError constructor when the condition passed to check() is
@@ -16,30 +15,29 @@ class MavennError(Exception):
     """
 
     def __init__(self, message):
+        """Construct class instance."""
         self.message = message
 
     def __str__(self):
+        """Return string representation of error."""
         return self.message
 
 
 class DebugResult:
-    """
-    Container class for debugging results.
-    """
+    """Container class used for testing."""
+
     def __init__(self, result, mistake):
+        """Construct class instance."""
         self.result = result
         self.mistake = mistake
 
 
 def check(condition, message):
-
     """
-    Checks a condition; raises a LogomakerError with message if condition
-    evaluates to False
+    Check whether a condition is satisfied; if not, throw MavennError.
 
-    parameters
+    Parameters
     ----------
-
     condition: (bool)
         A condition that, if false, halts mavenn execution and raises a
         clean error to user
@@ -47,18 +45,17 @@ def check(condition, message):
     message: (str)
         The string to show user if condition is False.
 
-    returns
+    Returns
     -------
     None
     """
-
     if not condition:
         raise MavennError(message)
 
 
 def handle_errors(func):
     """
-    Decorator function to handle mavenn errors.
+    Handle anticipated errors in a function.
 
     This decorator allows the user to pass the keyword argument
     'should_fail' to any wrapped function.
@@ -79,7 +76,6 @@ def handle_errors(func):
     with mistake flagging whether or not the function failed or succeeded
     as expected.
     """
-
     @wraps(func)  # So wrapped_func has the same docstring, etc., as func
     def wrapped_func(*args, **kwargs):
 

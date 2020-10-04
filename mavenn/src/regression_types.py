@@ -1,3 +1,5 @@
+"""regression_types.py: Specialized classes for GE and MPA regression."""
+
 # Standard imports
 import numpy as np
 import numbers
@@ -21,13 +23,11 @@ from mavenn.src.layers.measurement_process_layers \
 
 @handle_errors
 class GlobalEpistasisModel:
-
     """
-    Class that implements global epistasis regression.
+    Represents a global epistatsis model.
 
-    attributes
+    Parameters
     ----------
-
     parent_model: (mavenn.Model)
         Parent model.
 
@@ -64,10 +64,10 @@ class GlobalEpistasisModel:
         if its too large. Currently for additive models only.
 
     theta_regularization: (float >= 0)
-        Regularization strength for G-P map parameters $\theta$.
+        Regularization strength for G-P map parameters theta.
 
     eta_regularization: (float >= 0)
-        Regularization strength for measurement process parameters $\eta$.
+        Regularization strength for measurement process parameters eta.
     """
 
     @handle_errors
@@ -82,7 +82,7 @@ class GlobalEpistasisModel:
                  ge_heteroskedasticity_order,
                  theta_regularization,
                  eta_regularization):
-
+        """Construct class instance."""
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
         self.gpmap_type = gpmap_type
@@ -161,12 +161,13 @@ class GlobalEpistasisModel:
     def define_model(self,
                      ge_noise_model_type,
                      ge_nonlinearity_hidden_nodes=50):
-
         """
+        Establish model architecture.
+
         Defines the architecture of the global epistasis regression model.
         using the tensorflow.keras functional API.
 
-        parameters
+        Parameters
         ----------
         ge_nonlinearity_hidden_nodes: (int)
             Number of hidden nodes (i.e. sigmoidal contributions) to use in the
@@ -176,15 +177,11 @@ class GlobalEpistasisModel:
             Specifies the type of noise model the user wants to infer.
             The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
 
-        returns
+        Returns
         -------
-
         model: (tf.model)
-            A tensorflow model that can be compiled and subsequently fit to data.
-
-
+            TensorFlow model that can be compiled and subsequently fit to data.
         """
-
         # check that p_of_all_y_given_phi valid
         check(ge_noise_model_type in {'Gaussian', 'Cauchy', 'SkewedT'},
               f'p_of_all_y_given_phi = {ge_noise_model_type};' 
@@ -215,14 +212,17 @@ class GlobalEpistasisModel:
 
         # Create G-P map layer
         if self.gpmap_type == 'additive':
-            self.x_to_phi_layer = AdditiveGPMapLayer(L=self.L,
-                                                     C=self.C,
-                                                     theta_regularization=self.theta_regularization)
+            self.x_to_phi_layer = \
+                AdditiveGPMapLayer(
+                    L=self.L,
+                    C=self.C,
+                    theta_regularization=self.theta_regularization)
         elif self.gpmap_type in ['pairwise', 'neighbor']:
-            self.x_to_phi_layer = PairwiseGPMapLayer(L=self.L,
-                                                     C=self.C,
-                                                     theta_regularization=self.theta_regularization,
-                                                     mask_type=self.gpmap_type)
+            self.x_to_phi_layer = PairwiseGPMapLayer(
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization,
+                mask_type=self.gpmap_type)
         else:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)
@@ -279,12 +279,10 @@ class GlobalEpistasisModel:
 
 @handle_errors
 class MeasurementProcessAgnosticModel:
-
     """
-    Class that implements Measurement process agnostic regression.
+    Represents a measurement process agnostic model.
 
-
-    attributes
+    Parameters
     ----------
     sequence_length: (int)
         Integer specifying the length of a single training sequence.
@@ -307,10 +305,10 @@ class MeasurementProcessAgnosticModel:
         if its too large. Currently for additive models only.
 
     theta_regularization: (float >= 0)
-        Regularization strength for G-P map parameters $\theta$.
+        Regularization strength for G-P map parameters theta.
 
     eta_regularization: (float >= 0)
-        Regularization strength for measurement process parameters $\eta$.
+        Regularization strength for measurement process parameters eta.
     """
 
     @handle_errors
@@ -323,7 +321,7 @@ class MeasurementProcessAgnosticModel:
                  theta_regularization,
                  eta_regularization,
                  ohe_batch_size):
-
+        """Construct class instance."""
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
         self.gpmap_type = gpmap_type
@@ -385,28 +383,23 @@ class MeasurementProcessAgnosticModel:
     def define_model(self,
                      na_hidden_nodes=10):
         """
-        Defines the architecture of the noise agnostic regression model.
-        using the tensorflow.keras functional API. If custom_architecture is
+        Define the neural network architecture of the MPA model.
+
+        Uses the tensorflow.keras functional API. If custom_architecture is
         not None, this is used instead as the model architecture.
 
-        parameters
+        Parameters
         ----------
         na_hidden_nodes: (int)
             Number of nodes to use in the hidden layer of the measurement
             network of the GE model architecture.
 
-        returns
+        Returns
         -------
-
         model: (tf.model)
             A tensorflow model that can be compiled and subsequently
             fit to data.
-
-
         """
-
-        # useful tuple to check if some value is a number
-
         check(isinstance(na_hidden_nodes, numbers.Integral),
               'na_hidden_nodes must be a number.')
 
@@ -461,4 +454,3 @@ class MeasurementProcessAgnosticModel:
         self.model = model
         self.na_hidden_nodes = na_hidden_nodes
         return model
-
