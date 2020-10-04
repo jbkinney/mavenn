@@ -1,3 +1,4 @@
+"""measurement_process_layers.py: Classes representing such layers."""
 import numpy as np
 import pandas as pd
 import pdb
@@ -34,6 +35,8 @@ Square = K.square
 
 def handle_arrays(func):
     """
+    Allow functions that take tf.Tensor objects to take np.ndarrays.
+
     Decorator function that allows functions that take and return
     tensors to operate on numpy arrays. If use_arrays=True is set
     as a keyword argument, every input of one of the input_types
@@ -41,7 +44,6 @@ def handle_arrays(func):
     all outputs from func that are tf.Tensor objects are converted to
     np.ndarrays.
     """
-
     # Input types to convert to tf.Tensor objects upon input
     input_types = (np.ndarray, list, pd.Series)
 
@@ -95,13 +97,15 @@ def handle_arrays(func):
 
 
 class MPAMeasurementProcessLayer(Layer):
+    """Represents an MPA measurement process."""
+
     def __init__(self,
                  info_for_layers_dict,
                  Y,
                  K,
                  eta,
                  **kwargs):
-
+        """Construct layer."""
         # Set attributes
         self.Y = Y
         self.K = K
@@ -114,12 +118,14 @@ class MPAMeasurementProcessLayer(Layer):
         super().__init__(**kwargs)
 
     def get_config(self):
+        """Get configuration dictionary."""
         base_config = super().get_config()
         return {**base_config,
                 "info_for_layers_dict": self.info_for_layers_dict,
                 "number_bins": self.number_bins}
 
     def build(self, input_shape):
+        """Build layer."""
         self.a_y = self.add_weight(name='a_y',
                                    dtype=tf.float32,
                                    shape=(self.Y,),
@@ -153,20 +159,21 @@ class MPAMeasurementProcessLayer(Layer):
 
     def call(self, inputs):
         """
-        parameters
-        ----------
+        Transform layer inputs to outputs.
 
+        Parameters
+        ----------
         inputs: (tf.Tensor)
             A (B,Y+1) tensor containing counts, where B is batch
             size and Y is the number of bins.
             inputs[:,1] is phi
             inputs[:,1:Y+1] is c_my
 
-        returns
+        Returns
         -------
+        negative_log_likelihood: (np.array)
             A (B,) tensor containing negative log likelihood contributions
         """
-
         # Extract and shape inputs
         phi = inputs[:,0]
         ct_my = inputs[:,1:]
@@ -189,7 +196,7 @@ class MPAMeasurementProcessLayer(Layer):
 
     @handle_arrays
     def p_of_all_y_given_phi(self, phi):
-
+        """Compute p(y|phi) for all values of y."""
         # Shape phi
         phi = tf.reshape(phi, [-1, 1, 1])
 
@@ -210,16 +217,14 @@ class MPAMeasurementProcessLayer(Layer):
         return p_my
 
 class AffineLayer(Layer):
-    """
-    Represents an affine map from phi to yhat.
-    """
+    """Represents an affine map from phi to yhat."""
 
     @handle_errors
     def __init__(self,
                  eta,
                  monotonic,
                  **kwargs):
-
+        """Construct layer."""
         # Whether to make monotonic function
         self.monotonic = monotonic
 
@@ -235,6 +240,7 @@ class AffineLayer(Layer):
         super().__init__(**kwargs)
 
     def build(self, input_shape):
+        """Build layer."""
         self.a = self.add_weight(name='a',
                                  shape=(1,),
                                  initializer=Constant(0.),
@@ -250,19 +256,19 @@ class AffineLayer(Layer):
 
     # Just an alias for phi_to_yhat, for tensors only
     def call(self, phi):
+        """Transform layer inputs to outputs."""
         return self.phi_to_yhat(phi)
 
     # yhat as function of phi
     @handle_arrays
     def phi_to_yhat(self, phi):
+        """Compute yhat from phi."""
         yhat = self.a + self.b * phi
         return yhat
 
 
 class GlobalEpistasisLayer(Layer):
-    """
-    Represents a global epistasis layer.
-    """
+    """Represents a global epistasis layer."""
 
     @handle_errors
     def __init__(self,
@@ -270,7 +276,7 @@ class GlobalEpistasisLayer(Layer):
                  eta,
                  monotonic,
                  **kwargs):
-
+        """Construct layer."""
         # Whether to make monotonic function
         self.monotonic = monotonic
 
@@ -289,7 +295,7 @@ class GlobalEpistasisLayer(Layer):
         super().__init__(**kwargs)
 
     def build(self, input_shape):
-
+        """Build layer."""
         self.a_0 = self.add_weight(name='a_0',
                                    shape=(1,),
                                    initializer=Constant(0.),
@@ -321,11 +327,13 @@ class GlobalEpistasisLayer(Layer):
 
     # Just an alias for phi_to_yhat, for tensors only
     def call(self, phi):
+        """Transform layer inputs to outputs."""
         return self.phi_to_yhat(phi)
 
     # yhat as function of phi
     @handle_arrays
     def phi_to_yhat(self, phi):
+        """Compute yhat from phi."""
         b_k = tf.reshape(self.b_k, [1, -1])
         c_k = tf.reshape(self.c_k, [1, -1])
         d_k = tf.reshape(self.d_k, [1, -1])
@@ -336,17 +344,14 @@ class GlobalEpistasisLayer(Layer):
 
 
 class NoiseModelLayer(Layer):
-    """
-    Custom Keras Layer representing a GE noise model.
-    Specific noise model layers inherit from this class.
-    """
+    """Generic class representing the noise model of a GE model."""
 
     def __init__(self,
                  info_for_layers_dict,
                  polynomial_order=2,
                  eta_regularization=0.01,
                  **kwargs):
-
+        """Construct class instance."""
         # order of polynomial which defines log_sigma's dependence on y_hat
         self.K = polynomial_order
         self.eta = eta_regularization
@@ -355,6 +360,7 @@ class NoiseModelLayer(Layer):
         super().__init__(**kwargs)
 
     def get_config(self):
+        """Return configuration dictionary."""
         base_config = super().get_config()
         return {**base_config,
                 'info_for_layers_dict': self.info_for_layers_dict,
@@ -362,22 +368,23 @@ class NoiseModelLayer(Layer):
                 'eta_regularization': self.eta}
 
     def build(self, input_shape):
+        """Build layer."""
         super().build(input_shape)
 
     def call(self, inputs):
         """
-        parameters
-        ----------
+        Transform layer inputs to outputs.
 
+        Parameters
+        ----------
         inputs: (tf.Tensor)
             A (B,2) tensor containing both yhat and ytrue, where B is batch
             size.
 
-        returns
+        Returns
         -------
             A (B,) tensor containing negative log likelihood contributions
         """
-
         # this is yhat
         yhat = inputs[:, 0:1]
 
@@ -400,10 +407,7 @@ class NoiseModelLayer(Layer):
     def p_of_y_given_yhat(self,
                           y,
                           yhat):
-        """
-        Compute p(y|yhat).
-        """
-
+        """Compute p(y|yhat)."""
         # Compute negative log likeliihood
         nll_arr = self.compute_nlls(yhat=yhat,
                                     ytrue=y)
@@ -415,6 +419,7 @@ class NoiseModelLayer(Layer):
 
     @handle_arrays
     def sample_y_given_yhat(self, yhat):
+        """Sample y values from p(y|yhat)."""
         # Draw random quantiles
         q = tf.constant(np.random.rand(*yhat.shape), dtype=tf.float32)
 
@@ -424,30 +429,35 @@ class NoiseModelLayer(Layer):
 
     ### The following functions must be overridden
     def compute_params(self, yhat, ytrue):
+        """Compute the parameters governing p(y|yhat)."""
         assert False, 'Function must be overridden'
 
     def compute_nlls(self, yhat, ytrue):
+        """Compute negative log likelihoods."""
         assert False, 'Function must be overridden'
 
     def yhat_to_yq(self, yhat, q):
+        """Compute quantiles of p(y|yhat)."""
         assert False, 'Function must be overridden'
 
     def yhat_to_ymean(self, yhat):
+        """Compute the mean of p(y|yhat)."""
         assert False, 'Function must be overridden'
 
     def yhat_to_ystd(self, yhat):
+        """Compute the standard deviation of p(y|yhat)."""
         assert False, 'Function must be overridden'
 
 
 class GaussianNoiseModelLayer(NoiseModelLayer):
-    """
-    Custom kears Layer representing a
-    Gaussian noise model for GE regression.
-    """
+    """Represents a Gaussian noise model for GE regression."""
+
     def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
         super().__init__(*args, **kwargs)
 
     def build(self, input_shape):
+        """Build layer."""
         self.a = self.add_weight(name='a',
                                  shape=(self.K + 1, 1),
                                  initializer="TruncatedNormal",
@@ -456,11 +466,13 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         super().build(input_shape)
 
     def get_config(self):
+        """Get configuration dictionary."""
         base_config = super().get_config()
         return {**base_config, "a": self.a}
 
     @handle_arrays
     def compute_params(self, yhat):
+        """Compute layer parameters governing p(y|yhat)."""
         # Have to treat 0'th order term separately because of NaN bug.
         logsigma = self.a[0]
 
@@ -472,6 +484,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def compute_nlls(self, yhat, ytrue, use_arrays=False):
+        """Compute negative log likelihood contributions for each datum."""
         # Compute logsigma and sigma
         logsigma = self.compute_params(yhat)
         sigma = K.exp(logsigma)
@@ -486,29 +499,32 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def yhat_to_yq(self, yhat, q):
+        """Compute quantiles for p(y|yhat)."""
         sigma = K.exp(self.compute_params(yhat))
         yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
         return yq
 
     @handle_arrays
     def yhat_to_ymean(self, yhat):
+        """Compute mean of p(y|yhat)."""
         return yhat
 
     @handle_arrays
     def yhat_to_ystd(self, yhat):
+        """Compute standard deviation of p(y|yhat)."""
         sigma = K.exp(self.compute_params(yhat))
         return sigma
 
 
 class CauchyNoiseModelLayer(NoiseModelLayer):
-    """
-    Custom keras Layer representing a
-    Cauchy noise model for GE regression.
-    """
+    """Represents a Cauchy noise model for GE regression."""
+
     def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
         super().__init__(*args, **kwargs)
 
     def build(self, input_shape):
+        """Build layer."""
         self.a = self.add_weight(name='a',
                                  shape=(self.K + 1, 1),
                                  initializer="TruncatedNormal",
@@ -517,12 +533,14 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
         super().build(input_shape)
 
     def get_config(self):
+        """Get configuration dictionary."""
         base_config = super().get_config()
         return {**base_config, "a": self.a}
 
     ### Overloading functions
     @handle_arrays
     def compute_params(self, yhat):
+        """Compute layer parameters governing p(y|yhat)."""
         # Have to treat 0'th order term separately because of NaN bug.
         loggamma = self.a[0]
 
@@ -534,7 +552,7 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def compute_nlls(self, yhat, ytrue):
-
+        """Compute negative log likelihood contributions for each datum."""
         # Compute loggamma
         loggamma = self.compute_params(yhat)
 
@@ -548,29 +566,32 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def yhat_to_yq(self, yhat, q):
+        """Compute quantiles of p(y|yhat)."""
         gamma = K.exp(self.compute_params(yhat))
         yq = yhat + gamma * tf.math.tan(np.pi * (q - 0.5))
         return yq
 
     @handle_arrays
     def yhat_to_ymean(self, yhat):
+        """Compute mean of p(y|yhat)."""
         return yhat
 
     @handle_arrays
     def yhat_to_ystd(self, yhat):
+        """Compute standard devaition of p(y|yhat)."""
         sigma = K.exp(self.compute_params(yhat))
         return sigma
 
 
 class SkewedTNoiseModelLayer(NoiseModelLayer):
-    """
-    Custom keras Layer representing a
-    SkewedT noise model for GE regression.
-    """
+    """Represents a skewed-t noise model for GE regression."""
+
     def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
         super().__init__(*args, **kwargs)
 
     def build(self, input_shape):
+        """Build layer."""
         self.w_a = self.add_weight(name='w_a',
                                    shape=(self.K+1, 1),
                                    initializer="random_normal",
@@ -591,6 +612,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         super().build(input_shape)
 
     def get_config(self):
+        """Get configuration dictionary."""
         base_config = super().get_config()
         return {**base_config, "w_a": self.w_a,
                 "w_b": self.w_b, "w_s": self.w_s}
@@ -598,6 +620,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
     # Compute the mode as a function of a and b
     @handle_arrays
     def t_mode(self, a, b):
+        """Compute mode of p(t|a,b)."""
         t_mode = (a - b) * K.sqrt(a + b) \
                  / (K.sqrt(2 * a + 1) * K.sqrt(2 * b + 1))
         return t_mode
@@ -605,6 +628,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
     # Compute mean
     @handle_arrays
     def t_mean(self, a, b):
+        """Compute mean of p(t|a,b)."""
         return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
             tf.math.lgamma(a - 0.5)
             + tf.math.lgamma(b - 0.5)
@@ -614,6 +638,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def t_std(self, a, b):
+        """Compute standard devaition of p(t|a,b)."""
         t_expected = self.t_mean(a, b)
         tsq_expected = 0.25 * (a + b) * \
                        ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
@@ -622,6 +647,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def t_quantile(self, q, a, b):
+        """Compute quantiles of p(t|a,b)."""
         x_q = tf.constant(betaincinv(a.numpy(), b.numpy(), q.numpy()),
                           dtype=tf.float32)
         t_q = (2 * x_q - 1) * K.sqrt(a + b) / K.sqrt(1 - (2 * x_q - 1) ** 2)
@@ -630,6 +656,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
     ### Overloading functions
     @handle_arrays
     def compute_params(self, yhat):
+        """Compute layer parameters governing p(y|yhat)."""
         # Have to treat 0'th order term separately because of NaN bug.
         log_a = self.w_a[0]
         log_b = self.w_b[0]
@@ -650,6 +677,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def compute_nlls(self, yhat, ytrue):
+        """Compute negative log likelihood contributions for each datum."""
         # Compute distribution parameters at yhat values
         a, b, s = self.compute_params(yhat)
 
@@ -678,6 +706,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def yhat_to_yq(self, yhat, q):
+        """Compute quantiles for p(y|yhat)."""
         # Compute distribution parameters at yhat values
         a, b, s = self.compute_params(yhat)
 
@@ -693,6 +722,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def yhat_to_ymean(self, yhat):
+        """Compute mean of p(y|yhat)."""
         # Compute distribution parameters at yhat values
         a, b, s = self.compute_params(yhat)
 
@@ -707,6 +737,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
     @handle_arrays
     def yhat_to_ystd(self, yhat):
+        """Compute standard deviation of p(y|yhat)."""
         # Compute distribution parameters at yhat values
         a, b, s = self.compute_params(yhat)
 
