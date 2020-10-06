@@ -107,19 +107,7 @@ def test_GlobalEpistasisModel():
 
     # sequences arrays that fail when entered into mavenn.
     bad_x = 'x'
-
-    # could possibly check if all elements are numeric
-    # but that could slow things down
     bad_y = [1, 3, -2, 4.5]
-    # also could check for nan's like np.isnan(bad_y).all()
-
-    # # test sequences parameter X
-    # test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_x], success_list=[x],
-    #                       gpmap_type='additive', y=y, regression_type='GE', alphabet='dna')
-    #
-    # # test labels parameter y
-    # test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-    #                       gpmap_type='additive', x=x, regression_type='GE', alphabet='dna')
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['GE'],
@@ -160,6 +148,24 @@ def test_GlobalEpistasisModel():
                           success_list=[20000], gpmap_type='additive',
                           regression_type='GE', alphabet='dna', L=L)
 
+    # Prep model to test mavenn.Model child methods
+    model = mavenn.Model(regression_type='GE', L=L, alphabet='dna')
+    model.set_data(x=x, y=y)
+    model.fit(epochs=1, verbose=False)
+
+    # test model.simulate_method parameter N
+    test_parameter_values(func=model.simulate_dataset, var_name='N', fail_list=['0', -1, -0.1, 0],
+                          success_list=[10, 1000])
+
+    # test model.simulate_method parameter training_frac
+    test_parameter_values(func=model.simulate_dataset, var_name='training_frac', fail_list=['0', -1, -0.1, 0],
+                          success_list=[0.5], N=10)
+
+    # TODO: using gauge='user' breaks, need to test with p_lc, and x_wt
+    # test model.get_theta
+    test_parameter_values(func=model.get_theta, var_name='gauge', fail_list=[0, 'lorentz'],
+                          success_list=["none", "uniform", "empirical", "consensus"])
+
 
 def test_NoiseAgnosticModel():
 
@@ -188,10 +194,6 @@ def test_NoiseAgnosticModel():
     # test_parameter_values(func=mavenn.Model, var_name='x', fail_list=[bad_X], success_list=[x],
     #                       gpmap_type='additive', y=y, regression_type='MPA', alphabet='dna', ct_n=ct_n)
 
-    # TODO: need to fix vec_data_to_mat_data to work with one example before using this test.
-    # # test labels parameter y
-    # test_parameter_values(func=mavenn.Model, var_name='y', fail_list=[bad_y], success_list=[y],
-    #                       gpmap_type='additive', x=x, regression_type='MPA', alphabet='dna', ct_n=ct_n)
 
     # test labels parameter regression_type
     test_parameter_values(func=mavenn.Model, var_name='regression_type', fail_list=['polynomial'], success_list=['MPA'],
