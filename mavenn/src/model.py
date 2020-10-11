@@ -56,7 +56,11 @@ class Model:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Three possible choices allowed: ['additive','neighbor','pairwise']
+        Three possible choices allowed:
+        ['additive','neighbor','pairwise','mlp']
+
+    gpmap_kwargs: (dict)
+        Additional keyword arguments to specify the G-P map.
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to use a monotonicity constraint in GE regression.
@@ -103,6 +107,7 @@ class Model:
                  L,
                  alphabet,
                  gpmap_type='additive',
+                 gpmap_kwargs={},
                  ge_nonlinearity_type='nonlinear',
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
@@ -136,6 +141,7 @@ class Model:
 
         # Set other parameters
         self.gpmap_type = gpmap_type
+        self.gpmap_kwargs = gpmap_kwargs
         self.ge_nonlinearity_type = ge_nonlinearity_type
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
         self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
@@ -172,6 +178,7 @@ class Model:
                             info_for_layers_dict=self.info_for_layers_dict,
                             sequence_length=self.L,
                             gpmap_type=self.gpmap_type,
+                            gpmap_kwargs=self.gpmap_kwargs,
                             ge_nonlinearity_type=self.ge_nonlinearity_type,
                             ge_nonlinearity_monotonic=
                                 self.ge_nonlinearity_monotonic,
@@ -201,6 +208,7 @@ class Model:
                             number_of_bins=self.Y,
                             alphabet=self.alphabet,
                             gpmap_type=self.gpmap_type,
+                            gpmap_kwargs=self.gpmap_kwargs,
                             theta_regularization=self.theta_regularization,
                             eta_regularization=self.eta_regularization,
                             ohe_batch_size=self.ohe_batch_size)
@@ -581,6 +589,9 @@ class Model:
                     theta_0=0.,
                     theta_lc=self.theta_lc_init,
                     theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
+            elif self.gpmap_type == 'mlp':
+                print('Warning: linear initialization has no effect '
+                      'when gpmap_type="mpl".')
             else:
                 assert False, "This should not happen."
 
@@ -752,11 +763,16 @@ class Model:
               f"Invalid type(unobserved_value)={type(unobserved_value)}")
 
         # Extract parameter arrays. Get masks and replace masked values with 0
-        theta_0 = theta_dict['theta_0'].squeeze().copy()
-        theta_lc = theta_dict['theta_lc'].copy()
+        theta_0 = theta_dict.get('theta_0',
+                                 np.full(shape=(1,),
+                                         fill_value=np.nan)).squeeze().copy()
+        theta_lc = theta_dict.get('theta_lc',
+                                  np.full(shape=(L, C),
+                                          fill_value=np.nan)).copy()
         theta_lclc = theta_dict.get('theta_lclc',
                                     np.full(shape=(L, C, L, C),
                                             fill_value=np.nan)).copy()
+        theta_mlp = theta_dict.get('theta_mlp')
 
         # Record nan masks and then set nan values to zero.
         nan_mask_lclc = np.isnan(theta_lclc)
@@ -843,6 +859,7 @@ class Model:
             'theta_0': fixed_theta_0,
             'theta_lc': fixed_theta_lc,
             'theta_lclc': fixed_theta_lclc,
+            'theta_mlp': theta_mlp,
             'logomaker_df': logomaker_df
         }
 
