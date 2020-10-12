@@ -1453,7 +1453,7 @@ class Model:
             Measurement values.
 
         yhat: (float or array-like of floats)
-            Latent phenotype values.
+            Predictions of the GE model.
 
         paired: (bool)
             Whether y,yhat values should be treated as pairs.
