@@ -284,7 +284,7 @@ def I_intrinsic(y_values,
     Parameters
     ----------
     y_values: (array-like of floats)
-        y values for which mutual information will be computed
+        y values for which mutual information will be computed.
 
     dy_values: (array-like of floats)
         Represents errors in the y-values.
@@ -292,9 +292,9 @@ def I_intrinsic(y_values,
     Returns
     -------
     I_y_x: (float)
-        Mutual information of y given x
+        Mutual information of y given x.
     dI_y_x: (float)
-        Error in the estimated ,mutual information I_y_x
+        Error in the estimated ,mutual information I_y_x.
     """
     #TODO: Input checks
 

@@ -44,8 +44,8 @@ class Model:
     Parameters
     ----------
     regression_type: (str)
-        variable that choose type of regression, valid options
-        include 'GE', 'MPA'
+        variable that chooses type of regression, valid options
+        include 'GE', 'MPA'.
 
     L: (int)
         Integer specifying the length of a single training sequence.
@@ -56,7 +56,7 @@ class Model:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Three possible choices allowed: ['additive','neighbor','pairwise']
+        Three possible choices allowed: ['additive','neighbor','pairwise'].
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to use a monotonicity constraint in GE regression.
@@ -68,7 +68,7 @@ class Model:
 
     ge_noise_model_type: (str)
         Specifies the type of noise model the user wants to infer.
-        The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
+        The possible choices allowed: ['Gaussian','Cauchy','SkewedT'].
 
     ge_heteroskedasticity_order: (int)
         Order of the exponentiated polynomials used to make noise model
@@ -415,8 +415,8 @@ class Model:
         validation_split: (float in [0,1])
             Fraction of training data to be split into a validation set.
 
-        verbose: (0 or 1, or boolean)
-            Will show training progress if 1 or True, nothing if 0 or False.
+        verbose: (boolean)
+            Will show training progress if True, nothing if False.
 
         early_stopping: (bool)
             specifies whether to use early stopping or not
@@ -1064,7 +1064,7 @@ class Model:
                 - If 1D, will be interpretd as listing bin numbers, and
                     must be of length N.
                 - If 2D, will be interpreted as listing counts across all bins,
-                    and must be of shape (N,Y) where Y is the number of bins
+                    and must be of shape (N,Y) where Y is the number of bins.
 
         ct: (np.ndarray or None)
             Only used for MPA regression when y is 1D. In this case, represents
@@ -1184,7 +1184,7 @@ class Model:
 
         y: (np.ndarray)
             Array of measurements.
-            For GE regression, y must be a 1D array of floats, length N.
+            For GE regression, y must be a 1D array of floats, having length N.
             For MPA regression, y must be a 1D or 2D array of nonnegative ints.
                 - If 1D, will be interpretd as listing bin numbers, and
                     must be of length N.
