@@ -862,7 +862,7 @@ class Model:
         ----------
         x: (array-like of str)
             Sequence inputs representing DNA, RNA, or protein (whichever
-            type of sequence the model was trained on). Input can must be
+            type of sequence the model was trained on). Input must be
             an array of str, all the proper length.
 
         Returns
@@ -1436,7 +1436,7 @@ class Model:
             Measurement values.
 
         yhat: (float or array-like of floats)
-            Latent phenotype values.
+            Predictions of the GE model.
 
         paired: (bool)
             Whether y,yhat values should be treated as pairs.
