@@ -11,7 +11,8 @@ from tensorflow.keras.layers import Input, Lambda, Concatenate
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.validate import validate_alphabet
-from mavenn.src.layers.gpmap import AdditiveGPMapLayer, PairwiseGPMapLayer
+from mavenn.src.layers.gpmap \
+    import AdditiveGPMapLayer, PairwiseGPMapLayer, MultilayerPerceptronGPMap
 from mavenn.src.layers.measurement_process_layers \
     import GlobalEpistasisLayer, \
         AffineLayer, \
@@ -28,9 +29,6 @@ class GlobalEpistasisModel:
 
     Parameters
     ----------
-    parent_model: (mavenn.Model)
-        Parent model.
-
     sequence_length: (int)
         Integer specifying the length of a single training sequence.
 
@@ -40,7 +38,7 @@ class GlobalEpistasisModel:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Three possible choices allowed: ['additive','neighbor','pairwise']
+        Possible choices: ['additive','neighbor','pairwise','mlp']
 
     ge_nonlinearity_type: (str)
         Specifies the form of the GE nonlinearity. Options:
@@ -76,6 +74,7 @@ class GlobalEpistasisModel:
                  sequence_length,
                  alphabet,
                  gpmap_type,
+                 gpmap_kwargs,
                  ge_nonlinearity_monotonic,
                  ge_nonlinearity_type,
                  ohe_batch_size,
@@ -86,6 +85,7 @@ class GlobalEpistasisModel:
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
         self.gpmap_type = gpmap_type
+        self.gpmap_kwargs = gpmap_kwargs
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
         self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
@@ -119,10 +119,10 @@ class GlobalEpistasisModel:
         check(self.ge_heteroskedasticity_order >= 0,
               'ge_heteroskedasticity_order must be >= 0')
 
-        # check that gpmap_type valid
-        check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
-              f'gpmap_type = {self.gpmap_type};'
-              'must be "additive", "neighbor", or "pairwise"')
+        # check that model type valid
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'mlp']
+        check(self.gpmap_type in valid_gpmap_types,
+              f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
         # check that ge_nonlinearity_type valid
         allowed_types = ['linear', 'nonlinear']
@@ -212,17 +212,22 @@ class GlobalEpistasisModel:
 
         # Create G-P map layer
         if self.gpmap_type == 'additive':
-            self.x_to_phi_layer = \
-                AdditiveGPMapLayer(
-                    L=self.L,
-                    C=self.C,
-                    theta_regularization=self.theta_regularization)
+            self.x_to_phi_layer = AdditiveGPMapLayer(
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization)
         elif self.gpmap_type in ['pairwise', 'neighbor']:
             self.x_to_phi_layer = PairwiseGPMapLayer(
                 L=self.L,
                 C=self.C,
                 theta_regularization=self.theta_regularization,
                 mask_type=self.gpmap_type)
+        elif self.gpmap_type == 'mlp':
+            self.x_to_phi_layer = MultilayerPerceptronGPMap(
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization,
+                **self.gpmap_kwargs)
         else:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)
@@ -296,7 +301,7 @@ class MeasurementProcessAgnosticModel:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Three possible choices allowed: ['additive','neighbor','pairwise']
+        Possible choices: ['additive','neighbor','pairwise','mlp]
 
     ohe_batch_size: (int)
         Integer specifying how many sequences to one-hot encode at a time.
@@ -317,6 +322,7 @@ class MeasurementProcessAgnosticModel:
                  sequence_length,
                  number_of_bins,
                  gpmap_type,
+                 gpmap_kwargs,
                  alphabet,
                  theta_regularization,
                  eta_regularization,
@@ -325,6 +331,7 @@ class MeasurementProcessAgnosticModel:
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
         self.gpmap_type = gpmap_type
+        self.gpmap_kwargs = gpmap_kwargs
         self.alphabet = validate_alphabet(alphabet)
         self.C = len(self.alphabet)
         self.theta_regularization = theta_regularization
@@ -353,9 +360,9 @@ class MeasurementProcessAgnosticModel:
               'number_of_bins must be an integer')
 
         # check that model type valid
-        check(self.gpmap_type in {'additive', 'neighbor', 'pairwise'},
-              f'model_type = {self.gpmap_type}; '
-              'must be "additive", "neighbor", or "pairwise"')
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'mlp']
+        check(self.gpmap_type in valid_gpmap_types,
+              f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
         # check that theta regularization is a number
         check(isinstance(self.theta_regularization, numbers.Real),
@@ -424,14 +431,22 @@ class MeasurementProcessAgnosticModel:
 
         # Create G-P map layer
         if self.gpmap_type == 'additive':
-            self.x_to_phi_layer = AdditiveGPMapLayer(self.L,
-                                                     self.C,
-                                                     self.theta_regularization)
+            self.x_to_phi_layer = AdditiveGPMapLayer(
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization)
         elif self.gpmap_type in ['pairwise', 'neighbor']:
-            self.x_to_phi_layer = PairwiseGPMapLayer(self.L,
-                                                     self.C,
-                                                     self.theta_regularization,
-                                                     mask_type=self.gpmap_type)
+            self.x_to_phi_layer = PairwiseGPMapLayer(
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization,
+                mask_type=self.gpmap_type)
+        elif self.gpmap_type == 'mlp':
+            self.x_to_phi_layer = MultilayerPerceptronGPMap(
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization,
+                **self.gpmap_kwargs)
         else:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)

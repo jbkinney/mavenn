@@ -1,12 +1,14 @@
 """gpmap.py: Defines layers representing G-P maps."""
 # Standard imports
 import numpy as np
+from collections.abc import Iterable
+import pdb
 
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.initializers import Constant
-from tensorflow.keras.layers import Layer
+from tensorflow.keras.layers import Layer, Dense
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
@@ -34,6 +36,9 @@ class GPMapLayer(Layer):
 
         # Set regularization contribution
         self.theta_regularization = theta_regularization
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.theta_regularization)
 
         # Set mask type
         self.mask_type = mask_type
@@ -87,7 +92,8 @@ class AdditiveGPMapLayer(GPMapLayer):
         self.theta_0 = self.add_weight(name='theta_0',
                                        shape=(1,),
                                        initializer=Constant(0.),
-                                       trainable=True)
+                                       trainable=True,
+                                       regularizer=self.regularizer)
 
         # Define theta_lc parameters
         theta_lc_shape = (1, self.L, self.C)
@@ -95,7 +101,8 @@ class AdditiveGPMapLayer(GPMapLayer):
         self.theta_lc = self.add_weight(name='theta_lc',
                                         shape=theta_lc_shape,
                                         initializer=Constant(theta_lc_init),
-                                        trainable=True)
+                                        trainable=True,
+                                        regularizer=self.regularizer)
         # Call superclass build
         super().build(input_shape)
 
@@ -107,10 +114,6 @@ class AdditiveGPMapLayer(GPMapLayer):
         phi = self.theta_0 + \
               tf.reshape(K.sum(self.theta_lc * x_lc, axis=[1, 2]),
                          shape=[-1, 1])
-
-        # Compute regularization loss
-        norm_sq = tf.norm(self.theta_0) ** 2 + tf.norm(self.theta_lc) ** 2
-        self.add_loss(self.theta_regularization * norm_sq)
 
         return phi
 
@@ -214,7 +217,8 @@ class PairwiseGPMapLayer(GPMapLayer):
         self.theta_0 = self.add_weight(name='theta_0',
                                        shape=(1,),
                                        initializer=Constant(0.),
-                                       trainable=True)
+                                       trainable=True,
+                                       regularizer=self.regularizer)
 
         # Define theta_lc parameters
         theta_lc_shape = (1, self.L, self.C)
@@ -222,7 +226,8 @@ class PairwiseGPMapLayer(GPMapLayer):
         self.theta_lc = self.add_weight(name='theta_lc',
                                         shape=theta_lc_shape,
                                         initializer=Constant(theta_lc_init),
-                                        trainable=True)
+                                        trainable=True,
+                                        regularizer=self.regularizer)
 
         # Define theta_lclc parameters
         theta_lclc_shape = (1, self.L, self.C, self.L, self.C)
@@ -231,7 +236,8 @@ class PairwiseGPMapLayer(GPMapLayer):
         self.theta_lclc = self.add_weight(name='theta_lclc',
                                           shape=theta_lclc_shape,
                                           initializer=Constant(theta_lclc_init),
-                                          trainable=True)
+                                          trainable=True,
+                                          regularizer=self.regularizer)
 
         # Call superclass build
         super().build(input_shape)
@@ -252,12 +258,6 @@ class PairwiseGPMapLayer(GPMapLayer):
                                          [-1, 1, 1, self.L, self.C]),
                                      axis=[1, 2, 3, 4]),
                                shape=[-1, 1])
-
-        # Compute regularization loss
-        norm_sq = tf.norm(self.theta_0) ** 2 + \
-                  tf.norm(self.theta_lc) ** 2 + \
-                  tf.norm(self.theta_lclc) ** 2
-        self.add_loss(self.theta_regularization * norm_sq)
 
         return phi
 
@@ -333,5 +333,174 @@ class PairwiseGPMapLayer(GPMapLayer):
         masked_theta_lclc[~self.mask] = np.nan
         param_dict['theta_lclc'] = \
             masked_theta_lclc.reshape([self.L, self.C, self.L, self.C])
+
+        return param_dict
+
+
+class MultilayerPerceptronGPMap(GPMapLayer):
+    """Represents an MLP G-P map."""
+
+    @handle_errors
+    def __init__(self,
+                 *args,
+                 hidden_layer_sizes=(10, 10, 10),
+                 hidden_layer_activation='relu',
+                 features='additive',
+                 **kwargs):
+
+        # Check and set hidden layer sizes
+        check(isinstance(hidden_layer_sizes, Iterable),
+              f'type(hidden_layer_sizes)={type(hidden_layer_sizes)}; '
+              f'must be Iterable.')
+        check(all([x >= 1 for x in hidden_layer_sizes]),
+              f'all elements of hidden_layer_sizes={hidden_layer_sizes}'
+              f'must be >= 1')
+        check(all([isinstance(x, int) for x in hidden_layer_sizes]),
+              f'all elements of hidden_layer_sizes={hidden_layer_sizes}'
+              f'must be int.')
+        self.hidden_layer_sizes = hidden_layer_sizes
+
+        # Check and set features
+        allowed_features = ['additive','neighbor','pairwise']
+        check(features in allowed_features,
+              f'features={repr(features)}; must be one of {allowed_features}.')
+        self.features = features
+
+        # Initialize array to hold layers
+        self.layers = []
+
+        # Set activation
+        self.hidden_layer_activation = hidden_layer_activation
+        super().__init__(*args, **kwargs)
+
+    @handle_errors
+    def build(self, input_shape):
+
+        # Determine input shape
+        L = self.L
+        C = self.C
+        if self.features == 'additive':
+            self.num_features = L*C
+        elif self.features == 'neighbor':
+            self.num_features = L*C + (L-1)*(C**2)
+        elif self.features == 'pairwise':
+            self.num_features = L*C + L*(L-1)*(C**2)/2
+        self.x_shape = (input_shape[0], int(self.num_features))
+
+        # Create mask
+        ls = np.arange(self.L).astype(int)
+        ls1 = np.tile(ls.reshape([L, 1, 1, 1]),
+                                 [1, C, L, C])
+        ls2 = np.tile(ls.reshape([1, 1, L, 1]),
+                                 [L, C, 1, C])
+        if self.features in ['neighbor', 'pairwise']:
+            if self.features == 'pairwise':
+                mask_lclc = (ls2 - ls1 >= 1)
+            else:
+                mask_lclc = (ls2 - ls1 == 1)
+            mask_vec = np.reshape(mask_lclc, L*C*L*C)
+            self.mask_ints = np.arange(L*C*L*C, dtype=int)[mask_vec]
+        elif self.features == 'additive':
+            self.mask_ints = None
+        else:
+            assert False, "This should not work"
+
+        # Make sure self.layers is empty
+        self.layers = []
+
+        if len(self.hidden_layer_sizes) >= 1:
+            # Add hidden layer #1
+            size = self.hidden_layer_sizes[0]
+            self.layers.append(
+                Dense(units=size,
+                      activation=self.hidden_layer_activation,
+                      input_shape=self.x_shape,
+                      kernel_regularizer=self.regularizer,
+                      bias_regularizer=self.regularizer)
+            )
+
+            # Add rest of hidden layers
+            for size in self.hidden_layer_sizes[1:]:
+                self.layers.append(
+                    Dense(units=size,
+                          activation=self.hidden_layer_activation,
+                          kernel_regularizer=self.regularizer,
+                          bias_regularizer=self.regularizer)
+                )
+
+            # Add output layer
+            self.layers.append(
+                Dense(units=1,
+                      activation='linear',
+                      kernel_regularizer=self.regularizer,
+                      bias_regularizer=self.regularizer)
+            )
+        elif len(self.hidden_layer_sizes) == 0:
+            # Add single layer; no hidden nodes
+            self.layers.append(
+                Dense(units=1,
+                      activation='linear',
+                      input_shape=self.x_shape,
+                      kernel_regularizer=self.regularizer,
+                      bias_regularizer=self.regularizer)
+            )
+        else:
+            assert False, 'This should not happen.'
+
+        # Build superclass
+        super().build(input_shape)
+
+    def call(self, x_add):
+        """Process layer input and return output."""
+
+        # Create input features
+        if self.features == 'additive':
+            tensor = x_add
+        elif self.features in ['neighbor', 'pairwise']:
+            L = self.L
+            C = self.C
+            x___lc = tf.reshape(x_add, [-1, 1, 1, L, C])
+            x_lc__ = tf.reshape(x_add, [-1, L, C, 1, 1])
+            x_lclc = x___lc * x_lc__
+            x_pair = tf.reshape(x_lclc, [-1, L*C*L*C])
+
+            # Only use relevant columns
+            x_2pt = tf.gather(x_pair, self.mask_ints, axis=1)
+
+            # Make input tensor
+            tensor = tf.concat([x_add, x_2pt], axis=1)
+
+        # Run tensor through layers
+        for layer in self.layers:
+            tensor = layer(tensor)
+        phi = tensor
+
+        return phi
+
+    @handle_errors
+    def set_params(self, theta_0=None, theta_lc=None):
+        """
+        Does nothing for MultilayerPerceptronGPMap
+        """
+        print('Warning: MultilayerPerceptronGPMap.set_params() does nothing.')
+
+    @handle_errors
+    def get_params(self):
+        """
+        Get values of layer parameters.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        param_dict: (dict)
+            Dictionary containing model parameters.
+        """
+
+        #  Fill param_dict
+        param_dict = {}
+        param_dict['theta_mlp'] = [layer.get_weights() for layer in self.layers]
 
         return param_dict
