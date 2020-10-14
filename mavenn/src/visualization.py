@@ -59,7 +59,7 @@ def heatmap(values,
     Parameters
     ----------
     values: (np.ndarray)
-        Array sized (L,C) that contains values to plot
+        Array sized (L,C) that contains values to plot.
 
     alphabet: (np.ndarray)
         1D array containing characters in alphabet.
@@ -276,7 +276,7 @@ def heatmap_pairwise(values,
 
     gpmap_type: (str)
         Determines how many pairwise parameters are plotted.
-        Must be "pairwise", "neighbor". If "pairwise", a B2-bomber shape
+        Must be "pairwise", "neighbor". If "pairwise", a triangular diamond shape
         will be plotted. If "neighbor", a string of diamonds will be plotted.
 
     show_position: (bool)

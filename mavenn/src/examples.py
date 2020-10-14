@@ -115,6 +115,7 @@ def load_example_model(name=None):
     Returns
     -------
     model: (mavenn.Model)
+        A pre-trained MAVE-NN model object.
     """
     models_dir = mavenn.__path__[0] +'/examples/models'
     model_file_names = glob.glob(f'{models_dir}/*.h5')
