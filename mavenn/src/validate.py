@@ -197,6 +197,6 @@ def validate_seqs(x,
         alphabet_chars = set(alphabet)
         check(seq_chars <= alphabet_chars,
               f"x contain the following characters not in alphabet:"
-              "{seq_chars-alphabet_chars}")
+              f"{seq_chars-alphabet_chars}")
 
     return x

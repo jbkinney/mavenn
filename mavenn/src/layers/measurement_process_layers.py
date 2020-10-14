@@ -20,8 +20,8 @@ from tensorflow.keras.layers import Layer
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
+from mavenn import TINY
 
-eps = 1E-6
 pi = np.pi
 e = np.exp(1)
 
@@ -182,7 +182,7 @@ class MPAMeasurementProcessLayer(Layer):
         p_my = self.p_of_all_y_given_phi(phi)
 
         # Compute negative log likelihood
-        negative_log_likelihood = -K.sum(ct_my * K.log(p_my), axis=1)
+        negative_log_likelihood = -K.sum(ct_my * K.log(p_my + TINY), axis=1)
         ct_m = K.sum(ct_my, axis=1)
 
         # Add I_like metric
@@ -558,7 +558,7 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
 
         # Compute nlls
         nlls = \
-            K.log(K.exp(2*loggamma) + K.square(ytrue - yhat) + eps) \
+            K.log(K.exp(2*loggamma) + K.square(ytrue - yhat) + TINY) \
             - loggamma \
             + np.log(pi)
 
@@ -692,14 +692,14 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
         # Compute negative log likelihood contributions
         nlls = -(
-            (a + 0.5) * K.log(1 + arg) +
-            (b + 0.5) * K.log(1 - arg) +
+            (a + 0.5) * K.log(1 + arg + TINY) +
+            (b + 0.5) * K.log(1 - arg + TINY) +
             -(a + b - 1) * K.log(2.0) +
-            -0.5 * K.log(a + b) +
-            tf.math.lgamma(a + b) +
-            -tf.math.lgamma(a) +
-            -tf.math.lgamma(b) +
-            -K.log(s)
+            -0.5 * K.log(a + b + TINY) +
+            tf.math.lgamma(a + b + TINY) +
+            -tf.math.lgamma(a + TINY) +
+            -tf.math.lgamma(b + TINY) +
+            -K.log(s + TINY)
             )
 
         return nlls

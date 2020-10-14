@@ -4,9 +4,11 @@
 import numpy as np
 import pandas as pd
 import mavenn
+import random
 import pdb
 import pickle
 import time
+import os
 
 # Import Tensorflow
 import tensorflow as tf
@@ -447,8 +449,10 @@ def set_seed(seed):
           f'type(seed)={type(seed)}; must be int')
 
     # Set seed
-    np.random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = '0'
     tf.random.set_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 
 @handle_errors

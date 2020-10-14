@@ -21,6 +21,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 import sklearn.preprocessing
 
 # MAVE-NN imports
+from mavenn import TINY
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.regression_types import GlobalEpistasisModel, \
                                         MeasurementProcessAgnosticModel
@@ -361,7 +362,7 @@ class Model:
 
             # Compute entropy
             H_y_norm, dH_y = entropy_continuous(z, knn=7)
-            H_y = H_y_norm + np.log2(self.y_std)
+            H_y = H_y_norm + np.log2(self.y_std + TINY)
 
             self.info_for_layers_dict['H_y'] = H_y
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
@@ -376,8 +377,8 @@ class Model:
             c_y = self.y_norm.sum(axis=0).squeeze()
             p_y = c_y / c_y.sum()
             ix = p_y > 0
-            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix]))
-            H_y = H_y_norm + np.log2(self.y_std)
+            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
+            H_y = H_y_norm + np.log2(self.y_std + TINY)
             dH_y = 0 # Need NSB to estimate this well
             self.info_for_layers_dict['H_y'] = H_y
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
@@ -1119,7 +1120,7 @@ class Model:
 
             # Compute entropy
             H_y_norm, dH_y = entropy_continuous(z, knn=7)
-            H_y = H_y_norm + np.log2(self.y_std)
+            H_y = H_y_norm + np.log2(self.y_std + TINY)
 
             # Compute phi
             phi = self.x_to_phi(x)
@@ -1130,7 +1131,7 @@ class Model:
                                                   paired=True)
 
             # Compute H_y_given_phi
-            H_y_given_phi_n = -np.log2(p_y_given_phi)
+            H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
 
         elif self.regression_type == 'MPA':
 
@@ -1152,15 +1153,15 @@ class Model:
             ct_y = np.array([(y==i).sum() for i in range(self.Y)])
             p_y = ct_y / ct_y.sum()
             ix = p_y > 0
-            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix]))
-            H_y = H_y_norm + np.log2(self.y_std)
+            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
+            H_y = H_y_norm + np.log2(self.y_std + TINY)
             dH_y = 0  # Need NSB to estimate this well
 
             # Compute phi
             phi = self.x_to_phi(x)
 
             p_y_given_phi = self.p_of_y_given_phi(y, phi, paired=True)
-            H_y_given_phi_n = -np.log2(p_y_given_phi)
+            H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
 
         # Get total number of independent observations
         N = len(H_y_given_phi_n)
