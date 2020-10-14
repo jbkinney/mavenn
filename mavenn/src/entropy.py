@@ -9,6 +9,7 @@ from mavenn.src.error_handling import handle_errors, check
 @handle_errors
 def entropy_continuous(x,
                        knn=5,
+                       resolution=.01,
                        uncertainty=True,
                        num_subsamples=25,
                        verbose=False):
@@ -23,6 +24,10 @@ def entropy_continuous(x,
 
     knn: (int>0)
         Number of nearest neighbors to use in the KSG estimator.
+
+    resolution: (float>0)
+        Amount to fuzz up the data, in units of the standard
+        deviation of x.
 
     uncertainty: (bool)
         Whether to estimate the uncertainty of the MI estimate.
@@ -49,6 +54,10 @@ def entropy_continuous(x,
 
     # Reshape to Nx1 array
     x = np.array(x).reshape(N, 1)
+
+    # Fuzz up data
+    x_scale = x.std(ddof=1)
+    x += resolution * x_scale * np.random.randn(*x.shape)
 
     # Get best H estimate
     H = ee.entropy(x, k=knn, base=2)

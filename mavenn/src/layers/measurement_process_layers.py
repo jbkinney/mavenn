@@ -20,7 +20,6 @@ from tensorflow.keras.layers import Layer
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
-from mavenn import TINY
 
 pi = np.pi
 e = np.exp(1)
@@ -31,6 +30,24 @@ LogGamma = tf.math.lgamma
 Exp = K.exp
 Sqrt = K.sqrt
 Square = K.square
+
+MAX_EXP_ARG = np.float32(20.0)
+MIN_LOG_ARG = np.float32(np.exp(-MAX_EXP_ARG))
+
+# Create safe functions
+def Log(x):
+    x = tf.clip_by_value(x, MIN_LOG_ARG, np.inf)
+    return K.log(x)
+
+
+def LogGamma(x):
+    x = tf.clip_by_value(x, MIN_LOG_ARG, np.inf)
+    return tf.math.lgamma(x)
+
+
+def Exp(x):
+    x = tf.clip_by_value(x, -MAX_EXP_ARG, MAX_EXP_ARG)
+    return K.exp(x)
 
 
 def handle_arrays(func):
@@ -182,7 +199,7 @@ class MPAMeasurementProcessLayer(Layer):
         p_my = self.p_of_all_y_given_phi(phi)
 
         # Compute negative log likelihood
-        negative_log_likelihood = -K.sum(ct_my * K.log(p_my + TINY), axis=1)
+        negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
         ct_m = K.sum(ct_my, axis=1)
 
         # Add I_like metric
@@ -207,7 +224,7 @@ class MPAMeasurementProcessLayer(Layer):
         d_yk = tf.reshape(self.d_yk, [-1, self.Y, self.K])
 
         # Compute weights
-        w_my = K.exp(a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk),
+        w_my = Exp(a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk),
                                  axis=2))
         w_my = tf.reshape(w_my, [-1, self.Y])
 
@@ -413,7 +430,7 @@ class NoiseModelLayer(Layer):
                                     ytrue=y)
 
         # Convert to p_y_given_yhat and return
-        p_y_given_yhat = K.exp(-nll_arr)
+        p_y_given_yhat = Exp(-nll_arr)
 
         return p_y_given_yhat
 
@@ -487,7 +504,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         """Compute negative log likelihood contributions for each datum."""
         # Compute logsigma and sigma
         logsigma = self.compute_params(yhat)
-        sigma = K.exp(logsigma)
+        sigma = Exp(logsigma)
 
         # Compute nlls
         nlls = \
@@ -500,7 +517,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
     @handle_arrays
     def yhat_to_yq(self, yhat, q):
         """Compute quantiles for p(y|yhat)."""
-        sigma = K.exp(self.compute_params(yhat))
+        sigma = Exp(self.compute_params(yhat))
         yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
         return yq
 
@@ -512,7 +529,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
     @handle_arrays
     def yhat_to_ystd(self, yhat):
         """Compute standard deviation of p(y|yhat)."""
-        sigma = K.exp(self.compute_params(yhat))
+        sigma = Exp(self.compute_params(yhat))
         return sigma
 
 
@@ -558,7 +575,7 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
 
         # Compute nlls
         nlls = \
-            K.log(K.exp(2*loggamma) + K.square(ytrue - yhat) + TINY) \
+            Log(Exp(2*loggamma) + K.square(ytrue - yhat)) \
             - loggamma \
             + np.log(pi)
 
@@ -567,7 +584,7 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
     @handle_arrays
     def yhat_to_yq(self, yhat, q):
         """Compute quantiles of p(y|yhat)."""
-        gamma = K.exp(self.compute_params(yhat))
+        gamma = Exp(self.compute_params(yhat))
         yq = yhat + gamma * tf.math.tan(np.pi * (q - 0.5))
         return yq
 
@@ -579,7 +596,7 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
     @handle_arrays
     def yhat_to_ystd(self, yhat):
         """Compute standard devaition of p(y|yhat)."""
-        sigma = K.exp(self.compute_params(yhat))
+        sigma = Exp(self.compute_params(yhat))
         return sigma
 
 
@@ -630,10 +647,10 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
     def t_mean(self, a, b):
         """Compute mean of p(t|a,b)."""
         return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
-            tf.math.lgamma(a - 0.5)
-            + tf.math.lgamma(b - 0.5)
-            - tf.math.lgamma(a)
-            - tf.math.lgamma(b)
+            LogGamma(a - 0.5)
+            + LogGamma(b - 0.5)
+            - LogGamma(a)
+            - LogGamma(b)
             )
 
     @handle_arrays
@@ -669,9 +686,13 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
             log_s += self.w_s[k] * K.pow(yhat, k)
 
         # Compute a, b, s in terms of trainable parameters
-        a = K.exp(log_a)
-        b = K.exp(log_b)
-        s = K.exp(log_s)
+        a = Exp(log_a)
+        b = Exp(log_b)
+        s = Exp(log_s)
+
+        # Clip values to keep a and b in safe ranges
+        a = tf.clip_by_value(a, 0.1, 100.0)
+        b = tf.clip_by_value(b, 0.1, 100.0)
 
         return a, b, s
 
@@ -692,15 +713,24 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
         # Compute negative log likelihood contributions
         nlls = -(
-            (a + 0.5) * K.log(1 + arg + TINY) +
-            (b + 0.5) * K.log(1 - arg + TINY) +
-            -(a + b - 1) * K.log(2.0) +
-            -0.5 * K.log(a + b + TINY) +
-            tf.math.lgamma(a + b + TINY) +
-            -tf.math.lgamma(a + TINY) +
-            -tf.math.lgamma(b + TINY) +
-            -K.log(s + TINY)
+            (a + 0.5) * Log(1 + arg) +
+            (b + 0.5) * Log(1 - arg) +
+            -(a + b - 1) * Log(np.float32(2.0)) +
+            -0.5 * Log(a + b) +
+            LogGamma(a + b) +
+            -LogGamma(a) +
+            -LogGamma(b) +
+            -Log(s)
             )
+
+        # nlls =  -(a + 0.5) * Log(1.0 + arg)
+        # nlls += -(b + 0.5) * Log(1.0 - arg)
+        # nlls += (a + b - 1.0) * Log(np.float32(2.0))
+        # nlls += 0.5 * Log(a + b)
+        # nlls += -LogGamma(a + b)
+        # nlls += LogGamma(a)
+        # nlls += LogGamma(b)
+        # nlls += Log(s)
 
         return nlls
 
