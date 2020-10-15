@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 """
 run_demo: gb1_ge_evaluation
 
@@ -11,31 +12,38 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Import MAVE-NN
+# Insert path to local mavenn beginning of path
+import os
+import sys
+abs_path_to_mavenn = os.path.abspath('../../../')
+sys.path.insert(0, abs_path_to_mavenn)
+
+# Load mavenn
 import mavenn
+print(f'Using mavenn at: {mavenn.__path__[0]}')
 
 # Load model
 model = mavenn.load_example_model('gb1_ge_additive')
 
 # Set wild-type sequence
-gb1_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
+gb1_seq = model.x_stats['consensus_seq']
 
 # Get effects of all single-point mutations on phi
-theta_dict = model.get_theta(gauge='user',
-                             x_wt=gb1_seq)
+theta_dict = model.get_theta(gauge='user', x_wt=gb1_seq)
 
 # Load data as dataframe
-data_file = mavenn.__path__[0] + '/examples/datasets/gb1/GB1_test_data.csv'
-data_df = pd.read_csv(data_file, index_col=[0])
+data_df = mavenn.load_example_dataset('gb1')
+
+# Extract test data
+ix = ~data_df['training_set']
+test_df = data_df[ix]
 
 # Subsample test data, just to make plotting faster
-N_test = len(data_df)
+N_test = len(test_df)
 N_sample = 5000
 ix = np.random.choice(N_test, size=N_sample, replace=False).astype(int)
-
-# Extract data into np.arrays
-x = data_df['x_test'].values[ix]
-y = data_df['y_test'].values[ix]
+x = test_df['x'].values[ix]
+y = test_df['y'].values[ix]
 
 # Compute phi and yhat values
 phi = model.x_to_phi(x)
