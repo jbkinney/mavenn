@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 """
 run_demo: mpsa_ge_training
 
@@ -12,35 +13,42 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 
-# Import dataset splitter from sklearn
-from sklearn.model_selection import train_test_split
+# Insert path to local mavenn beginning of path
+import os
+import sys
+abs_path_to_mavenn = os.path.abspath('../../../')
+sys.path.insert(0, abs_path_to_mavenn)
 
-# Import MAVE-NN
+# Load mavenn
 import mavenn
+print(f'Using mavenn at: {mavenn.__path__[0]}')
 
 # Load dataset as a dataframe
 data_df = mavenn.load_example_dataset('mpsa')
 
+# Split into training and test data
+ix = data_df['training_set']
+train_df = data_df[ix]
+test_df = data_df[~ix]
+
 # Extract x and y as np.arrays
-x = data_df['x'].values
-y = data_df['y'].values
+x_train = train_df['x'].values
+y_train = train_df['y'].values
+x_test = test_df['x'].values
+y_test = test_df['y'].values
 
-# Split into training and test sets
-x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
 
-# Set seed
-mavenn.set_seed(0)
-
-# Define a model with a pairwise G-P map
-# a heteroskedastic Gaussian GE measurement process,
-# and specify the training data.
+# Define a model with:
+# - a pairwise G-P map
+# - a GE measurement process
+# - a heteroskedastic SkewedT noise model
 model = mavenn.Model(regression_type='GE',
-                     L=len(x[0]),
+                     L=len(x_train[0]),
                      gpmap_type='pairwise',
-                     alphabet='dna',
-                     ge_noise_model_type='Gaussian',
+                     alphabet='rna',
+                     ge_noise_model_type='SkewedT',
                      ge_nonlinearity_monotonic=True,
-                     ge_heteroskedasticity_order=0)
+                     ge_heteroskedasticity_order=2)
 
 # Set training data
 model.set_data(x=x_train,
@@ -105,12 +113,28 @@ ax.legend()
 
 # Right panel: Plot model training history
 ax = axs[2]
-ax.plot(loss_training, color='C2', label='training')
-ax.plot(loss_validation, color='C3', label='validation')
-ax.set_ylabel('loss')
-ax.set_xlabel('epoch')
-ax.set_title(f"training history ({training_time:.2f} sec)")
+# Compute likelihood information
+I_like, dI_like =  model.I_likelihood(x=x_test, y=y_test)
+print(f'I_like_test: {I_like:.3f} +- {dI_like:.3f} bits')
+
+# Compute predictive information
+I_pred, dI_pred = model.I_predictive(x=x_test, y=y_test)
+print(f'I_pred_test: {I_pred:.3f} +- {dI_pred:.3f} bits')
+
+# Get training history
+I_like_hist = model.history['I_like']
+val_I_like_hist = model.history['val_I_like']
+
+# Plot training history as well as information values
+ax.plot(I_like_hist, label='I_like_train')
+ax.plot(val_I_like_hist, label='I_like_val')
+ax.axhline(I_like, color='C2', linestyle=':', label='I_like_test')
+ax.axhline(I_pred, color='C3', linestyle=':', label='I_pred_test')
 ax.legend()
+ax.set_xlabel('epochs')
+ax.set_ylabel('bits')
+ax.set_title('training hisotry')
+ax.set_ylim([0, I_pred*1.2])
 
 # Tighten bounds on figure
 fig.tight_layout(w_pad=3)
