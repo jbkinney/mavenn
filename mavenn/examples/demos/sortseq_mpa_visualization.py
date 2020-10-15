@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 '''
 run_demo: sortseq_mpa_visualization
 
@@ -9,8 +10,17 @@ on the rnap-wt dataset of Kinney et al., 2010. Runs fast.
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Import MAVE-NN and Logomaker
+# Insert path to local mavenn beginning of path
+import os
+import sys
+abs_path_to_mavenn = os.path.abspath('../../../')
+sys.path.insert(0, abs_path_to_mavenn)
+
+# Load mavenn
 import mavenn
+print(f'Using mavenn at: {mavenn.__path__[0]}')
+
+# Import Logomaker
 import logomaker
 
 # Load model
