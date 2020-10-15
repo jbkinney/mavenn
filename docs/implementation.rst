@@ -22,16 +22,6 @@ Loading models
 
 .. autofunction:: mavenn.load
 
-Reproducibility
----------------
-
-.. autofunction:: mavenn.set_seed
-
-Intrinsic information
----------------------
-
-.. autofunction:: mavenn.I_intrinsic
-
 Visualization
 -------------
 

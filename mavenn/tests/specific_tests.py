@@ -510,9 +510,6 @@ def test_GE_fit():
         train_df = data_df[ix]
         test_df = data_df[~ix]
 
-        # Set seed for reproducibility.
-        mavenn.set_seed(0)
-
         # set alpbabet according to dataset.
         if ge_dataset == 'mpsa':
             alphabet = 'rna'
@@ -602,9 +599,6 @@ def test_MPA_fit():
     L = len(data_df['x'][0])
     train_df = data_df[ix]
     test_df = data_df[~ix]
-
-    # Set seed for reproducibility.
-    mavenn.set_seed(0)
 
     # loop over different gpmap_types
     for gpmap_type in gpmap_types:
