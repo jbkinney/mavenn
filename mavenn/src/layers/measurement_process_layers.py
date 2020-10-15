@@ -691,8 +691,8 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         s = Exp(log_s)
 
         # Clip values to keep a and b in safe ranges
-        a = tf.clip_by_value(a, 0.1, 100.0)
-        b = tf.clip_by_value(b, 0.1, 100.0)
+        a = tf.clip_by_value(a, 0.01, 100.0)
+        b = tf.clip_by_value(b, 0.01, 100.0)
 
         return a, b, s
 

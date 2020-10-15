@@ -58,7 +58,7 @@ class Model:
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
         Three possible choices allowed:
-        ['additive','neighbor','pairwise','mlp']
+        ['additive','neighbor','pairwise','blackbox']
 
     gpmap_kwargs: (dict)
         Additional keyword arguments to specify the G-P map.
@@ -81,7 +81,7 @@ class Model:
         heteroskedastic. Set to zero for a homoskedastic noise model.
         (Only used for GE regression).
 
-    na_hidden_nodes:
+    mpa_hidden_nodes:
         Number of hidden nodes (i.e. sigmoidal contributions) to use in the
         definition of the MPA measurement process.
 
@@ -114,7 +114,7 @@ class Model:
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
                  ge_heteroskedasticity_order=0,
-                 na_hidden_nodes=50,
+                 mpa_hidden_nodes=50,
                  theta_regularization=0.1,
                  eta_regularization=0.1,
                  ohe_batch_size=50000,
@@ -148,7 +148,7 @@ class Model:
         self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
         self.ge_noise_model_type = ge_noise_model_type
         self.ge_heteroskedasticity_order = ge_heteroskedasticity_order
-        self.na_hidden_nodes = na_hidden_nodes
+        self.mpa_hidden_nodes = mpa_hidden_nodes
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
@@ -216,8 +216,8 @@ class Model:
             self.model.theta_init = None
 
             self.define_model = self.model.define_model(
-                                    na_hidden_nodes=
-                                    self.na_hidden_nodes)
+                                    mpa_hidden_nodes=
+                                    self.mpa_hidden_nodes)
 
             # Set layers
             self.layer_gpmap = self.model.x_to_phi_layer
@@ -590,7 +590,7 @@ class Model:
                     theta_0=0.,
                     theta_lc=self.theta_lc_init,
                     theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
-            elif self.gpmap_type == 'mlp':
+            elif self.gpmap_type == 'blackbox':
                 print('Warning: linear initialization has no effect '
                       'when gpmap_type="mpl".')
             else:

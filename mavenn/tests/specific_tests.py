@@ -206,8 +206,8 @@ def test_NoiseAgnosticModel():
                           regression_type='MPA', alphabet='dna', L=L,
                           Y=Y)
 
-    # test parameter na_hidden_nodes
-    test_parameter_values(func=mavenn.Model, var_name='na_hidden_nodes', fail_list=['0', 0.1, -1, 0],
+    # test parameter mpa_hidden_nodes
+    test_parameter_values(func=mavenn.Model, var_name='mpa_hidden_nodes', fail_list=['0', 0.1, -1, 0],
                           success_list=[1, 10], gpmap_type='additive',
                           regression_type='MPA', alphabet='dna', L=L,
                           Y=Y)

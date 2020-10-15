@@ -38,7 +38,7 @@ class GlobalEpistasisModel:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Possible choices: ['additive','neighbor','pairwise','mlp']
+        Possible choices: ['additive','neighbor','pairwise','blackbox']
 
     ge_nonlinearity_type: (str)
         Specifies the form of the GE nonlinearity. Options:
@@ -120,7 +120,7 @@ class GlobalEpistasisModel:
               'ge_heteroskedasticity_order must be >= 0')
 
         # check that model type valid
-        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'mlp']
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox']
         check(self.gpmap_type in valid_gpmap_types,
               f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
@@ -222,7 +222,7 @@ class GlobalEpistasisModel:
                 C=self.C,
                 theta_regularization=self.theta_regularization,
                 mask_type=self.gpmap_type)
-        elif self.gpmap_type == 'mlp':
+        elif self.gpmap_type == 'blackbox':
             self.x_to_phi_layer = MultilayerPerceptronGPMap(
                 L=self.L,
                 C=self.C,
@@ -301,7 +301,7 @@ class MeasurementProcessAgnosticModel:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Possible choices: ['additive','neighbor','pairwise','mlp]
+        Possible choices: ['additive','neighbor','pairwise','blackbox']
 
     ohe_batch_size: (int)
         Integer specifying how many sequences to one-hot encode at a time.
@@ -347,7 +347,7 @@ class MeasurementProcessAgnosticModel:
         # the following set of attributes are used for
         # gauge fixing the neural network model (x_to_phi and measurement)
         # and are set after the model has been fit to data.
-        self.na_hidden_nodes = None
+        self.mpa_hidden_nodes = None
         self.theta_gf = None
         self.na_model = None
 
@@ -360,7 +360,7 @@ class MeasurementProcessAgnosticModel:
               'number_of_bins must be an integer')
 
         # check that model type valid
-        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'mlp']
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox']
         check(self.gpmap_type in valid_gpmap_types,
               f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
@@ -388,7 +388,7 @@ class MeasurementProcessAgnosticModel:
         self.all_y = np.arange(self.Y).astype(int)
 
     def define_model(self,
-                     na_hidden_nodes=10):
+                     mpa_hidden_nodes=10):
         """
         Define the neural network architecture of the MPA model.
 
@@ -397,7 +397,7 @@ class MeasurementProcessAgnosticModel:
 
         Parameters
         ----------
-        na_hidden_nodes: (int)
+        mpa_hidden_nodes: (int)
             Number of nodes to use in the hidden layer of the measurement
             network of the GE model architecture.
 
@@ -407,11 +407,11 @@ class MeasurementProcessAgnosticModel:
             A tensorflow model that can be compiled and subsequently
             fit to data.
         """
-        check(isinstance(na_hidden_nodes, numbers.Integral),
-              'na_hidden_nodes must be a number.')
+        check(isinstance(mpa_hidden_nodes, numbers.Integral),
+              'mpa_hidden_nodes must be a number.')
 
-        check(na_hidden_nodes > 0,
-              'na_hidden_nodes must be greater than 0.')
+        check(mpa_hidden_nodes > 0,
+              'mpa_hidden_nodes must be greater than 0.')
 
         # Compute number of sequence nodes. Useful for model construction below.
         number_x_nodes = int(self.L*self.C)
@@ -441,7 +441,7 @@ class MeasurementProcessAgnosticModel:
                 C=self.C,
                 theta_regularization=self.theta_regularization,
                 mask_type=self.gpmap_type)
-        elif self.gpmap_type == 'mlp':
+        elif self.gpmap_type == 'blackbox':
             self.x_to_phi_layer = MultilayerPerceptronGPMap(
                 L=self.L,
                 C=self.C,
@@ -459,7 +459,7 @@ class MeasurementProcessAgnosticModel:
         self.layer_measurement_process = MPAMeasurementProcessLayer(
             info_for_layers_dict=self.info_for_layers_dict,
             Y=self.number_of_bins,
-            K=na_hidden_nodes,
+            K=mpa_hidden_nodes,
             eta=self.eta_regularization
             )
         outputTensor = self.layer_measurement_process(phi_ct)
@@ -467,5 +467,5 @@ class MeasurementProcessAgnosticModel:
         #create the model:
         model = Model(inputTensor, outputTensor)
         self.model = model
-        self.na_hidden_nodes = na_hidden_nodes
+        self.mpa_hidden_nodes = mpa_hidden_nodes
         return model
