@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import re
 import glob
-from sklearn.model_selection import train_test_split
+import os
 
 # MAVE-NN imports
 import mavenn
@@ -18,7 +18,8 @@ def list_tutorials():
     Reveal local directory where MAVE-NN tutorials are stored, as well as
     the names of available tutorial notebook files.
     """
-    tutorials_dir = mavenn.__path__[0] + '/examples/tutorials'
+    tutorials_dir = os.path.abspath(mavenn.__path__[0] + '/../docs/tutorials')
+
     tutorial_file_names = glob.glob(f'{tutorials_dir}/*.ipynb')
     tutorial_base_names = [file_name.split('/')[-1]
                             for file_name in tutorial_file_names]

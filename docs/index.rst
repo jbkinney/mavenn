@@ -81,12 +81,17 @@ machine by running the following in Python: ::
     mavenn.list_tutorials()
 
 
+Here are some tutorials
+
+
+
 Resources
 ---------
 
 .. toctree::
     :maxdepth: 2
 
+    tutorials
     implementation
 
 

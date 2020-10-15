@@ -41,8 +41,14 @@ needs_sphinx = '1.7.3' #no, this doesnt solve the **kwargs problem
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'numpydoc']
+extensions = ['sphinx.ext.autodoc',
+              'numpydoc',
+              'nbsphinx',
+              'sphinx.ext.mathjax']
 #extensions = ['sphinx.ext.autodoc']
+
+# Do NOT automatically execute notebooks when building.
+nbsphinx_execute = 'never'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
