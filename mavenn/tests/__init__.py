@@ -9,7 +9,7 @@ from mavenn.tests.specific_tests import \
 
 def run_tests():
     """
-    Run all mavenn functional tests.
+    Run all MAVE-NN functional tests.
     """
 
     test_GlobalEpistasisModel()

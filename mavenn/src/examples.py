@@ -9,11 +9,15 @@ from sklearn.model_selection import train_test_split
 # MAVE-NN imports
 import mavenn
 from mavenn.src.error_handling import handle_errors, check
+from mavenn.src.utils import load
 
 
 @handle_errors
 def list_tutorials():
-    """Reveal local directory where tutorials are stored."""
+    """
+    Reveal local directory where MAVE-NN tutorials are stored, as well as
+    the names of available tutorial notebook files.
+    """
     tutorials_dir = mavenn.__path__[0] + '/examples/tutorials'
     tutorial_file_names = glob.glob(f'{tutorials_dir}/*.ipynb')
     tutorial_base_names = [file_name.split('/')[-1]
@@ -35,21 +39,22 @@ def run_demo(name=None, print_code=False, print_names=True):
     Parameters
     ----------
     name: (str, None)
-        Name of run_demo to run. If None, a list of valid run_demo names
+        Name of demo to run. If ``None``, a list of valid demo names
         will be returned.
 
     print_code: (bool)
-        If True, text of the run_demo file will be printed along with
-        the output of the run_demo file. If False, only the run_demo output
+        If ``True``, the text of the demo file will be printed along with
+        the output from running this file. If ``False``, only the demo output
         will be shown.
 
     print_names: (bool)
-        If True, the names of all demos will be printed if name=None.
+        If True and ``name=None``, the names of all demos will be printed.
 
     Returns
     -------
-    demo_names: (list)
-        Only returned if user passes names=None.
+    demo_names: (list, None)
+        List of demo names, returned if user passes ``names=None``.
+        Otherwise None.
     """
     demos_dir = mavenn.__path__[0] +'/examples/demos'
     demo_file_names = glob.glob(f'{demos_dir}/*.py')
@@ -109,13 +114,13 @@ def load_example_model(name=None):
     Parameters
     -----------
     name: (str, None)
-        Name of model to load. If None, a list of valid model names
+        Name of model to load. If ``None``, a list of valid model names
         will be printed.
 
     Returns
     -------
     model: (mavenn.Model)
-        A pre-trained MAVE-NN model object.
+        A pre-trained Model object.
     """
     models_dir = mavenn.__path__[0] +'/examples/models'
     model_file_names = glob.glob(f'{models_dir}/*.h5')
@@ -136,7 +141,7 @@ def load_example_model(name=None):
 
     # If input is valid, load model
     elif name in model_names:
-        model = mavenn.load(models_dir + '/' + name)
+        model = load(models_dir + '/' + name)
 
     # Otherwise
     else:
@@ -154,12 +159,13 @@ def load_example_dataset(name=None):
     Parameters
     ----------
     name: (str)
-        Name of example dataset. If None, a list of valid names will be printed.
+        Name of example dataset. If ``None``, a list of valid dataset names will
+        be printed.
 
     Returns
     -------
-    data_df: (np.array)
-        A pd.DataFrame containing the example data.
+    data_df: (pd.DataFrame)
+        Dataframe containing the example datase.
     """
     # Create list of valid dataset names
     dataset_names = ['mpsa', 'sortseq', 'gb1']

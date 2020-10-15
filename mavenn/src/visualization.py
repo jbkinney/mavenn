@@ -54,72 +54,76 @@ def heatmap(values,
             cmap_size="5%",
             cmap_pad=0.1):
     """
-    Draw a heatmap illustrating a matrix of values.
+    Draw a heatmap illustrating an ``L`` x ``C`` matrix of values, where ``L`` is
+    sequence length and ``C`` is the alphabet size.
 
     Parameters
     ----------
     values: (np.ndarray)
-        Array sized (L,C) that contains values to plot.
+        Array of shape ``(L,C)`` that contains values to plot.
 
-    alphabet: (np.ndarray)
-        1D array containing characters in alphabet.
+    alphabet: (str, np.ndarray)
+        Alphabet name ``'dna'``, ``'rna'``, or ``'protein']``, or 1D array
+        containing characters in the alphabet.
 
-    seq: (str)
-        The sequence to show, if any. Must have length len(df)
-        and be comprised of characters in df.columns.
+    seq: (str, None)
+        The sequence to show, if any, using dots plotted on top of the heatmap.
+        Must have length ``L`` and be comprised of characters in ``alphabet``.
 
     seq_kwargs: (dict)
-        Arguments to pass to plt.plot() when illustrating seq characters.
+        Arguments to pass to ``Axes.scatter()`` when drawing dots to illustrate
+        the characters in ``seq``.
 
     ax: (matplotlib.axes.Axes)
-        The Axes object on which the heatmap will be drawn.
-        If None, one will be created. If specified, cbar=True,
-        and cax=None, ax will be split in two to make room for
+        The ``Axes`` object on which the heatmap will be drawn.
+        If ``None``, one will be created. If specified, ``cbar=True``,
+        and ``cax=None``, ``ax`` will be split in two to make room for a
         colorbar.
 
     show_spines: (bool)
-        Whether to show axes spines.
+        Whether to show spines around the edges of the heatmap.
 
     cbar: (bool)
-        Whether to draw a colorbar.
+        Whether to draw a colorbar next to the heatmap.
 
-    cax: (matplotlib.axes.Axes)
-        The Axes object on which the colorbar will be drawn
-        if requested. If None, one will be created by splitting
-        ax in two according to cmap_size and cmpa_pad.
+    cax: (matplotlib.axes.Axes, None)
+        The ``Axes`` object on which the colorbar will be drawn,
+        if requested. If ``None``, one will be created by splitting
+        ``ax`` in two according to ``cmap_size`` and ``cmap_pad``.
 
-    clim: (array of form [cmin, cmax])
-        Optional specification of the maximum and minimum effect
-        values spanned by the colormap. Overrides clim_quantile.
+    clim: (list, None)
+        List of the form ``[cmin, cmax]``, specifying the maximum ``cmax``
+        and minimum ``cmin`` values spanned by the colormap. Overrides
+        ``clim_quantile``.
 
-    clim_quantile: (float in [0,1])
-        If set, clim will automatically chosen to include the specified
-        fraction of effect sizes.
+    clim_quantile: (float)
+        Must be a float in the range [0,1]. ``clim`` will be automatically
+        chosen to include this central quantile of values.
 
     ccenter: (float)
-        The effect value at which to position the center of a diverging
-        colormap. A value of ccenter=0 often makes sense.
+        Value at which to position the center of a diverging
+        colormap. Setting ``ccenter=0`` often makes sense.
 
-    cmap: (str or matplotlib.colors.Colormap)
+    cmap: (str, matplotlib.colors.Colormap)
         Colormap to use.
 
     cmap_size: (str)
-        Specifies the fraction of ax width used for colorbar.
-        See documentation for
-            mpl_toolkits.axes_grid1.make_axes_locatable().
+        Fraction of ``ax`` width to be used for the colorbar. For formatting
+        requirements, see the documentation for
+        ``mpl_toolkits.axes_grid1.make_axes_locatable()``.
 
     cmap_pad: (float)
-        Specifies space between colorbar and shrunken ax.
-        See documentation for
-            mpl_toolkits.axes_grid1.make_axes_locatable().
+        Space between colorbar and the shrunken heatmap ``Axes``. For formatting
+        requirements, see the documentation for
+        ``mpl_toolkits.axes_grid1.make_axes_locatable()``.
 
     Returns
     -------
     ax: (matplotlib.axes.Axes)
-        Axes containing the heatmap.
+        ``Axes`` object containing the heatmap.
 
-    cb: (matplotlib.colorbar.Colorbar)
-        Colorbar object linked to Axes.
+    cb: (matplotlib.colorbar.Colorbar, None)
+        Colorbar object linked to ``ax``, or ``None`` if no colorbar was drawn.
     """
     alphabet = validate_alphabet(alphabet)
     L, C = values.shape

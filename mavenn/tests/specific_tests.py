@@ -363,10 +363,10 @@ def test_x_to_phi_or_yhat():
     mavenn_dir = mavenn.__path__[0]
     model_dir = f'{mavenn_dir}/examples/models/'
 
-    mpa_model = mavenn.load(model_dir + 'sortseq_mpa_additive')
+    mpa_model = load(model_dir + 'sortseq_mpa_additive')
     mpa_seq = 'GGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG'
     mpa_seq_gap = 'GGCTTTACAC-TTATGCTTCCGGCTCGTATGTTGTGTGG'
-    ge_model = mavenn.load(model_dir + 'gb1_ge_additive')
+    ge_model = load(model_dir + 'gb1_ge_additive')
     ge_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
     ge_seq_gap = 'QYKLILNGKTLK-ETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
 
