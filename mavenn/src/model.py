@@ -1077,33 +1077,51 @@ class Model:
         """
         Estimate likelihood information.
 
+        Likelihood information, ``I_like``, is the mutual information
+        I[ ``phi`` ; ``y``] between latent phenotypes ``phi`` and measurements
+        ``y`` under the assumption that the inferred measurement process
+        p( ``y`` | ``phi`` ) is correct. ``I_like`` is an affine transformation
+        of log likelihood and thus provides a useful metric during model
+        training. When evaluated on test data, ``I_like`` also provides a lower
+        bound to the predictive information ``I_pred``, which does not assume
+        that the inferred measurement process is correct. The difference
+        ``I_pred - I_like`` thus quantifies the mismatch between the inferred
+        measurement process and the true conditional distribution
+        p( ``y`` | ``phi`` ).
+
         Parameters
         ----------
         x: (np.ndarray)
-            1D array of N sequences, each of the same length.
+            1D array of ``N`` sequences, each of length ``L``.
 
         y: (np.ndarray)
             Array of measurements.
-            For GE regression, y must be a 1D array of floats, length N.
-            For MPA regression, y must be a 1D or 2D array of nonnegative ints.
-                - If 1D, will be interpretd as listing bin numbers, and
-                    must be of length N.
-                - If 2D, will be interpreted as listing counts across all bins,
-                    and must be of shape (N,Y) where Y is the number of bins.
+            For GE models, ``y`` must be a 1D array of ``N`` floats.
+            For MPA models, ``y`` must be either a 1D or 2D array
+            of nonnegative ints. If 1D, ``y`` must be of length ``N``, and
+            will be interpreted as listing bin numbers, i.e. ``0`` , ``1`` ,
+            ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be
+            interpreted as listing the observed counts for each of the ``N``
+            sequences in each of the ``Y`` bins.
 
-        ct: (np.ndarray or None)
-            Only used for MPA regression when y is 1D. In this case, represents
-            the number of observations of each sequence in each bin. Must
-            then be 1D array, length N, of nonnegative ints.
+        ct: (np.ndarray, None)
+            Only used for MPA models when ``y`` is 1D. In this case, ``ct``
+            must be a 1D array, length ``N``, of nonnegative integers, and
+            represents the number  of observations of each sequence in each bin.
+            Use ``y=None`` for GE models, as well as for MPA models when
+            ``y`` is 2D.
 
         uncertainty: (bool)
-            Whether to estimate the uncertainty of the MI estimate.
+            Whether to estimate the uncertainty of ``I_like``.
 
         Returns
         -------
-        (I, dI): (float, float)
-            I = Mutual information estimate in bits.
-            dI = Uncertainty estimate in bits. Zero if uncertainty=False is set.
+        I_like: (float)
+            Estimated likelihood information, in bits.
+
+        dI_like: (float)
+            Standard error for ``I_like``. Is ``0`` if ``uncertainty=False``
+            is used.
         """
         if self.regression_type == 'GE':
 
@@ -1202,55 +1220,67 @@ class Model:
         """
         Estimate predictive information.
 
+        Predictive information, ``I_pred``, is the mutual information
+        I[ ``phi`` ; ``y``] between latent phenotypes ``phi`` and measurements
+        ``y``. Unlike likelihood information, ``I_pred`` does not assume that
+        the inferred measurement process p( ``y`` | ``phi`` ) is correct.
+        ``I_pred`` is estimated using the k'th nearest neighbor methods from the
+        NPEET package.
+
         Parameters
         ----------
         x: (np.ndarray)
-            1D array of N sequences, each of the same length.
+            1D array of ``N`` sequences, each of length ``L``.
 
         y: (np.ndarray)
             Array of measurements.
-            For GE regression, y must be a 1D array of floats, having length N.
-            For MPA regression, y must be a 1D or 2D array of nonnegative ints.
-                - If 1D, will be interpretd as listing bin numbers, and
-                    must be of length N.
-                - If 2D, will be interpreted as listing counts across all bins,
-                    and must be of shape (N,Y) where Y is the number of bins
+            For GE models, ``y`` must be a 1D array of ``N`` floats.
+            For MPA models, ``y`` must be either a 1D or 2D array
+            of nonnegative ints. If 1D, ``y`` must be of length ``N``, and
+            will be interpreted as listing bin numbers, i.e. ``0`` , ``1`` ,
+            ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be
+            interpreted as listing the observed counts for each of the ``N``
+            sequences in each of the ``Y`` bins.
 
-        ct: (np.ndarray or None)
-            Only used for MPA regression when y is 1D. In this case, represents
-            the number of observations of each sequence in each bin. Must
-            then be 1D array, length N, of nonnegative ints.
+        ct: (np.ndarray, None)
+            Only used for MPA models when ``y`` is 1D. In this case, ``ct``
+            must be a 1D array, length ``N``, of nonnegative integers, and
+            represents the number  of observations of each sequence in each bin.
+            Use ``y=None`` for GE models, as well as for MPA models when
+            ``y`` is 2D.
 
         knn: (int>0)
-            Number of nearest neighbors to use in the KSG estimator.
+            Number of nearest neighbors to use in the entropy estimators from
+            the NPEET package.
 
         uncertainty: (bool)
-            Whether to estimate the uncertainty of the MI estimate.
-            Substantially increases runtime if True.
+            Whether to estimate the uncertainty in ``I_pred``.
+            Substantially increases runtime if ``True``.
 
-        num_subsamples: (int > 0)
-            Number of subsamples to use if estimating uncertainty.
+        num_subsamples: (int)
+            Number of subsamples to use when estimating the uncertainty in
+            ``I_pred``.
 
         use_LNC: (bool)
-            Whether to compute the Local Nonuniform Correction
-            (LNC) using the method of Gao et al., 2015.
-            Substantially increases runtime if True. Only used for
-            continuous y values.
+            Whether to use the Local Nonuniform Correction (LNC) of
+            Gao et al., 2015 when computing ``I_pred`` for GE models.
+            Substantially increases runtime set to ``True``.
 
         alpha_LNC: (float in (0,1))
-            Value of alpha to use when computing LNC.
-            See Gao et al., 2015 for details. Only used for
-            continuous y values.
+            Value of ``alpha`` to use when computing the LNC correction.
+            See Gao et al., 2015 for details. Used only for GE models.
 
         verbose: (bool)
             Whether to print results and execution time.
 
         Returns
         -------
-        I: (float)
-            Mutual information estimate in bits.
-        dI: (float)
-            Uncertainty estimate in bits. Zero if uncertainty=False is set.
+        I_pred: (float)
+            Estimated likelihood information, in bits.
+
+        dI_pred: (float)
+            Standard error for ``I_pred``. Is ``0`` if ``uncertainty=False``
+            is used.
         """
         if self.regression_type == 'GE':
 
