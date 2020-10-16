@@ -40,75 +40,85 @@ from mavenn.src.utils import mat_data_to_vec_data, \
 
 class Model:
     """
-    Represents a MAVE-NN model.
+    Represents a MAVE-NN model, which includes a genotype-phenotype (G-P) map
+    as well as a meaurement process. For global epistasis (GE) regression,
+    set ``regression_type='GE'``; for measurement process agnostic (MPA)
+    regression, set ``regression_type='MPA'``.
 
     Parameters
     ----------
-    regression_type: (str)
-        variable that chooses type of regression, valid options
-        include 'GE', 'MPA'.
-
     L: (int)
-        Integer specifying the length of a single training sequence.
+        Length of each training sequence. Must be ``>= 1``.
 
-    alphabet: (str)
-        Specifies the type of input sequences. Three possible choices
-        allowed: ['dna','rna','protein', 'protein*'].
+    alphabet: (str, np.ndarray)
+        Either the alphabet name (``'dna'``, ``'rna'``, or ``'protein'``) or a
+        1D array of characters to be used as the alphabet.
+
+    regression_type: (str)
+        Type of regression implemented by the model. Choices are ``'GE'`` (for
+        a global epistasis model) and ``'MPA'`` (for a measurement process
+        agnostic model).
 
     gpmap_type: (str)
-        Specifies the type of G-P model the user wants to infer.
-        Three possible choices allowed:
-        ['additive','neighbor','pairwise','blackbox']
+        Type of G-P map to infer. Choices are ``'additive'``, ``'neighbor'``,
+        ``'pairwise'``, and ``'blackbox'``.
 
     gpmap_kwargs: (dict)
-        Additional keyword arguments to specify the G-P map.
-
-    ge_nonlinearity_monotonic: (boolean)
-        Whether to use a monotonicity constraint in GE regression.
-        This variable has no effect for MPA regression.
-
-    ge_nonlinearity_hidden_nodes:
-        Number of hidden nodes (i.e. sigmoidal contributions) to use in the
-        definition of the GE nonlinearity.
-
-    ge_noise_model_type: (str)
-        Specifies the type of noise model the user wants to infer.
-        The possible choices allowed: ['Gaussian','Cauchy','SkewedT'].
-
-    ge_heteroskedasticity_order: (int)
-        Order of the exponentiated polynomials used to make noise model
-        parameters dependent on y_hat, and thus render the noise model
-        heteroskedastic. Set to zero for a homoskedastic noise model.
-        (Only used for GE regression).
-
-    mpa_hidden_nodes:
-        Number of hidden nodes (i.e. sigmoidal contributions) to use in the
-        definition of the MPA measurement process.
-
-    theta_regularization: (float >= 0)
-        Regularization strength for G-P map parameters theta.
-
-    eta_regularization: (float >= 0)
-        Regularization strength for measurement process parameters eta.
-
-    ohe_batch_size: (int)
-        Integer specifying how many sequences to one-hot encode at a time.
-        The larger this number number, the quicker the encoding will happen,
-        but this may also take up a lot of memory and throw an exception
-        if its too large. Currently for additive models only.
+        Additional keyword arguments used for specifying the G-P map.
 
     Y: (int)
-        Integer specifying the number of bins.
-        Only used for MPA regression; set to None otherwise.
+        The number if discrete ``y`` bins to use when defining an MPA model.
+        Must be ``>= 2``. Has no effect on MPA models.
+
+    ge_nonlinearity_monotonic: (boolean)
+        Whether to enforce a monotonicity constraint on the GE nonlinearity.
+        Has no effect on MPA models.
+
+    ge_nonlinearity_hidden_nodes: (int)
+        Number of hidden nodes (i.e. sigmoidal contributions) to use when
+        defining the nonlinearity component of a GE model. Has no effect on
+        MPA models.
+
+    ge_noise_model_type: (str)
+        Noise model to use for when defining a GE model. Choices are
+        ``'Gaussian'``, ``'Cauchy'``, ``'SkewedT'``. Has no effect on MPA
+        models.
+
+    ge_heteroskedasticity_order: (int)
+        In the GE model context, this represents the order of the polynomial(s)
+        used to define noise model parameters as functions of ``yhat``. The
+        larger this is, the more heteroskedastic an inferred noise model is
+        likely to be. Set to ``0`` to enforce a homoskedastic noise model. Has
+        no effect on MPA models. Must be ``>= 0``.
+
+    mpa_hidden_nodes:
+        Number of hidden nodes (i.e. sigmoidal contributions) to use when
+        defining the MPA measurement process. Must be ``>= 1``.
+
+    theta_regularization: (float)
+        L2 regularization strength for G-P map parameters ``theta``. Must
+        be ``>= 0``; use ``0`` for no regularization.
+
+    eta_regularization: (float)
+        L2 regularization strength for measurement process parameters ``eta``.
+        Must be ``>= 0``; use ``0`` for no regularization.
+
+    ohe_batch_size: (int)
+        **DISABLED**.
+        How many sequences to one-hot encode at a time when calling
+        ``Model.set_data()``. Typically, the larger this number is the quicker
+        the encoding will happen. A number too large, however, may cause
+        the computer's memory to run out. Must be ``>= 1``.
     """
 
     @handle_errors
     def __init__(self,
-                 regression_type,
                  L,
                  alphabet,
+                 regression_type,
                  gpmap_type='additive',
                  gpmap_kwargs={},
+                 Y=2,
                  ge_nonlinearity_type='nonlinear',
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
@@ -117,8 +127,7 @@ class Model:
                  mpa_hidden_nodes=50,
                  theta_regularization=0.1,
                  eta_regularization=0.1,
-                 ohe_batch_size=50000,
-                 Y=None):
+                 ohe_batch_size=50000):
         """Model() class constructor."""
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
@@ -643,9 +652,7 @@ class Model:
     def phi_to_yhat(self,
                     phi):
         """
-        Map latent phenotype (phi) values to observable (yhat) values.
-
-        Only used for GE regression models.
+        Compute ``phi`` given ``yhat``; GE models only.
 
         Parameters
         ----------
@@ -689,7 +696,7 @@ class Model:
                   x_wt=None,
                   unobserved_value=np.nan):
         """
-        Get parameters (theta) of the G-P map.
+        Return parameters of the G-P map.
 
         Parameters
         ----------
@@ -868,13 +875,13 @@ class Model:
 
     @handle_errors
     def get_nn(self):
-        """Return the model's TensorFlow neural network backend."""
+        """Return the backend TensorFlow model."""
         return self.model.model
 
     @handle_errors
     def x_to_phi(self, x):
         """
-        Compute the latent phenotype (phi) from sequences (x).
+        Compute ``phi`` given ``x``.
 
         Parameters
         ----------
@@ -921,7 +928,7 @@ class Model:
     def x_to_yhat(self,
                   x):
         """
-        Map sequences (x) to observables (yhat).
+        Compute ``yhat`` given ``x``.
 
         Parameters
         ----------
@@ -951,7 +958,7 @@ class Model:
                          N,
                          training_frac=.8):
         """
-        Simulate a dataset based on the MAVE-NN model.
+        Simulate a dataset.
 
         Parameters
         ----------
@@ -1068,7 +1075,7 @@ class Model:
                      ct=None,
                      uncertainty=True):
         """
-        Estimate the likelihood information (I_like) on user-provided data.
+        Estimate likelihood information.
 
         Parameters
         ----------
@@ -1193,7 +1200,7 @@ class Model:
                      alpha_LNC=.5,
                      verbose=False):
         """
-        Estimate the predictive information I_pred on user-provided data.
+        Estimate predictive information.
 
         Parameters
         ----------
@@ -1289,7 +1296,7 @@ class Model:
                    yhat,
                    q=[0.16, 0.84], paired=False):
         """
-        Return quantile values of p(y|yhat). Used only for GE models.
+        Compute quantiles of p( ``y`` | ``yhat``); GE models only.
 
         Parameters
         ----------
@@ -1355,7 +1362,7 @@ class Model:
 
     def p_of_y_given_phi(self, y, phi, paired=False):
         """
-        Compute p(y|phi).
+        Compute probabilities p( ``y`` | ``phi`` ).
 
         y: (np.ndarray)
             Measurement values. Note that these are cast as integers for
@@ -1446,7 +1453,7 @@ class Model:
 
     def p_of_y_given_yhat(self, y, yhat, paired=False):
         """
-        Compute p(y|yhat); for GE models only.
+        Compute probabilities p( ``y`` | ``yhat``); GE models only.
 
         Parameters
         ----------
@@ -1513,7 +1520,7 @@ class Model:
 
     def p_of_y_given_x(self, y, x):
         """
-        Compute p(y|x).
+        Compute probabilities p( ``y`` | ``x`` ).
 
         parameters
         ----------
@@ -1554,18 +1561,22 @@ class Model:
              filename,
              verbose=True):
         """
-        Save the trained MAVE-NN model.
+        Save model.
 
-        Note: This does not save the training data, only training data
-        statistics.
+        Saved models are represented by two files having the same root
+        and two different extensions, ``.pickle`` and ``.h5``. The ``.pickle``
+        file contains model metadata, including all information needed to
+        reconstruct the model's architecture. The ``.h5`` file contains the
+        values of the trained neural network weights. Training data is not
+        saved.
 
         Parameters
         ----------
         filename: (str)
-            filename of the saved model.
+            File directory and root. Do not include extensions.
 
         verbose: (bool)
-            Whether to provide user feedback.
+            Whether to print feedback.
 
         Returns
         -------
