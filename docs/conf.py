@@ -80,6 +80,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# Syntax highlighting for nbsphinx
+highlight_language = 'python3'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -87,8 +89,6 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-#html_theme = 'bizstyle'
-
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -97,7 +97,6 @@ html_theme = 'sphinx_rtd_theme'
 # html_theme_options = {}
 
 html_theme_options = {
-    #'canonical_url': 'https://mave-nn.readthedocs.io',
     'canonical_url': 'https://mavenn.readthedocs.io',
     #'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
     'logo_only': True,
