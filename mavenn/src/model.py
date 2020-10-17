@@ -244,28 +244,34 @@ class Model:
         """
         Set training data.
 
+        Prepares data for use during training, e.g. by shuffling and one-hot
+        encoding training data sequences. Must be called before ``Model.fit()``.
+
         Parameters
         ----------
         x: (np.ndarray)
-            1D array of N sequences, each of the same length.
+            1D array of ``N`` sequences, each of length ``L``.
 
         y: (np.ndarray)
             Array of measurements.
-            For GE regression, y must be a 1D array of floats, length N.
-            For MPA regression, y must be a 1D or 2D array of nonnegative ints.
-                - If 1D, will be interpretd as listing bin numbers, and
-                    must be of length N.
-                - If 2D, will be interpreted as listing counts across all bins,
-                    and must be of shape (N,Y) where Y is the number of bins
+            For GE models, ``y`` must be a 1D array of ``N`` floats.
+            For MPA models, ``y`` must be either a 1D or 2D array
+            of nonnegative ints. If 1D, ``y`` must be of length ``N``, and
+            will be interpreted as listing bin numbers, i.e. ``0`` , ``1`` ,
+            ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be
+            interpreted as listing the observed counts for each of the ``N``
+            sequences in each of the ``Y`` bins.
 
-        ct: (np.ndarray or None)
-            Only used for MPA regression when y is 1D. In this case, represents
-            the number of observations of each sequence in each bin. Must
-            then be 1D array, length N, of nonnegative ints.
+        ct: (np.ndarray, None)
+            Only used for MPA models when ``y`` is 1D. In this case, ``ct``
+            must be a 1D array, length ``N``, of nonnegative integers, and
+            represents the number  of observations of each sequence in each bin.
+            Use ``y=None`` for GE models, as well as for MPA models when
+            ``y`` is 2D.
 
         shuffle: (bool)
             Whether to shuffle the observations, e.g., to ensure similar
-            composition of training and validation sets.
+            composition of the training and validation sets.
 
         verbose: (bool)
             Whether to provide printed feedback.
@@ -422,51 +428,62 @@ class Model:
         """
         Infer values for model parameters.
 
+        Uses training algorithms from TensorFlow to learn model parameters.
+        Before this is run, the training data must be set using
+        ``Model.set_data()``.
+
         Parameters
         ----------
-        epochs: (int>0)
-            Maximum number of epochs to complete during training.
+        epochs: (int)
+            Maximum number of epochs to complete during model training.
+            Must be ``>= 0``.
 
-        learning_rate: (float > 0)
-            Learning rate that will get passed to the optimizer.
+        learning_rate: (float)
+            Learning rate. Must be ``> 0.``
 
         validation_split: (float in [0,1])
-            Fraction of training data to be split into a validation set.
+            Fraction of training data to reserve for validation.
 
         verbose: (boolean)
-            Will show training progress if True, nothing if False.
+            Whether to show progress during training.
 
         early_stopping: (bool)
-            specifies whether to use early stopping or not
+            Whether to use early stopping.
 
         early_stopping_patience: (int)
-            If using early stopping, specifies the number of epochs to wait
-            after a new optimum is identified.
+            Number of epochs to wait, after a minimum value of validation loss is
+            observed, before terminating the model training process.
 
         batch_size: (None, int)
-            Batch size to use. If None, a full-sized batch will be used.
+            Batch size to use for stochastic gradient descent and related
+            algorithms. If None, a full-sized batch is used.
+            Note that the negative log likelihood loss function used by MAVE-NN
+            is extrinsic in batch_size.
 
         linear_initialization: (bool)
-            Whether to initialize model with linear regression results.
+            Whether to initialize the results of a linear regression
+            computation. Has no effect when ``gpmap_type='blackbox'``.
 
         callbacks: (list)
-            List of tf.keras.callbacks.Callback instances.
+            Optional list of ``tf.keras.callbacks.Callback`` objects to use
+            during training.
 
         optimizer: (str)
-            Optimizer to use. Valid options include: ['SGD', 'RMSprop',
-            'Adam', 'Adadelta', 'Adagrad', 'Adamax', 'Nadam', 'Ftrl']
+            Optimizer to use for training. Valid options include:
+            ``'SGD'``, ``'RMSprop'``, ``'Adam'``, ``'Adadelta'``,
+            ``'Adagrad'``, ``'Adamax'``, ``'Nadam'``, ``'Ftrl'``.
 
         optimizer_kwargs: (dict)
-            Additional keyword arguments to pass to the constructor of the
-            tf.keras.optimizers.Optimizer class.
+            Additional keyword arguments to pass to the
+            ``tf.keras.optimizers.Optimizer`` constructor.
 
         fit_kwargs: (dict):
-            Additional keyword arguments to pass to tf.keras.model.fit()
+            Additional keyword arguments to pass to ``tf.keras.Model.fit()``
 
         Returns
         -------
-        history: (tf.keras.callbacks.History object)
-            Standard TensorFlow record of the optimization session.
+        history: (tf.keras.callbacks.History)
+            Standard TensorFlow record of the training session.
         """
         # Start timer
         start_time = time.time()
@@ -657,12 +674,12 @@ class Model:
         Parameters
         ----------
         phi: (array-like)
-            Latent phenotype values at which to evaluate the GE nonlinearity.
+            Latent phenotype values, provided as an ``np.ndarray`` of floats.
 
         Returns
         -------
         y_hat: (array-like)
-            Observable values.
+            Observable values in an ``np.ndarray`` the same shape as ``phi``.
         """
         # Shape phi for processing
         phi, phi_shape = _get_shape_and_return_1d_array(phi)
@@ -698,36 +715,71 @@ class Model:
         """
         Return parameters of the G-P map.
 
+        This function returns a ``dict`` containing the parameters of the
+        model's G-P map. Keys are of type ``str``, values are of type
+        ``np.ndarray`` . Relevant (key, value) pairs are:
+        ``'theta_0'`` , constant term;
+        ``'theta_lc'`` , additive effects in the form of a 2D array with shape
+        ``(L,C)``;
+        ``'theta_lclc'`` , pairwise effects in the form of a 4D array of shape
+        ``(L,C,L,C)``;
+        ``'theta_bb'`` , all parameters for ``gpmap_type='blackbox'`` models.
+
+        Importantly this function gauge-fixes model parameters before
+        returning them, i.e., it pins down non-identifiable degrees of freedom.
+        Gauge fixing is performed using a hierarchical gauge, which maximizes the
+        fraction of variance in ``phi`` explained by the lowest-order terms.
+        Computing such variances requires assuming probability distribution
+        over sequence space, however, and using different distributions will
+        result in different ways of fixing the gauge.
+
+        This function assumes that the distribution used to define the gauge
+        factorizes across sequence positions, and can thus be represented by an
+        ``L`` x ``C`` probability matrix ``p_lc`` that lists the probability of
+        each character ``c`` at each position ``l``.
+
+        An important special case is the wild-type gauge, in which ``p_lc``
+        is the one-hot encoding of a "wild-type" specific sequence ``x_wt``.
+        In this case, the constant parameter ``theta_0`` is the value of
+        ``phi`` for ``x_wt``, additive parameters ``theta_lc`` represent the
+        effect of single-point mutations away from ``x_wt``, and so on.
+
         Parameters
         ----------
         gauge: (str)
-            Must be one of the following strings:
-            "none" -> No gauge fixing.
-            "uniform" -> Hierarchichal gauge with uniform sequence distribution.
-            "empirical" -> Hierarchichal gauge with empirical sequence
-                distribution from training data.
-            "consensus" -> Wild-type gauge with empirical consensus sequence
-                from training data.
-            "user" -> Gauge set using either p_lc or x_wt supplied by user.
+            String specification of which gauge to use. Allowed values are:
+            ``'uniform'`` , hierarchical gauge using a uniform sequence
+            distribution;
+            ``'empirical'`` , hierarchical gauge using an empirical
+            distribution computed from the training data;
+            ``'consensus'`` , wild-type gauge using the training data
+            consensus sequence;
+            ``'user'`` , gauge using either ``p_lc`` or ``x_wt`` supplied
+            by the user;
+            ``'none'`` , no gauge fixing.
 
         p_lc: (None, array)
-            An (L,C) array listing the probability of each base
-            at each position. This is used when choosing the
-            hierarchichal gauge. If set, must have gauge="user".
+            Custom probability matrix to use for hierarchical gauge fixing.
+            Must be a ``np.ndarray`` of shape ``(L,C)`` . If using this, also
+            set ``gauge='user'``.
 
         x_wt: (str, None)
-            Wild type sequence to use for gauge fixing. If set,
-            must have gauge="user".
+            Custom wild-type sequence to use for wild-type gauge fixing. Must
+            be a ``str`` of length ``L``. If using this, also set
+            ``gauge='user'``.
 
         unobserved_value: (float, None)
-            Value to use for theta parameters when no corresponding
-            sequences were present in the training data. If None,
-            these parameters will be left alone.
+            Value to use for parameters when no corresponding
+            sequences were present in the training data. If ``None``,
+            these parameters will be left alone. Using ``np.nan`` can help
+            when visualizing models using ``mavenn.heatmap()`` or
+            ``mavenn.heatmap_pariwise()``.
 
         Returns
         -------
         theta: (dict)
-            Model parmaeters, provided as a dict of np.arrays.
+            Model parameters provided as a ``dict`` of numpy arrays.
+
         """
         # Useful alias
         _ = np.newaxis
@@ -875,7 +927,18 @@ class Model:
 
     @handle_errors
     def get_nn(self):
-        """Return the backend TensorFlow model."""
+        """
+        Return the underlying TensorFlow neural network.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        nn: (tf.keras.Model)
+            The backend TensorFlow model.
+        """
         return self.model.model
 
     @handle_errors
@@ -885,15 +948,15 @@ class Model:
 
         Parameters
         ----------
-        x: (array-like of str)
-            Sequence inputs representing DNA, RNA, or protein (whichever
-            type of sequence the model was trained on). Input must be
-            an array of str, all the proper length.
+        x: (np.ndarray)
+            Sequences, provided as an ``np.ndarray`` of strings, each of
+            length ``L``.
 
         Returns
         -------
         phi: (array-like of float)
-            Array of latent phenotype values.
+            Latent phenotype values, provided as floats within an ``np.ndarray``
+            the same shape as ``x``.
         """
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
@@ -932,13 +995,15 @@ class Model:
 
         Parameters
         ----------
-        x: (array-like)
-            Sequence data on which to make predictions.
+        x: (np.ndarray)
+            Sequences, provided as an ``np.ndarray`` of strings, each of
+            length ``L``.
 
         Returns
         -------
-        predictions: (array-like)
-            An array of predictions for GE regression.
+        yhat: (np.ndarray)
+            Observation values, provided as floats within an ``np.ndarray``
+            the same shape as ``x``.
         """
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
@@ -958,24 +1023,32 @@ class Model:
                          N,
                          training_frac=.8):
         """
-        Simulate a dataset.
+        Generate a simulated dataset.
+
+        Sequences are simulated according to the probability matrix ``p_lc``
+        computed from training data. Measurements are then simulated for each
+        sequence using the inferred G-P map and measurement process. To aid
+        in downstream use, simulated observations are randomly assigned to
+        training and test sets.
 
         Parameters
         ----------
-        N: (int > 0)
-            The number of observations to simulate.
+        N: (int)
+            The number of observations to simulate. Must be ``>= 1``.
 
-        training_frac: (float in [0,1])
-            The fraction of sequences to label for training.
+        training_frac: (float)
+            The fraction of sequences to label for training. Must be in
+            the range [0,1].
 
         Returns
         -------
         data_df: (pd.DataFrame)
-            Simulated dataset formatted as a dataframe. Columns include
-            'training_set', 'phi', 'y', 'x'. If model is GE, an additional
-            column 'yhat' is added. If model is MPA, an additional column
-            'ct' is added. Note that, under MPA regression, N will be the
-            sum of values in the 'ct' column, not the number of rows in the
+            Simulated dataset in the form of a dataframe. Columns include
+            ``'training_set'`` , ``'phi'`` , ``'y'`` , and ``'x'`` . For GE
+            models, an additional column ``'yhat'`` is added. For MPA models,
+            an additional column ``'ct'`` is added. Note that, in the latter
+            case, the total number of simulated observations ``N`` is the sum
+            of values in the ``'ct'`` column, not the number of rows in the
             dataframe.
         """
         # Validate N
@@ -1330,21 +1403,27 @@ class Model:
 
         Parameters
         ----------
-        yhat: (array of floats)
-            Values from which p(y|yhat) is computed.
+        yhat: (np.ndarray)
+            Observable values, provided as an array of floats.
 
-        q: (array of floats in [0,1])
-            Quantile specifications
+        q: (np.ndarray)
+            Quantile specifications, provided as an array of floats in the
+            range [0,1].
 
         paired: (bool)
-            Whether yhat, q values should be treated as pairs.
-            If so, yhat and q must have the same number of elements.
-            The shape of yhat will be used as output.
+            Whether values in ``yhat`` and ``q`` should be treated as paired.
+            If ``True``, quantiles will be computed using each value in ``yhat``
+            paired with the corresponding value in ``q``. If ``False``,
+            the quantile for each value in ``yhat`` will be computed for every
+            value in ``q``.
 
         Returns
         -------
         yq: (array of floats)
-            Array of quantile values.
+            Quantiles of p( ``y`` | ``yhat`` ). If ``paired=True``,
+            ``yq.shape`` will be equal to both ``yhat.shape`` and ``q.shape``.
+            If ``paired=False``, ``yq.shape`` will be given by
+            ``yhat.shape + q.shape``.
         """
         # Prepare inputs
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
@@ -1394,22 +1473,29 @@ class Model:
         """
         Compute probabilities p( ``y`` | ``phi`` ).
 
+        Parameters
+        ----------
         y: (np.ndarray)
-            Measurement values. Note that these are cast as integers for
-            MPA regression.
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
 
         phi: (np.ndarray)
-            Latent phenotype values.
+            Latent phenotype values, provided as an array of floats.
 
         paired: (bool)
-            Whether y,phi values should be treated as pairs.
-            If so, y and phi must have the same number of elements.
-            The shape of y will be used as output.
+            Whether values in ``y`` and ``phi`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``phi``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``phi``.
 
         Returns
         -------
-            p: (np.ndarray)
-                Probability of y given phi.
+        p: (np.ndarray)
+            Probability of ``y`` given ``phi``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``phi.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + phi.shape``.
         """
         # Prepare inputs
         y, y_shape = _get_shape_and_return_1d_array(y)
@@ -1487,21 +1573,26 @@ class Model:
 
         Parameters
         ----------
-        y: (float or array-like of floats)
-            Measurement values.
+        y: (np.ndarray)
+            Measurement values, provided as an array of floats.
 
-        yhat: (float or array-like of floats)
-            Predictions of the GE model.
+        yhat: (np.ndarray)
+            Observable values, provided as an array of floats.
 
         paired: (bool)
-            Whether y,yhat values should be treated as pairs.
-            If so, y and yhat must have the same number of elements.
-            The shape of y will be used as output.
+            Whether values in ``y`` and ``yhat`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``yhat``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``yhat``.
 
         Returns
         -------
-            p: (float or array-like of floats)
-                Probability of y given yhat.
+        p: (np.ndarray)
+            Probability of ``y`` given ``yhat``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``yhat.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + yhat.shape`` .
         """
         check(self.regression_type == 'GE',
               f'Only works for GE models.')
@@ -1548,23 +1639,34 @@ class Model:
         p = _shape_for_output(p, p_shape)
         return p
 
-    def p_of_y_given_x(self, y, x):
+    # TODO: Implement keyword paired
+    def p_of_y_given_x(self, y, x, paired=True):
         """
         Compute probabilities p( ``y`` | ``x`` ).
 
-        parameters
+        Parameters
         ----------
-        y: (array-like of floats)
-            The y values for which the conditional probability will be computed.
+        y: (np.ndarray)
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
 
-        x: (array-like of strings)
-            The value on which the computed probability will be conditioned.
+        x: (np.ndarray)
+            Sequences, provided as an array of strings, each of length ``L``.
 
-        returns
+        paired: (bool)
+            Whether values in ``y`` and ``x`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``x``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``x``.
+
+        Returns
         -------
-        p_of_y_given_x: (array-like of floats)
-            Probability of y given sequence x. Shape of returned value will
-            match shape of y_test.
+        p: (np.ndarray)
+            Probability of ``y`` given ``x``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``x.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + x.shape``.
         """
         if self.regression_type=='GE':
             phi = self.x_to_phi(x)
@@ -1597,8 +1699,8 @@ class Model:
         and two different extensions, ``.pickle`` and ``.h5``. The ``.pickle``
         file contains model metadata, including all information needed to
         reconstruct the model's architecture. The ``.h5`` file contains the
-        values of the trained neural network weights. Training data is not
-        saved.
+        values of the trained neural network weights. Note that training
+        data is not saved.
 
         Parameters
         ----------
@@ -1610,7 +1712,7 @@ class Model:
 
         Returns
         -------
-        None.
+        None
         """
         # Create config_dict
         config_dict = {

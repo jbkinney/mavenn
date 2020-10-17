@@ -45,13 +45,13 @@ extensions = ['sphinx.ext.autodoc',
               'numpydoc',
               'nbsphinx',
               'sphinx.ext.mathjax']
-#extensions = ['sphinx.ext.autodoc']
 
 # Do NOT automatically execute notebooks when building.
 nbsphinx_execute = 'never'
 
 # Genereate autosummary
 autosummary_generate = True
+# numpydoc_show_class_members = False  # Gets rid of warnings, but also of table
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
