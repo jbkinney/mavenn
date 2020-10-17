@@ -24,5 +24,4 @@ python:
   version: 3.7
   install:
     - requirements: readthedocs_requirements.txt
-    - method: pip
   system_packages: true
