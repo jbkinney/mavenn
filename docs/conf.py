@@ -44,7 +44,8 @@ needs_sphinx = '1.7.3' #no, this doesnt solve the **kwargs problem
 extensions = ['sphinx.ext.autodoc',
               'numpydoc',
               'nbsphinx',
-              'sphinx.ext.mathjax']
+              'sphinx.ext.mathjax',
+              'sphinx_copybutton']
 
 # Do NOT automatically execute notebooks when building.
 nbsphinx_execute = 'never'
@@ -80,9 +81,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-# Syntax highlighting for nbsphinx
-highlight_language = 'python3'
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -93,8 +91,6 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#
-# html_theme_options = {}
 
 html_theme_options = {
     'canonical_url': 'https://mavenn.readthedocs.io',
