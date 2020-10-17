@@ -18,7 +18,7 @@ def list_tutorials():
     Reveal local directory where MAVE-NN tutorials are stored, as well as
     the names of available tutorial notebook files.
     """
-    tutorials_dir = os.path.abspath(mavenn.__path__[0] + '/../docs/tutorials')
+    tutorials_dir = os.path.abspath(mavenn.__path__[0] + '/examples/tutorials')
 
     tutorial_file_names = glob.glob(f'{tutorials_dir}/*.ipynb')
     tutorial_base_names = [file_name.split('/')[-1]
