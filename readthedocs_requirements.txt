@@ -9,4 +9,11 @@ matplotlib
 logomaker
 seaborn
 suftware
-nbsphinx
+ipykernel
+sphinxcontrib-bibtex
+sphinxcontrib-svg2pdfconverter
+ipywidgets
+sphinx-copybutton
+sphinx-gallery
+jupytext
+sphinx-last-updated-by-git
