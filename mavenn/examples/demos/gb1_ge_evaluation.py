@@ -50,16 +50,18 @@ phi = model.x_to_phi(x)
 yhat = model.phi_to_yhat(phi)
 
 # Create grid for plotting yhat and yqs
-phi_lim = [-5, 2.5]
+phi_lim = [-4.5, 2.5]
 phi_grid = np.linspace(phi_lim[0], phi_lim[1], 1000)
 yhat_grid = model.phi_to_yhat(phi_grid)
 yqs_grid = model.yhat_to_yq(yhat_grid, q=[.16,.84])
 
 # Create two panels
-fig, axs = plt.subplots(1, 2, figsize=[12, 4])
+fig = plt.figure(figsize=[12,  3.5])
+gs = fig.add_gridspec(1, 3)
+
 
 # Left panel: draw heatmap illustrating 1pt mutation effects
-ax = axs[0]
+ax = fig.add_subplot(gs[:2])
 ax, cb = mavenn.heatmap(theta_dict['theta_lc'],
                         alphabet=theta_dict['alphabet'],
                         seq=gb1_seq,
@@ -72,7 +74,7 @@ cb.set_label('effect ($\Delta\phi$)', rotation=-90, va="bottom")
 ax.set_title('mutation effects')
 
 # Right panel: illustrate measurement process with GE curve
-ax = axs[1]
+ax = fig.add_subplot(gs[2])
 ax.scatter(phi, y, color='C0', s=5, alpha=.2, label='test data')
 ax.plot(phi_grid, yhat_grid, linewidth=2, color='C1',
         label='$\hat{y} = g(\phi)$')
