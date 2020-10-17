@@ -21,20 +21,26 @@ from mavenn.src.validate import validate_1d_array, validate_nd_array, \
 @handle_errors
 def load(filename, verbose=True):
         """
-        Load a pre-trained model.
+        Load a previously saved model.
+
+        Saved models are represented by two files having the same root
+        and two different extensions, ``.pickle`` and ``.h5``. The ``.pickle``
+        file contains model metadata, including all information needed to
+        reconstruct the model's architecture. The ``.h5`` file contains the
+        values of the trained neural network weights.
 
         Parameters
         ----------
         filename: (str)
-            Filename of saved model.
+            File directory and root. Do not include extensions.
 
         verbose: (bool)
-            Whether to provide user feedback.
+            Whether to print feedback.
 
         Returns
         -------
-        loaded_model: (mavenn-Model object)
-            The model object that can be used to make predictions etc.
+        loaded_model: (mavenn.Model)
+            MAVE-NN model object.
         """
         # Load model
         filename_pickle = filename + '.pickle'

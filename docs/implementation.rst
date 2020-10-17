@@ -23,6 +23,13 @@ tutorials can be accessed using the following functions.
 
 .. autofunction:: mavenn.list_tutorials
 
+Load
+----
+
+MAVE-NN allows users to save and load trained models.
+
+.. autofunction:: mavenn.load
+
 Visualization
 -------------
 

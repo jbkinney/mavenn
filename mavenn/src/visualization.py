@@ -63,7 +63,7 @@ def heatmap(values,
         Array of shape ``(L,C)`` that contains values to plot.
 
     alphabet: (str, np.ndarray)
-        Alphabet name ``'dna'``, ``'rna'``, or ``'protein']``, or 1D array
+        Alphabet name ``'dna'``, ``'rna'``, or ``'protein'``, or 1D array
         containing characters in the alphabet.
 
     seq: (str, None)
@@ -241,121 +241,122 @@ def heatmap_pairwise(values,
                      cmap_size="5%",
                      cmap_pad=0.1):
     """
-    Draw a triangular heatmap illustrating the pairwise or neighbor parameters.
+    Draw a heatmap illustrating pairwise or neighbor values, e.g. representing
+    model parameters, mutational effects, etc.
 
-    Note: The resulting plot has aspect ratio of 1 and
-    is scaled so that pixels have half-diagonal lengths given by
-
-        half_pixel_diag = 1/(C*2),
-
-    and blocks of characters have half-diagonal lengths given by
-
-        half_block_diag = 1/2
-
-    This is done so that the horizontal distance between positions
-    (as indicated by x ticks) is 1.
+    Note: The resulting plot has aspect ratio of 1 and is scaled so that pixels
+    have half-diagonal lengths given by ``half_pixel_diag = 1/(C*2)``, and
+    blocks of characters have half-diagonal lengths given by
+    ``half_block_diag = 1/2``. This is done so that the horizontal distance
+    between positions (as indicated by x-ticks) is 1.
 
     Parameters
     ----------
     values: (np.array)
-        An array, shape (L,C,L,C), containing pairwise parameters.
-        Note that only values at coordinates [l1,c1,l2,c2] with l2 > l1
-        will be plotted. NaN values will not be plotted.
+        An array, shape ``(L,C,L,C)``, containing pairwise or neighbor values.
+        Note that only values at coordinates ``[l1, c1, l2, c2]`` with
+        ``l2`` > ``l1`` will be plotted. NaN values will not be plotted.
 
-    alphabet: (np.array)
-        Array of shape (C,) containing alphabet characters.
+    alphabet: (str, np.ndarray)
+        Alphabet name ``'dna'``, ``'rna'``, or ``'protein'``, or 1D array
+        containing characters in the alphabet.
 
-    seq: (str)
-        The sequence to show, if any. Must have length len(df)
-        and be comprised of characters in df.columns.
+    seq: (str, None)
+        The sequence to show, if any, using dots plotted on top of the heatmap.
+        Must have length ``L`` and be comprised of characters in ``alphabet``.
 
     seq_kwargs: (dict)
-        Arguments to pass to plt.plot() when illustrating seq characters.
+        Arguments to pass to ``Axes.scatter()`` when drawing dots to illustrate
+        the characters in ``seq``.
 
     ax: (matplotlib.axes.Axes)
-        The Axes object on which the heatmap will be drawn.
-        If None, one will be created. If specified, cbar=True,
-        and cax=None, ax will be split in two to make room for
+        The ``Axes`` object on which the heatmap will be drawn.
+        If ``None``, one will be created. If specified, ``cbar=True``,
+        and ``cax=None``, ``ax`` will be split in two to make room for a
         colorbar.
 
     gpmap_type: (str)
         Determines how many pairwise parameters are plotted.
-        Must be "pairwise", "neighbor". If "pairwise", a triangular diamond shape
-        will be plotted. If "neighbor", a string of diamonds will be plotted.
+        Must be ``'pairwise'`` or ``'neighbor'``. If ``'pairwise'``, a
+        triangular heatmap will be plotted. If ``'neighbor'``, a heatmap
+        resembling a string of diamonds will be plotted.
 
     show_position: (bool)
-        Whether to draw position labels on the plot.
+        Whether to annotate the heatmap with position labels.
 
-    position_size: (float >= 0)
-        Font size to use for position labels.
+    position_size: (float)
+        Font size to use for position labels. Must be >= 0.
 
     position_pad: (float)
-        Additional padding, in units of half_pixel_diag, used to space
+        Additional padding, in units of ``half_pixel_diag``, used to space
         the position labels further from the heatmap.
 
     show_alphabet: (bool)
-        Whether to draw alphabet on the plot.
+        Whether to annotate the heatmap with character labels.
 
-    alphabet_size: (float >= 0)
-        Font size to use for alphabet.
+    alphabet_size: (float)
+        Font size to use for alphabet. Must be >= 0.
 
     alphabet_pad: (float)
-        Additional padding, in units of half_pixel_diag, used to space
-        the c1 alphabet labels from the heatmap.
+        Additional padding, in units of ``half_pixel_diag``, used to space
+        the alphabet labels from the heatmap.
 
     show_seplines: (bool)
-        Whether to draw seplines, i.e. lines separating character blocks
-        for different position pairs.
+        Whether to draw lines separating character blocks for different
+        position pairs.
 
     sepline_kwargs: (dict)
-        Keywords to pass to ax.plot() when drawing seplines.
+        Keywords to pass to ``Axes.plot()`` when drawing seplines.
 
     xlim_pad: (float)
-        Additional padding to add to both xlims, in absolute units.
+        Additional padding to add (in absolute units) both left and right of
+        the heatmap.
 
     ylim_pad: (float)
-        Additional padding to add to both ylims, in aboslute units.
+        Additional padding to add (in absolute units) both above and below the
+        heatmap.
 
     cbar: (bool)
-        Whether to draw a colorbar.
+        Whether to draw a colorbar next to the heatmap.
 
-    cax: (matplotlib.axes.Axes)
-        The Axes object on which the colorbar will be drawn
-        if requested. If None, one will be created by splitting
-        ax in two according to cmap_size and cmpa_pad.
+    cax: (matplotlib.axes.Axes, None)
+        The ``Axes`` object on which the colorbar will be drawn, if requested.
+        If ``None``, one will be created by splitting ``ax`` in two according
+        to ``cmap_size`` and ``cmap_pad``.
 
-    clim: (array of form [cmin, cmax])
-        Optional specification of the maximum and minimum effect
-        values spanned by the colormap. Overrides clim_quantile.
+    clim: (list, None)
+        List of the form ``[cmin, cmax]``, specifying the maximum ``cmax``
+        and minimum ``cmin`` values spanned by the colormap. Overrides
+        ``clim_quantile``.
 
-    clim_quantile: (float in [0,1])
-        If set, clim will automatically be chosen to include the specified
-        fraction of pixel values.
+    clim_quantile: (float)
+        Must be a float in the range [0,1]. ``clim`` will be automatically
+        chosen to include this central quantile of values.
 
     ccenter: (float)
-        The pixel value at which to position the center of a diverging
-        colormap. A value of ccenter=0 most often makes sense.
+        Value at which to position the center of a diverging
+        colormap. Setting ``ccenter=0`` often makes sense.
 
-    cmap: (str or matplotlib.colors.Colormap)
+    cmap: (str, matplotlib.colors.Colormap)
         Colormap to use.
 
     cmap_size: (str)
-        Specifies the fraction of ax width used for colorbar.
-        See documentation for
-            mpl_toolkits.axes_grid1.make_axes_locatable().
+        Fraction of ``ax`` width to be used for the colorbar. For formatting
+        requirements, see the documentation for
+        ``mpl_toolkits.axes_grid1.make_axes_locatable()``.
 
     cmap_pad: (float)
-        Specifies space between colorbar and shrunken ax.
-        See documentation for
-            mpl_toolkits.axes_grid1.make_axes_locatable().
+        Space between colorbar and the shrunken heatmap ``Axes``. For formatting
+        requirements, see the documentation for
+        ``mpl_toolkits.axes_grid1.make_axes_locatable()``.
 
     Returns
     -------
     ax: (matplotlib.axes.Axes)
-        Axes containing the heatmap.
+        ``Axes`` object containing the heatmap.
 
-    cb: (matplotlib.colorbar.Colorbar)
-        Colorbar object linked to Axes.
+    cb: (matplotlib.colorbar.Colorbar, None)
+        Colorbar object linked to ``ax``, or ``None`` if no colorbar was drawn.
     """
     # Validate values
     check(isinstance(values, np.ndarray),
