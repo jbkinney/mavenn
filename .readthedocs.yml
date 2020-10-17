@@ -25,5 +25,4 @@ python:
   install:
     - requirements: readthedocs_requirements.txt
     - method: pip
-      path: .
   system_packages: true
