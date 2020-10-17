@@ -53,7 +53,7 @@ yhat = model.phi_to_yhat(phi)
 phi_lim = [-4.5, 2.5]
 phi_grid = np.linspace(phi_lim[0], phi_lim[1], 1000)
 yhat_grid = model.phi_to_yhat(phi_grid)
-yqs_grid = model.yhat_to_yq(yhat_grid, q=[.16,.84])
+yqs_grid = model.yhat_to_yq(yhat_grid, q=[.10,.90])
 
 # Create two panels
 fig = plt.figure(figsize=[10,  3.65])
