@@ -63,8 +63,8 @@ target/
 .idea/
 
 # Figures
-*.png
-*.pdf
+# *.png
+# *.pdf
 
 # Apple shit
 .DS_Store
