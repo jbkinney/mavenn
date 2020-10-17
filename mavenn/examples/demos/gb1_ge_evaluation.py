@@ -56,30 +56,31 @@ yhat_grid = model.phi_to_yhat(phi_grid)
 yqs_grid = model.yhat_to_yq(yhat_grid, q=[.16,.84])
 
 # Create two panels
-fig = plt.figure(figsize=[12,  3.5])
-gs = fig.add_gridspec(1, 3)
-
+fig = plt.figure(figsize=[10,  3.65])
+gs = fig.add_gridspec(1, 5)
 
 # Left panel: draw heatmap illustrating 1pt mutation effects
-ax = fig.add_subplot(gs[:2])
+ax = fig.add_subplot(gs[:3])
 ax, cb = mavenn.heatmap(theta_dict['theta_lc'],
                         alphabet=theta_dict['alphabet'],
                         seq=gb1_seq,
                         cmap='PiYG',
                         ccenter=0,
-                        ax=ax)
+                        ax=ax,
+                        cmap_size='2%')
 ax.set_xlabel('position ($l$)')
 ax.set_ylabel('amino acid ($c$)')
-cb.set_label('effect ($\Delta\phi$)', rotation=-90, va="bottom")
 ax.set_title('mutation effects')
+cb.set_label('effect ($\Delta\phi$)', rotation=-90, va="bottom")
+cb.outline.set_visible(False)
 
 # Right panel: illustrate measurement process with GE curve
-ax = fig.add_subplot(gs[2])
+ax = fig.add_subplot(gs[3:])
 ax.scatter(phi, y, color='C0', s=5, alpha=.2, label='test data')
 ax.plot(phi_grid, yhat_grid, linewidth=2, color='C1',
         label='$\hat{y} = g(\phi)$')
 ax.plot(phi_grid, yqs_grid[:, 0], linestyle='--', color='C1',
-        label='68% CI')
+        label='80% CI')
 ax.plot(phi_grid, yqs_grid[:, 1], linestyle='--', color='C1')
 ax.set_xlim(phi_lim)
 ax.set_xlabel('latent phenotype ($\phi$)')
