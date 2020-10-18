@@ -1,7 +1,7 @@
 numpy
 pandas
 numpydoc
-matplotlib>=3.2.0
+matplotlib
 sphinx_rtd_theme
 tensorflow
 sklearn
