@@ -874,16 +874,16 @@ class Model:
             # Fix 1st order parameters
             fixed_theta_lc = theta_lc \
                 - np.sum(theta_lc * p_lc, axis=1)[:, _] \
-                + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                + np.sum(theta_lclc * p_lc[_, _, :, :],
                          axis=(2, 3)) \
                 - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
                          axis=(1, 2, 3))[:, _]
 
             # Fix 2nd order parameters
             fixed_theta_lclc = theta_lclc \
-                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                - np.sum(theta_lclc * p_lc[:, :, _, _],
                          axis=1)[:, _, :, :] \
-                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                - np.sum(theta_lclc * p_lc[_, _, :, :],
                          axis=3)[:, :, :, _] \
                 + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
                          axis=(1, 3))[:, _, :, _]
