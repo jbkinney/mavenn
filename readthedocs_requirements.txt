@@ -1,11 +1,10 @@
 numpy
 pandas
 numpydoc
-matplotlib
+matplotlib>=3.2.0
 sphinx_rtd_theme
 tensorflow
 sklearn
-matplotlib
 logomaker
 seaborn
 suftware
