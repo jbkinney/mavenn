@@ -26,6 +26,7 @@ Documentation
     installation
     tutorials
     datasets
+    methods
     implementation
 
 
