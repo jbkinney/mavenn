@@ -1,7 +1,7 @@
+.. _installation:
+
 Installation
 ============
-
-.. _installation:
 
 From PyPI
 ---------

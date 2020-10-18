@@ -13,8 +13,8 @@ A key feature of MAVE-NN is that it explicitly accounts for the indirect nature 
 .. image:: _static/gb1_ge_evaluation.png
 
 MAVE-NN is written for Python 3 and is provided under an
-MIT open source license. The :ref:`installation`, :ref:`quickstart`,
-and :ref:`tutorial` sections below will help users quickly get
+MIT open source license. The :ref:`installation`
+and :ref:`tutorials` sections below will help users quickly get
 MAVE-NN working for their own research needs.
 
 Documentation
@@ -25,6 +25,7 @@ Documentation
 
     installation
     tutorials
+    datasets
     implementation
 
 
