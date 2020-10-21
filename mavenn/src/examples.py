@@ -169,11 +169,21 @@ def load_example_dataset(name=None):
         Dataframe containing the example datase.
     """
     # Create list of valid dataset names
-    dataset_names = ['mpsa', 'sortseq', 'gb1']
-    dataset_names.sort()
+    #dataset_names = ['mpsa', 'sortseq', 'gb1']
+    #dataset_names.sort()
 
     # Set dataset_dir
     dataset_dir = mavenn.__path__[0] + '/examples/datasets/'
+
+    dataset_file_names = glob.glob(f'{dataset_dir}*_data.csv.gz')
+    dataset_dict = {}
+    for file_name in dataset_file_names:
+        base_name = file_name.split('/')[-1]
+        pattern = '^(.*)_data\.csv\.gz$'
+        key = re.match(pattern, base_name).group(1)
+        dataset_dict[key] = file_name
+    dataset_names = list(dataset_dict.keys())
+    dataset_names.sort()
 
     # If no input, list valid names
     if name is None:
