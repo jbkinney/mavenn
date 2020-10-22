@@ -239,6 +239,8 @@ class Model:
                  x,
                  y,
                  ct=None,
+                 validation_frac=.2,
+                 validation_flags=None,
                  shuffle=True,
                  verbose=True):
         """
@@ -269,9 +271,21 @@ class Model:
             Use ``y=None`` for GE models, as well as for MPA models when
             ``y`` is 2D.
 
+        validation_frac (float):
+            Fraction of observations to use for the validation set. Is
+            overridden when setting ``validation_flags``. Must be in the range
+            [0,1].
+
+        validation_flags (np.ndarray, None):
+            1D array of ``N`` boolean numbers, with ``True`` indicating which
+            observations should be reserved for the validation set. If ``None``,
+            the training and validation sets will be randomly assigned based on
+            the value of ``validation_frac``.
+
         shuffle: (bool)
             Whether to shuffle the observations, e.g., to ensure similar
-            composition of the training and validation sets.
+            composition of the training and validation sets when
+            ``validation_flags`` is not set.
 
         verbose: (bool)
             Whether to provide printed feedback.
@@ -299,19 +313,32 @@ class Model:
             if y.ndim == 1:
                 y, x = vec_data_to_mat_data(y_n=y, ct_n=ct, x_n=x)
             else:
+                if isinstance(y, pd.DataFrame):
+                    y = y.values
                 check(y.ndim == 2,
                       f'y.ndim={y.ndim}; must be 1 or 2.')
 
-        self.x = x
-        self.y = y
-
-        # Make real sure xs are strings
-        self.x = validate_seqs(self.x, alphabet=self.alphabet)
-
         # Set N
-        self.N = len(self.x)
+        self.N = len(x)
+
+        # Set validation flags
+        if validation_flags is None:
+            self.validation_flags = (np.random.rand(self.N) < validation_frac)
+        else:
+            self.validation_flags = validation_flags
+        self.validation_frac = self.validation_flags.sum()/self.N
+
+        # Make sure x is valid
+        x = validate_seqs(x, alphabet=self.alphabet)
+
+        # Set training and validation x
+        self.x = x.copy()
+        self.y = y.copy()
+
+        # Provide feedback
         if verbose:
             print(f'N = {self.N:,} observations set as training data.')
+            print(f'Using {100*self.validation_frac:.1f}% for validation.')
 
         # Shuffle data if requested
         check(isinstance(shuffle, bool),
@@ -320,6 +347,7 @@ class Model:
             ix = np.arange(self.N).astype(int)
             np.random.shuffle(ix)
             self.x = self.x[ix]
+            self.validation_flags = self.validation_flags[ix]
             if self.regression_type == 'GE':
                 self.y = self.y[ix]
             else:
@@ -399,7 +427,7 @@ class Model:
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
             self.info_for_layers_dict['dH_y'] = dH_y
 
-        # Compute sequence statistics
+        # Compute sequence statistics (only on training set)
         self.x_stats = x_to_stats(self.x, self.alphabet)
 
         # Extract one-hot encoding of sequences
@@ -596,10 +624,16 @@ class Model:
         # Do linear regression if requested
         if self.linear_initialization:
 
+            # Extract training data
+            ix_val = self.validation_flags
+            x_sparse_train = csc_matrix(self.x_ohe[~ix_val])
+            y_targets_train = y_targets[~ix_val]
+
             # Do linear regression
             t = time.time()
-            x_sparse = csc_matrix(self.x_ohe)
-            self.theta_lc_init = lsmr(x_sparse, y_targets, show=verbose)[0]
+            self.theta_lc_init = lsmr(x_sparse_train,
+                                      y_targets_train,
+                                      show=verbose)[0]
 
             linear_regression_time = time.time() - t
             if verbose:
@@ -626,11 +660,21 @@ class Model:
         train_sequences = np.hstack([self.x_ohe,
                                      self.y_norm])
 
+        # Get training and validation sets
+        ix_val = self.validation_flags
+        x_train = train_sequences[~ix_val,:]
+        x_val = train_sequences[ix_val,:]
+        if self.regression_type == 'GE':
+            y_train = self.y_norm[~ix_val]
+            y_val = self.y_norm[ix_val]
+        elif self.regression_type == 'MPA':
+            y_train = self.y_norm[~ix_val,:]
+            y_val = self.y_norm[ix_val,:]
 
         # Train neural network using TensorFlow
-        history = self.model.model.fit(train_sequences,
-                                       self.y_norm,
-                                       validation_split=validation_split,
+        history = self.model.model.fit(x_train,
+                                       y_train,
+                                       validation_data=(x_val, y_val),
                                        epochs=epochs,
                                        verbose=verbose,
                                        callbacks=callbacks,
@@ -1021,7 +1065,8 @@ class Model:
     @handle_errors
     def simulate_dataset(self,
                          N,
-                         training_frac=.8):
+                         validation_frac=.2,
+                         test_frac=.2):
         """
         Generate a simulated dataset.
 
@@ -1036,20 +1081,21 @@ class Model:
         N: (int)
             The number of observations to simulate. Must be ``>= 1``.
 
-        training_frac: (float)
-            The fraction of sequences to label for training. Must be in
-            the range [0,1].
+        validation_frac: (float)
+            The fraction of sequences to reserve for the validation set.
+            Must be in the range [0,1].
+
+        test_frac: (float)
+            The fraction of sequences to reserve for the test set.
+            Must be in the range [0,1].
 
         Returns
         -------
         data_df: (pd.DataFrame)
             Simulated dataset in the form of a dataframe. Columns include
-            ``'training_set'`` , ``'phi'`` , ``'y'`` , and ``'x'`` . For GE
-            models, an additional column ``'yhat'`` is added. For MPA models,
-            an additional column ``'ct'`` is added. Note that, in the latter
-            case, the total number of simulated observations ``N`` is the sum
-            of values in the ``'ct'`` column, not the number of rows in the
-            dataframe.
+            ``'set'`` , ``'phi'`` , and ``'x'`` . For GE
+            models, additional columns ``'yhat'`` and ``'y'`` are added.
+            For MPA models, multiple columns of the form ``'ct_#'`` are added.
         """
         # Validate N
         check(isinstance(N, int),
@@ -1057,12 +1103,19 @@ class Model:
         check(N > 0,
               f'N={N}; must be > 0')
 
-        # Validate training_frac
-        check(isinstance(training_frac, float),
-                         f'type(training_frac)={type(training_frac)};'
-                         'must be float.')
-        check(0 <= training_frac <= 1,
-              f'training_frac={training_frac}; must be in [0,1]')
+        # Validate validation_frac
+        check(isinstance(validation_frac, float),
+              f'type(validation_frac)={type(validation_frac)};'
+              'must be float.')
+        check(0 <= validation_frac <= 1,
+              f'test_frac={validation_frac}; must be in [0,1]')
+
+        # Validate test_frac
+        check(isinstance(test_frac, float),
+              f'type(test_frac)={type(test_frac)};'
+              'must be float.')
+        check(0 <= test_frac <= 1,
+              f'test_frac={test_frac}; must be in [0,1]')
 
         # Generate sequences
         x = p_lc_to_x(N=N,
@@ -1121,7 +1174,6 @@ class Model:
         data_df['phi'] = phi
         if self.regression_type == 'GE':
             data_df['y'] = y
-        data_df['x'] = x
 
         # If doing MPA regression, collapse by sequence and add ct col
         if self.regression_type == 'MPA':
@@ -1135,9 +1187,22 @@ class Model:
         elif self.regression_type == 'GE':
             data_df.insert(0, column='yhat', value=yhat)
 
-        # Choose training frac
-        train_ix = np.random.rand(len(data_df)) < training_frac
-        data_df.insert(0, column='training_set', value=train_ix)
+        data_df['x'] = x
+
+        # Assign to training and test sets
+        r = np.random.rand(N)
+        validation_frac = .2
+        ix_train = (test_frac + validation_frac <= r)
+        ix_val = (test_frac <= r) & (r < test_frac + validation_frac)
+        ix_test = (r < test_frac)
+        data_df.insert(0, column='set', value='')
+        data_df.loc[ix_train, 'set'] = 'training'
+        data_df.loc[ix_val, 'set'] = 'validation'
+        data_df.loc[ix_test, 'set'] = 'test'
+        assert all([len(x) > 0 for x in data_df['set']])
+
+        # Shuffle data for extra safety
+        data_df = data_df.sample(frac=1).reset_index(drop=True)
 
         return data_df
 

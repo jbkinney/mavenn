@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import glob
+import pdb
 
 # MAVE-NN imports
 import mavenn
@@ -157,8 +158,12 @@ def test_GlobalEpistasisModel():
     test_parameter_values(func=model.simulate_dataset, var_name='N', fail_list=['0', -1, -0.1, 0],
                           success_list=[10, 1000])
 
-    # test model.simulate_method parameter training_frac
-    test_parameter_values(func=model.simulate_dataset, var_name='training_frac', fail_list=['0', -1, -0.1, 0],
+    # test model.simulate_method parameter validation_frac
+    test_parameter_values(func=model.simulate_dataset, var_name='validation_frac', fail_list=['0', -1, -0.1, 0],
+                          success_list=[0.5], N=10)
+
+    # test model.simulate_method parameter test_frac
+    test_parameter_values(func=model.simulate_dataset, var_name='test_frac', fail_list=['0', -1, -0.1, 0],
                           success_list=[0.5], N=10)
 
     # TODO: using gauge='user' breaks, need to test with p_lc, and x_wt
@@ -433,7 +438,6 @@ def test_for_nan_in_model_methods(model, seqs, y, regression_type):
     I, dI = model.I_predictive(x=seqs, y=y)
     check(np.isnan(I) == False, 'Predictive information computed to NAN')
     check(np.isnan(dI) == False, 'Error predictive information computed to NAN')
-    check(I >= 0, 'Predictive information is negative.')
 
     if regression_type == 'MPA':
 
@@ -505,7 +509,7 @@ def test_GE_fit():
         data_df = data_df.loc[0:100].copy()
 
         # get training set from data_df
-        ix = data_df['training_set']
+        ix = (data_df['set']!='test')
         L = len(data_df['x'][0])
         train_df = data_df[ix]
         test_df = data_df[~ix]
@@ -595,7 +599,7 @@ def test_MPA_fit():
     print(f'L={L}, Y={Y}')
 
     # Split into trianing and test data
-    ix = data_df['training_set']
+    ix = (data_df['set'] != 'test')
     L = len(data_df['x'][0])
     train_df = data_df[ix]
     test_df = data_df[~ix]

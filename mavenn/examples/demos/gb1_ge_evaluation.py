@@ -35,7 +35,7 @@ theta_dict = model.get_theta(gauge='user', x_wt=gb1_seq)
 data_df = mavenn.load_example_dataset('gb1')
 
 # Extract test data
-ix = ~data_df['training_set']
+ix = (data_df['set']=='test')
 test_df = data_df[ix]
 
 # Subsample test data, just to make plotting faster

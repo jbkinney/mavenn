@@ -26,7 +26,7 @@ print(f'Using mavenn at: {mavenn.__path__[0]}')
 data_df = mavenn.load_example_dataset('mpsa')
 
 # Split into training and test data
-ix = data_df['training_set']
+ix = (data_df['set']!='test')
 train_df = data_df[ix]
 test_df = data_df[~ix]
 
