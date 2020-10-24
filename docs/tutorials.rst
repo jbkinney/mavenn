@@ -16,15 +16,12 @@ machine by running the following in Python: ::
     mavenn.list_tutorials()
 
 
-Here are some tutorials
-
 Notebooks
 ---------
 
 .. toctree::
     :maxdepth: 0
 
-    tutorials/tutorial_0_built-in_examples
     tutorials/tutorial_1_mpsa_analysis
 
 

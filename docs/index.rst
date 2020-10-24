@@ -24,11 +24,11 @@ Documentation
     :maxdepth: 2
 
     installation
+    demos
     tutorials
     datasets
     methods
     implementation
-
 
 References
 ----------
