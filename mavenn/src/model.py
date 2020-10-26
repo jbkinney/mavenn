@@ -449,6 +449,7 @@ class Model:
             early_stopping_patience=20,
             batch_size=50,
             linear_initialization=True,
+            freeze_theta=False,
             callbacks=[],
             optimizer='Adam',
             optimizer_kwargs={},
@@ -491,6 +492,12 @@ class Model:
         linear_initialization: (bool)
             Whether to initialize the results of a linear regression
             computation. Has no effect when ``gpmap_type='blackbox'``.
+
+        freeze_theta: (bool)
+            Whether to set the weights of the gpmap layer to be
+            non-trainable. Note that setting linear_initialization=True
+            and freeze_theta=True will set theta to be initialized at the
+            linear regression solution and then become frozen during training.
 
         callbacks: (list)
             Optional list of ``tf.keras.callbacks.Callback`` objects to use
@@ -567,6 +574,12 @@ class Model:
               f'must be bool.')
         self.linear_initialization = linear_initialization
 
+        # Check freeze_theta
+        check(isinstance(freeze_theta, bool),
+              f'type(freeze_theta)={type(freeze_theta)};'
+              f'must be bool.')
+        self.freeze_theta = freeze_theta
+
         # Check callbacks
         check(isinstance(callbacks, list),
               f'type(callbacks)={type(callbacks)}; must be list.')
@@ -588,6 +601,11 @@ class Model:
         check(isinstance(fit_kwargs, dict),
               f'type(fit_kwargs)={type(fit_kwargs)}; must be dict.')
 
+        # set the theta/weights of the gpmap to be non-trainable
+        # if requested.
+        if self.freeze_theta:
+
+            self.layer_gpmap.trainable = False
 
         # Returns the sum of negative log likelihood contributions
         # from each sequence, which is provided as y_pred
