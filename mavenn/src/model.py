@@ -495,8 +495,8 @@ class Model:
 
         freeze_theta: (bool)
             Whether to set the weights of the G-P map layer to be
-            non-trainable. Note that setting ``linear_initialization=True```
-            and ``freeze_theta=True``` will set theta to be initialized at the
+            non-trainable. Note that setting ``linear_initialization=True``
+            and ``freeze_theta=True`` will set theta to be initialized at the
             linear regression solution and then become frozen during training.
 
         callbacks: (list)
