@@ -494,9 +494,9 @@ class Model:
             computation. Has no effect when ``gpmap_type='blackbox'``.
 
         freeze_theta: (bool)
-            Whether to set the weights of the gpmap layer to be
-            non-trainable. Note that setting linear_initialization=True
-            and freeze_theta=True will set theta to be initialized at the
+            Whether to set the weights of the G-P map layer to be
+            non-trainable. Note that setting ``linear_initialization=True```
+            and ``freeze_theta=True``` will set theta to be initialized at the
             linear regression solution and then become frozen during training.
 
         callbacks: (list)
@@ -601,7 +601,7 @@ class Model:
         check(isinstance(fit_kwargs, dict),
               f'type(fit_kwargs)={type(fit_kwargs)}; must be dict.')
 
-        # set the theta/weights of the gpmap to be non-trainable
+        # set the theta/weights of the G-P map to be non-trainable
         # if requested.
         if self.freeze_theta:
 
