@@ -176,7 +176,7 @@ def test_NoiseAgnosticModel():
 
     # load MPSA dataset for testing
     #x, y, ct_n = load_example_dataset(name='Sort-Seq')
-    data_df = load_example_dataset('sortseq')
+    data_df = load_example_dataset('sortseq_full-wt')
     x = data_df['x'].values
     y = data_df.filter(regex='ct_*').values
 
@@ -587,7 +587,7 @@ def test_MPA_fit():
 
     gpmap_types = ['additive', 'neighbor', 'pairwise']
 
-    data_df = mavenn.load_example_dataset('sortseq')
+    data_df = mavenn.load_example_dataset('sortseq_full-wt')
 
     # use small subset of data for quick training
     data_df = data_df.loc[0:100].copy()

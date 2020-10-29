@@ -12,10 +12,7 @@ A key feature of MAVE-NN is that it explicitly accounts for the indirect nature 
 
 .. image:: _static/gb1_ge_evaluation.png
 
-MAVE-NN is written for Python 3 and is provided under an
-MIT open source license. The :ref:`installation`
-and :ref:`tutorials` sections below will help users quickly get
-MAVE-NN working for their own research needs.
+MAVE-NN is written for Python 3 and is provided under an MIT open source license. The documentation provided here is meant help users quickly get MAVE-NN working for their own research needs. Please do not hesitate to contact us with any questions or suggestions for improvements.
 
 Documentation
 -------------
