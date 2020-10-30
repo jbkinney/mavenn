@@ -41,7 +41,7 @@ from mavenn.src.utils import mat_data_to_vec_data, \
 class Model:
     """
     Represents a MAVE-NN model, which includes a genotype-phenotype (G-P) map
-    as well as a meaurement process. For global epistasis (GE) regression,
+    as well as a measurement process. For global epistasis (GE) regression,
     set ``regression_type='GE'``; for measurement process agnostic (MPA)
     regression, set ``regression_type='MPA'``.
 
