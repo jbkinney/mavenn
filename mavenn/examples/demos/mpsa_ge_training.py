@@ -113,21 +113,21 @@ ax.legend()
 # Right panel: Plot model training history
 ax = axs[2]
 # Compute likelihood information
-I_like, dI_like =  model.I_likelihood(x=x_test, y=y_test)
-print(f'I_like_test: {I_like:.3f} +- {dI_like:.3f} bits')
+I_var, dI_var =  model.I_variational(x=x_test, y=y_test)
+print(f'I_var_test: {I_var:.3f} +- {dI_var:.3f} bits')
 
 # Compute predictive information
 I_pred, dI_pred = model.I_predictive(x=x_test, y=y_test)
 print(f'I_pred_test: {I_pred:.3f} +- {dI_pred:.3f} bits')
 
 # Get training history
-I_like_hist = model.history['I_like']
-val_I_like_hist = model.history['val_I_like']
+I_var_hist = model.history['I_var']
+val_I_var_hist = model.history['val_I_var']
 
 # Plot training history as well as information values
-ax.plot(I_like_hist, label='I_like_train')
-ax.plot(val_I_like_hist, label='I_like_val')
-ax.axhline(I_like, color='C2', linestyle=':', label='I_like_test')
+ax.plot(I_var_hist, label='I_var_train')
+ax.plot(val_I_var_hist, label='I_var_val')
+ax.axhline(I_var, color='C2', linestyle=':', label='I_var_test')
 ax.axhline(I_pred, color='C3', linestyle=':', label='I_pred_test')
 ax.legend()
 ax.set_xlabel('epochs')

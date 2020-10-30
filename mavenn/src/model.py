@@ -1225,23 +1225,23 @@ class Model:
         return data_df
 
     @handle_errors
-    def I_likelihood(self,
-                     x,
-                     y,
-                     ct=None,
-                     uncertainty=True):
+    def I_variational(self,
+                      x,
+                      y,
+                      ct=None,
+                      uncertainty=True):
         """
-        Estimate likelihood information.
+        Estimate variational information.
 
-        Likelihood information, ``I_like``, is the mutual information
+        Likelihood information, ``I_var``, is the mutual information
         I[ ``phi`` ; ``y``] between latent phenotypes ``phi`` and measurements
         ``y`` under the assumption that the inferred measurement process
-        p( ``y`` | ``phi`` ) is correct. ``I_like`` is an affine transformation
+        p( ``y`` | ``phi`` ) is correct. ``I_var`` is an affine transformation
         of log likelihood and thus provides a useful metric during model
-        training. When evaluated on test data, ``I_like`` also provides a lower
+        training. When evaluated on test data, ``I_var`` also provides a lower
         bound to the predictive information ``I_pred``, which does not assume
         that the inferred measurement process is correct. The difference
-        ``I_pred - I_like`` thus quantifies the mismatch between the inferred
+        ``I_pred - I_var`` thus quantifies the mismatch between the inferred
         measurement process and the true conditional distribution
         p( ``y`` | ``phi`` ).
 
@@ -1268,15 +1268,15 @@ class Model:
             ``y`` is 2D.
 
         uncertainty: (bool)
-            Whether to estimate the uncertainty of ``I_like``.
+            Whether to estimate the uncertainty of ``I_var``.
 
         Returns
         -------
-        I_like: (float)
-            Estimated likelihood information, in bits.
+        I_var: (float)
+            Estimated variational information, in bits.
 
-        dI_like: (float)
-            Standard error for ``I_like``. Is ``0`` if ``uncertainty=False``
+        dI_var: (float)
+            Standard error for ``I_var``. Is ``0`` if ``uncertainty=False``
             is used.
         """
         if self.regression_type == 'GE':
@@ -1353,14 +1353,14 @@ class Model:
         # Compute uncertainty
         dH_y_given_phi = np.std(H_y_given_phi_n, ddof=1)/np.sqrt(N)
 
-        # Compute I_like and dI_fit
-        I_like = H_y - H_y_given_phi
+        # Compute I_var and dI_fit
+        I_var = H_y - H_y_given_phi
         if uncertainty:
-            dI_like = np.sqrt(dH_y**2 + dH_y_given_phi**2)
+            dI_var = np.sqrt(dH_y**2 + dH_y_given_phi**2)
         else:
-            dI_like = 0
+            dI_var = 0
 
-        return I_like, dI_like
+        return I_var, dI_var
 
     @handle_errors
     def I_predictive(self,
@@ -1378,7 +1378,7 @@ class Model:
 
         Predictive information, ``I_pred``, is the mutual information
         I[ ``phi`` ; ``y``] between latent phenotypes ``phi`` and measurements
-        ``y``. Unlike likelihood information, ``I_pred`` does not assume that
+        ``y``. Unlike variational information, ``I_pred`` does not assume that
         the inferred measurement process p( ``y`` | ``phi`` ) is correct.
         ``I_pred`` is estimated using the k'th nearest neighbor methods from the
         NPEET package.
@@ -1432,7 +1432,7 @@ class Model:
         Returns
         -------
         I_pred: (float)
-            Estimated likelihood information, in bits.
+            Estimated variational information, in bits.
 
         dI_pred: (float)
             Standard error for ``I_pred``. Is ``0`` if ``uncertainty=False``

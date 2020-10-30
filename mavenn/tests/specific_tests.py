@@ -151,7 +151,7 @@ def test_GlobalEpistasisModel():
 
     # Prep model to test mavenn.Model child methods
     model = mavenn.Model(regression_type='GE', L=L, alphabet='rna')
-    model.set_data(x=x, y=y)
+    model.set_data(x=x, y=y, verbose=False)
     model.fit(epochs=1, verbose=False)
 
     # test model.simulate_method parameter N
@@ -525,7 +525,7 @@ def test_GE_fit():
 
             # loop over different GE noise model types
             for GE_noise_model_type in GE_noise_model_types:
-                print(f'======= {gpmap_type} : {GE_noise_model_type}========')
+                #print(f'======= {gpmap_type} : {GE_noise_model_type} : {dataset} ========')
 
                 # Define model
                 model = mavenn.Model(regression_type='GE',
@@ -539,18 +539,20 @@ def test_GE_fit():
                 model.set_data(x=train_df['x'],
                                y=train_df['y'],
                                shuffle=True,
-                               verbose=True)
+                               verbose=False)
 
                 # Fit model to data
                 _history = model.fit(epochs=1,
                                      linear_initialization=True,
                                      batch_size=200,
-                                     verbose=True)
+                                     verbose=False)
 
                 # check model methods for NANs
-                print('Check for NANs in the output of model methods')
-                print(f'gpmap_type = {gpmap_type}, dataset ='
-                      f' {ge_dataset}, GE = noise_model = {GE_noise_model_type}')
+                #print('Check for NANs in the output of model methods')
+                print(f'Testing model inference with: \n'
+                      f'gpmap_type={repr(gpmap_type)}, \n'
+                      f'dataset={repr(ge_dataset)}, \n'
+                      f'noise_model={repr(GE_noise_model_type)}')
 
                 test_parameter_values(test_for_nan_in_model_methods,
                                       var_name='seqs',
@@ -615,14 +617,19 @@ def test_MPA_fit():
                              gpmap_type=gpmap_type)
 
         model.set_data(x=train_df['x'].values,
-                       y=train_df[y_cols].values)
+                       y=train_df[y_cols].values,
+                       verbose=False)
 
         # Fit model to data
         history = model.fit(epochs=1,
-                            batch_size=250)
+                            batch_size=250,
+                            verbose=False)
         # check model methods for NANs
-        print('Check for NANs in the output of model methods')
+        #print('Check for NANs in the output of model methods')
         print(f'gpmap_type = {gpmap_type}, dataset = sortseq')
+        print(f'Testing model inference with: \n'
+              f'gpmap_type={repr(gpmap_type)}, \n'
+              f'dataset="sortseq"')
 
         test_parameter_values(test_for_nan_in_model_methods,
                               var_name='seqs',

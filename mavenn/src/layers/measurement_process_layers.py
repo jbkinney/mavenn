@@ -202,12 +202,12 @@ class MPAMeasurementProcessLayer(Layer):
         negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
         ct_m = K.sum(ct_my, axis=1)
 
-        # Add I_like metric
+        # Add I_var metric
         H_y = self.info_for_layers_dict['H_y_norm']
         H_y_given_phi = np.log2(e) * \
                         K.sum(negative_log_likelihood) / K.sum(ct_m)
         I_y_phi = H_y - H_y_given_phi
-        self.add_metric(I_y_phi, name="I_like", aggregation="mean")
+        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
 
         return negative_log_likelihood
 
@@ -412,11 +412,11 @@ class NoiseModelLayer(Layer):
         nlls = self.compute_nlls(yhat=yhat,
                                  ytrue=ytrue)
 
-        # Compute I_like metric from nlls
+        # Compute I_var metric from nlls
         H_y = self.info_for_layers_dict.get('H_y_norm', np.nan)
         H_y_given_phi = K.mean(np.log2(e) * nlls)
-        I_like = H_y - H_y_given_phi
-        self.add_metric(I_like, name="I_like", aggregation="mean")
+        I_var = H_y - H_y_given_phi
+        self.add_metric(I_var, name="I_var", aggregation="mean")
 
         return nlls
 
