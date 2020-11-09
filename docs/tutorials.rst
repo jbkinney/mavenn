@@ -23,5 +23,6 @@ Notebooks
     :maxdepth: 0
 
     tutorials/tutorial_1_mpsa_analysis
+    tutorials/tutorial_2_recover_true_GB1_model_from_simulated_data
 
 
