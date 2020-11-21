@@ -16,6 +16,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.constraints import non_neg
 from tensorflow.keras.initializers import Constant
 from tensorflow.math import tanh, sigmoid
+from tensorflow.nn import relu
 from tensorflow.keras.layers import Layer
 
 # MAVE-NN imports
@@ -212,7 +213,7 @@ class MPAMeasurementProcessLayer(Layer):
         return negative_log_likelihood
 
     @handle_arrays
-    def p_of_all_y_given_phi(self, phi):
+    def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
         # Shape phi
         phi = tf.reshape(phi, [-1, 1, 1])
@@ -224,14 +225,19 @@ class MPAMeasurementProcessLayer(Layer):
         d_yk = tf.reshape(self.d_yk, [-1, self.Y, self.K])
 
         # Compute weights
-        w_my = Exp(a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk),
-                                 axis=2))
-        w_my = tf.reshape(w_my, [-1, self.Y])
+        psi_my = a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk), axis=2)
+        psi_my = tf.reshape(psi_my, [-1, self.Y])
+        w_my = Exp(psi_my)
 
         # Compute and return distribution
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
 
-        return p_my
+        if return_var=='w':
+            return w_my
+        elif return_var=='psi':
+            return psi_my
+        else:
+            return p_my
 
 class AffineLayer(Layer):
     """Represents an affine map from phi to yhat."""

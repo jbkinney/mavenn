@@ -242,6 +242,7 @@ class Model:
                  validation_frac=.2,
                  validation_flags=None,
                  shuffle=True,
+                 knn_fuzz=0.01,
                  verbose=True):
         """
         Set training data.
@@ -286,6 +287,14 @@ class Model:
             Whether to shuffle the observations, e.g., to ensure similar
             composition of the training and validation sets when
             ``validation_flags`` is not set.
+
+        knn_fuzz: (float>0)
+            Amount of noise to add to ``y`` values before passing them to the
+            KNN estimator (for computing I_var during training). Specifically,
+            Gaussian noise with standard deviation ``knn_fuzz * np.std(y)`` is
+            added to ``y`` values. This is needed to mitigate errors caused by
+            multiple observations of the same sequence. Only used for GE
+            regression.
 
         verbose: (bool)
             Whether to provide printed feedback.
@@ -401,10 +410,10 @@ class Model:
                 z = self.y_norm.squeeze()
 
             # Add some noise to aid in entropy estimation
-            z += 1E-3 * np.random.randn(z.size)
+            z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
 
             # Compute entropy
-            H_y_norm, dH_y = entropy_continuous(z, knn=7)
+            H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
             H_y = H_y_norm + np.log2(self.y_std + TINY)
 
             self.info_for_layers_dict['H_y'] = H_y
@@ -1193,22 +1202,30 @@ class Model:
         if self.regression_type == 'GE':
             data_df['y'] = y
 
+        data_df['x'] = x
+
         # If doing MPA regression, collapse by sequence and add ct col
         if self.regression_type == 'MPA':
 
             # merge the y counts array with the dataframe created above
             # and name bin columns with prefix 'ct_*'
+            y_cols = ['ct_' + str(n) for n in range(self.Y)]
             y_df = pd.DataFrame(data=ct_,
-                                columns=['ct_' + str(n) for n in range(self.Y)])
+                                columns=y_cols)
             data_df = pd.concat([data_df, y_df], axis=1)
+
+            # Group by x so that can have multiple counts per bin
+            data_df = data_df.groupby('x').sum().reset_index()
+
+            # Reorder columns
+            data_df = data_df[y_cols + ['x']]
 
         elif self.regression_type == 'GE':
             data_df.insert(0, column='yhat', value=yhat)
 
-        data_df['x'] = x
-
         # Assign to training and test sets
-        r = np.random.rand(N)
+        M = len(data_df)
+        r = np.random.rand(M)
         validation_frac = .2
         ix_train = (test_frac + validation_frac <= r)
         ix_val = (test_frac <= r) & (r < test_frac + validation_frac)
@@ -1229,6 +1246,7 @@ class Model:
                       x,
                       y,
                       ct=None,
+                      knn_fuzz=0.01,
                       uncertainty=True):
         """
         Estimate variational information.
@@ -1267,6 +1285,13 @@ class Model:
             Use ``y=None`` for GE models, as well as for MPA models when
             ``y`` is 2D.
 
+        knn_fuzz: (float>0)
+            Amount of noise to add to ``y`` values before passing them to the
+            KNN estimators. Specifically, Gaussian noise with standard deviation
+            ``knn_fuzz * np.std(y)`` is added to ``y`` values. This is needed
+            to mitigate errors caused by multiple observations of the same
+            sequence. Only used for GE regression models.
+
         uncertainty: (bool)
             Whether to estimate the uncertainty of ``I_var``.
 
@@ -1297,10 +1322,10 @@ class Model:
                 z = y_norm.squeeze()
 
             # Add some noise to aid in entropy estimation
-            z += 1E-3 * np.random.randn(z.size)
+            z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
 
             # Compute entropy
-            H_y_norm, dH_y = entropy_continuous(z, knn=7)
+            H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
             H_y = H_y_norm + np.log2(self.y_std + TINY)
 
             # Compute phi
@@ -1368,6 +1393,7 @@ class Model:
                      y,
                      ct=None,
                      knn=5,
+                     knn_fuzz=0.01,
                      uncertainty=True,
                      num_subsamples=25,
                      use_LNC=False,
@@ -1409,6 +1435,13 @@ class Model:
             Number of nearest neighbors to use in the entropy estimators from
             the NPEET package.
 
+        knn_fuzz: (float>0)
+            Amount of noise to add to ``phi`` values before passing them to the
+            KNN estimators. Specifically, Gaussian noise with standard deviation
+            ``knn_fuzz * np.std(phi)`` is added to ``phi`` values. This is
+            needed to mitigate errors caused by multiple observations of the
+            same sequence.
+
         uncertainty: (bool)
             Whether to estimate the uncertainty in ``I_pred``.
             Substantially increases runtime if ``True``.
@@ -1440,7 +1473,14 @@ class Model:
         """
         if self.regression_type == 'GE':
 
-            return mi_continuous(self.x_to_phi(x),
+            # Compute phi
+            phi = self.x_to_phi(x)
+
+            # Add random component to phi to regularize information estimate
+            phi += knn_fuzz * phi.std(ddof=1) * np.random.randn(len(phi))
+
+            # Compute mi estimate
+            return mi_continuous(phi,
                                  y,
                                  knn=knn,
                                  uncertainty=uncertainty,
@@ -1467,11 +1507,17 @@ class Model:
             # Compute phi
             phi = self.x_to_phi(x)
 
-            # Add random component to phi to regularize information estimate
-            phi += (1.0E-3) * np.random.randn(len(x))
+            # Replace phi by rank order of phi
+            N = len(phi)
+            ix = phi.argsort()
+            phi_rank = np.empty_like(ix, dtype=float)
+            phi_rank[ix] = np.arange(N)/N
 
-            # Compute mi_mixed on expanded y and phi
-            return mi_mixed(phi,
+            # Add random component to rank orders
+            phi_rank += knn_fuzz * phi_rank.std(ddof=1) * np.random.randn(N)
+
+            # Compute mi_mixed on expanded y and phi ranks
+            return mi_mixed(phi_rank,
                             y,
                             knn=knn,
                             uncertainty=uncertainty,
