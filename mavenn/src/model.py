@@ -1288,9 +1288,9 @@ class Model:
         knn_fuzz: (float>0)
             Amount of noise to add to ``y`` values before passing them to the
             KNN estimators. Specifically, Gaussian noise with standard deviation
-            ``knn_fuzz * np.std(y)`` is added to ``y`` values. This is needed
-            to mitigate errors caused by multiple observations of the same
-            sequence. Only used for GE regression models.
+            ``knn_fuzz * np.std(y)`` is added to ``y`` values. This is a
+            hack and is not ideal, but is needed to get the KNN estimates to
+            behave well on real MAVE data. Only used for GE regression models.
 
         uncertainty: (bool)
             Whether to estimate the uncertainty of ``I_var``.
@@ -1438,9 +1438,9 @@ class Model:
         knn_fuzz: (float>0)
             Amount of noise to add to ``phi`` values before passing them to the
             KNN estimators. Specifically, Gaussian noise with standard deviation
-            ``knn_fuzz * np.std(phi)`` is added to ``phi`` values. This is
-            needed to mitigate errors caused by multiple observations of the
-            same sequence.
+            ``knn_fuzz * np.std(phi)`` is added to ``phi`` values. This is a
+            hack and is not ideal, but is needed to get the KNN estimates to
+            behave well on real MAVE data.
 
         uncertainty: (bool)
             Whether to estimate the uncertainty in ``I_pred``.
@@ -1506,18 +1506,20 @@ class Model:
 
             # Compute phi
             phi = self.x_to_phi(x)
+            N = len(phi)
 
             # Replace phi by rank order of phi
-            N = len(phi)
-            ix = phi.argsort()
-            phi_rank = np.empty_like(ix, dtype=float)
-            phi_rank[ix] = np.arange(N)/N
+            # Note: this doesn't seem to help. Prob. makes things worse.
+            # ix = phi.argsort()
+            # phi_rank = np.empty_like(ix, dtype=float)
+            # phi_rank[ix] = np.arange(N)/N
+            #phi_rank += knn_fuzz * phi_rank.std(ddof=1) * np.random.randn(N)
 
-            # Add random component to rank orders
-            phi_rank += knn_fuzz * phi_rank.std(ddof=1) * np.random.randn(N)
+            # Add fuzz to phi
+            phi += knn_fuzz * phi.std(ddof=1) * np.random.randn(N)
 
             # Compute mi_mixed on expanded y and phi ranks
-            return mi_mixed(phi_rank,
+            return mi_mixed(phi,
                             y,
                             knn=knn,
                             uncertainty=uncertainty,
