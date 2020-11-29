@@ -1089,6 +1089,7 @@ class Model:
 
         return yhat
 
+    # TODO: Add ability to pass x and ct.
     @handle_errors
     def simulate_dataset(self,
                          N,
