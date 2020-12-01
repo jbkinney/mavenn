@@ -1092,29 +1092,42 @@ class Model:
     # TODO: Add ability to pass x and ct.
     @handle_errors
     def simulate_dataset(self,
-                         N,
+                         N=None,
+                         x=None,
+                         ct=None,
                          validation_frac=.2,
                          test_frac=.2):
         """
         Generate a simulated dataset.
 
-        Sequences are simulated according to the probability matrix ``p_lc``
-        computed from training data. Measurements are then simulated for each
-        sequence using the inferred G-P map and measurement process. To aid
-        in downstream use, simulated observations are randomly assigned to
-        training and test sets.
+        Measurements are simulated for each sequence (either generated or
+        provided by the user) using the model's inferred G-P map and
+        measurement process. To aid in downstream use, simulated sequences
+        are randomly assigned to training, validation, and test sets.
 
         Parameters
         ----------
         N: (int)
-            The number of observations to simulate. Must be ``>= 1``.
+            The number of observations to simulate. If set, sequences are
+            simulated according to the probability matrix ``p_lc``
+            computed from training data. This is overridden by setting ``x``.
+
+        x: (np.ndarray)
+            Sequences, provided as an ``np.ndarray`` of strings, each of
+            length ``L``. If set, measurements will be simulated for each
+            of these sequences. Setting this overrides ``N``.
+
+        ct: (np.ndarray)
+            Sequence counts, provided as an ``np.ndarray`` of nonnegative
+            integers. Must be the same shape as ``x``. If not set, a
+            count of 1 will be assumed for each sequence in ``x``.
 
         validation_frac: (float)
-            The fraction of sequences to reserve for the validation set.
+            The fraction of unique sequences to reserve for the validation set.
             Must be in the range [0,1].
 
         test_frac: (float)
-            The fraction of sequences to reserve for the test set.
+            The fraction of unique sequences to reserve for the test set.
             Must be in the range [0,1].
 
         Returns
@@ -1125,11 +1138,6 @@ class Model:
             models, additional columns ``'yhat'`` and ``'y'`` are added.
             For MPA models, multiple columns of the form ``'ct_#'`` are added.
         """
-        # Validate N
-        check(isinstance(N, int),
-              f'type(N)={type(N)}; must be int.')
-        check(N > 0,
-              f'N={N}; must be > 0')
 
         # Validate validation_frac
         check(isinstance(validation_frac, float),
@@ -1145,10 +1153,39 @@ class Model:
         check(0 <= test_frac <= 1,
               f'test_frac={test_frac}; must be in [0,1]')
 
-        # Generate sequences
-        x = p_lc_to_x(N=N,
-                      p_lc=self.x_stats['probability_df'].values,
-                      alphabet=self.x_stats['alphabet'])
+        # If x is not set, generate from p_lc
+        if x is None:
+            # Validate N
+            check(isinstance(N, int),
+                  f'type(N)={type(N)}; must be int if x is not set.')
+            check(N > 0, f'N={N}; must be > 0')
+
+            # Generate sequences
+            x = p_lc_to_x(N=N,
+                          p_lc=self.x_stats['probability_df'].values,
+                          alphabet=self.x_stats['alphabet'])
+
+        # Otherwise, validate x provided and expand if ct is provided too
+        else:
+            # Shape x for processing
+            x, x_shape = _get_shape_and_return_1d_array(x)
+
+            # Validate sequences
+            x = validate_seqs(x, alphabet=self.alphabet)
+            check(len(x[0]) == self.L,
+                  f'len(x[0])={len(x[0])}; should be L={self.L}')
+
+            # Validate ct
+            if ct is not None:
+                ct, ct_shape = _get_shape_and_return_1d_array(ct)
+                ct = ct.astype(int)
+                check(all(ct >= 0), 'Not all elements of ct are >= 0')
+                check(len(ct)==len(x), 'x and ct are not the same length')
+            else:
+                ct = np.ones(len(x)).astype(int)
+
+            # Expand sequence list according to ct
+            x = np.concatenate([[seq]*count for (seq, count) in zip(x, ct)])
 
         # Compute phi values
         phi = self.x_to_phi(x)
