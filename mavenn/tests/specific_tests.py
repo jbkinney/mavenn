@@ -157,6 +157,10 @@ def test_GlobalEpistasisModel():
     # test model.simulate_method parameter N
     test_parameter_values(func=model.simulate_dataset, var_name='N', fail_list=['0', -1, -0.1, 0],
                           success_list=[10, 1000])
+                          
+    # test model.simulate_method parameter x
+    test_parameter_values(func=model.simulate_dataset, var_name='x', fail_list=['0', -1, -0.1, 0],
+                          success_list=[x[0:5]])                          
 
     # test model.simulate_method parameter validation_frac
     test_parameter_values(func=model.simulate_dataset, var_name='validation_frac', fail_list=['0', -1, -0.1, 0],

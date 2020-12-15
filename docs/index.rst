@@ -1,10 +1,6 @@
-========================================================================
-MAVE-NN: genotype-phenotype maps from multiplex assays of variant effect
-========================================================================
-
-.. raw:: html
-
-    <h3 style="color:red;">Under active development.</h1>
+=================================================================================
+MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
+=================================================================================
 
 MAVE-NN enables the rapid quantitative modeling of genotype-phenotype (G-P) maps from the data produced by multiplex assays of variant effect (MAVEs). Such assays include deep mutational scanning (DMS) experiments on proteins, massively parallel reporter assays (MPRAs) on DNA or RNA regulatory sequences, and more. MAVE-NN conceptualizes G-P map inference as a problem in information compression; this problem is then solved by training a neural network using a TensorFlow backend. 
 
@@ -35,8 +31,8 @@ References
     Curr Biol. 24(22):2643-2651.
     `<https://pubmed.ncbi.nlm.nih.gov/25455030/>`_
 
-.. [#Tareen2020] Tareen A, Ireland WT, Posfai A, McCandlish DM, Kinney JB.
-    MAVE-NN: Quantitative Modeling of Genotype-Phenotype Maps as Information Bottlenecks 
+.. [#Tareen2020] Tareen A, Posfai A, Ireland WT,  McCandlish DM, Kinney JB.
+    MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
     Biorxiv (2020). `<https://doi.org/10.1101/2020.07.14.201475>`_
 
 Contact

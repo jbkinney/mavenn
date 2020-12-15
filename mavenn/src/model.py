@@ -1121,6 +1121,7 @@ class Model:
             Sequence counts, provided as an ``np.ndarray`` of nonnegative
             integers. Must be the same shape as ``x``. If not set, a
             count of 1 will be assumed for each sequence in ``x``.
+            Has no effect for GE models.
 
         validation_frac: (float)
             The fraction of unique sequences to reserve for the validation set.
