@@ -715,7 +715,10 @@ class Model:
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
-        unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
+
+        # Hot-fix related to TF 2.4, 2020.12.18
+        #unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
+        unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
 
         # Set stats
         self.unfixed_phi_mean = np.mean(unfixed_phi)
@@ -1041,13 +1044,15 @@ class Model:
         stats = x_to_stats(x=x, alphabet=self.alphabet)
         x_ohe = stats.pop('x_ohe')
 
+        # this function messing up in TF 2.4
         # Keras function that computes phi from x
-        gpmap_function = K.function([self.model.model.layers[1].input],
-                                    [self.model.model.layers[2].output])
+        # gpmap_function = K.function([self.model.model.layers[1].input],
+        #                             [self.model.model.layers[2].output])
 
         # Compute latent phenotype values
         # Note that these are NOT diffeomorphic-mode fixed
-        unfixed_phi = gpmap_function([x_ohe])
+        #unfixed_phi = gpmap_function([x_ohe])
+        unfixed_phi = self.layer_gpmap.call(x_ohe.astype('float32'))
 
         # Fix diffeomorphic models
         phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
