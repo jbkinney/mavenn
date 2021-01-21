@@ -239,6 +239,142 @@ class MPAMeasurementProcessLayer(Layer):
         else:
             return p_my
 
+
+class MultiMPAMeasurementProcessLayer(Layer):
+    """Represents an MPA measurement process with multiple latent
+    trait nodes."""
+
+    def __init__(self,
+                 info_for_layers_dict,
+                 Y,
+                 K,
+                 eta,
+                 L,
+                 **kwargs):
+        """Construct layer."""
+
+        # Set attributes
+        self.Y = Y
+        self.K = K
+        self.eta = eta
+        self.number_latent_nodes = L      # represents total number of latent nodes.
+        self.info_for_layers_dict = info_for_layers_dict
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        super().__init__(**kwargs)
+
+    def get_config(self):
+        """Get configuration dictionary."""
+        base_config = super().get_config()
+        return {**base_config,
+                "info_for_layers_dict": self.info_for_layers_dict,
+                "number_bins": self.number_bins}
+
+    def build(self, input_shape):
+        """Build layer."""
+
+        self.a_y = self.add_weight(name='a_y',
+                                   dtype=tf.float32,
+                                   shape=(self.Y,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+
+        # Need to randomly initialize b_k
+        b_yk0 = expon(scale=1/self.K).rvs([self.Y, self.K, self.number_latent_nodes])
+        self.b_ykl = self.add_weight(name='b_ykl',
+                                     dtype=tf.float32,
+                                     shape=(self.Y, self.K, self.number_latent_nodes),
+                                     initializer=Constant(b_yk0),
+                                     trainable=True,
+                                     regularizer=self.regularizer)
+
+        self.c_ykl = self.add_weight(name='c_ykl',
+                                     dtype=tf.float32,
+                                     shape=(self.Y, self.K, self.number_latent_nodes),
+                                     initializer=Constant(1.),
+                                     trainable=True,
+                                     regularizer=self.regularizer)
+
+        self.d_ykl = self.add_weight(name='d_ykl',
+                                     dtype=tf.float32,
+                                     shape=(self.Y, self.K, self.number_latent_nodes),
+                                     initializer=Constant(0.),
+                                     trainable=True,
+                                     regularizer=self.regularizer)
+        super().build(input_shape)
+
+    def call(self, inputs):
+        """
+        Transform layer inputs to outputs.
+
+        Parameters
+        ----------
+        inputs: (tf.Tensor)
+            A (B,Y+1) tensor containing counts, where B is batch
+            size and Y is the number of bins.
+            inputs[:,number_latent_nodes] is the vector phi
+            inputs[:,number_latent_nodes:Y+1] is c_my
+
+        Returns
+        -------
+        negative_log_likelihood: (np.array)
+            A (B,) tensor containing negative log likelihood contributions
+        """
+
+        # Extract and shape inputs
+        phi = inputs[:, 0:self.number_latent_nodes]
+        ct_my = inputs[:, self.number_latent_nodes:]
+
+        # Compute p(y|phi)
+        p_my = self.p_of_all_y_given_phi(phi)
+
+        # Compute negative log likelihood
+        negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
+        ct_m = K.sum(ct_my, axis=1)
+
+        # Add I_var metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = np.log2(e) * \
+                        K.sum(negative_log_likelihood) / K.sum(ct_m)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
+
+        return negative_log_likelihood
+
+    @handle_arrays
+    def p_of_all_y_given_phi(self, phi, return_var='p'):
+        """Compute p(y|phi) for all values of y."""
+
+        # Shape phi to make the tensor multiplication work.
+        phi = tf.reshape(phi, [-1, self.number_latent_nodes,  1, 1])
+
+        # Reshape parameters
+        a_y  = tf.reshape(self.a_y, [-1, self.Y])
+        b_ykl = tf.reshape(self.b_ykl, [-1, self.number_latent_nodes, self.Y, self.K])
+        c_ykl = tf.reshape(self.c_ykl, [-1, self.number_latent_nodes, self.Y, self.K])
+        d_ykl = tf.reshape(self.d_ykl, [-1, self.number_latent_nodes, self.Y, self.K])
+
+        # Compute weights
+
+        # the following sums are over the latent nodes then hidden nodes axes of the multi MPA layer.
+        psi_my = a_y + K.sum(b_ykl * tanh(c_ykl * phi + d_ykl), axis=[1, 3])
+        psi_my = tf.reshape(psi_my, [-1, self.Y])
+        w_my = Exp(psi_my)
+
+        # Compute and return distribution
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        if return_var=='w':
+            return w_my
+        elif return_var=='psi':
+            return psi_my
+        else:
+            return p_my
+
+
 class AffineLayer(Layer):
     """Represents an affine map from phi to yhat."""
 

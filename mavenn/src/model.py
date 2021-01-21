@@ -24,7 +24,9 @@ import sklearn.preprocessing
 from mavenn import TINY
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.regression_types import GlobalEpistasisModel, \
-                                        MeasurementProcessAgnosticModel
+                                        MeasurementProcessAgnosticModel, \
+                                        MultiMeasurementProcessAgnosticModel
+
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, \
                                _get_shape_and_return_1d_array, \
@@ -69,6 +71,11 @@ class Model:
     Y: (int)
         The number if discrete ``y`` bins to use when defining an MPA model.
         Must be ``>= 2``. Has no effect on MPA models.
+
+    number_latent_nodes: (int)
+        Integer specifying the number of nodes in the first hidden layer.
+        Must be greater than or equal to 1. (Used only when regression type
+        is 'Multi_MPA', has currently not effect for anything else).
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to enforce a monotonicity constraint on the GE nonlinearity.
@@ -119,6 +126,7 @@ class Model:
                  gpmap_type='additive',
                  gpmap_kwargs={},
                  Y=2,
+                 number_latent_nodes=2,
                  ge_nonlinearity_type='nonlinear',
                  ge_nonlinearity_monotonic=True,
                  ge_nonlinearity_hidden_nodes=50,
@@ -135,7 +143,7 @@ class Model:
         self.arg_dict.pop('self')
 
         # Set regression_type
-        check(regression_type in {'MPA', 'GE'},
+        check(regression_type in {'MPA', 'GE', 'Multi_MPA'},
               f'regression_type = {regression_type};'
               f'must be "MPA", or "GE"')
         self.regression_type = regression_type
@@ -162,6 +170,7 @@ class Model:
         self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
         self.Y = Y
+        self.number_latent_nodes = number_latent_nodes
 
         # Variables needed for saving
         self.unfixed_phi_mean = np.nan
@@ -232,6 +241,32 @@ class Model:
             self.layer_gpmap = self.model.x_to_phi_layer
             self.layer_measurement_process = \
                 self.model.layer_measurement_process
+
+        elif regression_type == 'Multi_MPA':
+
+            self.model = MultiMeasurementProcessAgnosticModel(
+                            info_for_layers_dict=self.info_for_layers_dict,
+                            sequence_length=self.L,
+                            number_of_bins=self.Y,
+                            number_latent_nodes=self.number_latent_nodes,
+                            alphabet=self.alphabet,
+                            gpmap_type=self.gpmap_type,
+                            gpmap_kwargs=self.gpmap_kwargs,
+                            theta_regularization=self.theta_regularization,
+                            eta_regularization=self.eta_regularization,
+                            ohe_batch_size=self.ohe_batch_size)
+
+            self.model.theta_init = None
+
+            self.define_model = self.model.define_model(
+                                    mpa_hidden_nodes=
+                                    self.mpa_hidden_nodes)
+
+            # Set layers
+            self.layer_gpmap = self.model.x_to_phi_layer
+            self.layer_measurement_process = \
+                self.model.layer_measurement_process
+
 
 
     @handle_errors
@@ -318,7 +353,7 @@ class Model:
             y = validate_1d_array(y)
             check(len(x) == len(y), 'length of inputs (x, y) must be equal')
 
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             if y.ndim == 1:
                 y, x = vec_data_to_mat_data(y_n=y, ct_n=ct, x_n=x)
             else:
@@ -384,7 +419,7 @@ class Model:
             self.y_stats['y_mean'] = self.y_mean
             self.y_stats['y_std'] = self.y_std
 
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             self.y_std = 1
             self.y_mean = 0
             self.y_stats['y_mean'] = self.y_mean
@@ -420,7 +455,7 @@ class Model:
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
             self.info_for_layers_dict['dH_y'] = dH_y
 
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             self.y_norm = np.array(self.y_norm)
 
             # Compute naive entropy estimate
@@ -639,7 +674,7 @@ class Model:
             y_targets = self.y_norm
 
         # If MPA regression, use mean bin number
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             bin_nums = np.arange(self.Y)
             y_targets = (self.y_norm
                          * bin_nums[np.newaxis, :]).sum(axis=1) / \
@@ -694,7 +729,7 @@ class Model:
         if self.regression_type == 'GE':
             y_train = self.y_norm[~ix_val]
             y_val = self.y_norm[ix_val]
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             y_train = self.y_norm[~ix_val,:]
             y_val = self.y_norm[ix_val,:]
 
@@ -724,10 +759,11 @@ class Model:
         self.unfixed_phi_mean = np.mean(unfixed_phi)
         self.unfixed_phi_std = np.std(unfixed_phi)
 
-        # Flip sign if correlation of phi with y_targets is negative
-        r, p_val = spearmanr(unfixed_phi, y_targets)
-        if r < 0:
-            self.unfixed_phi_std *= -1.
+        if self.regression_type != 'Multi_MPA':
+            # Flip sign if correlation of phi with y_targets is negative
+            r, p_val = spearmanr(unfixed_phi, y_targets)
+            if r < 0:
+                self.unfixed_phi_std *= -1.
 
         # update history attribute
         self.history = history.history
@@ -1196,7 +1232,7 @@ class Model:
         # Compute phi values
         phi = self.x_to_phi(x)
 
-        if self.regression_type == 'MPA':
+        if self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
 
             # Compute grid of p(y|\phi) values over all y for all phi
             all_y = np.arange(self.Y).astype(int)
@@ -1249,7 +1285,7 @@ class Model:
         data_df['x'] = x
 
         # If doing MPA regression, collapse by sequence and add ct col
-        if self.regression_type == 'MPA':
+        if self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
 
             # merge the y counts array with the dataframe created above
             # and name bin columns with prefix 'ct_*'
@@ -1383,7 +1419,7 @@ class Model:
             # Compute H_y_given_phi
             H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
 
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
 
             # If y is 2D, convert from mat data to vec data
             if y.ndim == 2:
@@ -1515,6 +1551,7 @@ class Model:
             Standard error for ``I_pred``. Is ``0`` if ``uncertainty=False``
             is used.
         """
+
         if self.regression_type == 'GE':
 
             # Compute phi
@@ -1569,6 +1606,12 @@ class Model:
                             uncertainty=uncertainty,
                             num_subsamples=num_subsamples,
                             verbose=verbose)
+
+        elif self.regression_type == 'Multi_MPA':
+
+            print('Predictive information not implemented multi latent MPA regression.')
+            return None
+
 
     def yhat_to_yq(self,
                    yhat,
@@ -1707,7 +1750,7 @@ class Model:
             p = self.p_of_y_given_yhat(y, yhat, paired=True)
 
         # Otherwise, just compute p
-        elif self.regression_type == 'MPA':
+        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
 
             # Cast y as integers
             y = y.astype(int)

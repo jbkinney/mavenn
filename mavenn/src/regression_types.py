@@ -5,6 +5,7 @@ import numpy as np
 import numbers
 
 # Tensorflow imports
+import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Lambda, Concatenate
 
@@ -12,14 +13,15 @@ from tensorflow.keras.layers import Input, Lambda, Concatenate
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.layers.gpmap \
-    import AdditiveGPMapLayer, PairwiseGPMapLayer, MultilayerPerceptronGPMap
+    import AdditiveGPMapLayer, PairwiseGPMapLayer, MultilayerPerceptronGPMap, Multi_AdditiveGPMapLayer
 from mavenn.src.layers.measurement_process_layers \
     import GlobalEpistasisLayer, \
         AffineLayer, \
         GaussianNoiseModelLayer, \
         CauchyNoiseModelLayer, \
         SkewedTNoiseModelLayer, \
-        MPAMeasurementProcessLayer
+        MPAMeasurementProcessLayer, \
+        MultiMPAMeasurementProcessLayer
 
 
 @handle_errors
@@ -461,6 +463,214 @@ class MeasurementProcessAgnosticModel:
             Y=self.number_of_bins,
             K=mpa_hidden_nodes,
             eta=self.eta_regularization
+            )
+        outputTensor = self.layer_measurement_process(phi_ct)
+
+        #create the model:
+        model = Model(inputTensor, outputTensor)
+        self.model = model
+        self.mpa_hidden_nodes = mpa_hidden_nodes
+        return model
+
+
+@handle_errors
+class MultiMeasurementProcessAgnosticModel:
+    """
+    Represents a measurement process agnostic model with multiple
+    latent phenotype nodes. Currently supports only additive latent
+    trait models.
+
+    Parameters
+    ----------
+    sequence_length: (int)
+        Integer specifying the length of a single training sequence.
+
+    number_of_bins: (int)
+        Integer specifying the number of bins. (Only used for MPA regression).
+
+    number_latent_nodes: (int)
+        Integer specifying the number of nodes in the first hidden layer.
+
+    gpmap_type: (str)
+        Specifies the type of G-P model the user wants to infer.
+        Possible choices: ['additive']
+
+    alphabet: (str)
+        Specifies the type of input sequences. Three possible choices
+        allowed: ['dna','rna','protein', 'protein*'].
+
+    theta_regularization: (float >= 0)
+        Regularization strength for G-P map parameters theta.
+
+    eta_regularization: (float >= 0)
+        Regularization strength for measurement process parameters eta.
+
+    ohe_batch_size: (int)
+        Integer specifying how many sequences to one-hot encode at a time.
+        The larger this number number, the quicker the encoding will happen,
+        but this may also take up a lot of memory and throw an exception
+        if its too large. Currently for additive models only.
+    """
+
+    @handle_errors
+    def __init__(self,
+                 info_for_layers_dict,
+                 sequence_length,
+                 number_of_bins,
+                 number_latent_nodes,
+                 gpmap_type,
+                 gpmap_kwargs,
+                 alphabet,
+                 theta_regularization,
+                 eta_regularization,
+                 ohe_batch_size):
+        """Construct class instance."""
+        # set class attributes
+        self.info_for_layers_dict = info_for_layers_dict
+        self.gpmap_type = gpmap_type
+        self.gpmap_kwargs = gpmap_kwargs
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
+        self.theta_regularization = theta_regularization
+        self.eta_regularization = eta_regularization
+        self.ohe_batch_size = ohe_batch_size
+        self.number_of_bins = number_of_bins
+        self.number_latent_nodes = number_latent_nodes
+
+        # class attributes that are not parameters
+        # but are useful for using trained models
+        self.history = None
+        self.model = None
+
+        # the following set of attributes are used for
+        # gauge fixing the neural network model (x_to_phi and measurement)
+        # and are set after the model has been fit to data.
+        self.mpa_hidden_nodes = None
+        self.theta_gf = None
+        self.na_model = None
+
+        # check that L is an number
+        check(isinstance(sequence_length, numbers.Integral),
+              'L must be an integer')
+
+        # check that L is an number
+        check(isinstance(number_latent_nodes, numbers.Integral),
+              'number_latent_nodes must be an integer')
+
+        # check that number_of_bins is an number
+        check(isinstance(self.number_of_bins, numbers.Integral),
+              'number_of_bins must be an integer')
+
+        # check that theta number_of_bins is greater than or equal to  1
+        check(self.number_of_bins >= 1,
+              'number_of_bins must be >= 1')
+
+        # check that model type valid
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox']
+        check(self.gpmap_type in valid_gpmap_types,
+              f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
+
+        # check that theta regularization is a number
+        check(isinstance(self.theta_regularization, numbers.Real),
+              'theta_regularization must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.theta_regularization >= 0,
+              'theta_regularization must be >= 0')
+
+        # check that ohe_batch_size is an number
+        check(isinstance(self.ohe_batch_size, numbers.Integral),
+              'ohe_batch_size must be an integer')
+
+        # check that ohe_batch_size is > 0
+        check(self.ohe_batch_size > 0,
+              'ohe_batch_size must be > 0')
+
+        # record sequence length for convenience
+        self.L = sequence_length
+
+        # Record number of bins
+        self.Y = number_of_bins
+        self.all_y = np.arange(self.Y).astype(int)
+
+    def define_model(self,
+                     mpa_hidden_nodes=10):
+        """
+        Define the neural network architecture of the MPA model.
+
+        Uses the tensorflow.keras functional API. If custom_architecture is
+        not None, this is used instead as the model architecture.
+
+        Parameters
+        ----------
+        mpa_hidden_nodes: (int)
+            Number of nodes to use in the hidden layer of the measurement
+            network of the GE model architecture.
+
+        Returns
+        -------
+        model: (tf.model)
+            A tensorflow model that can be compiled and subsequently
+            fit to data.
+        """
+        check(isinstance(mpa_hidden_nodes, numbers.Integral),
+              'mpa_hidden_nodes must be a number.')
+
+        check(mpa_hidden_nodes > 0,
+              'mpa_hidden_nodes must be greater than 0.')
+
+        # Compute number of sequence nodes. Useful for model construction below.
+        number_x_nodes = int(self.L*self.C)
+        number_input_layer_nodes = number_x_nodes+self.number_of_bins
+
+        inputTensor = Input((number_input_layer_nodes,),
+                            name='Sequence_labels_input')
+
+        sequence_input = Lambda(lambda x: x[:, 0:number_x_nodes],
+                                output_shape=((number_x_nodes,)),
+                                name='Sequence_only')(inputTensor)
+        labels_input = Lambda(
+            lambda x: x[:, number_x_nodes:number_x_nodes + self.number_of_bins],
+            output_shape=((1,)),
+            trainable=False,
+            name='Labels_input')(inputTensor)
+
+        # Create G-P map layer
+        if self.gpmap_type == 'additive':
+            self.x_to_phi_layer = Multi_AdditiveGPMapLayer(
+                number_latent_nodes=self.number_latent_nodes,
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization)
+
+        # TODO: implement the following latent trait models
+        # elif self.gpmap_type in ['pairwise', 'neighbor']:
+        #     self.x_to_phi_layer = PairwiseGPMapLayer(
+        #         L=self.L,
+        #         C=self.C,
+        #         theta_regularization=self.theta_regularization,
+        #         mask_type=self.gpmap_type)
+        # elif self.gpmap_type == 'blackbox':
+        #     self.x_to_phi_layer = MultilayerPerceptronGPMap(
+        #         L=self.L,
+        #         C=self.C,
+        #         theta_regularization=self.theta_regularization,
+        #         **self.gpmap_kwargs)
+        # else:
+        #     assert False, "This should not happen."
+        phi = self.x_to_phi_layer(sequence_input)
+
+        # Create concatenation layer
+        self.layer_concatenate_phi_ct = Concatenate(name='phi_and_ct')
+        phi_ct = self.layer_concatenate_phi_ct([phi, labels_input])
+
+        # Create measurement process layer
+        self.layer_measurement_process = MultiMPAMeasurementProcessLayer(
+            info_for_layers_dict=self.info_for_layers_dict,
+            Y=self.number_of_bins,
+            K=mpa_hidden_nodes,
+            eta=self.eta_regularization,
+            L=self.number_latent_nodes
             )
         outputTensor = self.layer_measurement_process(phi_ct)
 
