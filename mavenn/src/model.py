@@ -27,6 +27,8 @@ from mavenn.src.regression_types import GlobalEpistasisModel, \
                                         MeasurementProcessAgnosticModel, \
                                         MultiMeasurementProcessAgnosticModel
 
+from mavenn.src.layers.measurement_process_layers import MultiMPAMeasurementProcessLayer
+
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, \
                                _get_shape_and_return_1d_array, \
@@ -1419,7 +1421,7 @@ class Model:
             # Compute H_y_given_phi
             H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
 
-        elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
+        elif self.regression_type == 'MPA':
 
             # If y is 2D, convert from mat data to vec data
             if y.ndim == 2:
@@ -1448,6 +1450,63 @@ class Model:
 
             p_y_given_phi = self.p_of_y_given_phi(y, phi, paired=True)
             H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
+
+        elif self.regression_type == 'Multi_MPA':
+
+            x, x_shape = _get_shape_and_return_1d_array(x)
+
+            # Check seqs
+            x = validate_seqs(x, alphabet=self.alphabet)
+            check(len(x[0]) == self.L,
+                  f'len(x[0])={len(x[0])}; should be L={self.L}')
+
+
+
+            # If y is 2D, convert from mat data to vec data
+            if y.ndim == 2:
+                y, ct, x = mat_data_to_vec_data(ct_my=y, x_m=x)
+
+            # If ct is not set, set to ones
+            if ct is None:
+                ct = np.ones(y.size)
+
+            # Expand x and y based on ct values
+            y = np.concatenate(
+                        [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
+            x = np.concatenate(
+                        [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
+
+            # Number of datapoints
+            ct_y = np.array([(y == i).sum() for i in range(self.Y)])
+            p_y = ct_y / ct_y.sum()
+            ix = p_y > 0
+            H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
+            H_y = H_y_norm + np.log2(self.y_std + TINY)
+
+            # Encode sequences as features
+            stats = x_to_stats(x=x, alphabet=self.alphabet)
+            x_ohe = stats.pop('x_ohe')
+
+            # no diffeomorphic mode fixing at the moment.
+            phi = self.layer_gpmap.call(x_ohe.astype('float32'))
+
+            # Get values for all bins
+            #p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
+            p_of_all_y_given_phi = \
+                self.layer_measurement_process.p_of_all_y_given_phi(
+                    phi,
+                    use_arrays=True)
+
+            # Extract y-specific elements TODO: need better explanation of following snippet
+            _ = np.newaxis
+            all_y = np.arange(self.Y).astype(int)
+            y_ix = (y[:, _] == all_y[_, :])
+            p_y_given_phi = p_of_all_y_given_phi[y_ix]
+
+            H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
+
+            # initialize variable, will be computed outside conditional.
+            dH_y = 0
 
         # Get total number of independent observations
         N = len(H_y_given_phi_n)
