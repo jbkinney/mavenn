@@ -219,7 +219,7 @@ class MPAMeasurementProcessLayer(Layer):
         phi = tf.reshape(phi, [-1, 1, 1])
 
         # Reshape parameters
-        a_y  = tf.reshape(self.a_y, [-1, self.Y])
+        a_y = tf.reshape(self.a_y, [-1, self.Y])
         b_yk = tf.reshape(self.b_yk, [-1, self.Y, self.K])
         c_yk = tf.reshape(self.c_yk, [-1, self.Y, self.K])
         d_yk = tf.reshape(self.d_yk, [-1, self.Y, self.K])
@@ -282,7 +282,6 @@ class MultiMPAMeasurementProcessLayer(Layer):
                                    trainable=True,
                                    regularizer=self.regularizer)
 
-        # Need to randomly initialize b_k
         b_yk0 = expon(scale=1/self.K).rvs([self.Y, self.K, self.number_latent_nodes])
         self.b_ykl = self.add_weight(name='b_ykl',
                                      dtype=tf.float32,

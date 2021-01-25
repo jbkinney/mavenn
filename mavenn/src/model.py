@@ -761,6 +761,7 @@ class Model:
         self.unfixed_phi_mean = np.mean(unfixed_phi)
         self.unfixed_phi_std = np.std(unfixed_phi)
 
+        # TODO need to fix following for multi-mpa
         if self.regression_type != 'Multi_MPA':
             # Flip sign if correlation of phi with y_targets is negative
             r, p_val = spearmanr(unfixed_phi, y_targets)
@@ -1070,6 +1071,7 @@ class Model:
             Latent phenotype values, provided as floats within an ``np.ndarray``
             the same shape as ``x``.
         """
+
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
@@ -1096,7 +1098,9 @@ class Model:
         phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
 
         # Shape phi for output
-        phi = _shape_for_output(phi, x_shape)
+        if self.regression_type !='Multi_MPA':
+
+            phi = _shape_for_output(phi, x_shape)
 
         # Return latent phenotype values
         return phi

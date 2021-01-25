@@ -13,7 +13,12 @@ from tensorflow.keras.layers import Input, Lambda, Concatenate
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.layers.gpmap \
-    import AdditiveGPMapLayer, PairwiseGPMapLayer, MultilayerPerceptronGPMap, Multi_AdditiveGPMapLayer
+    import AdditiveGPMapLayer, \
+    PairwiseGPMapLayer, \
+    MultilayerPerceptronGPMap, \
+    Multi_AdditiveGPMapLayer,  \
+    Multi_PairwiseGPMapLayer
+
 from mavenn.src.layers.measurement_process_layers \
     import GlobalEpistasisLayer, \
         AffineLayer, \
@@ -629,6 +634,7 @@ class MultiMeasurementProcessAgnosticModel:
         sequence_input = Lambda(lambda x: x[:, 0:number_x_nodes],
                                 output_shape=((number_x_nodes,)),
                                 name='Sequence_only')(inputTensor)
+
         labels_input = Lambda(
             lambda x: x[:, number_x_nodes:number_x_nodes + self.number_of_bins],
             output_shape=((1,)),
@@ -643,13 +649,14 @@ class MultiMeasurementProcessAgnosticModel:
                 C=self.C,
                 theta_regularization=self.theta_regularization)
 
+        elif self.gpmap_type in ['pairwise', 'neighbor']:
+            self.x_to_phi_layer = Multi_PairwiseGPMapLayer(
+                number_latent_nodes=self.number_latent_nodes,
+                L=self.L,
+                C=self.C,
+                theta_regularization=self.theta_regularization,
+                mask_type=self.gpmap_type)
         # TODO: implement the following latent trait models
-        # elif self.gpmap_type in ['pairwise', 'neighbor']:
-        #     self.x_to_phi_layer = PairwiseGPMapLayer(
-        #         L=self.L,
-        #         C=self.C,
-        #         theta_regularization=self.theta_regularization,
-        #         mask_type=self.gpmap_type)
         # elif self.gpmap_type == 'blackbox':
         #     self.x_to_phi_layer = MultilayerPerceptronGPMap(
         #         L=self.L,
