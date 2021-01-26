@@ -282,10 +282,10 @@ class MultiMPAMeasurementProcessLayer(Layer):
                                    trainable=True,
                                    regularizer=self.regularizer)
 
-        b_yk0 = expon(scale=1/self.K).rvs([self.Y, self.K, self.number_latent_nodes])
-        self.b_ykl = self.add_weight(name='b_ykl',
+        b_yk0 = expon(scale=1/self.K).rvs([self.Y, self.K])
+        self.b_yk = self.add_weight(name='b_yk',
                                      dtype=tf.float32,
-                                     shape=(self.Y, self.K, self.number_latent_nodes),
+                                     shape=(self.Y, self.K),
                                      initializer=Constant(b_yk0),
                                      trainable=True,
                                      regularizer=self.regularizer)
@@ -297,9 +297,9 @@ class MultiMPAMeasurementProcessLayer(Layer):
                                      trainable=True,
                                      regularizer=self.regularizer)
 
-        self.d_ykl = self.add_weight(name='d_ykl',
+        self.d_yk = self.add_weight(name='d_yk',
                                      dtype=tf.float32,
-                                     shape=(self.Y, self.K, self.number_latent_nodes),
+                                     shape=(self.Y, self.K),
                                      initializer=Constant(0.),
                                      trainable=True,
                                      regularizer=self.regularizer)
@@ -352,14 +352,15 @@ class MultiMPAMeasurementProcessLayer(Layer):
 
         # Reshape parameters
         a_y  = tf.reshape(self.a_y, [-1, self.Y])
-        b_ykl = tf.reshape(self.b_ykl, [-1, self.number_latent_nodes, self.Y, self.K])
+        b_yk = tf.reshape(self.b_yk, [-1, self.Y, self.K])
         c_ykl = tf.reshape(self.c_ykl, [-1, self.number_latent_nodes, self.Y, self.K])
-        d_ykl = tf.reshape(self.d_ykl, [-1, self.number_latent_nodes, self.Y, self.K])
+        d_yk = tf.reshape(self.d_yk, [-1, self.Y, self.K])
 
         # Compute weights
-
-        # the following sums are over the latent nodes then hidden nodes axes of the multi MPA layer.
-        psi_my = a_y + K.sum(b_ykl * tanh(c_ykl * phi + d_ykl), axis=[1, 3])
+        # Axis 2 represents sum over, k
+        # axis 1 represents sum over latent phi nodes.
+        psi_my = a_y + K.sum(b_yk * tanh(K.sum(c_ykl * phi, axis=1) + d_yk), axis=2)
+        #psi_my = a_y + K.sum(b_ykl * tanh(c_ykl * phi + d_ykl), axis=[1, 3])
         psi_my = tf.reshape(psi_my, [-1, self.Y])
         w_my = Exp(psi_my)
 
