@@ -502,6 +502,84 @@ class GlobalEpistasisLayer(Layer):
         return yhat
 
 
+class MultiPhiGlobalEpistasisLayer(Layer):
+    """Represents a global epistasis layer."""
+
+    @handle_errors
+    def __init__(self,
+                 K,
+                 eta,
+                 monotonic,
+                 number_latent_nodes,
+                 **kwargs):
+        """Construct layer."""
+        # Whether to make monotonic function
+        self.monotonic = monotonic
+
+        # represents the number of latent (phi) nodes.
+        self.number_latent_nodes = number_latent_nodes
+
+        # Create function that returns a kernel constraint
+        # based on self.monotonic
+        self.constraint = lambda: non_neg() if self.monotonic else None
+
+        # Set number of hidden nodes
+        self.K = K
+
+        # Set regularizer
+        self.eta = eta
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        # Call superclass constructor
+        super().__init__(**kwargs)
+
+    def build(self, input_shape):
+        """Build layer."""
+        self.a_0 = self.add_weight(name='a_0',
+                                   shape=(1,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+
+        # Need to randomly initialize b_k
+        b_k_dist = expon(scale=1/self.K)
+        self.b_k = self.add_weight(name='b_k',
+                                   shape=(self.K,),
+                                   initializer=Constant(b_k_dist.rvs(self.K)),
+                                   trainable=True,
+                                   constraint=self.constraint(),
+                                   regularizer=self.regularizer)
+
+        self.c_kl = self.add_weight(name='c_kl',
+                                   shape=(self.K, self.number_latent_nodes),
+                                   initializer=Constant(1.),
+                                   trainable=True,
+                                   constraint=self.constraint(),
+                                   regularizer=self.regularizer)
+
+        self.d_k = self.add_weight(name='d_k',
+                                   shape=(self.K,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+        super().build(input_shape)
+
+    # Just an alias for phi_to_yhat, for tensors only
+    def call(self, phi):
+        """Transform layer inputs to outputs."""
+        return self.phi_to_yhat(phi)
+
+    # yhat as function of phi
+    @handle_arrays
+    def phi_to_yhat(self, phi):
+        """Compute yhat from phi."""
+        phi = tf.reshape(phi, [-1, 1, self.number_latent_nodes])
+        b_k = tf.reshape(self.b_k, [-1, self.K])
+        c_kl = tf.reshape(self.c_kl, [-1, self.K, self.number_latent_nodes])
+        d_k = tf.reshape(self.d_k, [-1, self.K])
+        yhat = self.a_0 + tf.reshape(K.sum(b_k * tanh(K.sum(c_kl * phi, axis=2) + d_k), axis=1), shape=[-1, 1])
+        return yhat
+
 class NoiseModelLayer(Layer):
     """Generic class representing the noise model of a GE model."""
 

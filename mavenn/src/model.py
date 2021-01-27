@@ -25,7 +25,8 @@ from mavenn import TINY
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.regression_types import GlobalEpistasisModel, \
                                         MeasurementProcessAgnosticModel, \
-                                        MultiMeasurementProcessAgnosticModel
+                                        MultiMeasurementProcessAgnosticModel, \
+                                        MultiPhiGlobalEpistasisModel
 
 from mavenn.src.layers.measurement_process_layers import MultiMPAMeasurementProcessLayer
 
@@ -61,7 +62,9 @@ class Model:
     regression_type: (str)
         Type of regression implemented by the model. Choices are ``'GE'`` (for
         a global epistasis model) and ``'MPA'`` (for a measurement process
-        agnostic model).
+        agnostic model). Also allowed are 'Multi_MPA', and 'Multi_Phi_GE',
+        These represent multi-dimensional extensions of the standard GE and MPA
+        regression and currently are in the development/beta stage.
 
     gpmap_type: (str)
         Type of G-P map to infer. Choices are ``'additive'``, ``'neighbor'``,
@@ -77,7 +80,7 @@ class Model:
     number_latent_nodes: (int)
         Integer specifying the number of nodes in the first hidden layer.
         Must be greater than or equal to 1. (Used only when regression type
-        is 'Multi_MPA', has currently not effect for anything else).
+        is 'Multi_MPA' or 'Multi_Phi_GE', has currently not effect for anything else).
 
     ge_nonlinearity_monotonic: (boolean)
         Whether to enforce a monotonicity constraint on the GE nonlinearity.
@@ -145,7 +148,7 @@ class Model:
         self.arg_dict.pop('self')
 
         # Set regression_type
-        check(regression_type in {'MPA', 'GE', 'Multi_MPA'},
+        check(regression_type in {'MPA', 'GE', 'Multi_Phi_GE', 'Multi_MPA'},
               f'regression_type = {regression_type};'
               f'must be "MPA", or "GE"')
         self.regression_type = regression_type
@@ -198,6 +201,35 @@ class Model:
             self.model = GlobalEpistasisModel(
                             info_for_layers_dict=self.info_for_layers_dict,
                             sequence_length=self.L,
+                            gpmap_type=self.gpmap_type,
+                            gpmap_kwargs=self.gpmap_kwargs,
+                            ge_nonlinearity_type=self.ge_nonlinearity_type,
+                            ge_nonlinearity_monotonic=
+                                self.ge_nonlinearity_monotonic,
+                            alphabet=self.alphabet,
+                            ohe_batch_size=self.ohe_batch_size,
+                            ge_heteroskedasticity_order=
+                                self.ge_heteroskedasticity_order,
+                            theta_regularization=self.theta_regularization,
+                            eta_regularization=self.eta_regularization)
+
+            self.define_model = self.model.define_model(
+                                    ge_noise_model_type=
+                                        self.ge_noise_model_type,
+                                    ge_nonlinearity_hidden_nodes=
+                                        self.ge_nonlinearity_hidden_nodes)
+
+            # Set layers
+            self.layer_gpmap = self.model.x_to_phi_layer
+            self.layer_nonlinearity = self.model.phi_to_yhat_layer
+            self.layer_noise_model = self.model.noise_model_layer
+
+        elif regression_type == 'Multi_Phi_GE':
+
+            self.model = MultiPhiGlobalEpistasisModel(
+                            info_for_layers_dict=self.info_for_layers_dict,
+                            sequence_length=self.L,
+                            number_latent_nodes=self.number_latent_nodes,
                             gpmap_type=self.gpmap_type,
                             gpmap_kwargs=self.gpmap_kwargs,
                             ge_nonlinearity_type=self.ge_nonlinearity_type,
@@ -351,7 +383,7 @@ class Model:
         # Validate y, note that this doesn't
         # apply for MPA regression since y
         # is not a 1-d array in MPAR.
-        if self.regression_type == 'GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
             y = validate_1d_array(y)
             check(len(x) == len(y), 'length of inputs (x, y) must be equal')
 
@@ -394,7 +426,7 @@ class Model:
             np.random.shuffle(ix)
             self.x = self.x[ix]
             self.validation_flags = self.validation_flags[ix]
-            if self.regression_type == 'GE':
+            if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
                 self.y = self.y[ix]
             else:
                 self.y = self.y[ix, :]
@@ -411,7 +443,7 @@ class Model:
 
         # Normalize self.y -> self.y_norm
         self.y_stats = {}
-        if self.regression_type == 'GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
             y_unique = np.unique(self.y)
             check(len(y_unique),
                   f'Only {len(y_unique)} unique y-values provided;'
@@ -434,7 +466,7 @@ class Model:
         self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
 
         # Reshape self.y_norm to facilitate input creation
-        if self.regression_type == 'GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
             self.y_norm = np.array(self.y_norm).reshape(-1, 1)
 
             # Subsample y_norm for entropy estimation if necessary
@@ -672,7 +704,7 @@ class Model:
         self.y_std = self.y_stats['y_std']
 
         # Set y targets for linear regression and sign assignment
-        if self.regression_type == 'GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
             y_targets = self.y_norm
 
         # If MPA regression, use mean bin number
@@ -728,7 +760,7 @@ class Model:
         ix_val = self.validation_flags
         x_train = train_sequences[~ix_val,:]
         x_val = train_sequences[ix_val,:]
-        if self.regression_type == 'GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
             y_train = self.y_norm[~ix_val]
             y_val = self.y_norm[ix_val]
         elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
@@ -762,7 +794,7 @@ class Model:
         self.unfixed_phi_std = np.std(unfixed_phi)
 
         # TODO need to fix following for multi-mpa
-        if self.regression_type != 'Multi_MPA':
+        if self.regression_type != 'Multi_MPA' and self.regression_type != 'Multi_Phi_GE':
             # Flip sign if correlation of phi with y_targets is negative
             r, p_val = spearmanr(unfixed_phi, y_targets)
             if r < 0:
@@ -795,24 +827,33 @@ class Model:
             Observable values in an ``np.ndarray`` the same shape as ``phi``.
         """
         # Shape phi for processing
-        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+        if self.regression_type != 'Multi_Phi_GE':
+            phi, phi_shape = _get_shape_and_return_1d_array(phi)
 
         # make phi unfixed
         unfixed_phi = self.unfixed_phi_mean + self.unfixed_phi_std * phi
 
-        # Multiply by diffeomorphic mode factors
-        check(self.regression_type == 'GE',
-              'regression type must be "GE" for this function')
+        if self.regression_type != 'Multi_Phi_GE':
+            # Multiply by diffeomorphic mode factors
+            check(self.regression_type == 'GE',
+                  'regression type must be "GE" for this function')
 
         # Compute normalized phi using nonlinearity layer
         yhat_norm = self.layer_nonlinearity.phi_to_yhat(unfixed_phi,
                                                         use_arrays=True)
 
+        # don't do any diffeomorphic change to phi if phi is not a scalar.
+        if self.regression_type == 'Multi_Phi_GE':
+
+            yhat_norm = self.layer_nonlinearity.phi_to_yhat(phi,
+                                                       use_arrays=True)
+
         # Restore shift and scale
         yhat = self.y_mean + self.y_std * yhat_norm
 
         # Shape yhat for output
-        yhat = _shape_for_output(yhat, phi_shape)
+        if self.regression_type !='Multi_Phi_GE':
+            yhat = _shape_for_output(yhat, phi_shape)
 
         return yhat
 
@@ -1094,13 +1135,16 @@ class Model:
         #unfixed_phi = gpmap_function([x_ohe])
         unfixed_phi = self.layer_gpmap.call(x_ohe.astype('float32'))
 
-        # Fix diffeomorphic models
-        phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
-
         # Shape phi for output
-        if self.regression_type !='Multi_MPA':
+        if self.regression_type !='Multi_MPA' and self.regression_type != 'Multi_Phi_GE':
 
+            # Fix diffeomorphic models
+            phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
             phi = _shape_for_output(phi, x_shape)
+
+        # if doing multi-ge or multi-mpa regression, return unfixed phi.
+        else:
+            phi = unfixed_phi
 
         # Return latent phenotype values
         return phi
@@ -1126,7 +1170,7 @@ class Model:
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
-        check(self.regression_type == 'GE',
+        check(self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE',
               'Regression type must be GE for this function.')
 
         yhat = self.phi_to_yhat(self.x_to_phi(x))
@@ -1425,6 +1469,48 @@ class Model:
             # Compute H_y_given_phi
             H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
 
+        elif self.regression_type == 'Multi_Phi_GE':
+
+            # Number of datapoints
+            N = len(y)
+
+            # Normalize y values
+            y_norm = (y - self.y_mean) / self.y_std
+
+            # Subsample y_norm for entropy estimation if necessary
+            N_max = int(1E4)
+            if N > N_max:
+                z = np.random.choice(a=y_norm.squeeze(),
+                                     size=N_max,
+                                     replace=False)
+            else:
+                z = y_norm.squeeze()
+
+            # Add some noise to aid in entropy estimation
+            z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
+
+            # Compute entropy
+            H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
+            H_y = H_y_norm + np.log2(self.y_std + TINY)
+
+            # Compute phi
+            #phi = self.x_to_phi(x)
+            # Encode sequences as features
+            stats = x_to_stats(x=x, alphabet=self.alphabet)
+            x_ohe = stats.pop('x_ohe')
+
+            # no diffeomorphic mode fixing at the moment.
+            phi = self.layer_gpmap.call(x_ohe.astype('float32'))
+            #phi = self.x_to_phi(x)
+
+            # Compute p_y_give_phi
+            p_y_given_phi = self.p_of_y_given_phi(y,
+                                                  phi,
+                                                  paired=True)
+
+            # Compute H_y_given_phi
+            H_y_given_phi_n = -np.log2(p_y_given_phi + TINY)
+
         elif self.regression_type == 'MPA':
 
             # If y is 2D, convert from mat data to vec data
@@ -1670,9 +1756,9 @@ class Model:
                             num_subsamples=num_subsamples,
                             verbose=verbose)
 
-        elif self.regression_type == 'Multi_MPA':
+        elif self.regression_type == 'Multi_MPA' or self.regression_type=='Multi_Phi_GE':
 
-            print('Predictive information not implemented multi latent MPA regression.')
+            print(f'Predictive information not implemented for {self.regression_type}.')
             return None
 
 
@@ -1780,13 +1866,16 @@ class Model:
         """
         # Prepare inputs
         y, y_shape = _get_shape_and_return_1d_array(y)
-        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+        if self.regression_type !='Multi_Phi_GE':
+
+            phi, phi_shape = _get_shape_and_return_1d_array(phi)
 
         # If inputs are paired, use as is
         if paired:
             # Check that dimensions match
-            check(y_shape == phi_shape,
-                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+            if self.regression_type != 'Multi_Phi_GE':
+                check(y_shape == phi_shape,
+                      f"y shape={y_shape} does not match phi shape={phi_shape}")
 
             # Use y_shape as output shape
             p_shape = y_shape
@@ -1801,10 +1890,11 @@ class Model:
 
         # Ravel arrays
         y = y.ravel()
-        phi = phi.ravel()
+        if self.regression_type != 'Multi_Phi_GE':
+            phi = phi.ravel()
 
         # If GE, compute yhat, then p
-        if self.regression_type == 'GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
 
             # Compute y_hat
             yhat = self.phi_to_yhat(phi)
@@ -1875,8 +1965,9 @@ class Model:
             If ``paired=False``, ``p.shape`` will be given by
             ``y.shape + yhat.shape`` .
         """
-        check(self.regression_type == 'GE',
-              f'Only works for GE models.')
+        if self.regression_type !='Multi_Phi_GE':
+            check(self.regression_type == 'GE',
+                  f'Only works for GE models.')
 
         # Prepare inputs
         y, y_shape = _get_shape_and_return_1d_array(y)
@@ -1885,8 +1976,9 @@ class Model:
         # If inputs are paired, use as is
         if paired:
             # Check that dimensions match
-            check(y_shape == yhat_shape,
-                  f"y shape={y_shape} does not match yhat shape={yhat_shape}")
+            if self.regression_type != 'Multi_Phi_GE':
+                check(y_shape == yhat_shape,
+                      f"y shape={y_shape} does not match yhat shape={yhat_shape}")
 
             # Use y_shape as output shape
             p_shape = y_shape
