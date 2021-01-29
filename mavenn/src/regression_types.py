@@ -581,7 +581,7 @@ class MeasurementProcessAgnosticModel:
 
     gpmap_type: (str)
         Specifies the type of G-P model the user wants to infer.
-        Possible choices: ['additive','neighbor','pairwise','blackbox']
+        Possible choices: ['additive','neighbor','pairwise','blackbox', 'custom']
 
     ohe_batch_size: (int)
         Integer specifying how many sequences to one-hot encode at a time.
@@ -594,6 +594,10 @@ class MeasurementProcessAgnosticModel:
 
     eta_regularization: (float >= 0)
         Regularization strength for measurement process parameters eta.
+
+    custom_gpmap: (GPMapLayer sub-class)
+        Defines custom gpmap, provided by user. Inherited class of GP-MAP layer,
+        which defines the functionality for x_to_phi_layer.
     """
 
     @handle_errors
@@ -606,7 +610,8 @@ class MeasurementProcessAgnosticModel:
                  alphabet,
                  theta_regularization,
                  eta_regularization,
-                 ohe_batch_size):
+                 ohe_batch_size,
+                 custom_gpmap):
         """Construct class instance."""
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
@@ -618,6 +623,7 @@ class MeasurementProcessAgnosticModel:
         self.eta_regularization = eta_regularization
         self.ohe_batch_size = ohe_batch_size
         self.number_of_bins = number_of_bins
+        self.custom_gpmap = custom_gpmap
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -640,7 +646,7 @@ class MeasurementProcessAgnosticModel:
               'number_of_bins must be an integer')
 
         # check that model type valid
-        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox']
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox', 'custom']
         check(self.gpmap_type in valid_gpmap_types,
               f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
@@ -727,6 +733,9 @@ class MeasurementProcessAgnosticModel:
                 C=self.C,
                 theta_regularization=self.theta_regularization,
                 **self.gpmap_kwargs)
+        elif self.gpmap_type == 'custom':
+            self.x_to_phi_layer = self.custom_gpmap(**self.gpmap_kwargs)
+
         else:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)

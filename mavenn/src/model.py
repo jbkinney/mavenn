@@ -121,6 +121,11 @@ class Model:
         ``Model.set_data()``. Typically, the larger this number is the quicker
         the encoding will happen. A number too large, however, may cause
         the computer's memory to run out. Must be ``>= 1``.
+
+    custom_gpmap: (GPMapLayer sub-class)
+        Defines custom gpmap, provided by user. Inherited class of GP-MAP layer,
+        which defines the functionality for x_to_phi_layer.
+
     """
 
     @handle_errors
@@ -140,7 +145,8 @@ class Model:
                  mpa_hidden_nodes=50,
                  theta_regularization=0.1,
                  eta_regularization=0.1,
-                 ohe_batch_size=50000):
+                 ohe_batch_size=50000,
+                 custom_gpmap=None):
         """Model() class constructor."""
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
@@ -176,6 +182,7 @@ class Model:
         self.ohe_batch_size = ohe_batch_size
         self.Y = Y
         self.number_latent_nodes = number_latent_nodes
+        self.custom_gpmap = custom_gpmap
 
         # Variables needed for saving
         self.unfixed_phi_mean = np.nan
@@ -264,7 +271,8 @@ class Model:
                             gpmap_kwargs=self.gpmap_kwargs,
                             theta_regularization=self.theta_regularization,
                             eta_regularization=self.eta_regularization,
-                            ohe_batch_size=self.ohe_batch_size)
+                            ohe_batch_size=self.ohe_batch_size,
+                            custom_gpmap=self.custom_gpmap)
             self.model.theta_init = None
 
             self.define_model = self.model.define_model(
@@ -725,16 +733,17 @@ class Model:
             x_sparse_train = csc_matrix(self.x_ohe[~ix_val])
             y_targets_train = y_targets[~ix_val]
 
-            # Do linear regression
-            t = time.time()
-            self.theta_lc_init = lsmr(x_sparse_train,
-                                      y_targets_train,
-                                      show=verbose)[0]
+            # Do linear regression if gpmap_type is not custom.
+            if self.gpmap_type != 'custom':
+                t = time.time()
+                self.theta_lc_init = lsmr(x_sparse_train,
+                                          y_targets_train,
+                                          show=verbose)[0]
 
-            linear_regression_time = time.time() - t
-            if verbose:
-                print(f'Linear regression time: '
-                      f'{linear_regression_time:.4f} sec')
+                linear_regression_time = time.time() - t
+                if verbose:
+                    print(f'Linear regression time: '
+                          f'{linear_regression_time:.4f} sec')
 
             # Set weights from linear regression result
             if self.gpmap_type == 'additive':
@@ -746,9 +755,8 @@ class Model:
                     theta_0=0.,
                     theta_lc=self.theta_lc_init,
                     theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
-            elif self.gpmap_type == 'blackbox':
-                print('Warning: linear initialization has no effect '
-                      'when gpmap_type="mpl".')
+            elif self.gpmap_type == 'blackbox' or self.gpmap_type == 'custom':
+                print(f'Warning: linear initialization has no effect when gpmap_type={self.gpmap_type}.')
             else:
                 assert False, "This should not happen."
 
