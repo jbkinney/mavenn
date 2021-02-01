@@ -628,6 +628,12 @@ class NoiseModelLayer(Layer):
         # these are the labels
         ytrue = inputs[:, 1:]
 
+        # This gives strange results where loss tends to -inf, need to investigate.
+        # replace the tensors where nans in ytrue occur with zeros, so that likelihood for
+        # that yhat, ypred pair is also zero.
+        # yhat = tf.where(tf.math.is_nan(ytrue), tf.zeros_like(yhat), yhat)
+        # ytrue = tf.where(tf.math.is_nan(ytrue), tf.zeros_like(ytrue), ytrue)
+
         # Compute negative log likelihood
         nlls = self.compute_nlls(yhat=yhat,
                                  ytrue=ytrue)

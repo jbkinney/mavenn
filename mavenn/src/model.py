@@ -26,7 +26,8 @@ from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.regression_types import GlobalEpistasisModel, \
                                         MeasurementProcessAgnosticModel, \
                                         MultiMeasurementProcessAgnosticModel, \
-                                        MultiPhiGlobalEpistasisModel
+                                        MultiPhiGlobalEpistasisModel, \
+                                        MultiyGlobalEpistasisModel
 
 from mavenn.src.layers.measurement_process_layers import MultiMPAMeasurementProcessLayer
 
@@ -63,8 +64,8 @@ class Model:
         Type of regression implemented by the model. Choices are ``'GE'`` (for
         a global epistasis model) and ``'MPA'`` (for a measurement process
         agnostic model). Also allowed are 'Multi_MPA', and 'Multi_Phi_GE',
-        These represent multi-dimensional extensions of the standard GE and MPA
-        regression and currently are in the development/beta stage.
+        and 'Multi_y_GE'; these represent multi-dimensional extensions of
+        the standard GE and MPA regression and currently are in development/alpha stage.
 
     gpmap_type: (str)
         Type of G-P map to infer. Choices are ``'additive'``, ``'neighbor'``,
@@ -75,7 +76,7 @@ class Model:
 
     Y: (int)
         The number if discrete ``y`` bins to use when defining an MPA model.
-        Must be ``>= 2``. Has no effect on MPA models.
+        Must be ``>= 2``.
 
     number_latent_nodes: (int)
         Integer specifying the number of nodes in the first hidden layer.
@@ -126,6 +127,9 @@ class Model:
         Defines custom gpmap, provided by user. Inherited class of GP-MAP layer,
         which defines the functionality for x_to_phi_layer.
 
+    number_of_replicate_targets: (int)
+        Number of simultaneous targets to fit using 'Multi_y_GE' regression.
+
     """
 
     @handle_errors
@@ -146,7 +150,8 @@ class Model:
                  theta_regularization=0.1,
                  eta_regularization=0.1,
                  ohe_batch_size=50000,
-                 custom_gpmap=None):
+                 custom_gpmap=None,
+                 number_of_replicate_targets=None):
         """Model() class constructor."""
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
@@ -154,7 +159,7 @@ class Model:
         self.arg_dict.pop('self')
 
         # Set regression_type
-        check(regression_type in {'MPA', 'GE', 'Multi_Phi_GE', 'Multi_MPA'},
+        check(regression_type in {'MPA', 'GE', 'Multi_Phi_GE', 'Multi_MPA', 'Multi_y_GE'},
               f'regression_type = {regression_type};'
               f'must be "MPA", or "GE"')
         self.regression_type = regression_type
@@ -163,6 +168,11 @@ class Model:
         check(L > 0,
               f'len(x[0])={L}; must be > 0')
         self.L = L
+
+        if regression_type == 'Multi_y_GE':
+            # Make sure number_of_replicate_targets is not none with multi_y GE regression.
+            check(number_of_replicate_targets is not None,
+                  f'number_of_replicate_targets cannot be None with regression type = {regression_type}')
 
         # Validate and set alphabet
         self.alphabet = validate_alphabet(alphabet)
@@ -183,6 +193,7 @@ class Model:
         self.Y = Y
         self.number_latent_nodes = number_latent_nodes
         self.custom_gpmap = custom_gpmap
+        self.number_of_replicate_targets = number_of_replicate_targets
 
         # Variables needed for saving
         self.unfixed_phi_mean = np.nan
@@ -248,6 +259,35 @@ class Model:
                                 self.ge_heteroskedasticity_order,
                             theta_regularization=self.theta_regularization,
                             eta_regularization=self.eta_regularization)
+
+            self.define_model = self.model.define_model(
+                                    ge_noise_model_type=
+                                        self.ge_noise_model_type,
+                                    ge_nonlinearity_hidden_nodes=
+                                        self.ge_nonlinearity_hidden_nodes)
+
+            # Set layers
+            self.layer_gpmap = self.model.x_to_phi_layer
+            self.layer_nonlinearity = self.model.phi_to_yhat_layer
+            self.layer_noise_model = self.model.noise_model_layer
+
+        elif regression_type == 'Multi_y_GE':
+
+            self.model = MultiyGlobalEpistasisModel(
+                            info_for_layers_dict=self.info_for_layers_dict,
+                            sequence_length=self.L,
+                            gpmap_type=self.gpmap_type,
+                            gpmap_kwargs=self.gpmap_kwargs,
+                            ge_nonlinearity_type=self.ge_nonlinearity_type,
+                            ge_nonlinearity_monotonic=
+                                self.ge_nonlinearity_monotonic,
+                            alphabet=self.alphabet,
+                            ohe_batch_size=self.ohe_batch_size,
+                            ge_heteroskedasticity_order=
+                                self.ge_heteroskedasticity_order,
+                            theta_regularization=self.theta_regularization,
+                            eta_regularization=self.eta_regularization,
+                            number_of_replicate_targets=self.number_of_replicate_targets)
 
             self.define_model = self.model.define_model(
                                     ge_noise_model_type=
@@ -461,6 +501,22 @@ class Model:
             self.y_stats['y_mean'] = self.y_mean
             self.y_stats['y_std'] = self.y_std
 
+        elif self.regression_type == 'Multi_y_GE':
+
+            # cast replicates input as np array
+            self.y = np.array(self.y)
+            #print(f' set data mult_y_GE, self.y shape = {self.y.shape}')
+
+            # compute mean and standard deviation for all replicates
+            self.y_std = self.y.T.std(axis=1).reshape(-1, 1)
+            self.y_mean = self.y.T.mean(axis=1).reshape(-1, 1)
+            self.y_stats['y_mean'] = self.y_mean.T
+            self.y_stats['y_std'] = self.y_std.T
+
+            # perform normalization and take transpose to restore shape to (-1, # targets)
+            self.y_norm = ((self.y.T - self.y_mean) / self.y_std).T
+            #print(f'y_std shape = {self.y_std.shape}')
+
         elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             self.y_std = 1
             self.y_mean = 0
@@ -470,8 +526,10 @@ class Model:
         else:
             assert False, "This shouldn't happen"
 
-        # Set normalized y and relevant parameters
-        self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
+        # Set normalized y and relevant parameters if regression type isn't Multi_y_GE.
+        # For Multi_y_GE, the normalization happens in the conditional above.
+        if self.regression_type != 'Multi_y_GE':
+            self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
 
         # Reshape self.y_norm to facilitate input creation
         if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
@@ -496,6 +554,11 @@ class Model:
             self.info_for_layers_dict['H_y'] = H_y
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
             self.info_for_layers_dict['dH_y'] = dH_y
+
+        elif self.regression_type == 'Multi_y_GE':
+
+            self.y_norm = np.array(self.y_norm).reshape(-1, self.number_of_replicate_targets)
+            #print(f' set data, mult_y_GE, y_norm shape = {self.y_norm.shape}')
 
         elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
             self.y_norm = np.array(self.y_norm)
@@ -712,7 +775,8 @@ class Model:
         self.y_std = self.y_stats['y_std']
 
         # Set y targets for linear regression and sign assignment
-        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE' \
+                or self.regression_type == 'Multi_y_GE':
             y_targets = self.y_norm
 
         # If MPA regression, use mean bin number
@@ -768,7 +832,8 @@ class Model:
         ix_val = self.validation_flags
         x_train = train_sequences[~ix_val,:]
         x_val = train_sequences[ix_val,:]
-        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE' \
+                or self.regression_type == 'Multi_y_GE':
             y_train = self.y_norm[~ix_val]
             y_val = self.y_norm[ix_val]
         elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
@@ -802,7 +867,8 @@ class Model:
         self.unfixed_phi_std = np.std(unfixed_phi)
 
         # TODO need to fix following for multi-mpa
-        if self.regression_type != 'Multi_MPA' and self.regression_type != 'Multi_Phi_GE':
+        if self.regression_type != 'Multi_MPA' and self.regression_type != 'Multi_Phi_GE' \
+                and self.regression_type !='Multi_y_GE':
             # Flip sign if correlation of phi with y_targets is negative
             r, p_val = spearmanr(unfixed_phi, y_targets)
             if r < 0:
