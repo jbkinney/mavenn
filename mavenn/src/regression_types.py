@@ -7,7 +7,7 @@ import numbers
 # Tensorflow imports
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Lambda, Concatenate
+from tensorflow.keras.layers import Input, Lambda, Concatenate, Dense
 
 # MAVE-NN imports
 from mavenn.src.error_handling import handle_errors, check
@@ -17,7 +17,8 @@ from mavenn.src.layers.gpmap \
     PairwiseGPMapLayer, \
     MultilayerPerceptronGPMap, \
     Multi_AdditiveGPMapLayer,  \
-    Multi_PairwiseGPMapLayer
+    Multi_PairwiseGPMapLayer, \
+    ThermodynamicGPMapLayer
 
 from mavenn.src.layers.measurement_process_layers \
     import GlobalEpistasisLayer, \
@@ -977,7 +978,7 @@ class MeasurementProcessAgnosticModel:
               'number_of_bins must be an integer')
 
         # check that model type valid
-        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox', 'custom']
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox', 'thermodynamic', 'custom']
         check(self.gpmap_type in valid_gpmap_types,
               f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
@@ -1063,6 +1064,11 @@ class MeasurementProcessAgnosticModel:
                 L=self.L,
                 C=self.C,
                 theta_regularization=self.theta_regularization,
+                **self.gpmap_kwargs)
+        elif self.gpmap_type == 'thermodynamic':
+
+            self.x_to_phi_layer = ThermodynamicGPMapLayer(
+                C=self.C,
                 **self.gpmap_kwargs)
         elif self.gpmap_type == 'custom':
             self.x_to_phi_layer = self.custom_gpmap(**self.gpmap_kwargs)
@@ -1298,4 +1304,236 @@ class MultiMeasurementProcessAgnosticModel:
         model = Model(inputTensor, outputTensor)
         self.model = model
         self.mpa_hidden_nodes = mpa_hidden_nodes
+        return model
+
+
+@handle_errors
+class AIEModel:
+    """
+    Represents an aggregation of individual effects model.
+
+    Parameters
+    ----------
+    sequence_length: (int)
+        Integer specifying the length of a single training sequence.
+
+    alphabet: (str)
+        Specifies the type of input sequences. Three possible choices
+        allowed: ['dna','rna','protein', 'protein*'].
+
+    gpmap_type: (str)
+        Specifies the type of G-P model the user wants to infer.
+        Possible choices: ['additive','neighbor','pairwise','blackbox']
+
+    ge_nonlinearity_type: (str)
+        Specifies the form of the GE nonlinearity. Options:
+        "linear": An affine transformation from phi to yhat.
+        "nonlinear": Allow and arbitrary nonlinear map from phi to yhat.
+
+    ge_nonlinearity_monotonic: (boolean)
+        Whether to use a monotonicity constraint in GE regression.
+        This variable has no effect for MPA regression.
+
+    ge_heteroskedasticity_order: (int)
+        Order of the exponentiated polynomials used to make noise model
+        parameters dependent on y_hat, and thus render the noise model
+        heteroskedastic. Set to zero for a homoskedastic noise model.
+        (Only used for GE regression).
+
+    ohe_batch_size: (int)
+        Integer specifying how many sequences to one-hot encode at a time.
+        The larger this number number, the quicker the encoding will happen,
+        but this may also take up a lot of memory and throw an exception
+        if its too large. Currently for additive models only.
+
+    theta_regularization: (float >= 0)
+        Regularization strength for G-P map parameters theta.
+
+    eta_regularization: (float >= 0)
+        Regularization strength for measurement process parameters eta.
+    """
+
+    @handle_errors
+    def __init__(self,
+                 info_for_layers_dict,
+                 sequence_length,
+                 alphabet,
+                 gpmap_type,
+                 gpmap_kwargs,
+                 ge_nonlinearity_monotonic,
+                 ge_nonlinearity_type,
+                 ohe_batch_size,
+                 ge_heteroskedasticity_order,
+                 theta_regularization,
+                 eta_regularization,
+                 custom_gpmap):
+        """Construct class instance."""
+        # set class attributes
+        self.info_for_layers_dict = info_for_layers_dict
+        self.gpmap_type = gpmap_type
+        self.gpmap_kwargs = gpmap_kwargs
+        self.alphabet = validate_alphabet(alphabet)
+        self.C = len(self.alphabet)
+        self.ge_nonlinearity_monotonic = ge_nonlinearity_monotonic
+        self.ge_heteroskedasticity_order = ge_heteroskedasticity_order
+        self.ohe_batch_size = ohe_batch_size
+        self.theta_regularization = theta_regularization
+        self.eta_regularization = eta_regularization
+        self.ge_nonlinearity_type = ge_nonlinearity_type
+        self.custom_gpmap = custom_gpmap
+
+        # class attributes that are not parameters
+        # but are useful for using trained models
+        self.history = None
+        self.model = None
+
+        # the following set of attributes are used for
+        # gauge fixing the neural network model (x_to_phi and measurement)
+        # and are set after the model has been fit to data.
+        #self.num_nodes_hidden_measurement_layer = None
+        self.theta_gf = None
+        self.ge_model = None
+
+        # check that ge_nonlinearity_monotonic is a boolean.
+        check(isinstance(self.ge_nonlinearity_monotonic,
+                         (bool, np.bool, np.bool_)),
+              'ge_nonlinearity_monotonic must be a boolean')
+
+        # check that ge_heteroskedasticity_order is an number
+        check(isinstance(self.ge_heteroskedasticity_order, numbers.Integral),
+              'ge_heteroskedasticity_order must be an integers')
+
+        check(self.ge_heteroskedasticity_order >= 0,
+              'ge_heteroskedasticity_order must be >= 0')
+
+        # check that model type valid
+        # valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox']
+        # check(self.gpmap_type in valid_gpmap_types,
+        #       f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
+
+        # check that ge_nonlinearity_type valid
+        allowed_types = ['linear', 'nonlinear']
+        check(self.ge_nonlinearity_type in allowed_types,
+              f'gpmap_type = {self.gpmap_type};'
+              f'must be in {allowed_types}')
+
+        # check that theta regularization is a number
+        check(isinstance(self.theta_regularization, numbers.Real),
+              'theta_regularization must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.theta_regularization >= 0,
+              'theta_regularization must be >= 0')
+
+        # check that eta regularization is a number
+        check(isinstance(self.eta_regularization, numbers.Real),
+              'eta must be a number')
+
+        # check that theta regularization is greater than 0
+        check(self.eta_regularization >= 0,
+              'eta must be >= 0')
+
+        # check that ohe_batch_size is an number
+        check(isinstance(self.ohe_batch_size, numbers.Integral),
+              'ohe_batch_size must be an integer')
+
+        # check that ohe_batch_size is > 0
+        check(self.ohe_batch_size > 0,
+              'ohe_batch_size must be > 0')
+
+        # record sequence length for convenience
+        self.L = sequence_length
+
+    @handle_errors
+    def define_model(self,
+                     ge_noise_model_type,
+                     ge_nonlinearity_hidden_nodes=50):
+        """
+        Establish model architecture.
+
+        Defines the architecture of the global epistasis regression model.
+        using the tensorflow.keras functional API.
+
+        Parameters
+        ----------
+        ge_nonlinearity_hidden_nodes: (int)
+            Number of hidden nodes (i.e. sigmoidal contributions) to use in the
+            definition of the GE nonlinearity.
+
+        ge_noise_model_type: (str)
+            Specifies the type of noise model the user wants to infer.
+            The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
+
+        Returns
+        -------
+        model: (tf.model)
+            TensorFlow model that can be compiled and subsequently fit to data.
+        """
+        # check that p_of_all_y_given_phi valid
+        check(ge_noise_model_type in {'Gaussian', 'Cauchy', 'SkewedT'},
+              f'p_of_all_y_given_phi = {ge_noise_model_type};' 
+              f'must be "Gaussian", "Cauchy", or "SkewedT"')
+
+        check(isinstance(ge_nonlinearity_hidden_nodes, numbers.Integral),
+              'ge_nonlinearity_hidden_nodes must be an integer.')
+
+        check(ge_nonlinearity_hidden_nodes > 0,
+              'ge_nonlinearity_hidden_nodes must be greater than 0.')
+
+        # Compute number of sequence nodes. Useful for model construction below.
+        number_x_nodes = int(self.L*self.C)
+
+        number_input_layer_nodes = number_x_nodes + 1
+
+        inputTensor = Input((number_input_layer_nodes,),
+                            name='Sequence_labels_input')
+
+        sequence_input = Lambda(lambda x: x[:, 0:number_x_nodes],
+                                output_shape=((number_x_nodes,)),
+                                name='Sequence_only')(inputTensor)
+        labels_input = Lambda(
+            lambda x: x[:, number_x_nodes:number_x_nodes + 1],
+            output_shape=((1,)),
+            trainable=False, name='Labels_input')(inputTensor)
+
+        # create x to y-hat layer.
+        self.x_to_yhat = self.custom_gpmap(**self.gpmap_kwargs)
+        concatenateLayer = self.x_to_yhat(sequence_input)
+
+        nonLinearLayer = Dense(ge_nonlinearity_hidden_nodes, activation='tanh')(concatenateLayer)
+        nonLinearLayer = Dense(ge_nonlinearity_hidden_nodes, activation='tanh')(nonLinearLayer)
+        yhat = Dense(1, activation='linear', name='yhat')(nonLinearLayer)
+
+        # Concatenate yhat and training labels
+        yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+            [yhat, labels_input])
+
+        # Create noise model layer
+        if ge_noise_model_type == 'Gaussian':
+            self.noise_model_layer = GaussianNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization)
+
+        elif ge_noise_model_type == 'Cauchy':
+            self.noise_model_layer = CauchyNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization)
+
+        elif ge_noise_model_type == 'SkewedT':
+            self.noise_model_layer = SkewedTNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization)
+        else:
+            assert False, 'This should not happen.'
+
+        outputTensor = self.noise_model_layer(yhat_y_concat)
+
+        # create the model:
+        model = Model(inputTensor, outputTensor)
+        self.model = model
+        self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
+
         return model

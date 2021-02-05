@@ -218,6 +218,195 @@ class AdditiveGPMapLayer(GPMapLayer):
         return param_dict
 
 
+class ThermodynamicGPMapLayer(Layer):
+    """
+    Represents an thermodynamic gp-map layer
+    where the sequence has binding sites for
+    RNAP poylmerase and a single transcription
+    factor.
+
+    """
+
+    def __init__(self,
+                 TF_start,
+                 TF_end,
+                 RNAP_start,
+                 RNAP_end,
+                 C,
+                 regularizer,
+                 *args, **kwargs):
+        """Construct layer instance."""
+
+        # set attributes
+        self.TF_start = TF_start
+        self.TF_end = TF_end
+        self.RNAP_start = RNAP_start
+        self.RNAP_end = RNAP_end
+        self.C = C
+        self.regularizer = tf.keras.regularizers.L2(regularizer)
+
+        # form helpful variables
+        self.L_TF = TF_end - TF_start
+        self.L_RNAP = RNAP_end - RNAP_start
+
+        super().__init__(*args, **kwargs)
+
+    def build(self, input_shape):
+        """Build layer."""
+
+        # define bias/chemical potential weight for crp
+        self.mu_TF = self.add_weight(name='mu_TF',
+                                     shape=(1,),
+                                     initializer=Constant(1.),
+                                     trainable=True,
+                                     regularizer=self.regularizer)
+
+        # define bias/chemical potential weight for rnap
+        self.mu_RNAP = self.add_weight(name='mu_RNAP',
+                                       shape=(1,),
+                                       initializer=Constant(1.),
+                                       trainable=True,
+                                       regularizer=self.regularizer)
+
+        # Define theta_TF_lc parameters
+        theta_TF_lc_shape = (1, self.L_TF, self.C)
+
+        theta_TF_lc_init = np.random.randn(*theta_TF_lc_shape) / np.sqrt(self.L_TF)
+        self.theta_TF_lc = self.add_weight(name='theta_TF_lc',
+                                           shape=theta_TF_lc_shape,
+                                           initializer=Constant(theta_TF_lc_init),
+                                           trainable=True,
+                                           regularizer=self.regularizer)
+
+        # Define theta_rnap_lc parameters
+        theta_RNAP_lc_shape = (1, self.L_RNAP, self.C)
+
+        theta_RNAP_lc_init = np.random.randn(*theta_RNAP_lc_shape) / np.sqrt(self.L_RNAP)
+        self.theta_RNAP_lc = self.add_weight(name='theta_RNAP_lc',
+                                             shape=theta_RNAP_lc_shape,
+                                             initializer=Constant(theta_RNAP_lc_init),
+                                             trainable=True,
+                                             regularizer=self.regularizer)
+
+        # define interaction term. Not sure if this needs regularization
+        self.interaction = self.add_weight(name='interaction',
+                                           shape=(1,),
+                                           initializer=Constant(1.),
+                                           trainable=True,
+                                           regularizer=self.regularizer)
+
+        # define tsat term. Not sure if this needs regularization
+        self.tsat = self.add_weight(name='tsat',
+                                    shape=(1,),
+                                    initializer=Constant(1.),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+
+        # Call superclass build
+        super().build(input_shape)
+
+    def call(self, x_lc):
+        """Process layer input and return output.
+
+        x_lc: (tensor)
+            Input tensor that represents one-hot encoded
+            sequence values.
+
+        t: (tensor)
+            Output tensor with shape (None, 1), representing
+            rate of transcription.
+        """
+
+        # extract locations of binding sites from entire lac-promoter sequence.
+        x_TF_lc = x_lc[:, self.C * self.TF_start:self.C * self.TF_end]
+        x_RNAP_lc = x_lc[:, self.C * self.RNAP_start: self.C * self.RNAP_end]
+
+        # reshape according to crp and rnap lengths.
+        x_TF_lc = tf.reshape(x_TF_lc, [-1, self.L_TF, self.C])
+        x_RNAP_lc = tf.reshape(x_RNAP_lc, [-1, self.L_RNAP, self.C])
+
+        # compute delta G for crp
+        phi_TF = self.mu_TF + \
+                 tf.reshape(K.sum(self.theta_TF_lc * x_TF_lc, axis=[1, 2]),
+                            shape=[-1, 1])
+
+        # compute delta G for rnap
+        phi_RNAP = self.mu_RNAP + \
+                   tf.reshape(K.sum(self.theta_RNAP_lc * x_RNAP_lc, axis=[1, 2]),
+                              shape=[-1, 1])
+
+        # compute rate of transcription
+        t = (self.tsat) * (K.exp(-phi_RNAP) + K.exp(-phi_TF - phi_RNAP - self.interaction)) / (
+        1 + K.exp(-phi_TF) + K.exp(-phi_RNAP) + K.exp(-phi_TF - phi_RNAP - self.interaction))
+
+        # return rate of transcription
+        return t
+
+    @handle_errors
+    def set_params(self,
+                   mu_TF=None,
+                   theta_TF_lc=None):
+        """
+        Set values of layer parameters.
+
+        Parameters
+        ----------
+        mu_TF: (float)
+            Tensor with shape (1,) representing chemical potential
+            term of the transcription factor.
+
+        theta_TF_lc: (np.ndarray)
+            Shape (L_TF,C)
+
+        Returns
+        -------
+        None
+        """
+        # Check mu_TF
+        if mu_TF is not None:
+            check(isinstance(mu_TF, float),
+                  f'type(mu_TF)={mu_TF}; must be float')
+
+        # Check theta_TF_lc
+        if theta_TF_lc is not None:
+            check(isinstance(theta_TF_lc, np.ndarray),
+                  f'type(theta_TF_lc)={theta_TF_lc}; must be np.ndarray')
+            check(theta_TF_lc.size == self.L_TF * self.C,
+                   f'theta_lc.size={repr(theta_lc.size)}; '
+                   f'must be ({self.L * self.C}).')
+            theta_TF_lc = theta_TF_lc.reshape([1, self.L_TF, self.C])
+
+        # Set weight values
+        self.set_weights([np.array([mu_TF]), theta_TF_lc])
+
+    @handle_errors
+    def get_params(self):
+        """
+        Get values of layer parameters.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        param_dict: (dict)
+            Dictionary containing model parameters. Model parameters are
+            returned as matrices, NOT as individual named parameters, and are
+            NOT gauge-fixed.
+        """
+        # Get list of weights
+        param_list = self.get_weights()
+
+        #  Fill param_dict
+        param_dict = {}
+        param_dict['theta_0'] = param_list[0]
+        param_dict['theta_lc'] = param_list[1].reshape([self.L, self.C])
+
+        return param_dict
+
+
+
 class Multi_AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive with two latent phenotypes G-P map."""
 

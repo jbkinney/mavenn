@@ -27,7 +27,8 @@ from mavenn.src.regression_types import GlobalEpistasisModel, \
                                         MeasurementProcessAgnosticModel, \
                                         MultiMeasurementProcessAgnosticModel, \
                                         MultiPhiGlobalEpistasisModel, \
-                                        MultiyGlobalEpistasisModel
+                                        MultiyGlobalEpistasisModel, \
+                                        AIEModel
 
 from mavenn.src.layers.measurement_process_layers import MultiMPAMeasurementProcessLayer
 
@@ -69,7 +70,7 @@ class Model:
 
     gpmap_type: (str)
         Type of G-P map to infer. Choices are ``'additive'``, ``'neighbor'``,
-        ``'pairwise'``, and ``'blackbox'``.
+        ``'pairwise'``, ``'blackbox'``, and ``'thermodynamic'``.
 
     gpmap_kwargs: (dict)
         Additional keyword arguments used for specifying the G-P map.
@@ -159,7 +160,13 @@ class Model:
         self.arg_dict.pop('self')
 
         # Set regression_type
-        check(regression_type in {'MPA', 'GE', 'Multi_Phi_GE', 'Multi_MPA', 'Multi_y_GE'},
+        check(regression_type in {'MPA',
+                                  'GE',
+                                  'Multi_Phi_GE',
+                                  'Multi_MPA',
+                                  'Multi_y_GE',
+                                  'AIE'
+                                  },
               f'regression_type = {regression_type};'
               f'must be "MPA", or "GE"')
         self.regression_type = regression_type
@@ -349,6 +356,27 @@ class Model:
             self.layer_measurement_process = \
                 self.model.layer_measurement_process
 
+        elif regression_type == 'AIE':
+
+
+            self.model = AIEModel(
+                            info_for_layers_dict=self.info_for_layers_dict,
+                            sequence_length=self.L,
+                            gpmap_type=self.gpmap_type,
+                            gpmap_kwargs=self.gpmap_kwargs,
+                            ge_nonlinearity_type=self.ge_nonlinearity_type,
+                            ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
+                            alphabet=self.alphabet,
+                            ohe_batch_size=self.ohe_batch_size,
+                            ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
+                            theta_regularization=self.theta_regularization,
+                            eta_regularization=self.eta_regularization,
+                            custom_gpmap=self.custom_gpmap)
+
+            self.define_model = self.model.define_model(
+                                    ge_noise_model_type=self.ge_noise_model_type,
+                                    ge_nonlinearity_hidden_nodes=self.ge_nonlinearity_hidden_nodes)
+
 
 
     @handle_errors
@@ -474,7 +502,8 @@ class Model:
             np.random.shuffle(ix)
             self.x = self.x[ix]
             self.validation_flags = self.validation_flags[ix]
-            if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
+            if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE'\
+                    or self.regression_type == 'AIE':
                 self.y = self.y[ix]
             else:
                 self.y = self.y[ix, :]
@@ -491,7 +520,8 @@ class Model:
 
         # Normalize self.y -> self.y_norm
         self.y_stats = {}
-        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE' \
+               or self.regression_type =='AIE':
             y_unique = np.unique(self.y)
             check(len(y_unique),
                   f'Only {len(y_unique)} unique y-values provided;'
@@ -532,7 +562,8 @@ class Model:
             self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
 
         # Reshape self.y_norm to facilitate input creation
-        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE':
+        if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE' \
+                or self.regression_type == 'AIE':
             self.y_norm = np.array(self.y_norm).reshape(-1, 1)
 
             # Subsample y_norm for entropy estimation if necessary
@@ -776,7 +807,7 @@ class Model:
 
         # Set y targets for linear regression and sign assignment
         if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE' \
-                or self.regression_type == 'Multi_y_GE':
+                or self.regression_type == 'Multi_y_GE' or self.regression_type == 'AIE':
             y_targets = self.y_norm
 
         # If MPA regression, use mean bin number
@@ -798,7 +829,7 @@ class Model:
             y_targets_train = y_targets[~ix_val]
 
             # Do linear regression if gpmap_type is not custom.
-            if self.gpmap_type != 'custom':
+            if self.gpmap_type != 'custom' and self.gpmap_type != 'thermodynamic':
                 t = time.time()
                 self.theta_lc_init = lsmr(x_sparse_train,
                                           y_targets_train,
@@ -819,7 +850,7 @@ class Model:
                     theta_0=0.,
                     theta_lc=self.theta_lc_init,
                     theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
-            elif self.gpmap_type == 'blackbox' or self.gpmap_type == 'custom':
+            elif self.gpmap_type == 'blackbox' or self.gpmap_type == 'custom' or self.gpmap_type == 'thermodynamic':
                 print(f'Warning: linear initialization has no effect when gpmap_type={self.gpmap_type}.')
             else:
                 assert False, "This should not happen."
@@ -833,12 +864,12 @@ class Model:
         x_train = train_sequences[~ix_val,:]
         x_val = train_sequences[ix_val,:]
         if self.regression_type == 'GE' or self.regression_type == 'Multi_Phi_GE' \
-                or self.regression_type == 'Multi_y_GE':
+                or self.regression_type == 'Multi_y_GE' or self.regression_type == 'AIE':
             y_train = self.y_norm[~ix_val]
             y_val = self.y_norm[ix_val]
         elif self.regression_type == 'MPA' or self.regression_type == 'Multi_MPA':
-            y_train = self.y_norm[~ix_val,:]
-            y_val = self.y_norm[ix_val,:]
+            y_train = self.y_norm[~ix_val, :]
+            y_val = self.y_norm[ix_val, :]
 
         # Train neural network using TensorFlow
         history = self.model.model.fit(x_train,
@@ -850,25 +881,30 @@ class Model:
                                        batch_size=batch_size,
                                        **fit_kwargs)
 
-        # Get function representing the raw gp_map
-        self._unfixed_gpmap = K.function(
-            [self.model.model.layers[1].input],
-            [self.model.model.layers[2].output])
 
-        # compute unfixed phi using the function unfixed_gpmap with
-        # training sequences.
+        # the following causes a memory bottleneck with AIE
+        # thus skip for aie.
+        if self.regression_type != 'AIE':
 
-        # Hot-fix related to TF 2.4, 2020.12.18
-        #unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
-        unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
+            # Get function representing the raw gp_map
+            self._unfixed_gpmap = K.function(
+                [self.model.model.layers[1].input],
+                [self.model.model.layers[2].output])
 
-        # Set stats
-        self.unfixed_phi_mean = np.mean(unfixed_phi)
-        self.unfixed_phi_std = np.std(unfixed_phi)
+            # compute unfixed phi using the function unfixed_gpmap with
+            # training sequences.
+
+            # Hot-fix related to TF 2.4, 2020.12.18
+            #unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
+            unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
+
+            # Set stats
+            self.unfixed_phi_mean = np.mean(unfixed_phi)
+            self.unfixed_phi_std = np.std(unfixed_phi)
 
         # TODO need to fix following for multi-mpa
         if self.regression_type != 'Multi_MPA' and self.regression_type != 'Multi_Phi_GE' \
-                and self.regression_type !='Multi_y_GE':
+                and self.regression_type !='Multi_y_GE' and self.regression_type != 'AIE':
             # Flip sign if correlation of phi with y_targets is negative
             r, p_val = spearmanr(unfixed_phi, y_targets)
             if r < 0:
