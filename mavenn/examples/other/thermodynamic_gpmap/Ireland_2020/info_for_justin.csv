@@ -1,0 +1,11 @@
+gene,RNAP_start,RNAP_end,TF_start,TF_end,notes
+bdcR,80,110,90,100,
+tig,79,109,109,119,only active in M9 and heat conditions
+tff,79,108,108,117,only active in heat and SS
+yehU,83,113,65,90,only active in anaero
+yjjJ,103,132,143,158, has second TF in SS growth and the main TF is most active in M9 and heat
+aphA,78,108,46,65,only active in anaero
+yedJ,60,90,100,110,
+yeiQ,76,108,36,56,only active in anaero
+ykgE,49,79,79,95,in anaero there is a second active TF while the repressor is active in all growth conditions
+thiM,79,109,109,120, most active in M9 and heat
