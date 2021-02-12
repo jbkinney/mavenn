@@ -236,7 +236,8 @@ class Model:
                             ge_heteroskedasticity_order=
                                 self.ge_heteroskedasticity_order,
                             theta_regularization=self.theta_regularization,
-                            eta_regularization=self.eta_regularization)
+                            eta_regularization=self.eta_regularization,
+                            custom_gpmap=self.custom_gpmap)
 
             self.define_model = self.model.define_model(
                                     ge_noise_model_type=

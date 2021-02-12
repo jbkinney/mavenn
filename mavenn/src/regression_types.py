@@ -89,7 +89,8 @@ class GlobalEpistasisModel:
                  ohe_batch_size,
                  ge_heteroskedasticity_order,
                  theta_regularization,
-                 eta_regularization):
+                 eta_regularization,
+                 custom_gpmap):
         """Construct class instance."""
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
@@ -103,6 +104,7 @@ class GlobalEpistasisModel:
         self.theta_regularization = theta_regularization
         self.eta_regularization = eta_regularization
         self.ge_nonlinearity_type = ge_nonlinearity_type
+        self.custom_gpmap = custom_gpmap
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -129,7 +131,7 @@ class GlobalEpistasisModel:
               'ge_heteroskedasticity_order must be >= 0')
 
         # check that model type valid
-        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox']
+        valid_gpmap_types = ['additive', 'neighbor', 'pairwise', 'blackbox', 'custom']
         check(self.gpmap_type in valid_gpmap_types,
               f'model_type = {self.gpmap_type}; must be in {valid_gpmap_types}')
 
@@ -237,6 +239,8 @@ class GlobalEpistasisModel:
                 C=self.C,
                 theta_regularization=self.theta_regularization,
                 **self.gpmap_kwargs)
+        elif self.gpmap_type == 'custom':
+            self.x_to_phi_layer = self.custom_gpmap(**self.gpmap_kwargs)
         else:
             assert False, "This should not happen."
         phi = self.x_to_phi_layer(sequence_input)
@@ -492,7 +496,7 @@ class MultiyGlobalEpistasisModel:
         # fed to each of the measurement layers
         for replicate_layer_index in range(self.number_of_replicate_targets):
 
-            print(replicate_layer_index, replicate_layer_index + 1)
+            #print(replicate_layer_index, replicate_layer_index + 1)
 
             temp_replicate_layer = Lambda(lambda x:
                                           x[:, number_x_nodes + replicate_layer_index:
@@ -573,7 +577,6 @@ class MultiyGlobalEpistasisModel:
 
             for ll_index in range(self.number_of_replicate_targets):
 
-                print(f' Making Gaussian noise model, index = {ll_index}')
                 temp_ll_layer = GaussianNoiseModelLayer(info_for_layers_dict=self.info_for_layers_dict,
                                                         polynomial_order=self.ge_heteroskedasticity_order,
                                                         eta_regularization=self.eta_regularization)
