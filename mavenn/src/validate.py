@@ -126,7 +126,9 @@ def validate_alphabet(alphabet):
           'Alphabet contains non-string characters.')
 
     # Sort alphabet
-    alphabet.sort()
+	# commented out because this causes a bug in heatmap visualization
+	# when user tries to reorder characters.
+    #alphabet.sort()
 
     return alphabet
 

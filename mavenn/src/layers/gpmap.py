@@ -77,6 +77,47 @@ class GPMapLayer(Layer):
         return {}
 
 
+class CustomGPMapLayer(Layer):
+    """
+    Represents a custom genotype-phenotype map
+    where user has to provide implementation via
+    a sub-class of this class.
+    """
+
+    #@handle_errors
+    def __init__(self):
+        """Construct layer instance."""
+        # Call superclass constructor
+        super().__init__()
+
+    #@handle_errors
+    def get_config(self):
+        """Return configuration dictionary."""
+        base_config = super(Layer, self).get_config()
+        return {**base_config}
+
+    #@handle_errors
+    def build(self, input_shape):
+        """Build layer."""
+        super().build(input_shape)
+
+    ### The following methods must be fully overridden
+
+    def call(self, inputs):
+        """Process layer input and return output."""
+        assert False
+        return np.nan
+
+    def set_params(self, **kwargs):
+        """Set values of layer parameters."""
+        assert False
+
+    def get_params(self):
+        """Get values of layer parameters."""
+        assert False
+        return {}
+
+
 class AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive G-P map."""
 
