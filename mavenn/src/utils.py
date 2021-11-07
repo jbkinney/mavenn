@@ -525,6 +525,68 @@ def x_to_ohe(x,
 
     return x_ohe
 
+
+def hamming_distance(sequence_1, sequence_2):
+    """
+    Helper function to compute hamming distance between two
+    input sequences.
+
+    parameters
+    ----------
+    sequence_1: (str)
+        First sequence for hamming distance calculation.
+
+    sequence_2: (str)
+        Second sequence for hamming distance calculation.
+
+    returns
+    -------
+    hamming_distance: (int)
+    The hamming distance between the input strings.
+
+    """
+    # Sequences must be of the same length. This is redundant since validation_sequences
+    # would have ensured equality of length. Thus only included for completion of method.
+    check(len(sequence_1) == len(sequence_2), "Length of sequences must be equal.")
+
+    return sum(char1 != char2 for char1, char2 in zip(sequence_1, sequence_2))
+
+
+def only_single_mutants(training_sequences, consensus_sequence):
+
+    """
+    Method that checks if training data contains only single mutants or not.
+
+    training_sequences: (array)
+        Array of sequences used for training models.
+
+    consensus_sequence:
+        Consensus sequence, evaluated using training data.
+        Available as model.x_to_stats['consensus_seq'].
+
+    returns
+    -------
+    only_single_mutants_in_training_data: (bool)
+        True if only single mutants founds compared to consensus
+        sequence, false otherwise.
+    """
+
+    # Return variable declaration. Assuming initial value
+    only_single_mutants_in_training_data = False
+
+    for training_sequence in training_sequences:
+
+        if hamming_distance(consensus_sequence, training_sequence) > 1:
+            only_single_mutants_in_training_data = False
+
+            # Break out of loop as soon as more than single mutant found.
+            break
+        else:
+            only_single_mutants_in_training_data = True
+
+    return only_single_mutants_in_training_data
+
+
 # Converts sequences to matrices
 def _x_to_mat(x, alphabet):
     return (np.array(list(x))[:, np.newaxis] ==

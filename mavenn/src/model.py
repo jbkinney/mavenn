@@ -35,7 +35,8 @@ from mavenn.src.validate import validate_seqs, \
 from mavenn.src.utils import mat_data_to_vec_data, \
                              vec_data_to_mat_data, \
                              x_to_stats, \
-                             p_lc_to_x, _x_to_mat
+                             p_lc_to_x, _x_to_mat, \
+                             only_single_mutants
 
 
 class Model:
@@ -128,7 +129,7 @@ class Model:
                  ge_noise_model_type='Gaussian',
                  ge_heteroskedasticity_order=0,
                  mpa_hidden_nodes=50,
-                 theta_regularization=0.1,
+                 theta_regularization=0.001,
                  eta_regularization=0.1,
                  ohe_batch_size=50000,
                  custom_gpmap=None):
@@ -452,6 +453,35 @@ class Model:
 
         # Extract consensus sequence
         self.x_consensus = self.x_stats['consensus_seq']
+
+        # Instantiate this key as false, update if more than
+        # single mutants founds (see lines below).
+        self.x_stats['only_single_mutants'] = False
+
+        # Check if only single mutants found in training data.
+        only_single_mutants_found = only_single_mutants(training_sequences=self.x,
+                                                        consensus_sequence=self.x_consensus)
+
+        # If only single mutants found in training data, check conditions below.
+        if only_single_mutants_found:
+
+            check(self.ge_nonlinearity_type == 'linear',
+                  f'Only single mutants found in training data, this condition requires '
+                  f'"model.ge_nonlinearity_type == linear", '
+                  f' value set for ge_nonlinearity_type = {self.ge_nonlinearity_type}')
+
+            check(self.gpmap_type == 'additive',
+                  f'Only single mutants found in training data, this condition requires '
+                  f'"model.gpmap_type == additive", '
+                  f' value set for gpmap_type = {self.gpmap_type}')
+
+            check(self.ge_noise_model_type == 'Gaussian',
+                  f'Only single mutants found in training data, this condition requires '
+                  f'"model.ge_noise_model_type == Gaussian", '
+                  f' value set for ge_noise_model_type = {self.ge_noise_model_type}')
+
+            self.x_stats['only_single_mutants'] = True
+
         if verbose:
             print(f'Time to set data: {time.time() - set_data_start:.3} sec.')
 
