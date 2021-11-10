@@ -460,7 +460,8 @@ class Model:
 
         # Check if only single mutants found in training data.
         only_single_mutants_found = only_single_mutants(training_sequences=self.x,
-                                                        consensus_sequence=self.x_consensus)
+                                                        consensus_sequence=self.x_consensus,
+                                                        alphabet=self.alphabet)
 
         # If only single mutants found in training data, check conditions below.
         if only_single_mutants_found:
@@ -474,11 +475,6 @@ class Model:
                   f'Only single mutants found in training data, this condition requires '
                   f'"model.gpmap_type == additive", '
                   f' value set for gpmap_type = {self.gpmap_type}')
-
-            check(self.ge_noise_model_type == 'Gaussian',
-                  f'Only single mutants found in training data, this condition requires '
-                  f'"model.ge_noise_model_type == Gaussian", '
-                  f' value set for ge_noise_model_type = {self.ge_noise_model_type}')
 
             self.x_stats['only_single_mutants'] = True
 

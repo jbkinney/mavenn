@@ -526,34 +526,7 @@ def x_to_ohe(x,
     return x_ohe
 
 
-def hamming_distance(sequence_1, sequence_2):
-    """
-    Helper function to compute hamming distance between two
-    input sequences.
-
-    parameters
-    ----------
-    sequence_1: (str)
-        First sequence for hamming distance calculation.
-
-    sequence_2: (str)
-        Second sequence for hamming distance calculation.
-
-    returns
-    -------
-    hamming_distance: (int)
-    The hamming distance between the input strings.
-
-    """
-    # Sequences must be of the same length. This is redundant since validation_sequences
-    # would have ensured equality of length. Thus only included for completion of method.
-    check(len(sequence_1) == len(sequence_2), "Length of sequences must be equal.")
-
-    return sum(char1 != char2 for char1, char2 in zip(sequence_1, sequence_2))
-
-
-def only_single_mutants(training_sequences, consensus_sequence):
-
+def only_single_mutants(training_sequences, consensus_sequence, alphabet):
     """
     Method that checks if training data contains only single mutants or not.
 
@@ -564,6 +537,9 @@ def only_single_mutants(training_sequences, consensus_sequence):
         Consensus sequence, evaluated using training data.
         Available as model.x_to_stats['consensus_seq'].
 
+    alphabet: (np.array)
+        The alphabet, length C, from which sequences will be generated.
+
     returns
     -------
     only_single_mutants_in_training_data: (bool)
@@ -571,18 +547,20 @@ def only_single_mutants(training_sequences, consensus_sequence):
         sequence, false otherwise.
     """
 
-    # Return variable declaration. Assuming initial value
-    only_single_mutants_in_training_data = False
+    # Convert the consensus and training sequences to one-hot encoded.
+    consensus_seq_ohe = x_to_ohe(consensus_sequence, alphabet)
+    training_seqs_ohe = x_to_ohe(training_sequences, alphabet)
 
-    for training_sequence in training_sequences:
+    # Calculate the hamming distance between all the training
+    # sequences and the consensus sequence and store it in
+    # hamming_dist array.
+    hamming_dist = np.sum(np.bitwise_xor(
+        training_seqs_ohe, consensus_seq_ohe), axis=1)/2.0
 
-        if hamming_distance(consensus_sequence, training_sequence) > 1:
-            only_single_mutants_in_training_data = False
-
-            # Break out of loop as soon as more than single mutant found.
-            break
-        else:
-            only_single_mutants_in_training_data = True
+    # If all the elements of hamming_dist array are less than
+    # and equal to one, then training set consists of
+    # only single mutants.
+    only_single_mutants_in_training_data = np.all(hamming_dist <= 1)
 
     return only_single_mutants_in_training_data
 
