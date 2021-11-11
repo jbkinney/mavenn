@@ -1,6 +1,6 @@
 .. _datasets:
 
-Built-in Datasets
+Datasets
 =================
 
 .. toctree::
