@@ -779,7 +779,7 @@ class Model:
 
         # Using tqdm progress bar for training.
         if tqdm_bar == True:
-            callbacks.append(TqdmCallback(verbose=1))
+            callbacks.append(TqdmCallback(verbose=0))
             verbose = False
 
         # Train neural network using TensorFlow
