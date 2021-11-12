@@ -17,3 +17,4 @@ sphinx-copybutton
 sphinx-gallery
 jupytext
 sphinx-last-updated-by-git
+tqdm
