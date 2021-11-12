@@ -17,6 +17,10 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.callbacks import EarlyStopping
 
+# tqdm progressbar
+from tqdm.keras import TqdmCallback
+
+
 # sklearn import
 import sklearn.preprocessing
 
@@ -24,19 +28,19 @@ import sklearn.preprocessing
 from mavenn import TINY
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.regression_types import GlobalEpistasisModel, \
-                                        MeasurementProcessAgnosticModel
+    MeasurementProcessAgnosticModel
 from mavenn.src.entropy import mi_continuous, mi_mixed, entropy_continuous
 from mavenn.src.reshape import _shape_for_output, \
-                               _get_shape_and_return_1d_array, \
-                               _broadcast_arrays
+    _get_shape_and_return_1d_array, \
+    _broadcast_arrays
 from mavenn.src.validate import validate_seqs, \
-                                validate_1d_array, \
-                                validate_alphabet
+    validate_1d_array, \
+    validate_alphabet
 from mavenn.src.utils import mat_data_to_vec_data, \
-                             vec_data_to_mat_data, \
-                             x_to_stats, \
-                             p_lc_to_x, _x_to_mat, \
-                             only_single_mutants
+    vec_data_to_mat_data, \
+    x_to_stats, \
+    p_lc_to_x, _x_to_mat, \
+    only_single_mutants
 
 
 class Model:
@@ -191,26 +195,22 @@ class Model:
         if regression_type == 'GE':
 
             self.model = GlobalEpistasisModel(
-                            info_for_layers_dict=self.info_for_layers_dict,
-                            sequence_length=self.L,
-                            gpmap_type=self.gpmap_type,
-                            gpmap_kwargs=self.gpmap_kwargs,
-                            ge_nonlinearity_type=self.ge_nonlinearity_type,
-                            ge_nonlinearity_monotonic=
-                                self.ge_nonlinearity_monotonic,
-                            alphabet=self.alphabet,
-                            ohe_batch_size=self.ohe_batch_size,
-                            ge_heteroskedasticity_order=
-                                self.ge_heteroskedasticity_order,
-                            theta_regularization=self.theta_regularization,
-							custom_gpmap=self.custom_gpmap,
-                            eta_regularization=self.eta_regularization)
+                info_for_layers_dict=self.info_for_layers_dict,
+                sequence_length=self.L,
+                gpmap_type=self.gpmap_type,
+                gpmap_kwargs=self.gpmap_kwargs,
+                ge_nonlinearity_type=self.ge_nonlinearity_type,
+                ge_nonlinearity_monotonic=self.ge_nonlinearity_monotonic,
+                alphabet=self.alphabet,
+                ohe_batch_size=self.ohe_batch_size,
+                ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
+                theta_regularization=self.theta_regularization,
+                custom_gpmap=self.custom_gpmap,
+                eta_regularization=self.eta_regularization)
 
             self.define_model = self.model.define_model(
-                                    ge_noise_model_type=
-                                        self.ge_noise_model_type,
-                                    ge_nonlinearity_hidden_nodes=
-                                        self.ge_nonlinearity_hidden_nodes)
+                ge_noise_model_type=self.ge_noise_model_type,
+                ge_nonlinearity_hidden_nodes=self.ge_nonlinearity_hidden_nodes)
 
             # Set layers
             self.layer_gpmap = self.model.x_to_phi_layer
@@ -220,27 +220,25 @@ class Model:
         elif regression_type == 'MPA':
 
             self.model = MeasurementProcessAgnosticModel(
-                            info_for_layers_dict=self.info_for_layers_dict,
-                            sequence_length=self.L,
-                            number_of_bins=self.Y,
-                            alphabet=self.alphabet,
-                            gpmap_type=self.gpmap_type,
-                            gpmap_kwargs=self.gpmap_kwargs,
-                            theta_regularization=self.theta_regularization,
-                            eta_regularization=self.eta_regularization,
-                            ohe_batch_size=self.ohe_batch_size,
-                            custom_gpmap=self.custom_gpmap)
+                info_for_layers_dict=self.info_for_layers_dict,
+                sequence_length=self.L,
+                number_of_bins=self.Y,
+                alphabet=self.alphabet,
+                gpmap_type=self.gpmap_type,
+                gpmap_kwargs=self.gpmap_kwargs,
+                theta_regularization=self.theta_regularization,
+                eta_regularization=self.eta_regularization,
+                ohe_batch_size=self.ohe_batch_size,
+                custom_gpmap=self.custom_gpmap)
             self.model.theta_init = None
 
             self.define_model = self.model.define_model(
-                                    mpa_hidden_nodes=
-                                    self.mpa_hidden_nodes)
+                mpa_hidden_nodes=self.mpa_hidden_nodes)
 
             # Set layers
             self.layer_gpmap = self.model.x_to_phi_layer
             self.layer_measurement_process = \
                 self.model.layer_measurement_process
-
 
     @handle_errors
     def set_data(self,
@@ -344,14 +342,17 @@ class Model:
         if self.ge_noise_model_type == 'Empirical':
 
             # ensure the regression type is GE if noise model is empirical
-            check(self.regression_type == 'GE', 'Regression type must be "GE" for Empirical noise model.')
+            check(self.regression_type == 'GE',
+                  'Regression type must be "GE" for Empirical noise model.')
 
             # if noise model is empirical ensure that dy is not None.
-            check(dy is not None, 'dy must not be None if noise model is Empirical and must be supplied.')
+            check(dy is not None,
+                  'dy must not be None if noise model is Empirical and must be supplied.')
 
             dy = validate_1d_array(dy)
 
-            check(len(y) == len(dy), 'length of targets and error-bar array (y, dy) must be equal')
+            check(len(y) == len(dy),
+                  'length of targets and error-bar array (y, dy) must be equal')
 
             # set error bars.
             self.dy = dy.copy()
@@ -460,7 +461,7 @@ class Model:
             ix = p_y > 0
             H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
             H_y = H_y_norm + np.log2(self.y_std + TINY)
-            dH_y = 0 # Need NSB to estimate this well
+            dH_y = 0  # Need NSB to estimate this well
             self.info_for_layers_dict['H_y'] = H_y
             self.info_for_layers_dict['H_y_norm'] = H_y_norm
             self.info_for_layers_dict['dH_y'] = dH_y
@@ -516,7 +517,8 @@ class Model:
             callbacks=[],
             optimizer='Adam',
             optimizer_kwargs={},
-            fit_kwargs={}):
+            fit_kwargs={},
+            tqdm_bar=True):
         """
         Infer values for model parameters.
 
@@ -577,6 +579,9 @@ class Model:
 
         fit_kwargs: (dict):
             Additional keyword arguments to pass to ``tf.keras.Model.fit()``
+
+        tqdm_bar: (bool):
+            Using tqdm for progress bar. The default is true.
 
         Returns
         -------
@@ -697,7 +702,7 @@ class Model:
             bin_nums = np.arange(self.Y)
             y_targets = (self.y_norm
                          * bin_nums[np.newaxis, :]).sum(axis=1) / \
-                        self.y_norm.sum(axis=1)
+                self.y_norm.sum(axis=1)
 
         else:
             assert False, "This should never happen."
@@ -733,10 +738,10 @@ class Model:
                     theta_lc=self.theta_lc_init,
                     theta_lclc=np.zeros([self.L, self.C, self.L, self.C]))
             elif self.gpmap_type == 'blackbox' or self.gpmap_type == 'custom':
-                print(f'Warning: linear initialization has no effect when gpmap_type={self.gpmap_type}.')
+                print(
+                    f'Warning: linear initialization has no effect when gpmap_type={self.gpmap_type}.')
             else:
                 assert False, "This should not happen."
-
 
         # Concatenate seqs and ys if noise model is not empirical
         if self.ge_noise_model_type != 'Empirical':
@@ -750,8 +755,8 @@ class Model:
 
         # Get training and validation sets
         ix_val = self.validation_flags
-        x_train = train_sequences[~ix_val,:]
-        x_val = train_sequences[ix_val,:]
+        x_train = train_sequences[~ix_val, :]
+        x_val = train_sequences[ix_val, :]
         if self.regression_type == 'GE':
             y_train = self.y_norm[~ix_val]
             y_val = self.y_norm[ix_val]
@@ -769,8 +774,13 @@ class Model:
                 y_val = np.hstack([y_val, dy_val])
 
         elif self.regression_type == 'MPA':
-            y_train = self.y_norm[~ix_val,:]
-            y_val = self.y_norm[ix_val,:]
+            y_train = self.y_norm[~ix_val, :]
+            y_val = self.y_norm[ix_val, :]
+
+        # Using tqdm progress bar for training.
+        if tqdm_bar == True:
+            callbacks.append(TqdmCallback(verbose=1))
+            verbose = False
 
         # Train neural network using TensorFlow
         history = self.model.model.fit(x_train,
@@ -851,7 +861,6 @@ class Model:
         return yhat
 
     from mavenn.src.error_handling import handle_errors, check
-
 
     @handle_errors
     def get_theta(self,
@@ -1126,7 +1135,7 @@ class Model:
         # Note that these are NOT diffeomorphic-mode fixed
         # unfixed_phi = gpmap_function([x_ohe])
         unfixed_phi = self.layer_gpmap.call(x_ohe.astype('float32'))
-		
+
         # Fix diffeomorphic models
         phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
 
@@ -1259,7 +1268,7 @@ class Model:
                 ct, ct_shape = _get_shape_and_return_1d_array(ct)
                 ct = ct.astype(int)
                 check(all(ct >= 0), 'Not all elements of ct are >= 0')
-                check(len(ct)==len(x), 'x and ct are not the same length')
+                check(len(ct) == len(x), 'x and ct are not the same length')
             else:
                 ct = np.ones(len(x)).astype(int)
 
@@ -1468,12 +1477,12 @@ class Model:
 
             # Expand x and y based on ct values
             y = np.concatenate(
-                        [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
+                [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
             x = np.concatenate(
-                        [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
+                [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
 
             # Number of datapoints
-            ct_y = np.array([(y==i).sum() for i in range(self.Y)])
+            ct_y = np.array([(y == i).sum() for i in range(self.Y)])
             p_y = ct_y / ct_y.sum()
             ix = p_y > 0
             H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
@@ -1618,9 +1627,9 @@ class Model:
 
             # Expand x and y based on ct values
             y = np.concatenate(
-                        [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
+                [[y_n]*ct_n for y_n, ct_n in zip(y, ct)])
             x = np.concatenate(
-                        [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
+                [[x_n]*ct_n for x_n, ct_n in zip(x, ct)])
 
             # Compute phi
             phi = self.x_to_phi(x)
@@ -1696,9 +1705,8 @@ class Model:
             # Set output shape
             yq_shape = yhat_shape + q_shape
 
-
         # Make sure this is the right type of model
-        check(self.regression_type=='GE',
+        check(self.regression_type == 'GE',
               'regression type must be GE for this methdd')
 
         # Normalize yhat
@@ -1917,13 +1925,13 @@ class Model:
             If ``paired=False``, ``p.shape`` will be given by
             ``y.shape + x.shape``.
         """
-        if self.regression_type=='GE':
+        if self.regression_type == 'GE':
             phi = self.x_to_phi(x)
             yhat = self.phi_to_yhat(phi)
             p = self.p_of_y_given_yhat(y, yhat)
             return p
 
-        elif self.regression_type=='MPA':
+        elif self.regression_type == 'MPA':
 
             # check that entered y (specifying bin number) is an integer
             check(isinstance(y, int),
@@ -1989,6 +1997,3 @@ class Model:
             print(f'Model saved to these files:\n'
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
-
-
-
