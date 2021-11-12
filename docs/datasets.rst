@@ -9,8 +9,8 @@ Datasets
     datasets/overview
     datasets/dataset_gb1
     datasets/dataset_amyloid
+    datasets/dataset_tdp43
     datasets/dataset_mpsa
     datasets/dataset_sortseq
     datasets/dataset_ace2rbd
-
 

@@ -31,7 +31,7 @@ References
     Curr Biol. 24(22):2643-2651.
     `<https://pubmed.ncbi.nlm.nih.gov/25455030/>`_
 
-.. [#Tareen2020] Tareen A, Posfai A, Ireland WT,  McCandlish DM, Kinney JB.
+.. [#Tareen2020] Tareen A, Kooshkbaghi M, Posfai A, Ireland WT,  McCandlish DM, Kinney JB.
     MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
     Biorxiv (2020). `<https://doi.org/10.1101/2020.07.14.201475>`_
 
