@@ -177,7 +177,7 @@ class GlobalEpistasisModel:
 
         ge_noise_model_type: (str)
             Specifies the type of noise model the user wants to infer.
-            The possible choices allowed: ['Gaussian','Cauchy','SkewedT']
+            The possible choices allowed: ['Gaussian','Cauchy','SkewedT', 'Empirical']
 
         Returns
         -------
@@ -185,7 +185,7 @@ class GlobalEpistasisModel:
             TensorFlow model that can be compiled and subsequently fit to data.
         """
         # check that p_of_all_y_given_phi valid
-        check(ge_noise_model_type in {'Gaussian', 'Cauchy', 'SkewedT'},
+        check(ge_noise_model_type in {'Gaussian', 'Cauchy', 'SkewedT', 'Empirical'},
               f'p_of_all_y_given_phi = {ge_noise_model_type};' 
               f'must be "Gaussian", "Cauchy", or "SkewedT"')
 
@@ -198,7 +198,13 @@ class GlobalEpistasisModel:
         # Compute number of sequence nodes. Useful for model construction below.
         number_x_nodes = int(self.L*self.C)
 
-        number_input_layer_nodes = number_x_nodes + 1
+        # need to add one additional node for targets
+        # but 2 additional nodes if noise model is empirical; 1 for y
+        # and another for dy
+        if ge_noise_model_type != 'Empirical':
+            number_input_layer_nodes = number_x_nodes + 1
+        else:
+            number_input_layer_nodes = number_x_nodes + 2
 
         inputTensor = Input((number_input_layer_nodes,),
                             name='Sequence_labels_input')
@@ -210,6 +216,14 @@ class GlobalEpistasisModel:
             lambda x: x[:, number_x_nodes:number_x_nodes + 1],
             output_shape=((1,)),
             trainable=False, name='Labels_input')(inputTensor)
+
+        # User supplied error bars
+        if ge_noise_model_type == 'Empirical':
+
+            dlabels_input = Lambda(
+                lambda x: x[:, number_x_nodes+1:number_x_nodes + 2],
+                output_shape=((1,)),
+                trainable=False, name='dLabels_input')(inputTensor)
 
 
         # Create G-P map layer
@@ -251,9 +265,16 @@ class GlobalEpistasisModel:
 
         yhat = self.phi_to_yhat_layer(phi)
 
-        # Concatenate yhat and training labels
-        yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
-            [yhat, labels_input])
+        # Concatenate yhat and training labels only if
+        # noise model is not empirical, other concatenate
+        # user error bars also.
+        if ge_noise_model_type != 'Empirical':
+
+            yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+                [yhat, labels_input])
+        else:
+            yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+                [yhat, labels_input, dlabels_input])
 
         # Create noise model layer
         if ge_noise_model_type == 'Gaussian':
@@ -273,6 +294,13 @@ class GlobalEpistasisModel:
                 info_for_layers_dict=self.info_for_layers_dict,
                 polynomial_order=self.ge_heteroskedasticity_order,
                 eta_regularization=self.eta_regularization)
+
+        elif ge_noise_model_type == 'Empirical':
+            self.noise_model_layer = GaussianNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta_regularization,
+                is_noise_model_empirical=True)
         else:
             assert False, 'This should not happen.'
 

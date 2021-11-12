@@ -246,6 +246,7 @@ class Model:
     def set_data(self,
                  x,
                  y,
+                 dy=None,
                  ct=None,
                  validation_frac=.2,
                  validation_flags=None,
@@ -272,6 +273,10 @@ class Model:
             ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be
             interpreted as listing the observed counts for each of the ``N``
             sequences in each of the ``Y`` bins.
+
+        dy : (np.ndarray)
+            User supplied error bars associated with continuous measurements
+            to be used as sigma in the Gaussian noise model.
 
         ct: (np.ndarray, None)
             Only used for MPA models when ``y`` is 1D. In this case, ``ct``
@@ -334,6 +339,22 @@ class Model:
                     y = y.values
                 check(y.ndim == 2,
                       f'y.ndim={y.ndim}; must be 1 or 2.')
+
+        # Ensure empirical noise model conditions are set.
+        if self.ge_noise_model_type == 'Empirical':
+
+            # ensure the regression type is GE if noise model is empirical
+            check(self.regression_type == 'GE', 'Regression type must be "GE" for Empirical noise model.')
+
+            # if noise model is empirical ensure that dy is not None.
+            check(dy is not None, 'dy must not be None if noise model is Empirical and must be supplied.')
+
+            dy = validate_1d_array(dy)
+
+            check(len(y) == len(dy), 'length of targets and error-bar array (y, dy) must be equal')
+
+            # set error bars.
+            self.dy = dy.copy()
 
         # Set N
         self.N = len(x)
@@ -716,9 +737,16 @@ class Model:
             else:
                 assert False, "This should not happen."
 
-        # Concatenate seqs and ys
-        train_sequences = np.hstack([self.x_ohe,
-                                     self.y_norm])
+
+        # Concatenate seqs and ys if noise model is not empirical
+        if self.ge_noise_model_type != 'Empirical':
+            train_sequences = np.hstack([self.x_ohe,
+                                         self.y_norm])
+        # Concatenate seqs, ys, and dys if noise model is  empirical
+        else:
+            train_sequences = np.hstack([self.x_ohe,
+                                         self.y_norm,
+                                         self.dy])
 
         # Get training and validation sets
         ix_val = self.validation_flags
@@ -727,6 +755,19 @@ class Model:
         if self.regression_type == 'GE':
             y_train = self.y_norm[~ix_val]
             y_val = self.y_norm[ix_val]
+
+            # if noise model is empirical, then input to the model
+            # will be x, y, dy, which will get split into
+            # x_train, y_trian, dy_trian, and x_val, y_val, dy_val
+
+            # TODO: need to test this implementation.
+            if self.ge_noise_model_type == 'Empirical':
+                dy_train = self.dy[~ix_val]
+                dy_val = self.dy[ix_val]
+
+                y_train = np.hstack([y_train, dy_train])
+                y_val = np.hstack([y_val, dy_val])
+
         elif self.regression_type == 'MPA':
             y_train = self.y_norm[~ix_val,:]
             y_val = self.y_norm[ix_val,:]

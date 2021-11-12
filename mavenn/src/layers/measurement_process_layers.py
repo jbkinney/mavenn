@@ -373,6 +373,7 @@ class NoiseModelLayer(Layer):
                  info_for_layers_dict,
                  polynomial_order=2,
                  eta_regularization=0.01,
+                 is_noise_model_empirical=False,
                  **kwargs):
         """Construct class instance."""
         # order of polynomial which defines log_sigma's dependence on y_hat
@@ -380,6 +381,7 @@ class NoiseModelLayer(Layer):
         self.eta = eta_regularization
         self.info_for_layers_dict = info_for_layers_dict
         self.regularizer = tf.keras.regularizers.L2(self.eta)
+        self.is_noise_model_empirical = is_noise_model_empirical
         super().__init__(**kwargs)
 
     def get_config(self):
@@ -408,15 +410,40 @@ class NoiseModelLayer(Layer):
         -------
             A (B,) tensor containing negative log likelihood contributions
         """
-        # this is yhat
-        yhat = inputs[:, 0:1]
 
-        # these are the labels
-        ytrue = inputs[:, 1:]
+        # variable represent user supplied error bars, will get
+        # instantiated if nooise model is empirical
+        dy = None
 
-        # Compute negative log likelihood
-        nlls = self.compute_nlls(yhat=yhat,
-                                 ytrue=ytrue)
+        # if noise model is not empirical, do everything as before
+        # i.e., do not supply the additional argument of dy to compute nll
+        if self.is_noise_model_empirical == False:
+            # this is yhat
+            yhat = inputs[:, 0:1]
+
+            # these are the labels
+            ytrue = inputs[:, 1:]
+
+            # Compute negative log likelihood
+            nlls = self.compute_nlls(yhat=yhat,
+                                     ytrue=ytrue)
+
+        # if noise model is empirical, supply argument dy to compute nll
+        # method in the Gaussian noise model derived class.
+        else:
+            # this is yhat
+            yhat = inputs[:, 0:1]
+
+            # these are the labels
+            ytrue = inputs[:, 1:2]
+
+            # these are user supplied error bars
+            dy = inputs[:,2:3]
+
+            # Compute negative log likelihood
+            nlls = self.compute_nlls(yhat=yhat,
+                                     ytrue=ytrue,
+                                     dy=dy)
 
         # Compute I_var metric from nlls
         H_y = self.info_for_layers_dict.get('H_y_norm', np.nan)
@@ -506,11 +533,18 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         return logsigma
 
     @handle_arrays
-    def compute_nlls(self, yhat, ytrue, use_arrays=False):
+    def compute_nlls(self, yhat, ytrue, use_arrays=False, dy=None):
         """Compute negative log likelihood contributions for each datum."""
         # Compute logsigma and sigma
-        logsigma = self.compute_params(yhat)
-        sigma = Exp(logsigma)
+
+        # if user-supplied error bars are not None, set sigma equal
+        # to dy (user supplied error bars. )
+        if dy is None:
+            logsigma = self.compute_params(yhat)
+            sigma = Exp(logsigma)
+        else:
+            sigma = dy
+            logsigma = Log(dy)
 
         # Compute nlls
         nlls = \
