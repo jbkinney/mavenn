@@ -581,7 +581,7 @@ class Model:
             Additional keyword arguments to pass to ``tf.keras.Model.fit()``
 
         tqdm_bar: (bool):
-            Using tqdm for progress bar. The default is true.
+            Using tqdm for progress bar. The default is True.
 
         Returns
         -------
@@ -751,7 +751,7 @@ class Model:
         else:
             train_sequences = np.hstack([self.x_ohe,
                                          self.y_norm,
-                                         self.dy])
+                                         self.dy.reshape(-1, 1)])
 
         # Get training and validation sets
         ix_val = self.validation_flags
@@ -770,8 +770,8 @@ class Model:
                 dy_train = self.dy[~ix_val]
                 dy_val = self.dy[ix_val]
 
-                y_train = np.hstack([y_train, dy_train])
-                y_val = np.hstack([y_val, dy_val])
+                y_train = np.hstack([y_train, dy_train.reshape(-1, 1)])
+                y_val = np.hstack([y_val, dy_val.reshape(-1, 1)])
 
         elif self.regression_type == 'MPA':
             y_train = self.y_norm[~ix_val, :]
