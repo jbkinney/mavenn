@@ -39,3 +39,8 @@ Models
 -----------------
 
 MAVE-NN comes with a variety of pre-trained models that users can load and apply. All of these models were trained on the built-in datasets provided above.
+
+.. toctree::
+    :maxdepth: 1
+
+    models/amyloid_additive_ge_model.ipynb
