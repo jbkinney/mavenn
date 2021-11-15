@@ -413,7 +413,7 @@ class NoiseModelLayer(Layer):
 
         # variable represent user supplied error bars, will get
         # instantiated if nooise model is empirical
-        dy = None
+        self.dy = None
 
         # if noise model is not empirical, do everything as before
         # i.e., do not supply the additional argument of dy to compute nll
@@ -438,12 +438,12 @@ class NoiseModelLayer(Layer):
             ytrue = inputs[:, 1:2]
 
             # these are user supplied error bars
-            dy = inputs[:,2:3]
+            self.dy = inputs[:,2:3]
 
             # Compute negative log likelihood
             nlls = self.compute_nlls(yhat=yhat,
                                      ytrue=ytrue,
-                                     dy=dy)
+                                     dy=self.dy)
 
         # Compute I_var metric from nlls
         H_y = self.info_for_layers_dict.get('H_y_norm', np.nan)
@@ -523,6 +523,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
     @handle_arrays
     def compute_params(self, yhat):
         """Compute layer parameters governing p(y|yhat)."""
+
         # Have to treat 0'th order term separately because of NaN bug.
         logsigma = self.a[0]
 
@@ -531,6 +532,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
             logsigma += self.a[k] * K.pow(yhat, k)
 
         return logsigma
+
 
     @handle_arrays
     def compute_nlls(self, yhat, ytrue, use_arrays=False, dy=None):
@@ -555,9 +557,20 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         return nlls
 
     @handle_arrays
-    def yhat_to_yq(self, yhat, q):
+    def yhat_to_yq(self, yhat, q, dy=None):
         """Compute quantiles for p(y|yhat)."""
-        sigma = Exp(self.compute_params(yhat))
+
+        # if user has not provided error bars, then
+        #  use the implementation of sigma as an
+        # exponentiated polynomial in yhat.
+        if dy is None:
+            sigma = Exp(self.compute_params(yhat))
+
+        # if user has provided error bars, set sigma to dy
+        else:
+            sigma = dy
+            sigma = sigma.numpy().reshape(-1, 1)
+
         yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
         return yq
 

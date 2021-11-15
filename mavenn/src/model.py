@@ -18,7 +18,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.callbacks import EarlyStopping
 
 # tqdm progressbar
-from tqdm.keras import TqdmCallback
+# from tqdm.keras import TqdmCallback
 
 
 # sklearn import
@@ -517,8 +517,7 @@ class Model:
             callbacks=[],
             optimizer='Adam',
             optimizer_kwargs={},
-            fit_kwargs={},
-            tqdm_bar=True):
+            fit_kwargs={}):
         """
         Infer values for model parameters.
 
@@ -579,9 +578,6 @@ class Model:
 
         fit_kwargs: (dict):
             Additional keyword arguments to pass to ``tf.keras.Model.fit()``
-
-        tqdm_bar: (bool):
-            Using tqdm for progress bar. The default is True.
 
         Returns
         -------
@@ -778,9 +774,9 @@ class Model:
             y_val = self.y_norm[ix_val, :]
 
         # Using tqdm progress bar for training.
-        if tqdm_bar == True:
-            callbacks.append(TqdmCallback(verbose=0))
-            verbose = False
+        # if tqdm_bar == True:
+        #     callbacks.append(TqdmCallback(verbose=0))
+        #     verbose = False
 
         # Train neural network using TensorFlow
         history = self.model.model.fit(x_train,
@@ -1655,7 +1651,9 @@ class Model:
 
     def yhat_to_yq(self,
                    yhat,
-                   q=[0.16, 0.84], paired=False):
+                   q=[0.16, 0.84],
+                   paired=False,
+                   dy=None):
         """
         Compute quantiles of p( ``y`` | ``yhat``); GE models only.
 
@@ -1675,6 +1673,10 @@ class Model:
             the quantile for each value in ``yhat`` will be computed for every
             value in ``q``.
 
+        dy : (np.ndarray)
+            User supplied error bars associated with continuous measurements
+            to be used as sigma in the Gaussian noise model.
+
         Returns
         -------
         yq: (array of floats)
@@ -1686,6 +1688,13 @@ class Model:
         # Prepare inputs
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
         q, q_shape = _get_shape_and_return_1d_array(q)
+
+        if dy is not None:
+
+            check(self.regression_type == 'GE', 'Regression type must be GE if dy is not None')
+
+            check(self.ge_noise_model_type == 'Empirical', 'GE noise model type must be Empirical for '
+                                                           'user provided error bars.')
 
         # If inputs are paired, use as is
         if paired:
@@ -1716,7 +1725,7 @@ class Model:
         layer = self.layer_noise_model
 
         # Use layer to compute normalized quantile
-        yq_norm = layer.yhat_to_yq(yhat=yhat_norm, q=q, use_arrays=True)
+        yq_norm = layer.yhat_to_yq(yhat=yhat_norm, q=q, use_arrays=True, dy=dy)
 
         # Restore scale and shift
         yq = self.y_mean + self.y_std * yq_norm
