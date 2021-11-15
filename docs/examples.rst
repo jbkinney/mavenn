@@ -38,9 +38,11 @@ MAVE-NN provides multiple built-in datasets that users can easily load and use t
 Models
 -----------------
 
-MAVE-NN comes with a variety of pre-trained models that users can load and apply. All of these models were trained on the built-in datasets provided above.
+MAVE-NN comes with a variety of pre-trained models that users can load and apply. Models similar to these can be trained using the following notebooks
 
 .. toctree::
     :maxdepth: 1
 
-    models/amyloid_additive_ge_model.ipynb
+    models/additive_protein_models.ipynb
+    models/empirical_models.ipynb
+    models/comparing_model_architectures.ipynb

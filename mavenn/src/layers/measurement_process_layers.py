@@ -412,7 +412,7 @@ class NoiseModelLayer(Layer):
         """
 
         # variable represent user supplied error bars, will get
-        # instantiated if nooise model is empirical
+        # instantiated if noise model is empirical
         self.dy = None
 
         # if noise model is not empirical, do everything as before
@@ -567,7 +567,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
 
 
 class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
-    """Represents a Gaussian noise model for GE regression."""
+    """Represents an Empirical Gaussian noise model for GE regression."""
 
     def __init__(self, *args, **kwargs):
         """Construct layer instance."""
@@ -600,57 +600,47 @@ class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
 
         return logsigma
 
-
     @handle_arrays
-    def compute_nlls(self, yhat, ytrue, use_arrays=False, dy=None):
-        """Compute negative log likelihood contributions for each datum."""
+    def compute_nlls(self, yhat, ytrue, dy, use_arrays=False):
+        """
+        Compute negative log likelihood contributions for each datum.
+        Note: User must pass dy, since noise model is 'Empirical'
+        """
         # Compute logsigma and sigma
 
-        # if user-supplied error bars are not None, set sigma equal
-        # to dy (user supplied error bars. )
-        if dy is None:
-            logsigma = self.compute_params(yhat)
-            sigma = Exp(logsigma)
-        else:
-            sigma = dy
-            logsigma = Log(dy)
+        # Set sigma equal to dy (user supplied error bars. )
+        logsigma = Log(dy)
 
         # Compute nlls
         nlls = \
-            0.5 * K.square((ytrue - yhat) / sigma) \
+            0.5 * K.square((ytrue - yhat) / dy) \
             + logsigma \
             + 0.5*np.log(2*pi)
 
         return nlls
 
-    @handle_arrays
-    def yhat_to_yq(self, yhat, q, dy=None):
-        """Compute quantiles for p(y|yhat)."""
-
-        # if user has not provided error bars, then
-        #  use the implementation of sigma as an
-        # exponentiated polynomial in yhat.
-        if dy is None:
-            sigma = Exp(self.compute_params(yhat))
-
-        # if user has provided error bars, set sigma to dy
-        else:
-            sigma = dy
-            sigma = sigma.numpy().reshape(-1, 1)
-
-        yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
-        return yq
+    # @handle_arrays
+    # def yhat_to_yq(self, yhat, q, dy):
+    #     """
+    #     Compute quantiles for p(y|yhat).
+    #     Note: User must pass dy, since noise model is 'Empirical'
+    #     """
+    #
+    #     # Set sigma equal to dy (user supplied error bars. )
+    #     sigma = dy.numpy().reshape(-1, 1)
+    #
+    #     yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
+    #     return yq
 
     @handle_arrays
     def yhat_to_ymean(self, yhat):
         """Compute mean of p(y|yhat)."""
         return yhat
 
-    @handle_arrays
-    def yhat_to_ystd(self, yhat):
-        """Compute standard deviation of p(y|yhat)."""
-        sigma = Exp(self.compute_params(yhat))
-        return sigma
+    # @handle_arrays
+    # def yhat_to_ystd(self, yhat, dy):
+    #     """This method is dumb because the user supplies dy, which is ystd."""
+    #     return dy
 
 
 class CauchyNoiseModelLayer(NoiseModelLayer):
