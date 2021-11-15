@@ -20,6 +20,7 @@ from mavenn.src.examples import load_example_model
 
 # For loading models
 from mavenn.src.utils import load
+from mavenn.src.utils import split_dataset
 
 # For visualizing G-P maps
 from mavenn.src.visualization import heatmap

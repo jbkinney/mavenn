@@ -17,6 +17,7 @@ from mavenn.src.layers.measurement_process_layers \
     import GlobalEpistasisLayer, \
         AffineLayer, \
         GaussianNoiseModelLayer, \
+        EmpiricalGaussianNoiseModelLayer, \
         CauchyNoiseModelLayer, \
         SkewedTNoiseModelLayer, \
         MPAMeasurementProcessLayer
@@ -296,7 +297,7 @@ class GlobalEpistasisModel:
                 eta_regularization=self.eta_regularization)
 
         elif ge_noise_model_type == 'Empirical':
-            self.noise_model_layer = GaussianNoiseModelLayer(
+            self.noise_model_layer = EmpiricalGaussianNoiseModelLayer(
                 info_for_layers_dict=self.info_for_layers_dict,
                 polynomial_order=self.ge_heteroskedasticity_order,
                 eta_regularization=self.eta_regularization,

@@ -523,6 +523,73 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
     @handle_arrays
     def compute_params(self, yhat):
         """Compute layer parameters governing p(y|yhat)."""
+        # Have to treat 0'th order term separately because of NaN bug.
+        logsigma = self.a[0]
+
+        # Add higher order terms and return
+        for k in range(1, self.K + 1):
+            logsigma += self.a[k] * K.pow(yhat, k)
+
+        return logsigma
+
+    @handle_arrays
+    def compute_nlls(self, yhat, ytrue, use_arrays=False):
+        """Compute negative log likelihood contributions for each datum."""
+        # Compute logsigma and sigma
+        logsigma = self.compute_params(yhat)
+        sigma = Exp(logsigma)
+
+        # Compute nlls
+        nlls = \
+            0.5 * K.square((ytrue - yhat) / sigma) \
+            + logsigma \
+            + 0.5*np.log(2*pi)
+
+        return nlls
+
+    @handle_arrays
+    def yhat_to_yq(self, yhat, q):
+        """Compute quantiles for p(y|yhat)."""
+        sigma = Exp(self.compute_params(yhat))
+        yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
+        return yq
+
+    @handle_arrays
+    def yhat_to_ymean(self, yhat):
+        """Compute mean of p(y|yhat)."""
+        return yhat
+
+    @handle_arrays
+    def yhat_to_ystd(self, yhat):
+        """Compute standard deviation of p(y|yhat)."""
+        sigma = Exp(self.compute_params(yhat))
+        return sigma
+
+
+class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
+    """Represents a Gaussian noise model for GE regression."""
+
+    def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
+        super().__init__(*args, **kwargs)
+
+    def build(self, input_shape):
+        """Build layer."""
+        self.a = self.add_weight(name='a',
+                                 shape=(self.K + 1, 1),
+                                 initializer="TruncatedNormal",
+                                 trainable=True,
+                                 regularizer=self.regularizer)
+        super().build(input_shape)
+
+    def get_config(self):
+        """Get configuration dictionary."""
+        base_config = super().get_config()
+        return {**base_config, "a": self.a}
+
+    @handle_arrays
+    def compute_params(self, yhat):
+        """Compute layer parameters governing p(y|yhat)."""
 
         # Have to treat 0'th order term separately because of NaN bug.
         logsigma = self.a[0]

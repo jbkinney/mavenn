@@ -86,8 +86,8 @@ class Model:
 
     ge_noise_model_type: (str)
         Noise model to use for when defining a GE model. Choices are
-        ``'Gaussian'``, ``'Cauchy'``, ``'SkewedT'``. Has no effect on MPA
-        models.
+        ``'Gaussian'``, ``'Cauchy'``, ``'SkewedT'``, or ``'Empirical'``.
+        Has no effect on MPA models.
 
     ge_heteroskedasticity_order: (int)
         In the GE model context, this represents the order of the polynomial(s)
@@ -1652,8 +1652,7 @@ class Model:
     def yhat_to_yq(self,
                    yhat,
                    q=[0.16, 0.84],
-                   paired=False,
-                   dy=None):
+                   paired=False):
         """
         Compute quantiles of p( ``y`` | ``yhat``); GE models only.
 
@@ -1673,10 +1672,6 @@ class Model:
             the quantile for each value in ``yhat`` will be computed for every
             value in ``q``.
 
-        dy : (np.ndarray)
-            User supplied error bars associated with continuous measurements
-            to be used as sigma in the Gaussian noise model.
-
         Returns
         -------
         yq: (array of floats)
@@ -1688,13 +1683,6 @@ class Model:
         # Prepare inputs
         yhat, yhat_shape = _get_shape_and_return_1d_array(yhat)
         q, q_shape = _get_shape_and_return_1d_array(q)
-
-        if dy is not None:
-
-            check(self.regression_type == 'GE', 'Regression type must be GE if dy is not None')
-
-            check(self.ge_noise_model_type == 'Empirical', 'GE noise model type must be Empirical for '
-                                                           'user provided error bars.')
 
         # If inputs are paired, use as is
         if paired:
@@ -1725,7 +1713,7 @@ class Model:
         layer = self.layer_noise_model
 
         # Use layer to compute normalized quantile
-        yq_norm = layer.yhat_to_yq(yhat=yhat_norm, q=q, use_arrays=True, dy=dy)
+        yq_norm = layer.yhat_to_yq(yhat=yhat_norm, q=q, use_arrays=True)
 
         # Restore scale and shift
         yq = self.y_mean + self.y_std * yq_norm
