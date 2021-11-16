@@ -11,16 +11,7 @@ Demos
 
     demos
 
-
-Tutorials
-----------------
-
-.. toctree::
-    :maxdepth: 1
-
-    tutorials
-
-Datasets
+Built-in datasets
 -----------------
 
 MAVE-NN provides multiple built-in datasets that users can easily load and use to train their own models
@@ -35,8 +26,8 @@ MAVE-NN provides multiple built-in datasets that users can easily load and use t
     datasets/dataset_mpsa
     datasets/dataset_sortseq
 
-Models
------------------
+Modeling tutorials
+------------------
 
 MAVE-NN comes with a variety of pre-trained models that users can load and apply. Models similar to these can be trained using the following notebooks
 
