@@ -37,3 +37,5 @@ MAVE-NN comes with a variety of pre-trained models that users can load and apply
     models/additive_protein_models.ipynb
     models/empirical_models.ipynb
     models/comparing_model_architectures.ipynb
+    models/gb1_thermodynamic_model.ipynb
+
