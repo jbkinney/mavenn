@@ -3,14 +3,6 @@
 Examples
 =================
 
-Demos
-----------------
-
-.. toctree::
-    :maxdepth: 1
-
-    demos
-
 Built-in datasets
 -----------------
 
@@ -34,8 +26,13 @@ MAVE-NN comes with a variety of pre-trained models that users can load and apply
 .. toctree::
     :maxdepth: 1
 
-    models/additive_protein_models.ipynb
-    models/empirical_models.ipynb
-    models/comparing_model_architectures.ipynb
-    models/gb1_thermodynamic_model.ipynb
+    tutorials/1_demos.ipynb
+    tutorials/2_protein_dms_additive_gpmaps.ipynb
+    tutorials/3_splicing_mpra_multiple_gpmaps.ipynb
+    tutorials/4_protein_dms_biohysical_gpmap.ipynb
+
+..
+    tutorials/5_promoter_biophysical_gpmaps.ipynb
+    tutorials/empirical_models.ipynb
+
 
