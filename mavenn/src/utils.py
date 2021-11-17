@@ -575,7 +575,8 @@ def split_dataset(data_df,
                   set_col='set',
                   train_set_name='training',
                   val_set_name='validation',
-                  test_set_name='test'):
+                  test_set_name='test',
+                  verbose=True):
     """
     Splits dataset into
         (1) `trainval_df`: training + validation set
@@ -601,6 +602,9 @@ def split_dataset(data_df,
     test_set_name: (str)
         Value in data_df[set_col] indicating allocation to test set
 
+    verbose: (bool)
+        Whether to print out the size of the resulting datasets
+
     Returns
     -------
     trainval_df: (pd.DataFrame)
@@ -624,6 +628,24 @@ def split_dataset(data_df,
     test_ix = data_df[set_col].eq(test_set_name)
     test_df = data_df[test_ix].copy().reset_index(drop=True)
     test_df.drop(columns=set_col, inplace=True)
+
+    # Show dataset sizes
+    if verbose:
+        # Print number of data points
+        num_data = len(data_df)
+        num_train = sum(~trainval_df["validation"])
+        pct_train = 100 * num_train / num_data
+        num_val = sum(trainval_df["validation"])
+        pct_val = 100 * num_val / num_data
+        num_test = len(test_df)
+        pct_test = 100 * num_test / num_data
+
+        print(f'Training set   : {num_train:8,d} observations ({pct_train:7.2f}%)')
+        print(f'Validation set : {num_val:8,d} observations ({pct_val:7.2f}%)')
+        print(f'Test set       : {num_test:8,d} observations ({pct_test:7.2f}%)')
+        print('-------------------------------------------------')
+        print(f'Total dataset  : {num_data:8,d} observations ({100:7.2f}%)')
+        print('')
 
     # return
     return trainval_df, test_df
