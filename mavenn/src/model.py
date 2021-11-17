@@ -515,6 +515,7 @@ class Model:
             linear_initialization=True,
             freeze_theta=False,
             callbacks=[],
+            try_tqdm=True,
             optimizer='Adam',
             optimizer_kwargs={},
             fit_kwargs={}):
@@ -566,6 +567,12 @@ class Model:
         callbacks: (list)
             Optional list of ``tf.keras.callbacks.Callback`` objects to use
             during training.
+
+        try_tqdm: (bool)
+            If true, mavenn will attempt to load the package `tqdm` and append
+            `TqdmCallback(verbose=0)` to the `callbacks` list in order to
+            improve the visual display of training progress. If
+            users do not have tqdm installed, this will do nothing.
 
         optimizer: (str)
             Optimizer to use for training. Valid options include:
@@ -647,6 +654,14 @@ class Model:
         # Check callbacks
         check(isinstance(callbacks, list),
               f'type(callbacks)={type(callbacks)}; must be list.')
+
+        # Add tdm if possible
+        if try_tqdm:
+            try:
+                from tqdm.keras import TqdmCallback
+                callbacks.append(TqdmCallback(verbose=0))
+            except ModuleNotFoundError:
+                pass
 
         # Check optimizer
         check(isinstance(optimizer, str),
@@ -813,8 +828,9 @@ class Model:
 
         # Compute training time
         self.training_time = time.time() - start_time
-        if verbose:
-            print(f'Training time: {self.training_time:.1f} seconds')
+
+        #if verbose:
+        print(f'Training time: {self.training_time:.1f} seconds')
 
         return history
 
