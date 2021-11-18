@@ -57,7 +57,8 @@ model.set_data(x=x_train,
 start_time = time.time()
 model.fit(epochs=30,
           learning_rate=0.005,
-          early_stopping=False)
+          early_stopping=False,
+          try_tqdm=False)
 training_time = time.time()-start_time
 
 # Predict latent phentoype values (phi) on test data
