@@ -2010,3 +2010,172 @@ class Model:
             print(f'Model saved to these files:\n'
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
+
+    def compute_parameter_uncertainties(self,
+                                        num_simulations=10,
+                                        verbose=True):
+
+        """
+        This method allows the computations of uncertainties in
+        parameters inferred for a mavenn model. This method
+        simulates user-specified number, num_simulations, of datasets
+        using the same training sequences that original model was trained on,
+        with measurements drawn from the inferred measurement process. Then,
+        num_simulations number of models are re-inferred on thsese simulated
+        data, and whose hyperparamerers are the same as the original model.
+        This method is currently only implemented for GE regression. GP_type
+        needs to be additive, neighbor, or pairwise for this method. The steps
+        used are outlined as follows:
+
+        1. Provide a trained ge model, for which set_data was called.
+        2. Use this ge model to simulate a specified number of datasets.
+        Simulate new data using  original training sequences: for each
+        (not necessarily unique) x, compute φ=f(x), then draw a random sample from y ~ p(y|φ).
+        3. train a vector of models on these data from random initial conditions
+        4. compute means and standard deviations across these gauge fixed models
+
+        Parameters
+        ----------
+
+        num_simulations: (int)
+            The number of different simulated datasets, and the number of
+            different models that will be inferred.
+
+        verbose: (bool)
+            If true, this method will print out a message warning the user
+            that method can be very time consuming.
+
+        Returns
+        -------
+        parameter_uncertainty_dict: {dictionary}
+            A dictionary containing the mean and standard deviations for model parameters
+            theta and eta.
+        """
+
+        # check that model has attributes x (i.e., sequences it
+        # was trained on) also and the validation flags attribute, so models
+        # trained on simulated data can use exactly the same sequences for
+        # for training and validation
+        check(hasattr(self, 'x'), 'Provided trained model must have attribute x, '
+                                  'representing training sequences. Please run the set_data '
+                                  'method to set this attribute')
+
+        check(hasattr(self, 'validation_flags'), 'Provided trained model must have '
+                                                 'attribute validation_flags, so that the '
+                                                 'same validation sequences can be used for '
+                                                 'models trained on simulated data.')
+
+        # check that num_simulations (specifying number of simulated datasets
+        # and model inferences ) is an integer
+        check(isinstance(num_simulations, int),
+              'type(num_simulations)  must be of type int')
+
+        # TODO: need to check if gp-map is additive, neighbor, pairwise.
+
+        if verbose:
+            print('Note that this method may take a long time to execute'
+                  'for large num_simulations.')
+
+        # set training sequences
+        x_train = self.x
+
+        # compute phi for training sequences
+        phi_train = self.x_to_phi(x_train)
+
+        # compute yhat for these phi_train values
+        yhat_train = self.phi_to_yhat(phi_train)
+
+        # simulated dataset will be populated in this dictionary
+        simulated_dataset = {}
+
+        # add training sequences to dictionary containing simulated dataset
+        simulated_dataset['x_train'] = x_train
+
+        # now draw a specified number of samples from p(y|yhat) to form a simulated dataset
+        for sampled_y_idx in np.arange(num_simulations):
+            yhat_train_sample = self.layer_noise_model.sample_y_given_yhat(yhat_train).numpy()
+            simulated_dataset[f'y_sampled_{sampled_y_idx}'] = yhat_train_sample
+
+        simulated_df = pd.DataFrame(simulated_dataset)
+
+        # this dictionary will contain models trained on the simulated df
+        dictionary_of_models = {}
+
+        # For each simulated dataset, infer the model once from random initial
+        # conditions.This will produce a vector of models.
+        for model_idx in np.arange(num_simulations):
+
+            if verbose:
+                print(f'training model {model_idx} ...')
+
+            # Define model with the same parameters as the original model
+            sim_model = Model(**self.arg_dict)
+
+            # Set training data: use training sequences but use y_values form simulated_df.
+            sim_model.set_data(x=x_train,
+                               y=simulated_df[f'y_sampled_{model_idx}'],
+                               validation_flags=self.validation_flags,
+                               shuffle=True,
+                               verbose=verbose)
+
+            # TODO: 21.11.24, (AT). Need to figure out whether
+            # we want to bind all arguments of fit and set_data data
+            # (e.g. epochs, learning rate, etc) to the self object so that they can be used here.
+            # Is there a more reasonable alternative way to implement?
+
+            # Fit model to data
+            sim_model.fit(learning_rate=0.001,
+                          epochs=1000,
+                          batch_size=200,
+                          early_stopping=True,
+                          early_stopping_patience=30,
+                          try_tqdm=False,
+                          linear_initialization=True,
+                          verbose=verbose)
+
+            # populate dictionary with model trained on simulated dataset
+            dictionary_of_models[f'model_{model_idx}'] = sim_model
+
+        if verbose:
+            print('done!')
+
+        # If model is additive, neighbor, or pairwise: Compute
+        # standard deviations( and means) for each parameters
+        # (both theta and eta) across gauge-fixed models
+
+        # lists that will contain parameters values from various models.
+        # Could be turned into an np array, but this operation is quite quick small num_simulations
+        list_of_theta_lc = []
+        list_of_theta_lclc = []
+
+        list_of_etas = []
+
+        for model_key in dictionary_of_models.keys():
+            list_of_theta_lc.append(dictionary_of_models[model_key].get_theta()['theta_lc'])
+            list_of_theta_lclc.append(dictionary_of_models[model_key].get_theta()['theta_lclc'])
+
+            list_of_etas.append(dictionary_of_models[model_key].layer_noise_model.get_weights())
+
+        # compute the parameter means across gauge fixed models.
+        theta_lc_means = np.mean(list_of_theta_lc, axis=0)
+        theta_lc_stds = np.std(list_of_theta_lc, axis=0)
+
+        theta_lclc_means = np.mean(list_of_theta_lclc, axis=0)
+        theta_lclc_stds = np.std(list_of_theta_lclc, axis=0)
+
+        eta_means = np.mean(list_of_etas, axis=0)
+        eta_stds = np.std(list_of_etas, axis=0)
+
+        # instantiate and populate return dictionary
+        parameter_uncertainty_dict = {}
+
+        parameter_uncertainty_dict['theta_lc_means'] = theta_lc_means
+        parameter_uncertainty_dict['theta_lclc_means'] = theta_lclc_means
+
+        parameter_uncertainty_dict['theta_lc_stds'] = theta_lc_stds
+        parameter_uncertainty_dict['theta_lclc_stds'] = theta_lclc_stds
+
+        parameter_uncertainty_dict['eta_means'] = eta_means
+        parameter_uncertainty_dict['eta_stds'] = eta_stds
+
+        return parameter_uncertainty_dict
