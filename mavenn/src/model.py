@@ -314,6 +314,12 @@ class Model:
         -------
         None
         """
+
+        # bind attributes to self so they can be used in other methods
+        # like compute_parameter_uncertainties
+        self.set_data_args = locals()
+        self.set_data_args.pop('self')
+
         # Start timer
         set_data_start = time.time()
 
@@ -591,6 +597,17 @@ class Model:
         history: (tf.keras.callbacks.History)
             Standard TensorFlow record of the training session.
         """
+
+        # bind attributes to self so they can be used in other methods
+        # like compute_parameter_uncertainties
+        self.fit_args = locals()
+        self.fit_args.pop('self')
+
+        # this is due to some tensorflow bug, if this key is not popped then pickling
+        # fails during model save. The reason for this bug could be that callbacks is
+        # passed in as an empty list but is appended to later ... or something else.
+        self.fit_args.pop('callbacks', None)
+
         # Start timer
         start_time = time.time()
 
@@ -660,7 +677,8 @@ class Model:
             try:
                 from tqdm.keras import TqdmCallback
                 callbacks.append(TqdmCallback(verbose=0))
-            except ModuleNotFoundError:
+            #except ModuleNotFoundError:
+            except:
                 pass
 
         # Check optimizer
@@ -1987,6 +2005,8 @@ class Model:
         # Create config_dict
         config_dict = {
             'model_kwargs': self.arg_dict,
+            'set_data_args': self.set_data_args,
+            'fit_args': self.fit_args,
             'unfixed_phi_mean': self.unfixed_phi_mean,
             'unfixed_phi_std': self.unfixed_phi_std,
             'y_std': self.y_std,
@@ -2070,7 +2090,9 @@ class Model:
         check(isinstance(num_simulations, int),
               'type(num_simulations)  must be of type int')
 
-        # TODO: need to check if gp-map is additive, neighbor, pairwise.
+        # check if gp-map is additive, neighbor, pairwise.
+        check(self.gpmap_type in ['additive', 'neighbor', 'pairwise'], 'gpmap_type to be additive, neighbor'
+                                                                       'or pairwise for this method.')
 
         if verbose:
             print('Note that this method may take a long time to execute'
@@ -2112,26 +2134,26 @@ class Model:
             sim_model = Model(**self.arg_dict)
 
             # Set training data: use training sequences but use y_values form simulated_df.
-            sim_model.set_data(x=x_train,
-                               y=simulated_df[f'y_sampled_{model_idx}'],
-                               validation_flags=self.validation_flags,
-                               shuffle=True,
-                               verbose=verbose)
+            # sim_model.set_data(x=x_train,
+            #                    y=simulated_df[f'y_sampled_{model_idx}'],
+            #                    validation_flags=self.validation_flags,
+            #                    shuffle=True,
+            #                    verbose=verbose)
+            sim_model.set_data(**self.set_data_args)
 
-            # TODO: 21.11.24, (AT). Need to figure out whether
-            # we want to bind all arguments of fit and set_data data
-            # (e.g. epochs, learning rate, etc) to the self object so that they can be used here.
-            # Is there a more reasonable alternative way to implement?
+            # the following if is due to the callbacks/save/pickling bug mentioned in fit.
+            # See fit for more details. Currently this ensures that ES callback is the same
+            # the original model.
+            # Set early stopping callback if requested
+            if self.fit_args['early_stopping']:
+                callbacks = []
+                callbacks.append(EarlyStopping(monitor='val_loss',
+                                               mode='auto',
+                                               patience=self.fit_args['early_stopping_patience']))
 
-            # Fit model to data
-            sim_model.fit(learning_rate=0.001,
-                          epochs=1000,
-                          batch_size=200,
-                          early_stopping=True,
-                          early_stopping_patience=30,
-                          try_tqdm=False,
-                          linear_initialization=True,
-                          verbose=verbose)
+                self.fit_args['callbacks'] = callbacks
+
+            sim_model.fit(**self.fit_args)
 
             # populate dictionary with model trained on simulated dataset
             dictionary_of_models[f'model_{model_idx}'] = sim_model

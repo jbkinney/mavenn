@@ -60,6 +60,9 @@ def load(filename, verbose=True):
         loaded_model.info_for_layers_dict = \
             config_dict.get('info_for_layers_dict', {})
 
+        loaded_model.set_data_args = config_dict.get('set_data_args')
+        loaded_model.fit_args = config_dict.get('fit_args')
+
         # Load and set weights
         filename_h5 = filename + '.h5'
         loaded_model.get_nn().load_weights(filename_h5)
