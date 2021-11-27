@@ -894,7 +894,7 @@ class Model:
 
     @handle_errors
     def get_theta(self,
-                  gauge="uniform",
+                  gauge="empirical",
                   p_lc=None,
                   x_wt=None,
                   unobserved_value=np.nan):
@@ -935,7 +935,8 @@ class Model:
         gauge: (str)
             String specification of which gauge to use. Allowed values are:
             ``'uniform'`` , hierarchical gauge using a uniform sequence
-            distribution;
+            distribution over the characters at each position observed in the
+            training set (unobserved characters are assigned probability 0).
             ``'empirical'`` , hierarchical gauge using an empirical
             distribution computed from the training data;
             ``'consensus'`` , wild-type gauge using the training data
@@ -1032,7 +1033,14 @@ class Model:
             pass
 
         elif gauge == "uniform":
-            p_lc = (1 / C) * np.ones((L, C))
+
+            # Get binary matrix of observed characters
+            observed_characters_lc = \
+                (x_stats['probability_df'].values > 0).astype(float)
+
+            # Normalize binary matrix by position
+            p_lc = observed_characters_lc / \
+                observed_characters_lc.sum(axis=1)[:,np.newaxis]
 
         elif gauge == "empirical":
             p_lc = x_stats['probability_df'].values
