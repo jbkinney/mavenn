@@ -67,6 +67,10 @@ class GlobalEpistasisModel:
 
     eta_regularization: (float >= 0)
         Regularization strength for measurement process parameters eta.
+
+    initial_weights: (np.array)
+        Numpy array of weights that gets set as initial weights of a model
+        if not set to None.
     """
 
     @handle_errors
@@ -82,7 +86,8 @@ class GlobalEpistasisModel:
                  ge_heteroskedasticity_order,
                  theta_regularization,
                  eta_regularization,
-                 custom_gpmap):
+                 custom_gpmap,
+                 initial_weights):
         """Construct class instance."""
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
@@ -97,6 +102,7 @@ class GlobalEpistasisModel:
         self.eta_regularization = eta_regularization
         self.ge_nonlinearity_type = ge_nonlinearity_type
         self.custom_gpmap = custom_gpmap
+        self.initial_weights = initial_weights
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -312,6 +318,14 @@ class GlobalEpistasisModel:
         self.model = model
         self.ge_nonlinearity_hidden_nodes = ge_nonlinearity_hidden_nodes
 
+        # set initial weights if provided.
+        if self.initial_weights is not None:
+
+            check(isinstance(self.initial_weights, np.ndarray),
+                  f'type(initial_weights)={type(self.initial_weights)}; must be a numpy array.')
+
+            model.set_weights(self.initial_weights)
+
         return model
 
 
@@ -351,6 +365,10 @@ class MeasurementProcessAgnosticModel:
     custom_gpmap: (GPMapLayer sub-class)
         Defines custom gpmap, provided by user. Inherited class of GP-MAP layer,
         which defines the functionality for x_to_phi_layer.
+
+    initial_weights: (np.array)
+        Numpy array of weights that gets set as initial weights of a model
+        if not set to None.
     """
 
     @handle_errors
@@ -364,7 +382,8 @@ class MeasurementProcessAgnosticModel:
                  theta_regularization,
                  eta_regularization,
                  ohe_batch_size,
-                 custom_gpmap):
+                 custom_gpmap,
+                 initial_weights):
         """Construct class instance."""
         # set class attributes
         self.info_for_layers_dict = info_for_layers_dict
@@ -377,6 +396,7 @@ class MeasurementProcessAgnosticModel:
         self.ohe_batch_size = ohe_batch_size
         self.number_of_bins = number_of_bins
         self.custom_gpmap = custom_gpmap
+        self.initial_weights = initial_weights
 
         # class attributes that are not parameters
         # but are useful for using trained models
@@ -510,4 +530,13 @@ class MeasurementProcessAgnosticModel:
         model = Model(inputTensor, outputTensor)
         self.model = model
         self.mpa_hidden_nodes = mpa_hidden_nodes
+
+        # set initial weights if provided.
+        if self.initial_weights is not None:
+
+            check(isinstance(self.initial_weights, np.ndarray),
+                  f'type(initial_weights)={type(self.initial_weights)}; must be a numpy array.')
+
+            model.set_weights(self.initial_weights)
+
         return model
