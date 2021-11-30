@@ -114,9 +114,14 @@ class Model:
         ``Model.set_data()``. Typically, the larger this number is the quicker
         the encoding will happen. A number too large, however, may cause
         the computer's memory to run out. Must be ``>= 1``.
+
     custom_gpmap: (GPMapLayer sub-class)
         Defines custom gpmap, provided by user. Inherited class of GP-MAP layer,
         which defines the functionality for x_to_phi_layer.
+
+    initial_weights: (np.array)
+        Numpy array of weights that gets set as initial weights of a model
+        if not set to None.
     """
 
     @handle_errors
@@ -136,7 +141,8 @@ class Model:
                  theta_regularization=0.001,
                  eta_regularization=0.1,
                  ohe_batch_size=50000,
-                 custom_gpmap=None):
+                 custom_gpmap=None,
+                 initial_weights=None):
         """Model() class constructor."""
         # Get dictionary of args passed to constructor
         # This is needed for saving models.
@@ -172,6 +178,7 @@ class Model:
         self.ohe_batch_size = ohe_batch_size
         self.Y = Y
         self.custom_gpmap = custom_gpmap
+        self.initial_weights = initial_weights
 
         # Variables needed for saving
         self.unfixed_phi_mean = np.nan
@@ -206,7 +213,8 @@ class Model:
                 ge_heteroskedasticity_order=self.ge_heteroskedasticity_order,
                 theta_regularization=self.theta_regularization,
                 custom_gpmap=self.custom_gpmap,
-                eta_regularization=self.eta_regularization)
+                eta_regularization=self.eta_regularization,
+                initial_weights=self.initial_weights)
 
             self.define_model = self.model.define_model(
                 ge_noise_model_type=self.ge_noise_model_type,
@@ -229,7 +237,8 @@ class Model:
                 theta_regularization=self.theta_regularization,
                 eta_regularization=self.eta_regularization,
                 ohe_batch_size=self.ohe_batch_size,
-                custom_gpmap=self.custom_gpmap)
+                custom_gpmap=self.custom_gpmap,
+                initial_weights=self.initial_weights)
             self.model.theta_init = None
 
             self.define_model = self.model.define_model(
