@@ -96,6 +96,9 @@ class Model:
         likely to be. Set to ``0`` to enforce a homoskedastic noise model. Has
         no effect on MPA models. Must be ``>= 0``.
 
+    normalize_phi: (bool)
+        Whether to fix diffeomorphic modes after model training.
+
     mpa_hidden_nodes:
         Number of hidden nodes (i.e. sigmoidal contributions) to use when
         defining the MPA measurement process. Must be ``>= 1``.
@@ -137,6 +140,7 @@ class Model:
                  ge_nonlinearity_hidden_nodes=50,
                  ge_noise_model_type='Gaussian',
                  ge_heteroskedasticity_order=0,
+                 normalize_phi=True,
                  mpa_hidden_nodes=50,
                  theta_regularization=0.001,
                  eta_regularization=0.1,
@@ -179,6 +183,7 @@ class Model:
         self.Y = Y
         self.custom_gpmap = custom_gpmap
         self.initial_weights = initial_weights
+        self.normalize_phi = normalize_phi
 
         # Variables needed for saving
         self.unfixed_phi_mean = np.nan
@@ -842,13 +847,18 @@ class Model:
         unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
 
         # Set stats
-        self.unfixed_phi_mean = np.mean(unfixed_phi)
-        self.unfixed_phi_std = np.std(unfixed_phi)
+        if self.normalize_phi:
+            self.unfixed_phi_mean = np.mean(unfixed_phi)
+            self.unfixed_phi_std = np.std(unfixed_phi)
 
-        # Flip sign if correlation of phi with y_targets is negative
-        r, p_val = spearmanr(unfixed_phi, y_targets)
-        if r < 0:
-            self.unfixed_phi_std *= -1.
+            # Flip sign if correlation of phi with y_targets is negative
+            r, p_val = spearmanr(unfixed_phi, y_targets)
+            if r < 0:
+                self.unfixed_phi_std *= -1.
+
+        else:
+            self.unfixed_phi_mean = 0.0
+            self.unfixed_phi_std = 1.0
 
         # update history attribute
         self.history = history.history
