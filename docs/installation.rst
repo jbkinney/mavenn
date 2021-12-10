@@ -1,7 +1,7 @@
 .. _installation:
 
-Installation
-==============
+Installation Instructions
+=========================
 
 using the ``pip`` package manager by executing the following at the
 commandline: ::

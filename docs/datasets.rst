@@ -1,6 +1,6 @@
-.. _builtindatasets:
+.. _datasets:
 
-Built-in datasets
+Built-In Datasets
 =================
 
 MAVE-NN provides multiple built-in datasets that users can easily load and use to train their own models

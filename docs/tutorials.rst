@@ -1,6 +1,6 @@
-.. _modeling:
+.. _tutorials:
 
-Modeling tutorials
+Modeling Tutorials
 ===================
 
 MAVE-NN comes with a variety of pre-trained models that users can load and apply. Models similar to these can be trained using the following notebooks

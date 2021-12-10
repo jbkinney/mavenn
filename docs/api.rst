@@ -1,6 +1,6 @@
-.. _implementation:
+.. _api:
 
-Implementation
+API Reference
 ==============
 
 Tests

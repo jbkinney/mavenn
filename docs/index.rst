@@ -13,12 +13,12 @@ MAVE-NN is written for Python 3 and is provided under an MIT open source license
 .. toctree::
     :maxdepth: 1
     :caption: Table of Contents
-    
-    MAVE-NN <self>
+
     installation
-    modeling
-    builtindatasets
-    documentation
+    tutorials
+    datasets
+    math
+    api
 
 Links
 ==============
