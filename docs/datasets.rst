@@ -10,6 +10,7 @@ MAVE-NN provides multiple built-in datasets that users can easily load and use t
 
     datasets/overview
     datasets/dataset_gb1
+    datasets/dataset_nisthal
     datasets/dataset_amyloid
     datasets/dataset_tdp43
     datasets/dataset_mpsa
