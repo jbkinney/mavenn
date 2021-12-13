@@ -31,77 +31,44 @@ today = date.today()
 date_str = today.strftime("%d_%m_%Y")
 
 
-def data_set_dict():
-    """
-    This function will define the dataset name and
-    the associated parametes used for training the models
-    in the paper. This is the only function we need to
-    tune if we are not happy with the models.
-    """
-    models_dict = {}
-    # Parametes for the amyloid beta trained in the paper
-    models_dict["amyloid"] = {}
-    models_dict["amyloid"]["dataset_name"] = "amyloid"
-    models_dict["amyloid"]["alphabet"] = "protein*"
-    models_dict["amyloid"]["gpmap_type"] = "additive"
-    models_dict["amyloid"]["ge_noise_model_type"] = "SkewedT"
-    models_dict["amyloid"]["ge_heteroskedasticity_order"] = 2
-    models_dict["amyloid"]["learning_rate"] = 1e-3
-    models_dict["amyloid"]["epochs"] = 500
-    models_dict["amyloid"]["batch_size"] = 64
-    models_dict["amyloid"]["early_stopping_patience"] = 25
+# This dict defines the dataset name and
+# the associated parameters used for training the models
+# in the paper.
+models_dict = {}
 
-    return models_dict
-
-
-def loading_dataset_and_params(dataset_name):
-    models_dict = data_set_dict()
-    alphabet = models_dict[dataset_name]["alphabet"]
-    gp_map_type = models_dict[dataset_name]["gpmap_type"]
-    ge_noise_model_type = models_dict[dataset_name]["ge_noise_model_type"]
-    ge_heteroskedasticity_order = models_dict[dataset_name][
-        "ge_heteroskedasticity_order"
-    ]
-    learning_rate = models_dict[dataset_name]["learning_rate"]
-    epochs = models_dict[dataset_name]["epochs"]
-    batch_size = models_dict[dataset_name]["batch_size"]
-    early_stopping_patience = models_dict[dataset_name]["early_stopping_patience"]
-
-    # Load datset
-    print(f"Loading dataset and parameters for '{dataset_name}' ")
-    data_df = mavenn.load_example_dataset(dataset_name)
-
-    return (
-        data_df,
-        alphabet,
-        gp_map_type,
-        ge_noise_model_type,
-        ge_heteroskedasticity_order,
-        learning_rate,
-        epochs,
-        batch_size,
-        early_stopping_patience,
-    )
-
+# Parameters for the amyloid beta trained in the paper
+models_dict["amyloid"] = {
+    "dataset_name":"amyloid",
+    "model_params":{
+        "alphabet": "protein*",
+        "gpmap_type": "additive",
+        "regression_type": "GE",
+        "ge_noise_model_type": "SkewedT",
+        "ge_heteroskedasticity_order": 2
+    },
+    "fit_params":{
+        "learning_rate": 1e-3,
+        "epochs": 500,
+        "batch_size": 64,
+        "early_stopping_patience": 25,
+        "early_stopping":True
+    }
+}
 
 def main(args):
 
+    # Set dataset name
     dataset_name = args.dataset_name
-    (
-        data_df,
-        alphabet,
-        gp_map_type,
-        ge_noise_model_type,
-        ge_heteroskedasticity_order,
-        learning_rate,
-        epochs,
-        batch_size,
-        early_stopping_patience,
-    ) = loading_dataset_and_params(dataset_name)
+
+    # Get parameters dict
+    params_dict = models_dict[dataset_name]
+
+    # TODO: Change to pandas
+    data_df = mavenn.load_example_dataset(dataset_name)
 
     # Get and report sequence length
     L = len(data_df.loc[0, "x"])
-    print(f"Sequence length: {L:d} amino acids (+ stops)")
+    print(f"Sequence length: {L:d} ")
 
     # Preview dataset
     print("data_df:")
@@ -115,11 +82,7 @@ def main(args):
     # Define model
     model = mavenn.Model(
         L=L,
-        alphabet=alphabet,
-        gpmap_type=gp_map_type,
-        regression_type="GE",
-        ge_noise_model_type=ge_noise_model_type,
-        ge_heteroskedasticity_order=ge_heteroskedasticity_order,
+        **params_dict["model_params"]
     )
 
     # Set training data
@@ -131,12 +94,8 @@ def main(args):
 
     # Train model
     model.fit(
-        learning_rate=learning_rate,
-        epochs=epochs,
-        batch_size=batch_size,
-        early_stopping=True,
-        early_stopping_patience=early_stopping_patience,
         verbose=False,
+        **params_dict["fit_params"]
     )
 
     # Compute variational information on test data
