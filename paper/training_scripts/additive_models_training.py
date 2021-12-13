@@ -50,7 +50,7 @@ def main(args):
     # Get parameters dict
     params_dict = models_dict[dataset_name]
 
-    # TODO: Change to pandas
+    # Read dataset from the paper dataset instead of MAVENN dataset
     data_df = pd.read_csv(f'../datasets/{dataset_name}_data.csv.gz')
 
     # Get and report sequence length
