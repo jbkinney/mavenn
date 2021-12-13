@@ -1,0 +1,39 @@
+{
+    "amyloid": {
+        "dataset_name": "amyloid",
+        "model_params": {
+            "alphabet": "protein*",
+            "gpmap_type": "additive",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2
+        },
+        "fit_params": {
+            "learning_rate": 0.001,
+            "epochs": 500,
+            "batch_size": 64,
+            "early_stopping_patience": 25,
+            "early_stopping": true
+        }
+    },
+    "tdp43": {
+        "dataset_name": "tdp43",
+        "model_params": {
+            "alphabet": "protein*",
+            "gpmap_type": "additive",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2,
+            "ge_nonlinearity_hidden_nodes": 20,
+            "eta_regularization": 1e2,
+            "theta_regularization": 5e-3
+        },
+        "fit_params": {
+            "learning_rate": 0.0005,
+            "epochs": 500,
+            "batch_size": 1024,
+            "early_stopping_patience": 10,
+            "early_stopping": true
+        }
+    }
+}
