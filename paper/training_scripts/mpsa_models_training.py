@@ -36,7 +36,7 @@ import mavenn
 
 # Get the date to append to the saved model name
 today = datetime.now()
-date_str = today.strftime("%d_%m_%Y_%H_%M")
+date_str = today.strftime("%Y.%m.%d.%Hh.%Mm")
 
 # Get the models dictionary from the json input file.
 input_file = open("mpsa_models_param.json")
