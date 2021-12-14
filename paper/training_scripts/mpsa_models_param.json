@@ -1,0 +1,74 @@
+{
+    "additive": {
+        "model_params": {
+            "alphabet": "rna",
+            "gpmap_type": "additive",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2
+        },
+        "fit_params": {
+            "learning_rate": 0.001,
+            "epochs": 500,
+            "batch_size": 200,
+            "early_stopping_patience": 30,
+            "early_stopping": true,
+            "linear_initialization": false
+        }
+    },
+    "neighbor": {
+        "model_params": {
+            "alphabet": "rna",
+            "gpmap_type": "neighbor",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2
+        },
+        "fit_params": {
+            "learning_rate": 0.001,
+            "epochs": 500,
+            "batch_size": 200,
+            "early_stopping_patience": 30,
+            "early_stopping": true,
+            "linear_initialization": false
+        }
+    },
+    "pairwise": {
+        "model_params": {
+            "alphabet": "rna",
+            "gpmap_type": "pairwise",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2
+        },
+        "fit_params": {
+            "learning_rate": 0.001,
+            "epochs": 500,
+            "batch_size": 50,
+            "early_stopping_patience": 30,
+            "early_stopping": true,
+            "linear_initialization": false
+        }
+    },
+    "blackbox": {
+        "model_params": {
+            "alphabet": "rna",
+            "gpmap_type": "blackbox",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2,
+            "gpmap_kwargs": {
+                "hidden_layer_sizes": "(10, 10, 10, 10, 10)",
+                "features": "pairwise"
+            }
+        },
+        "fit_params": {
+            "learning_rate": 0.0005,
+            "epochs": 500,
+            "batch_size": 50,
+            "early_stopping_patience": 10,
+            "early_stopping": true,
+            "linear_initialization": false
+        }
+    }
+}
