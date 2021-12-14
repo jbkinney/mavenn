@@ -2227,4 +2227,5 @@ class Model:
         parameter_uncertainty_dict['eta_means'] = eta_means
         parameter_uncertainty_dict['eta_stds'] = eta_stds
 
-        return parameter_uncertainty_dict
+        #return parameter_uncertainty_dict
+        return parameter_uncertainty_dict, dictionary_of_models

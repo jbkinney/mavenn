@@ -23,13 +23,13 @@ import sys
 #import logomaker
 
 project = 'mavenn'
-copyright = '2020, Ammar Tareen and Justin B. Kinney'
-author = 'Ammar Tareen and Justin B. Kinney'
+copyright = '2021, Ammar Tareen, Mahdi Kooshkbaghi, Justin B. Kinney'
+author = 'Ammar Tareen, Mahdi Kooshkbaghi, Justin B. Kinney'
 
 # The short X.Y version
-version = '0.25'
+version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '0.25'
+release = '1.0'
 
 # -- General configuration ---------------------------------------------------
 
