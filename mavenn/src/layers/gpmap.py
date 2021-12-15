@@ -26,8 +26,7 @@ class GPMapLayer(Layer):
     def __init__(self,
                  L,
                  C,
-                 theta_regularization,
-                 mask_type=None):
+                 theta_regularization):
         """Construct layer instance."""
         # Set sequence length
         self.L = L
@@ -41,8 +40,8 @@ class GPMapLayer(Layer):
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.theta_regularization)
 
-        # Set mask type
-        self.mask_type = mask_type
+        # Initialize mask dict
+        self.mask_dict = {}
 
         # Define regular expression for theta parameters
         self.theta_pattern = re.compile('^theta.*')
@@ -76,13 +75,19 @@ class GPMapLayer(Layer):
             # Type and shape v as needed
             v = np.array(v).astype(np.float).reshape(self_param.shape)
 
+            # Mask meaningless values with zeros
+            no_mask = np.full(v.shape, True, dtype=bool)
+            mask = self.mask_dict.get(k, no_mask)
+            v[~mask] = 0.0
+
             # Assign to self_param values
             self_param.assign(v)
 
     @handle_errors
     def get_params(self,
-                   as_arrays=True,
-                   squeeze_and_pop_arrays=True):
+                   squeeze=True,
+                   pop=True,
+                   mask_with_nans=True):
 
         # Get theta_dict
         theta_dict = {k:v for (k, v) in self.__dict__.items()
@@ -93,15 +98,21 @@ class GPMapLayer(Layer):
         for k, v in theta_dict.items():
 
             # Convert to numpy array
-            if as_arrays:
-                v = v.numpy()
+            v = v.numpy()
 
-                # Squeeze out singleton dimensions
-                # and pop values from fully singleton arrays
-                if squeeze_and_pop_arrays:
-                    v = v.squeeze()
-                    if v.size == 1:
-                        v = v.item()
+            # Mask meaningless values with nans
+            if mask_with_nans:
+                no_mask = np.full(v.shape, True, dtype=bool)
+                mask = self.mask_dict.get(k, no_mask)
+                v[~mask] = np.nan
+
+            # Squeeze out singleton dimensions
+            # Pop out values form singleton arrays
+            if squeeze:
+                v = v.squeeze()
+
+            if pop and v.size == 1:
+                v = v.item()
 
             # Save modified value
             theta_dict[k] = v
@@ -123,11 +134,6 @@ class GPMapLayer(Layer):
 
 class AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive G-P map."""
-
-    @handle_errors
-    def __init__(self, *args, **kwargs):
-        """Construct layer instance."""
-        super().__init__(*args, **kwargs)
 
     @handle_errors
     def build(self, input_shape):
@@ -161,91 +167,35 @@ class AdditiveGPMapLayer(GPMapLayer):
 
         return phi
 
-    @handle_errors
-    def set_params(self, theta_0=None, theta_lc=None):
-        """
-        Set values of layer parameters.
-
-        Parameters
-        ----------
-        theta_0: (float)
-
-        theta_lc: (np.ndarray)
-            Shape (L,C)
-
-        Returns
-        -------
-        None
-        """
-        # Check theta_0
-        if theta_0 is not None:
-            check(isinstance(theta_0, float),
-                  f'type(theta_0)={theta_0}; must be float')
-
-        # Check theta_lc
-        if theta_lc is not None:
-            check(isinstance(theta_lc, np.ndarray),
-                  f'type(theta_lc)={theta_lc}; must be np.ndarray')
-            check(theta_lc.size == self.L * self.C,
-                   f'theta_lc.size={repr(theta_lc.size)}; '
-                   f'must be ({self.L * self.C}).')
-            theta_lc = theta_lc.reshape([1, self.L, self.C])
-
-        # Set weight values
-        self.set_weights([np.array([theta_0]), theta_lc])
-
-    @handle_errors
-    def get_params(self):
-        """
-        Get values of layer parameters.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        param_dict: (dict)
-            Dictionary containing model parameters. Model parameters are
-            returned as matrices, NOT as individual named parameters, and are
-            NOT gauge-fixed.
-        """
-        # Get list of weights
-        param_list = self.get_weights()
-
-        #  Fill param_dict
-        param_dict = {}
-        param_dict['theta_0'] = param_list[0]
-        param_dict['theta_lc'] = param_list[1].reshape([self.L, self.C])
-
-        return param_dict
-
 
 class PairwiseGPMapLayer(GPMapLayer):
     """Represents a pairwise G-P map."""
 
     @handle_errors
-    def __init__(self, *args, **kwargs):
+    def __init__(self, mask_type, *args, **kwargs):
+
         """Construct layer instance."""
         super().__init__(*args, **kwargs)
 
         # Set mask type
+        self.mask_type = mask_type
         check(self.mask_type in ['neighbor', 'pairwise'],
               f'self.mask_type={repr(self.mask_type)}; must be'
               f'one of ["neighbor","pairwise"]')
 
-        # Create mask
+        # Create mask for theta_lclc
         ls = np.arange(self.L).astype(int)
         ls1 = np.tile(ls.reshape([1, self.L, 1, 1, 1]),
                       [1, 1, self.C, self.L, self.C])
         ls2 = np.tile(ls.reshape([1, 1, 1, self.L, 1]),
                       [1, self.L, self.C, 1, self.C])
         if self.mask_type == 'pairwise':
-            self.mask = (ls2 - ls1 >= 1)
+            mask = (ls2 - ls1 >= 1)
         elif self.mask_type == 'neighbor':
-            self.mask = (ls2 - ls1 == 1)
+            mask = (ls2 - ls1 == 1)
         else:
             assert False, "This should not work"
+        self.mask_dict['theta_lclc'] = mask
 
     @handle_errors
     def get_config(self):
@@ -276,7 +226,7 @@ class PairwiseGPMapLayer(GPMapLayer):
         # Define theta_lclc parameters
         theta_lclc_shape = (1, self.L, self.C, self.L, self.C)
         theta_lclc_init = np.random.randn(*theta_lclc_shape)/np.sqrt(self.L**2)
-        theta_lclc_init *= self.mask
+        theta_lclc_init *= self.mask_dict['theta_lclc']
         self.theta_lclc = self.add_weight(name='theta_lclc',
                                           shape=theta_lclc_shape,
                                           initializer=Constant(theta_lclc_init),
@@ -295,7 +245,7 @@ class PairwiseGPMapLayer(GPMapLayer):
                                      axis=[1, 2]),
                                shape=[-1, 1])
         phi = phi + tf.reshape(K.sum(self.theta_lclc *
-                                     self.mask *
+                                     self.mask_dict['theta_lclc'] *
                                      tf.reshape(x_lc,
                                          [-1, self.L, self.C, 1, 1]) *
                                      tf.reshape(x_lc,
@@ -304,81 +254,6 @@ class PairwiseGPMapLayer(GPMapLayer):
                                shape=[-1, 1])
 
         return phi
-
-    @handle_errors
-    def set_params(self, theta_0=None, theta_lc=None, theta_lclc=None):
-        """
-        Set values of layer parameters.
-
-        Parameters
-        ----------
-        theta_0: (float)
-
-        theta_lc: (np.ndarray)
-            Shape (L,C)
-
-        theta_lclc: (np.ndarray)
-            Shape (L,C,L,C)
-
-        Returns
-        -------
-        None
-        """
-        # Check theta_0
-        if theta_0 is not None:
-            check(isinstance(theta_0, float),
-                  f'type(theta_0)={theta_0}; must be float')
-
-        # Check theta_lc
-        if theta_lc is not None:
-            check(isinstance(theta_lc, np.ndarray),
-                  f'type(theta_lc)={theta_lc}; must be np.ndarray')
-            check(theta_lc.size == self.L * self.C,
-                   f'theta_lc.size={repr(theta_lc.size)}; '
-                   f'must be ({self.L * self.C}).')
-            theta_lc = theta_lc.reshape([1, self.L, self.C])
-
-        # Check theta_lclc
-        if theta_lclc is not None:
-            check(isinstance(theta_lclc, np.ndarray),
-                  f'type(theta_lclc)={theta_lclc}; must be np.ndarray')
-            check(theta_lclc.size == self.L * self.C * self.L * self.C,
-                   f'theta_lclc.size={repr(theta_lclc.size)}; '
-                   f'must be ({self.L * self.C * self.L * self.C}).')
-            theta_lclc = theta_lclc.reshape([1, self.L, self.C, self.L, self.C])
-
-        # Set weight values
-        self.set_weights([np.array([theta_0]), theta_lc, theta_lclc])
-
-    @handle_errors
-    def get_params(self):
-        """
-        Get values of layer parameters.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        param_dict: (dict)
-            Dictionary containing model parameters. Model parameters are
-            returned as matrices, NOT as individual named parameters, and are
-            NOT gauge-fixed.
-        """
-        # Get list of weights
-        param_list = self.get_weights()
-
-        #  Fill param_dict
-        param_dict = {}
-        param_dict['theta_0'] = param_list[0]
-        param_dict['theta_lc'] = param_list[1].reshape([self.L, self.C])
-        masked_theta_lclc = param_list[2]
-        masked_theta_lclc[~self.mask] = np.nan
-        param_dict['theta_lclc'] = \
-            masked_theta_lclc.reshape([self.L, self.C, self.L, self.C])
-
-        return param_dict
 
 
 class MultilayerPerceptronGPMap(GPMapLayer):

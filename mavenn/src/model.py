@@ -994,7 +994,9 @@ class Model:
         L = x_stats['L']
         C = x_stats['C']
         alphabet = x_stats['alphabet']
-        theta_dict = self.model.x_to_phi_layer.get_params()
+
+        # Get parameters from layer. squeeze but do NOT pop
+        theta_dict = self.model.x_to_phi_layer.get_params(pop=False)
 
         # Check gauge
         choices = ("none", "uniform", "empirical", "consensus", "user")
