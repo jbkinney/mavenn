@@ -20,7 +20,6 @@ from tensorflow.keras.callbacks import EarlyStopping
 # tqdm progressbar
 # from tqdm.keras import TqdmCallback
 
-
 # sklearn import
 import sklearn.preprocessing
 

@@ -2,6 +2,7 @@
 # Standard imports
 import numpy as np
 from collections.abc import Iterable
+import re
 import pdb
 
 # Tensorflow imports
@@ -43,6 +44,9 @@ class GPMapLayer(Layer):
         # Set mask type
         self.mask_type = mask_type
 
+        # Define regular expression for theta parameters
+        self.theta_pattern = re.compile('^theta.*')
+
         # Call superclass constructor
         super().__init__()
 
@@ -56,66 +60,65 @@ class GPMapLayer(Layer):
                 **base_config}
 
     @handle_errors
+    def set_params(self, **kwargs):
+        """Set values of layer parameters."""
+
+        # Iterate over kwargs
+        for k,v in kwargs.items():
+
+            # Get current parameter object
+            check(k in self.__dict__,
+                  f'Keyword argument "{k}" is not the name of a parameter')
+            check(bool(self.theta_pattern.match(k)),
+                  f'Keyword argument "{k}" does not match a theta parameter')
+            self_param = self.__dict__[k]
+
+            # Type and shape v as needed
+            v = np.array(v).astype(np.float).reshape(self_param.shape)
+
+            # Assign to self_param values
+            self_param.assign(v)
+
+    @handle_errors
+    def get_params(self,
+                   as_arrays=True,
+                   squeeze_and_pop_arrays=True):
+
+        # Get theta_dict
+        theta_dict = {k:v for (k, v) in self.__dict__.items()
+                      if self.theta_pattern.match(k)
+                      and isinstance(v, tf.Variable)}
+
+        # Modify dict values as requested
+        for k, v in theta_dict.items():
+
+            # Convert to numpy array
+            if as_arrays:
+                v = v.numpy()
+
+                # Squeeze out singleton dimensions
+                # and pop values from fully singleton arrays
+                if squeeze_and_pop_arrays:
+                    v = v.squeeze()
+                    if v.size == 1:
+                        v = v.item()
+
+            # Save modified value
+            theta_dict[k] = v
+
+        return theta_dict
+
+    ### The following methods must be fully overridden ###
+
+    @handle_errors
     def build(self, input_shape):
-        """Build layer."""
+        # Call superclass build
         super().build(input_shape)
 
-    ### The following methods must be fully overridden
-
+    @handle_errors
     def call(self, inputs):
         """Process layer input and return output."""
         assert False
-        return np.nan
-
-    def set_params(self, **kwargs):
-        """Set values of layer parameters."""
-        assert False
-
-    def get_params(self):
-        """Get values of layer parameters."""
-        assert False
-        return {}
-
-
-class CustomGPMapLayer(Layer):
-    """
-    Represents a custom genotype-phenotype map
-    where user has to provide implementation via
-    a sub-class of this class.
-    """
-
-    #@handle_errors
-    def __init__(self):
-        """Construct layer instance."""
-        # Call superclass constructor
-        super().__init__()
-
-    #@handle_errors
-    def get_config(self):
-        """Return configuration dictionary."""
-        base_config = super(Layer, self).get_config()
-        return {**base_config}
-
-    #@handle_errors
-    def build(self, input_shape):
-        """Build layer."""
-        super().build(input_shape)
-
-    ### The following methods must be fully overridden
-
-    def call(self, inputs):
-        """Process layer input and return output."""
-        assert False
-        return np.nan
-
-    def set_params(self, **kwargs):
-        """Set values of layer parameters."""
-        assert False
-
-    def get_params(self):
-        """Get values of layer parameters."""
-        assert False
-        return {}
 
 
 class AdditiveGPMapLayer(GPMapLayer):
