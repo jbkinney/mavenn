@@ -63,7 +63,7 @@ class GPMapLayer(Layer):
         """Set values of layer parameters."""
 
         # Iterate over kwargs
-        for k,v in kwargs.items():
+        for k, v in kwargs.items():
 
             # Get current parameter object
             check(k in self.__dict__,
@@ -90,7 +90,7 @@ class GPMapLayer(Layer):
                    mask_with_nans=True):
 
         # Get theta_dict
-        theta_dict = {k:v for (k, v) in self.__dict__.items()
+        theta_dict = {k: v for (k, v) in self.__dict__.items()
                       if self.theta_pattern.match(k)
                       and isinstance(v, tf.Variable)}
 
@@ -136,7 +136,12 @@ class AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive G-P map."""
 
     @handle_errors
-    def build(self, input_shape):
+    def __init__(self, *args, **kwargs):
+        """Construct layer instance."""
+
+        # Call superclass constructor
+        super().__init__(*args, **kwargs)
+
         """Build layer."""
         # Define theta_0
         self.theta_0 = self.add_weight(name='theta_0',
@@ -153,8 +158,6 @@ class AdditiveGPMapLayer(GPMapLayer):
                                         initializer=Constant(theta_lc_init),
                                         trainable=True,
                                         regularizer=self.regularizer)
-        # Call superclass build
-        super().build(input_shape)
 
     def call(self, x_lc):
         """Process layer input and return output."""
@@ -173,9 +176,26 @@ class PairwiseGPMapLayer(GPMapLayer):
 
     @handle_errors
     def __init__(self, mask_type, *args, **kwargs):
-
         """Construct layer instance."""
+
+        # Call superclass constructor
         super().__init__(*args, **kwargs)
+
+        # Define theta_0
+        self.theta_0 = self.add_weight(name='theta_0',
+                                       shape=(1,),
+                                       initializer=Constant(0.),
+                                       trainable=True,
+                                       regularizer=self.regularizer)
+
+        # Define theta_lc parameters
+        theta_lc_shape = (1, self.L, self.C)
+        theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
+        self.theta_lc = self.add_weight(name='theta_lc',
+                                        shape=theta_lc_shape,
+                                        initializer=Constant(theta_lc_init),
+                                        trainable=True,
+                                        regularizer=self.regularizer)
 
         # Set mask type
         self.mask_type = mask_type
@@ -194,34 +214,8 @@ class PairwiseGPMapLayer(GPMapLayer):
         elif self.mask_type == 'neighbor':
             mask = (ls2 - ls1 == 1)
         else:
-            assert False, "This should not work"
+            assert False, "This should not happen."
         self.mask_dict['theta_lclc'] = mask
-
-    @handle_errors
-    def get_config(self):
-        """Return configuration dictionary."""
-        base_config = super().get_config()
-        return {'mask_type': self.mask_type,
-                **base_config}
-
-    @handle_errors
-    def build(self, input_shape):
-        """Build layer."""
-        # Define theta_0
-        self.theta_0 = self.add_weight(name='theta_0',
-                                       shape=(1,),
-                                       initializer=Constant(0.),
-                                       trainable=True,
-                                       regularizer=self.regularizer)
-
-        # Define theta_lc parameters
-        theta_lc_shape = (1, self.L, self.C)
-        theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
-        self.theta_lc = self.add_weight(name='theta_lc',
-                                        shape=theta_lc_shape,
-                                        initializer=Constant(theta_lc_init),
-                                        trainable=True,
-                                        regularizer=self.regularizer)
 
         # Define theta_lclc parameters
         theta_lclc_shape = (1, self.L, self.C, self.L, self.C)
@@ -233,11 +227,9 @@ class PairwiseGPMapLayer(GPMapLayer):
                                           trainable=True,
                                           regularizer=self.regularizer)
 
-        # Call superclass build
-        super().build(input_shape)
-
     def call(self, x_lc):
         """Process layer input and return output."""
+
         # Compute phi
         phi = self.theta_0
         phi = phi + tf.reshape(K.sum(self.theta_lc *
@@ -254,6 +246,17 @@ class PairwiseGPMapLayer(GPMapLayer):
                                shape=[-1, 1])
 
         return phi
+
+    @handle_errors
+    def get_config(self):
+        """Return configuration dictionary."""
+
+        # Get base config of superclass
+        base_config = super().get_config()
+
+        # Add new param from __init__() to dict and return
+        return {'mask_type': self.mask_type,
+                **base_config}
 
 
 class MultilayerPerceptronGPMap(GPMapLayer):
