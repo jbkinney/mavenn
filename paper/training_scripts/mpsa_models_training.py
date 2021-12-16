@@ -8,7 +8,6 @@ William T. Ireland, David M. McCandlish, Justin B. Kinney
 import numpy as np
 import argparse
 import pandas as pd
-import random
 import warnings
 import os
 from datetime import datetime
@@ -18,21 +17,14 @@ import json
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 warnings.filterwarnings("ignore")
 
-# Fix all the possible seeds
-import tensorflow as tf
-
-seed = 1234
-tf.random.set_seed(seed)
-np.random.seed(seed)
-random.seed(seed)
-os.environ["PYTHONHASHSEED"] = str(seed)
-
-
 # Import MAVE-NN local
 import sys
 
 sys.path.insert(0, "/home/mahdik/workspace/mavenn")
 import mavenn
+
+# Fix the seed, default seed is seed=1234
+mavenn.src.utils.set_seed()
 
 # Get the date to append to the saved model name
 today = datetime.now()

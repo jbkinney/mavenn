@@ -439,15 +439,16 @@ def x_to_stats(x, alphabet, weights=None, verbose=False):
 
 
 @handle_errors
-def set_seed(seed):
+def set_seed(seed=1234):
     """
     Set random number generator seed; use to make training reproducible.
 
     Parameters
     ----------
     seed: (int)
-        The value provided is used in both np.random.seed()
-        and tf.random.set_seed().
+        The value provided is used in np.random.seed(),
+        tf.random.set_seed(), random.seed() and
+        environ['PYTHONHASHSEED']. Default is seed=1234.
 
     Returns
     -------
@@ -458,10 +459,9 @@ def set_seed(seed):
           f'type(seed)={type(seed)}; must be int')
 
     # Set seed
-    os.environ['PYTHONHASHSEED'] = '0'
-    tf.random.set_seed(seed)
-    np.random.seed(seed)
     random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
 
 @handle_errors

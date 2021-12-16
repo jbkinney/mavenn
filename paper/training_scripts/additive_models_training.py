@@ -8,30 +8,23 @@ William T. Ireland, David M. McCandlish, Justin B. Kinney
 import numpy as np
 import argparse
 import pandas as pd
-import random
 import warnings
 import os
 from datetime import datetime
 import json
+
 # Turn off Tensorflow GPU warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-warnings.filterwarnings('ignore')
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+warnings.filterwarnings("ignore")
 
-# Fix all the possible seeds
-import tensorflow as tf
-
-seed = 1234
-tf.random.set_seed(seed)
-np.random.seed(seed)
-random.seed(seed)
-os.environ["PYTHONHASHSEED"] = str(seed)
-
-
-# Import MAVE-NN local
+# Import Local MAVENN
 import sys
 
 sys.path.insert(0, "/home/mahdik/workspace/mavenn")
 import mavenn
+
+# Fix the seed, default is seed=1234
+mavenn.src.utils.set_seed()
 
 # Get the date to append to the saved model name
 today = datetime.now()
@@ -51,7 +44,7 @@ def main(args):
     params_dict = models_dict[dataset_name]
 
     # Read dataset from the paper dataset instead of MAVENN dataset
-    data_df = pd.read_csv(f'../datasets/{dataset_name}_data.csv.gz')
+    data_df = pd.read_csv(f"../datasets/{dataset_name}_data.csv.gz")
 
     # Get and report sequence length
     L = len(data_df.loc[0, "x"])
