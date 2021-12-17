@@ -68,3 +68,6 @@ target/
 
 # Apple shit
 .DS_Store
+
+# Visual Studio Code
+.vscode/

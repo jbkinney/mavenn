@@ -9,18 +9,16 @@
             "ge_noise_model_type": "SkewedT",
             "ge_heteroskedasticity_order": 2,
             "ge_nonlinearity_hidden_nodes": 100,
-            "eta_regularization": 1e-4,
+            "eta_regularization": 1e-5,
             "normalize_phi": false
         },
         "gpmap_kwargs": {
             "L": 55,
             "C": 20,
-            "theta_regularization": 0.0005
+            "theta_regularization": 5e-4
         },
         "fit_params": {
-            "learning_rate": 5e-4,
-            "epochs": 500,
-            "batch_size": 16,
+            "batch_size": 300,
             "early_stopping": false,
             "linear_initialization": false,
             "verbose": false
