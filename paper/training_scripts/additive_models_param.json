@@ -35,5 +35,22 @@
             "early_stopping_patience": 10,
             "early_stopping": true
         }
+    },
+    "gb1": {
+        "dataset_name": "gb1_single_and_double",
+        "model_params": {
+            "alphabet": "protein",
+            "gpmap_type": "additive",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2
+        },
+        "fit_params": {
+            "learning_rate": 5e-4,
+            "epochs": 2000,
+            "batch_size": 300,
+            "early_stopping_patience": 30,
+            "early_stopping": true
+        }
     }
 }
