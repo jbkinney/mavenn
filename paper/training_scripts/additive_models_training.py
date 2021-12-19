@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 # Import Local MAVENN
 import sys
 
-sys.path.insert(0, "/home/mahdik/workspace/mavenn")
+sys.path.insert(0, "../../")
 import mavenn
 
 # Fix the seed, default is seed=1234
