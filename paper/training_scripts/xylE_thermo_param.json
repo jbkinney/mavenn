@@ -1,0 +1,32 @@
+{
+    "custom": {
+        "model_params": {
+            "L": 150,
+            "Y": 12,
+            "alphabet": "dna",
+            "gpmap_type": "custom",
+            "regression_type": "MPA",
+            "eta_regularization": 1e-5,
+            "normalize_phi": false
+        },
+        "gpmap_kwargs": {
+            "L": 150,
+            "C": 4,
+            "theta_regularization": 1e-1,
+            "CRP_start":37,
+            "CRP_end":57,
+            "xylR_start":58,
+            "xylR_end":89,
+            "RNAP_start":91,
+            "RNAP_end":122,
+            "regularizer":0.1
+        },
+        "fit_params": {
+            "batch_size": 500,
+            "early_stopping": true,
+            "early_stopping_patience":25,
+            "linear_initialization": true,
+            "verbose": false
+        }
+    }
+}
