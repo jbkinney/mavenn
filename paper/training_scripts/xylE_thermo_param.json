@@ -25,7 +25,7 @@
             "batch_size": 500,
             "early_stopping": true,
             "early_stopping_patience":25,
-            "linear_initialization": true,
+            "linear_initialization": false,
             "verbose": false
         }
     }
