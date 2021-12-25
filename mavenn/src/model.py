@@ -24,6 +24,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 import sklearn.preprocessing
 
 # MAVE-NN imports
+import mavenn
 from mavenn import TINY
 from mavenn.src.error_handling import handle_errors, check
 from mavenn.src.regression_types import GlobalEpistasisModel, \
@@ -2007,7 +2008,6 @@ class Model:
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
 
-    ################################
     # TODO: Fill this out
     @handle_errors
     def sample_plausible_models(self,
@@ -2017,53 +2017,68 @@ class Model:
                                 initialize_from_fit_model=False,
                                 fit_kwargs={}):
 
-        check(hasattr(self, 'x'),
-              'attribute `x` not set; `run set_data()` method.')
-
-        check(hasattr(self, 'validation_flags'),
-              'attribute `validation_flags` not set; run `set_data()` method.')
-
         check(isinstance(num_models, int),
               f'type(num_models)={type(num_models)}; must be `int`')
 
-        models_list = []
+        # Fit models one-by-one
+        models = []
         for model_num in range(num_models):
 
             # Simulate dataset
             sim_dataset = self.simulate_dataset(template_df=data_df)
+            sim_trainval_df, sim_test_df = mavenn.split_dataset(sim_dataset)
 
             if verbose:
-                print(f'training model {model_idx} ...')
+                print(f'training model {model_num} ...')
 
             # Define model with the same parameters as the original model
             sim_model = Model(**self.arg_dict)
 
-            # Set training data: use training sequences but use y_values form simulated_df.
-            # sim_model.set_data(x=x_train,
-            #                    y=simulated_df[f'y_sampled_{model_idx}'],
-            #                    validation_flags=self.validation_flags,
-            #                    shuffle=True,
-            #                    verbose=verbose)
-            sim_model.set_data(**self.set_data_args)
+            # Set training data from simulated dataset
+            x = sim_trainval_df['x']
+            validation_flags = sim_trainval_df['validation']
+            if self.regression_type == 'MPA':
+                y_cols = [c for c in sim_trainval_df.columns if 'ct_' in c]
+                y = sim_trainval_df[y_cols].values
+            elif self.regression_type == 'GE':
+                y = sim_trainval_df['y'].values
+            else:
+                assert False, 'This should not happen'
+            sim_model.set_data(x=x,
+                               y=y,
+                               validation_flags=validation_flags,
+                               shuffle=True,
+                               verbose=verbose)
 
-            # the following if is due to the callbacks/save/pickling bug mentioned in fit.
-            # See fit for more details. Currently this ensures that ES callback is the same
-            # the original model.
+            # Override fit_kwargs
+            sim_fit_kwargs = self.fit_args.copy()
+            for k, v in fit_kwargs:
+                sim_fit_kwargs[k] = v
+
+            # The following if is due to the callbacks/save/pickling bug
+            # mentioned in fit. See fit for more details. Currently this
+            # ensures that ES callback is the same the original model.
             # Set early stopping callback if requested
-            if self.fit_args['early_stopping']:
+            if sim_fit_kwargs['early_stopping']:
                 callbacks = []
+                patience = sim_fit_kwargs['early_stopping_patience']
                 callbacks.append(EarlyStopping(monitor='val_loss',
                                                mode='auto',
-                                               patience=self.fit_args['early_stopping_patience']))
-
+                                               patience=patience))
                 self.fit_args['callbacks'] = callbacks
 
-            sim_model.fit(**self.fit_args)
+            # Set model parameters if desired
+            if initialize_from_fit_model:
+                sim_model.set_params(self.get_params)
 
-            # populate dictionary with model trained on simulated dataset
-            dictionary_of_models[f'model_{model_idx}'] = sim_model
+            # Fit model
+            sim_model.fit(**sim_fit_kwargs)
 
-            ################################
+            # Append to model list
+            models.append(sim_model)
+
+        # Return list of sampled models
+        return models
 
     # TODO: Remove this
     def compute_parameter_uncertainties(self,
