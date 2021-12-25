@@ -1234,111 +1234,89 @@ class Model:
 
         return yhat
 
-    # TODO: Add ability to pass x and ct.
     @handle_errors
-    def simulate_dataset(self,
-                         N=None,
-                         x=None,
-                         ct=None,
-                         validation_frac=.2,
-                         test_frac=.2):
+    def simulate_dataset(self, template_df):
         """
         Generate a simulated dataset.
 
-        Measurements are simulated for each sequence (either generated or
-        provided by the user) using the model's inferred G-P map and
-        measurement process. To aid in downstream use, simulated sequences
-        are randomly assigned to training, validation, and test sets.
-
         Parameters
         ----------
-        N: (int)
-            The number of observations to simulate. If set, sequences are
-            simulated according to the probability matrix ``p_lc``
-            computed from training data. This is overridden by setting ``x``.
-
-        x: (np.ndarray)
-            Sequences, provided as an ``np.ndarray`` of strings, each of
-            length ``L``. If set, measurements will be simulated for each
-            of these sequences. Setting this overrides ``N``.
-
-        ct: (np.ndarray)
-            Sequence counts, provided as an ``np.ndarray`` of nonnegative
-            integers. Must be the same shape as ``x``. If not set, a
-            count of 1 will be assumed for each sequence in ``x``.
-            Has no effect for GE models.
-
-        validation_frac: (float)
-            The fraction of unique sequences to reserve for the validation set.
-            Must be in the range [0,1].
-
-        test_frac: (float)
-            The fraction of unique sequences to reserve for the test set.
-            Must be in the range [0,1].
+        template_df: (pd.DataFrame)
+            Dataset off of which to base the simulated dataset. Specifically,
+            the simulated dataset will have the same sequences and the same
+            train/validation/test flags, but different values for ``'y'`` (in
+            the case of a GE regression model) or ``'ct_#'`` (in the case of an
+            MPA regression model.
 
         Returns
         -------
-        data_df: (pd.DataFrame)
+        simulated_df: (pd.DataFrame)
             Simulated dataset in the form of a dataframe. Columns include
             ``'set'`` , ``'phi'`` , and ``'x'`` . For GE
             models, additional columns ``'yhat'`` and ``'y'`` are added.
             For MPA models, multiple columns of the form ``'ct_#'`` are added.
         """
 
-        # Validate validation_frac
-        check(isinstance(validation_frac, float),
-              f'type(validation_frac)={type(validation_frac)};'
-              'must be float.')
-        check(0 <= validation_frac <= 1,
-              f'test_frac={validation_frac}; must be in [0,1]')
+        # Verify template_data_df
+        check(isinstance(template_df, pd.DataFrame),
+              f'type(template_df)={type(template_df)}; must be pd.DataFrame')
+        N = len(template_df)
 
-        # Validate test_frac
-        check(isinstance(test_frac, float),
-              f'type(test_frac)={type(test_frac)};'
-              'must be float.')
-        check(0 <= test_frac <= 1,
-              f'test_frac={test_frac}; must be in [0,1]')
+        # Verify x column
+        check('x' in template_df.columns,
+              f'template_df.columns={template_df.columns};'
+              f"must contain 'x'.")
 
-        # If x is not set, generate from p_lc
-        if x is None:
-            # Validate N
-            check(isinstance(N, int),
-                  f'type(N)={type(N)}; must be int if x is not set.')
-            check(N > 0, f'N={N}; must be > 0')
+        # Validate sequences
+        x = validate_seqs(template_df['x'], alphabet=self.alphabet)
+        check(len(x[0]) == self.L,
+              f'len(x[0])={len(x[0])}; should be L={self.L}')
 
-            # Generate sequences
-            x = p_lc_to_x(N=N,
-                          p_lc=self.x_stats['probability_df'].values,
-                          alphabet=self.x_stats['alphabet'])
+        # Validate set assignments
+        check('set' in template_df.columns,
+              f'tempalte_df.columns={template_df.columns};'
+              f"must contain 'set'.")
+        check(np.all(template_df['set'].isin(['training','validation','test'])),
+              f"template_df['set'].unique()={template_df['set'].unique()}; "
+              f"must be ['training','validation','test']")
 
-        # Otherwise, validate x provided and expand if ct is provided too
-        else:
-            # Shape x for processing
-            x, x_shape = _get_shape_and_return_1d_array(x)
+        # Compute num occurances for each sequence
+        if self.regression_type == 'MPA':
+            ct_cols = [c for c in template_df.columns if 'ct_' in c]
+            ct = template_df[ct_cols].sum(axis=1).values
+        elif self.regression_type == 'GE':
+            ct = np.ones(N).astype(int)
 
-            # Validate sequences
-            x = validate_seqs(x, alphabet=self.alphabet)
-            check(len(x[0]) == self.L,
-                  f'len(x[0])={len(x[0])}; should be L={self.L}')
+        # Expand sequence list according to ct
+        x = template_df['x'].values
+        sets = template_df['set'].values
+        x = np.concatenate([[seq]*count for (seq, count) in zip(x, ct)])
+        sets = np.concatenate([[s]*count for (s, count) in zip(sets, ct)])
 
-            # Validate ct
-            if ct is not None:
-                ct, ct_shape = _get_shape_and_return_1d_array(ct)
-                ct = ct.astype(int)
-                check(all(ct >= 0), 'Not all elements of ct are >= 0')
-                check(len(ct) == len(x), 'x and ct are not the same length')
-            else:
-                ct = np.ones(len(x)).astype(int)
-
-            # Expand sequence list according to ct
-            x = np.concatenate([[seq]*count for (seq, count) in zip(x, ct)])
-
-        # Compute phi values
+        # Compute phi values using the model's G-P map
         phi = self.x_to_phi(x)
 
-        if self.regression_type == 'MPA':
+        # Simulate measurements using the model's measurement process
+        if self.regression_type == 'GE':
 
-            # Compute grid of p(y|\phi) values over all y for all phi
+            # Compute yhat
+            yhat = self.phi_to_yhat(phi)
+
+            # Normalize yhat
+            yhat_norm = (yhat - self.y_mean)/self.y_std
+
+            # Get layer
+            layer = self.layer_noise_model
+
+            # Sample values
+            y_norm = layer.sample_y_given_yhat(yhat_norm)
+
+            # Compute y from y_norm
+            y = self.y_mean + self.y_std * y_norm
+
+        elif self.regression_type == 'MPA':
+
+            # Compute p(y|\phi) for all possible y for all computed phi
             all_y = np.arange(self.Y).astype(int)
             p_all_y_given_phi = self.p_of_y_given_phi(all_y,
                                                       phi,
@@ -1359,71 +1337,41 @@ class Model:
             label_binarizer = sklearn.preprocessing.LabelBinarizer()
             label_binarizer.fit(range(self.Y))
             ct_ = label_binarizer.transform(y)
-
-        elif self.regression_type == 'GE':
-
-            # Compute yhat
-            yhat = self.phi_to_yhat(phi)
-
-            # Normalize yhat
-            yhat_norm = (yhat - self.y_mean)/self.y_std
-
-            # Get layer
-            layer = self.layer_noise_model
-
-            # Sample values
-            y_norm = layer.sample_y_given_yhat(yhat_norm)
-
-            # Compute y from y_norm
-            y = self.y_mean + self.y_std * y_norm
-
         else:
             assert False, 'This should not happen.'
 
         # Store results in dataframe and return
-        data_df = pd.DataFrame()
-        data_df['phi'] = phi
+        simulated_df = pd.DataFrame()
+        simulated_df['x'] = x
+        simulated_df['set'] = sets
+        simulated_df['phi'] = phi
+
+        # Add in sequences
         if self.regression_type == 'GE':
-            data_df['y'] = y
+            simulated_df['yhat'] = yhat
+            simulated_df['y'] = y
 
-        data_df['x'] = x
-
-        # If doing MPA regression, collapse by sequence and add ct col
-        if self.regression_type == 'MPA':
-
-            # merge the y counts array with the dataframe created above
-            # and name bin columns with prefix 'ct_*'
+        elif self.regression_type == 'MPA':
             y_cols = ['ct_' + str(n) for n in range(self.Y)]
             y_df = pd.DataFrame(data=ct_,
                                 columns=y_cols)
-            data_df = pd.concat([data_df, y_df], axis=1)
+            simulated_df = pd.concat([simulated_df, y_df], axis=1)
 
-            # Group by x so that can have multiple counts per bin
-            data_df = data_df.groupby('x').sum().reset_index()
+            agg_dict = {}
+            for col in simulated_df.columns:
+                if col != 'x':
+                    agg_dict[col] = 'first'
+            for col in y_cols:
+                agg_dict[col] = 'sum'
 
-            # Reorder columns
-            data_df = data_df[y_cols + ['x']]
+            simulated_df = simulated_df.groupby('x').agg(agg_dict).reset_index()
 
-        elif self.regression_type == 'GE':
-            data_df.insert(0, column='yhat', value=yhat)
+        # Reorder columns to put x last
+        cols = simulated_df.columns
+        reordered_cols = list(cols[1:])+list(cols[:1])
+        simulated_df = simulated_df[reordered_cols]
 
-        # Assign to training and test sets
-        M = len(data_df)
-        r = np.random.rand(M)
-        validation_frac = .2
-        ix_train = (test_frac + validation_frac <= r)
-        ix_val = (test_frac <= r) & (r < test_frac + validation_frac)
-        ix_test = (r < test_frac)
-        data_df.insert(0, column='set', value='')
-        data_df.loc[ix_train, 'set'] = 'training'
-        data_df.loc[ix_val, 'set'] = 'validation'
-        data_df.loc[ix_test, 'set'] = 'test'
-        assert all([len(x) > 0 for x in data_df['set']])
-
-        # Shuffle data for extra safety
-        data_df = data_df.sample(frac=1).reset_index(drop=True)
-
-        return data_df
+        return simulated_df
 
     @handle_errors
     def I_variational(self,
@@ -2059,6 +2007,65 @@ class Model:
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
 
+    ################################
+    # TODO: Fill this out
+    @handle_errors
+    def sample_plausible_models(self,
+                                data_df,
+                                num_models=10,
+                                verbose=True,
+                                initialize_from_fit_model=False,
+                                fit_kwargs={}):
+
+        check(hasattr(self, 'x'),
+              'attribute `x` not set; `run set_data()` method.')
+
+        check(hasattr(self, 'validation_flags'),
+              'attribute `validation_flags` not set; run `set_data()` method.')
+
+        check(isinstance(num_models, int),
+              f'type(num_models)={type(num_models)}; must be `int`')
+
+        models_list = []
+        for model_num in range(num_models):
+
+            # Simulate dataset
+            sim_dataset = self.simulate_dataset(template_df=data_df)
+
+            if verbose:
+                print(f'training model {model_idx} ...')
+
+            # Define model with the same parameters as the original model
+            sim_model = Model(**self.arg_dict)
+
+            # Set training data: use training sequences but use y_values form simulated_df.
+            # sim_model.set_data(x=x_train,
+            #                    y=simulated_df[f'y_sampled_{model_idx}'],
+            #                    validation_flags=self.validation_flags,
+            #                    shuffle=True,
+            #                    verbose=verbose)
+            sim_model.set_data(**self.set_data_args)
+
+            # the following if is due to the callbacks/save/pickling bug mentioned in fit.
+            # See fit for more details. Currently this ensures that ES callback is the same
+            # the original model.
+            # Set early stopping callback if requested
+            if self.fit_args['early_stopping']:
+                callbacks = []
+                callbacks.append(EarlyStopping(monitor='val_loss',
+                                               mode='auto',
+                                               patience=self.fit_args['early_stopping_patience']))
+
+                self.fit_args['callbacks'] = callbacks
+
+            sim_model.fit(**self.fit_args)
+
+            # populate dictionary with model trained on simulated dataset
+            dictionary_of_models[f'model_{model_idx}'] = sim_model
+
+            ################################
+
+    # TODO: Remove this
     def compute_parameter_uncertainties(self,
                                         num_simulations=10,
                                         verbose=True):
@@ -2066,10 +2073,10 @@ class Model:
         """
         This method allows the computations of uncertainties in
         parameters inferred for a mavenn model. This method
-        simulates user-specified number, num_simulations, of datasets
+        simulates user-specified number, num_models, of datasets
         using the same training sequences that original model was trained on,
         with measurements drawn from the inferred measurement process. Then,
-        num_simulations number of models are re-inferred on thsese simulated
+        num_models number of models are re-inferred on thsese simulated
         data, and whose hyperparamerers are the same as the original model.
         This method is currently only implemented for GE regression. GP_type
         needs to be additive, neighbor, or pairwise for this method. The steps
@@ -2113,10 +2120,10 @@ class Model:
                                                  'same validation sequences can be used for '
                                                  'models trained on simulated data.')
 
-        # check that num_simulations (specifying number of simulated datasets
+        # check that num_models (specifying number of simulated datasets
         # and model inferences ) is an integer
         check(isinstance(num_simulations, int),
-              'type(num_simulations)  must be of type int')
+              'type(num_models)  must be of type int')
 
         # check if gp-map is additive, neighbor, pairwise.
         check(self.gpmap_type in ['additive', 'neighbor', 'pairwise'], 'gpmap_type to be additive, neighbor'
@@ -2124,7 +2131,7 @@ class Model:
 
         if verbose:
             print('Note that this method may take a long time to execute'
-                  'for large num_simulations.')
+                  'for large num_models.')
 
         # set training sequences
         x_train = self.x
@@ -2194,7 +2201,180 @@ class Model:
         # (both theta and eta) across gauge-fixed models
 
         # lists that will contain parameters values from various models.
-        # Could be turned into an np array, but this operation is quite quick small num_simulations
+        # Could be turned into an np array, but this operation is quite quick small num_models
+        list_of_theta_lc = []
+        list_of_theta_lclc = []
+
+        list_of_etas = []
+
+        for model_key in dictionary_of_models.keys():
+            list_of_theta_lc.append(dictionary_of_models[model_key].get_theta()['theta_lc'])
+            list_of_theta_lclc.append(dictionary_of_models[model_key].get_theta()['theta_lclc'])
+
+            list_of_etas.append(dictionary_of_models[model_key].layer_noise_model.get_weights())
+
+        # compute the parameter means across gauge fixed models.
+        theta_lc_means = np.mean(list_of_theta_lc, axis=0)
+        theta_lc_stds = np.std(list_of_theta_lc, axis=0)
+
+        theta_lclc_means = np.mean(list_of_theta_lclc, axis=0)
+        theta_lclc_stds = np.std(list_of_theta_lclc, axis=0)
+
+        eta_means = np.mean(list_of_etas, axis=0)
+        eta_stds = np.std(list_of_etas, axis=0)
+
+        # instantiate and populate return dictionary
+        parameter_uncertainty_dict = {}
+
+        parameter_uncertainty_dict['theta_lc_means'] = theta_lc_means
+        parameter_uncertainty_dict['theta_lclc_means'] = theta_lclc_means
+
+        parameter_uncertainty_dict['theta_lc_stds'] = theta_lc_stds
+        parameter_uncertainty_dict['theta_lclc_stds'] = theta_lclc_stds
+
+        parameter_uncertainty_dict['eta_means'] = eta_means
+        parameter_uncertainty_dict['eta_stds'] = eta_stds
+
+        #return parameter_uncertainty_dict
+        return parameter_uncertainty_dict, dictionary_of_models
+
+
+    # Function JBK is writing:
+    @handle_errors
+    def sample_plausible_models(self,
+                                num_models=10,
+                                initialize_from_fit_model=False,
+                                simulate_datasets=True,
+                                fit_kwargs={},
+                                verbose=True, ):
+
+        """
+        After the parent model has been fit to a dataset, this method will
+        simulate a specified number of new datasets, then fit a new model
+        to each one. The output is a list of "plausible" models computed
+        in this manner.
+
+        Parameters
+        ----------
+
+        num_models: (int > 0)
+            Number of models to sample.
+
+        simulate_datasets: (bool)
+            Whether to simulate a new dataset for each model, as opposed
+            to using the original dataset to fit all sampled models.
+            The `False` setting is provided for diagnostic purposes.
+
+        initialize_from_fit_model: (bool)
+            Whether to initialize each simulation-inferred model using the
+            inferred parameters of the parent model. This is provided to
+            speed up the inference procedure and to help users avoid issues
+            due to local maxima.
+
+        fit_kwargs: (dict)
+            A dictionary of keyword arguments, each member of which will
+            replace the corresponding member of the original set of
+            keyword arguments passed to Model.fit() when inferring the parent
+            model.
+
+        verbose: (bool)
+            Whether to report progress.
+
+        Returns
+        -------
+        plausible_models: (list)
+            A list of plausible models.
+        """
+
+        # Make sure that Model.set_data() has been called
+        check(hasattr(self, 'x') and hasattr(self, 'validation_flags'),
+              'Dataset has not been set. Please call Model.set_data()'
+              'before Model.sample_plausbile_models().')
+
+        # Validate the number of models
+        check(isinstance(num_models, int),
+              f'type(num_models)={type(num_models)}; must be of type int')
+        check(num_models > 0,
+              f'num_modes={num_models}; must be > 0.')
+
+        # Sample models
+        x_train = self.x
+        vf_train = self.validation_flags
+        y_train = self.y
+        for model_num in range(num_models):
+
+            if simulate_datasets:
+                y_train = self.simulate_dataset()
+
+        # set training sequences
+        x_train = self.x
+
+        # compute phi for training sequences
+        phi_train = self.x_to_phi(x_train)
+
+        # compute yhat for these phi_train values
+        yhat_train = self.phi_to_yhat(phi_train)
+
+        # simulated dataset will be populated in this dictionary
+        simulated_dataset = {}
+
+        # add training sequences to dictionary containing simulated dataset
+        simulated_dataset['x_train'] = x_train
+
+        # now draw a specified number of samples from p(y|yhat) to form a simulated dataset
+        for sampled_y_idx in np.arange(num_models):
+            yhat_train_sample = self.layer_noise_model.sample_y_given_yhat(yhat_train).numpy()
+            simulated_dataset[f'y_sampled_{sampled_y_idx}'] = yhat_train_sample
+
+        simulated_df = pd.DataFrame(simulated_dataset)
+
+        # this dictionary will contain models trained on the simulated df
+        dictionary_of_models = {}
+
+        # For each simulated dataset, infer the model once from random initial
+        # conditions.This will produce a vector of models.
+        for model_idx in np.arange(num_models):
+
+            if verbose:
+                print(f'training model {model_idx} ...')
+
+            # Define model with the same parameters as the original model
+            sim_model = Model(**self.arg_dict)
+
+            # Set training data: use training sequences but use y_values form simulated_df.
+            # sim_model.set_data(x=x_train,
+            #                    y=simulated_df[f'y_sampled_{model_idx}'],
+            #                    validation_flags=self.validation_flags,
+            #                    shuffle=True,
+            #                    verbose=verbose)
+            sim_model.set_data(**self.set_data_args)
+
+            # the following if is due to the callbacks/save/pickling bug mentioned in fit.
+            # See fit for more details. Currently this ensures that ES callback is the same
+            # the original model.
+            # Set early stopping callback if requested
+            if self.fit_args['early_stopping']:
+                callbacks = []
+                callbacks.append(EarlyStopping(monitor='val_loss',
+                                               mode='auto',
+                                               patience=self.fit_args['early_stopping_patience']))
+
+                self.fit_args['callbacks'] = callbacks
+
+            sim_model.fit(**self.fit_args)
+
+            # populate dictionary with model trained on simulated dataset
+            dictionary_of_models[f'model_{model_idx}'] = sim_model
+
+        if verbose:
+            print('done!')
+
+        # If model is additive, neighbor, or pairwise: Compute
+        # standard deviations( and means) for each parameters
+        # (both theta and eta) across gauge-fixed models
+
+        # lists that will contain parameters values from various models.
+        # Could be turned into an np array, but this operation is quite quick small num_models
         list_of_theta_lc = []
         list_of_theta_lclc = []
 
