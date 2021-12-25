@@ -15,4 +15,5 @@ MAVE-NN provides multiple built-in datasets that users can easily load and use t
     datasets/dataset_tdp43
     datasets/dataset_mpsa
     datasets/dataset_sortseq
+    datasets/dataset_xylE
 
