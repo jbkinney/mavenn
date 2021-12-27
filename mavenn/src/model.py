@@ -2031,6 +2031,10 @@ class Model:
             if verbose:
                 print(f'training model {model_num} ...')
 
+            # Set initial weights of simulated model to weights of parent model
+            if initialize_from_fit_model:
+                self.arg_dict['initial_weights'] = self.get_nn().get_weights()
+
             # Define model with the same parameters as the original model
             sim_model = Model(**self.arg_dict)
 
@@ -2068,8 +2072,13 @@ class Model:
                 self.fit_args['callbacks'] = callbacks
 
             # Set model parameters if desired
+            # if initialize_from_fit_model:
+            #     sim_model.set_params(self.get_params)
+
+            # set linear initialization to false in-case inference is
+            # requested to start from weights of parent model.
             if initialize_from_fit_model:
-                sim_model.set_params(self.get_params)
+                sim_fit_kwargs['linear_initialization'] = False
 
             # Fit model
             sim_model.fit(**sim_fit_kwargs)
@@ -2254,174 +2263,174 @@ class Model:
         return parameter_uncertainty_dict, dictionary_of_models
 
 
-    # Function JBK is writing:
-    @handle_errors
-    def sample_plausible_models(self,
-                                num_models=10,
-                                initialize_from_fit_model=False,
-                                simulate_datasets=True,
-                                fit_kwargs={},
-                                verbose=True, ):
-
-        """
-        After the parent model has been fit to a dataset, this method will
-        simulate a specified number of new datasets, then fit a new model
-        to each one. The output is a list of "plausible" models computed
-        in this manner.
-
-        Parameters
-        ----------
-
-        num_models: (int > 0)
-            Number of models to sample.
-
-        simulate_datasets: (bool)
-            Whether to simulate a new dataset for each model, as opposed
-            to using the original dataset to fit all sampled models.
-            The `False` setting is provided for diagnostic purposes.
-
-        initialize_from_fit_model: (bool)
-            Whether to initialize each simulation-inferred model using the
-            inferred parameters of the parent model. This is provided to
-            speed up the inference procedure and to help users avoid issues
-            due to local maxima.
-
-        fit_kwargs: (dict)
-            A dictionary of keyword arguments, each member of which will
-            replace the corresponding member of the original set of
-            keyword arguments passed to Model.fit() when inferring the parent
-            model.
-
-        verbose: (bool)
-            Whether to report progress.
-
-        Returns
-        -------
-        plausible_models: (list)
-            A list of plausible models.
-        """
-
-        # Make sure that Model.set_data() has been called
-        check(hasattr(self, 'x') and hasattr(self, 'validation_flags'),
-              'Dataset has not been set. Please call Model.set_data()'
-              'before Model.sample_plausbile_models().')
-
-        # Validate the number of models
-        check(isinstance(num_models, int),
-              f'type(num_models)={type(num_models)}; must be of type int')
-        check(num_models > 0,
-              f'num_modes={num_models}; must be > 0.')
-
-        # Sample models
-        x_train = self.x
-        vf_train = self.validation_flags
-        y_train = self.y
-        for model_num in range(num_models):
-
-            if simulate_datasets:
-                y_train = self.simulate_dataset()
-
-        # set training sequences
-        x_train = self.x
-
-        # compute phi for training sequences
-        phi_train = self.x_to_phi(x_train)
-
-        # compute yhat for these phi_train values
-        yhat_train = self.phi_to_yhat(phi_train)
-
-        # simulated dataset will be populated in this dictionary
-        simulated_dataset = {}
-
-        # add training sequences to dictionary containing simulated dataset
-        simulated_dataset['x_train'] = x_train
-
-        # now draw a specified number of samples from p(y|yhat) to form a simulated dataset
-        for sampled_y_idx in np.arange(num_models):
-            yhat_train_sample = self.layer_noise_model.sample_y_given_yhat(yhat_train).numpy()
-            simulated_dataset[f'y_sampled_{sampled_y_idx}'] = yhat_train_sample
-
-        simulated_df = pd.DataFrame(simulated_dataset)
-
-        # this dictionary will contain models trained on the simulated df
-        dictionary_of_models = {}
-
-        # For each simulated dataset, infer the model once from random initial
-        # conditions.This will produce a vector of models.
-        for model_idx in np.arange(num_models):
-
-            if verbose:
-                print(f'training model {model_idx} ...')
-
-            # Define model with the same parameters as the original model
-            sim_model = Model(**self.arg_dict)
-
-            # Set training data: use training sequences but use y_values form simulated_df.
-            # sim_model.set_data(x=x_train,
-            #                    y=simulated_df[f'y_sampled_{model_idx}'],
-            #                    validation_flags=self.validation_flags,
-            #                    shuffle=True,
-            #                    verbose=verbose)
-            sim_model.set_data(**self.set_data_args)
-
-            # the following if is due to the callbacks/save/pickling bug mentioned in fit.
-            # See fit for more details. Currently this ensures that ES callback is the same
-            # the original model.
-            # Set early stopping callback if requested
-            if self.fit_args['early_stopping']:
-                callbacks = []
-                callbacks.append(EarlyStopping(monitor='val_loss',
-                                               mode='auto',
-                                               patience=self.fit_args['early_stopping_patience']))
-
-                self.fit_args['callbacks'] = callbacks
-
-            sim_model.fit(**self.fit_args)
-
-            # populate dictionary with model trained on simulated dataset
-            dictionary_of_models[f'model_{model_idx}'] = sim_model
-
-        if verbose:
-            print('done!')
-
-        # If model is additive, neighbor, or pairwise: Compute
-        # standard deviations( and means) for each parameters
-        # (both theta and eta) across gauge-fixed models
-
-        # lists that will contain parameters values from various models.
-        # Could be turned into an np array, but this operation is quite quick small num_models
-        list_of_theta_lc = []
-        list_of_theta_lclc = []
-
-        list_of_etas = []
-
-        for model_key in dictionary_of_models.keys():
-            list_of_theta_lc.append(dictionary_of_models[model_key].get_theta()['theta_lc'])
-            list_of_theta_lclc.append(dictionary_of_models[model_key].get_theta()['theta_lclc'])
-
-            list_of_etas.append(dictionary_of_models[model_key].layer_noise_model.get_weights())
-
-        # compute the parameter means across gauge fixed models.
-        theta_lc_means = np.mean(list_of_theta_lc, axis=0)
-        theta_lc_stds = np.std(list_of_theta_lc, axis=0)
-
-        theta_lclc_means = np.mean(list_of_theta_lclc, axis=0)
-        theta_lclc_stds = np.std(list_of_theta_lclc, axis=0)
-
-        eta_means = np.mean(list_of_etas, axis=0)
-        eta_stds = np.std(list_of_etas, axis=0)
-
-        # instantiate and populate return dictionary
-        parameter_uncertainty_dict = {}
-
-        parameter_uncertainty_dict['theta_lc_means'] = theta_lc_means
-        parameter_uncertainty_dict['theta_lclc_means'] = theta_lclc_means
-
-        parameter_uncertainty_dict['theta_lc_stds'] = theta_lc_stds
-        parameter_uncertainty_dict['theta_lclc_stds'] = theta_lclc_stds
-
-        parameter_uncertainty_dict['eta_means'] = eta_means
-        parameter_uncertainty_dict['eta_stds'] = eta_stds
-
-        #return parameter_uncertainty_dict
-        return parameter_uncertainty_dict, dictionary_of_models
+    # # Function JBK is writing:
+    # @handle_errors
+    # def sample_plausible_models(self,
+    #                             num_models=10,
+    #                             initialize_from_fit_model=False,
+    #                             simulate_datasets=True,
+    #                             fit_kwargs={},
+    #                             verbose=True, ):
+    #
+    #     """
+    #     After the parent model has been fit to a dataset, this method will
+    #     simulate a specified number of new datasets, then fit a new model
+    #     to each one. The output is a list of "plausible" models computed
+    #     in this manner.
+    #
+    #     Parameters
+    #     ----------
+    #
+    #     num_models: (int > 0)
+    #         Number of models to sample.
+    #
+    #     simulate_datasets: (bool)
+    #         Whether to simulate a new dataset for each model, as opposed
+    #         to using the original dataset to fit all sampled models.
+    #         The `False` setting is provided for diagnostic purposes.
+    #
+    #     initialize_from_fit_model: (bool)
+    #         Whether to initialize each simulation-inferred model using the
+    #         inferred parameters of the parent model. This is provided to
+    #         speed up the inference procedure and to help users avoid issues
+    #         due to local maxima.
+    #
+    #     fit_kwargs: (dict)
+    #         A dictionary of keyword arguments, each member of which will
+    #         replace the corresponding member of the original set of
+    #         keyword arguments passed to Model.fit() when inferring the parent
+    #         model.
+    #
+    #     verbose: (bool)
+    #         Whether to report progress.
+    #
+    #     Returns
+    #     -------
+    #     plausible_models: (list)
+    #         A list of plausible models.
+    #     """
+    #
+    #     # Make sure that Model.set_data() has been called
+    #     check(hasattr(self, 'x') and hasattr(self, 'validation_flags'),
+    #           'Dataset has not been set. Please call Model.set_data()'
+    #           'before Model.sample_plausbile_models().')
+    #
+    #     # Validate the number of models
+    #     check(isinstance(num_models, int),
+    #           f'type(num_models)={type(num_models)}; must be of type int')
+    #     check(num_models > 0,
+    #           f'num_modes={num_models}; must be > 0.')
+    #
+    #     # Sample models
+    #     x_train = self.x
+    #     vf_train = self.validation_flags
+    #     y_train = self.y
+    #     for model_num in range(num_models):
+    #
+    #         if simulate_datasets:
+    #             y_train = self.simulate_dataset()
+    #
+    #     # set training sequences
+    #     x_train = self.x
+    #
+    #     # compute phi for training sequences
+    #     phi_train = self.x_to_phi(x_train)
+    #
+    #     # compute yhat for these phi_train values
+    #     yhat_train = self.phi_to_yhat(phi_train)
+    #
+    #     # simulated dataset will be populated in this dictionary
+    #     simulated_dataset = {}
+    #
+    #     # add training sequences to dictionary containing simulated dataset
+    #     simulated_dataset['x_train'] = x_train
+    #
+    #     # now draw a specified number of samples from p(y|yhat) to form a simulated dataset
+    #     for sampled_y_idx in np.arange(num_models):
+    #         yhat_train_sample = self.layer_noise_model.sample_y_given_yhat(yhat_train).numpy()
+    #         simulated_dataset[f'y_sampled_{sampled_y_idx}'] = yhat_train_sample
+    #
+    #     simulated_df = pd.DataFrame(simulated_dataset)
+    #
+    #     # this dictionary will contain models trained on the simulated df
+    #     dictionary_of_models = {}
+    #
+    #     # For each simulated dataset, infer the model once from random initial
+    #     # conditions.This will produce a vector of models.
+    #     for model_idx in np.arange(num_models):
+    #
+    #         if verbose:
+    #             print(f'training model {model_idx} ...')
+    #
+    #         # Define model with the same parameters as the original model
+    #         sim_model = Model(**self.arg_dict)
+    #
+    #         # Set training data: use training sequences but use y_values form simulated_df.
+    #         # sim_model.set_data(x=x_train,
+    #         #                    y=simulated_df[f'y_sampled_{model_idx}'],
+    #         #                    validation_flags=self.validation_flags,
+    #         #                    shuffle=True,
+    #         #                    verbose=verbose)
+    #         sim_model.set_data(**self.set_data_args)
+    #
+    #         # the following if is due to the callbacks/save/pickling bug mentioned in fit.
+    #         # See fit for more details. Currently this ensures that ES callback is the same
+    #         # the original model.
+    #         # Set early stopping callback if requested
+    #         if self.fit_args['early_stopping']:
+    #             callbacks = []
+    #             callbacks.append(EarlyStopping(monitor='val_loss',
+    #                                            mode='auto',
+    #                                            patience=self.fit_args['early_stopping_patience']))
+    #
+    #             self.fit_args['callbacks'] = callbacks
+    #
+    #         sim_model.fit(**self.fit_args)
+    #
+    #         # populate dictionary with model trained on simulated dataset
+    #         dictionary_of_models[f'model_{model_idx}'] = sim_model
+    #
+    #     if verbose:
+    #         print('done!')
+    #
+    #     # If model is additive, neighbor, or pairwise: Compute
+    #     # standard deviations( and means) for each parameters
+    #     # (both theta and eta) across gauge-fixed models
+    #
+    #     # lists that will contain parameters values from various models.
+    #     # Could be turned into an np array, but this operation is quite quick small num_models
+    #     list_of_theta_lc = []
+    #     list_of_theta_lclc = []
+    #
+    #     list_of_etas = []
+    #
+    #     for model_key in dictionary_of_models.keys():
+    #         list_of_theta_lc.append(dictionary_of_models[model_key].get_theta()['theta_lc'])
+    #         list_of_theta_lclc.append(dictionary_of_models[model_key].get_theta()['theta_lclc'])
+    #
+    #         list_of_etas.append(dictionary_of_models[model_key].layer_noise_model.get_weights())
+    #
+    #     # compute the parameter means across gauge fixed models.
+    #     theta_lc_means = np.mean(list_of_theta_lc, axis=0)
+    #     theta_lc_stds = np.std(list_of_theta_lc, axis=0)
+    #
+    #     theta_lclc_means = np.mean(list_of_theta_lclc, axis=0)
+    #     theta_lclc_stds = np.std(list_of_theta_lclc, axis=0)
+    #
+    #     eta_means = np.mean(list_of_etas, axis=0)
+    #     eta_stds = np.std(list_of_etas, axis=0)
+    #
+    #     # instantiate and populate return dictionary
+    #     parameter_uncertainty_dict = {}
+    #
+    #     parameter_uncertainty_dict['theta_lc_means'] = theta_lc_means
+    #     parameter_uncertainty_dict['theta_lclc_means'] = theta_lclc_means
+    #
+    #     parameter_uncertainty_dict['theta_lc_stds'] = theta_lc_stds
+    #     parameter_uncertainty_dict['theta_lclc_stds'] = theta_lclc_stds
+    #
+    #     parameter_uncertainty_dict['eta_means'] = eta_means
+    #     parameter_uncertainty_dict['eta_stds'] = eta_stds
+    #
+    #     #return parameter_uncertainty_dict
+    #     return parameter_uncertainty_dict, dictionary_of_models
