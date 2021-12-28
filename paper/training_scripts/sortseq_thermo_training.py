@@ -170,18 +170,6 @@ class sortseqGPMapLayer(GPMapLayer):
         return t
 
 
-def simulation(trained_model, params_dict, lr, ep, n_sim=2, n_seq=51000):
-    """
-    Simulate the dataset
-    trained_model: trained model
-    param_dict: model parameters set in the json file
-    lr: learning rate
-    ep: number of epochs
-    n_sim: number of simulation
-    n_seq: number of sequences to simulate
-
-    """
-
 def main(args):
 
     # Set dataset name
@@ -236,25 +224,19 @@ def main(args):
 
     # Save trained model to file
     model_name = (
-        f"../models/sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_{date_str}"
+        f"./sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_{date_str}"
     )
     model.save(model_name)
 
     # simulate new dataset with trained model
-    sim_models = model.sample_plausible_models(data_df=data_df,num_models=2,initialize_from_fit_model=True)
-    simulation(
-        trained_model=model,
-        params_dict=params_dict,
-        lr=learning_rate,
-        ep=epochs,
-        n_sim=2,
-    )
-
+    sim_models = model.sample_plausible_models(data_df=data_df,
+                                               num_models=20,
+                                               initialize_from_fit_model=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="sortseq Thermodynamic Model")
     parser.add_argument(
-        "-e", "--epochs", default=1000, type=int, help="Number of epochs"
+        "-e", "--epochs", default=10, type=int, help="Number of epochs"
     )
     parser.add_argument(
         "-lr", "--learning_rate", default=1e-3, type=float, help="Learning Rate"
