@@ -98,15 +98,23 @@ def main(args):
     model_name = f"../models/mpsa_{model_type}_ge_{date_str}"
     model.save(model_name)
 
+    # simulate 20 datasets for pairwise model
+    if model_type=='pairwise':
+        num_models = 20
+        sim_models = model.sample_plausible_models(data_df=data_df,
+                                                   num_models=num_models,
+                                                   initialize_from_fit_model=True)
+        # save simulated models
+        for i in range(num_models):
+            model_name = f"../models/mpsa_{model_type}_ge_model_{i}_{date_str}"
+            sim_models[i].save(model_name)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Splicing MPSA Models")
     parser.add_argument(
-        "-m",
-        "--model_type",
-        default="additive",
-        type=str,
+        "-m","--model_type", default="additive", type=str,
         help="Types of G-P maps: additive, neighbor, pairwise, blackbox",
     )
     args = parser.parse_args()
+
     main(args)
