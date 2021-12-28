@@ -534,8 +534,8 @@ class MeasurementProcessAgnosticModel:
         # set initial weights if provided.
         if self.initial_weights is not None:
 
-            check(isinstance(self.initial_weights, np.ndarray),
-                  f'type(initial_weights)={type(self.initial_weights)}; must be a numpy array.')
+            # check(isinstance(self.initial_weights, np.ndarray),
+            #      f'type(initial_weights)={type(self.initial_weights)}; must be a numpy array.')
 
             model.set_weights(self.initial_weights)
 
