@@ -42,12 +42,12 @@
             "alphabet": "protein",
             "gpmap_type": "additive",
             "regression_type": "GE",
-            "ge_noise_model_type": "SkewedT",
+            "ge_noise_model_type": "Cauchy",
             "ge_heteroskedasticity_order": 2
         },
         "fit_params": {
-            "learning_rate": 5e-4,
-            "epochs": 2000,
+            "learning_rate": 2e-3,
+            "epochs": 4000,
             "batch_size": 300,
             "early_stopping_patience": 30,
             "early_stopping": true
