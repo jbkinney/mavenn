@@ -42,7 +42,7 @@
             "alphabet": "protein",
             "gpmap_type": "additive",
             "regression_type": "GE",
-            "ge_noise_model_type": "Cauchy",
+            "ge_noise_model_type": "SkewedT",
             "ge_heteroskedasticity_order": 2
         },
         "fit_params": {
