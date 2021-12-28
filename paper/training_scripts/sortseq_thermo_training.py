@@ -223,23 +223,33 @@ def main(args):
     model.fit(learning_rate=learning_rate, epochs=epochs, **params_dict["fit_params"])
 
     # Save trained model to file
-    model_name = (
-        f"./sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_{date_str}"
-    )
+    model_name = (f"../models/sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_{date_str}")
     model.save(model_name)
 
     # simulate new dataset with trained model
+    num_models = args.num_models
     sim_models = model.sample_plausible_models(data_df=data_df,
-                                               num_models=20,
+                                               num_models=num_models,
                                                initialize_from_fit_model=True)
+    # save simulated models
+    for i in range(num_models):
+        model_name = (f"../models/sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_model_{i}_{date_str}")
+        sim_models[i].save(model_name)
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="sortseq Thermodynamic Model")
     parser.add_argument(
-        "-e", "--epochs", default=10, type=int, help="Number of epochs"
+        "-e", "--epochs", default=1000, type=int, help="Number of epochs"
     )
     parser.add_argument(
         "-lr", "--learning_rate", default=1e-3, type=float, help="Learning Rate"
     )
+
+    parser.add_argument(
+        "-ns", "--num_models", default=20, type=int, help="number of simulation models"
+        )
+
+
     args = parser.parse_args()
     main(args)
