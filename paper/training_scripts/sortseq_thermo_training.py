@@ -98,11 +98,9 @@ class sortseqGPMapLayer(GPMapLayer):
         # Define theta_TF_lc parameters
         theta_TF_lc_shape = (1, self.L_TF, self.C)
 
-        theta_TF_lc_init = np.random.randn(*theta_TF_lc_shape) / np.sqrt(self.L_TF)
         self.theta_TF_lc = self.add_weight(
             name="theta_TF_lc",
             shape=theta_TF_lc_shape,
-            # initializer=Constant(theta_TF_lc_init),
             trainable=True,
             regularizer=self.regularizer,
         )
@@ -110,18 +108,13 @@ class sortseqGPMapLayer(GPMapLayer):
         # Define theta_rnap_lc parameters
         theta_RNAP_lc_shape = (1, self.L_RNAP, self.C)
 
-        theta_RNAP_lc_init = np.random.randn(*theta_RNAP_lc_shape) / np.sqrt(
-            self.L_RNAP
-        )
         self.theta_RNAP_lc = self.add_weight(
             name="theta_RNAP_lc",
             shape=theta_RNAP_lc_shape,
-            # initializer=Constant(theta_RNAP_lc_init),
             trainable=True,
             regularizer=self.regularizer,
         )
 
-        # define interaction term. Not sure if this needs regularization
         self.interaction = self.add_weight(
             name="interaction",
             shape=(1,),
@@ -130,15 +123,8 @@ class sortseqGPMapLayer(GPMapLayer):
             regularizer=tf.keras.regularizers.L2(0),
         )
 
-        # define tsat term. Not sure if this needs regularization
-        self.tsat = self.add_weight(
-            name="tsat",
-            shape=(1,),
-            initializer=Constant(1.0),
-            trainable=True,
-            regularizer=tf.keras.regularizers.L2(0),
-        )
-
+        self.tsat = 1.0
+        
         # Call superclass build
         super().build(input_shape)
 
@@ -195,38 +181,6 @@ def simulation(trained_model, params_dict, lr, ep, n_sim=2, n_seq=51000):
     n_seq: number of sequences to simulate
 
     """
-
-    for model_number in range(n_sim):
-
-        sim_df_new = trained_model.simulate_dataset(n_seq)
-        y_cols_sim = sim_df_new.columns[1:-1]
-        # Separate test from data_df
-        ix_test = sim_df_new["set"] == "test"
-        test_df = sim_df_new[ix_test].reset_index(drop=True)
-        # Remove test data from data_df
-        sim_df_new = sim_df_new[~ix_test].reset_index(drop=True)
-        # Create model
-        sim_model = mavenn.Model(
-            custom_gpmap=sortseqGPMapLayer,
-            **params_dict["model_params"],
-            gpmap_kwargs=params_dict["gpmap_kwargs"],
-        )
-
-        # Set training data
-        sim_model.set_data(
-            x=sim_df_new["x"],
-            y=sim_df_new[y_cols_sim],
-            validation_flags=(sim_df_new["set"] == "validation"),
-            shuffle=True,
-        )
-
-        # Fit model to data
-        sim_model.fit(learning_rate=lr, epochs=ep, **params_dict["fit_params"])
-
-        # Save simulated model to file
-        sim_model_name = f"../models/sortseq_sim_{model_number}_lr_{lr}_e_{ep}_{date_str}"
-        sim_model.save(sim_model_name)
-
 
 def main(args):
 
@@ -287,6 +241,7 @@ def main(args):
     model.save(model_name)
 
     # simulate new dataset with trained model
+    sim_models = model.sample_plausible_models(data_df=data_df,num_models=2,initialize_from_fit_model=True)
     simulation(
         trained_model=model,
         params_dict=params_dict,
@@ -302,7 +257,7 @@ if __name__ == "__main__":
         "-e", "--epochs", default=1000, type=int, help="Number of epochs"
     )
     parser.add_argument(
-        "-lr", "--learning_rate", default=1e-3, type=float, help="Number of epochs"
+        "-lr", "--learning_rate", default=1e-3, type=float, help="Learning Rate"
     )
     args = parser.parse_args()
     main(args)
