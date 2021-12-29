@@ -129,6 +129,9 @@ class sortseqGPMapLayer(GPMapLayer):
             Input tensor that represents one-hot encoded 
             sequence values. 
         """
+        
+        # 1kT = 0.616 kcal/mol at body temperature
+        kT = 0.616
 
         # extract locations of binding sites from entire lac-promoter sequence.
         # for transcription factor and rnap
@@ -152,8 +155,8 @@ class sortseqGPMapLayer(GPMapLayer):
         G_I = self.theta_dG_I
 
         # compute phi
-        numerator_of_rate = (K.exp(-G_R) + K.exp(-G_C-G_R-G_I))
-        denom_of_rate = 1.0 + K.exp(-G_C) + K.exp(-G_R) + K.exp(-G_C-G_R-G_I)
+        numerator_of_rate = K.exp(-G_R/kT) + K.exp(-(G_C+G_R+G_I)/kT)
+        denom_of_rate = 1.0 + K.exp(-G_C/kT) + K.exp(-G_R/kT) + K.exp(-(G_C+G_R+G_I)/kT)
         phi = numerator_of_rate/denom_of_rate
 
         return phi
@@ -229,10 +232,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="sortseq Thermodynamic Model")
     parser.add_argument(
-        "-e", "--epochs", default=1000, type=int, help="Number of epochs"
+        "-e", "--epochs", default=2000, type=int, help="Number of epochs"
     )
     parser.add_argument(
-        "-lr", "--learning_rate", default=1e-3, type=float, help="Learning Rate"
+        "-lr", "--learning_rate", default=1e-4, type=float, help="Learning Rate"
     )
 
     parser.add_argument(
