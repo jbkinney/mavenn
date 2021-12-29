@@ -47,127 +47,119 @@ input_file = open("sortseq_thermo_param.json")
 models_dict = json.load(input_file)
 
 # Define custom G-P map layer
-
-
 class sortseqGPMapLayer(GPMapLayer):
-    """Represents an thermodynamic model of transcription
-    regulation in E. Coli at the lac promoter, which
-    contains binding sites for RNAP and CRP.
+    """
+    Represents a four-stage thermodynamic model
+    containing the states:
+    1. free DNA 
+    2. CPR-DNA binding
+    3. RNAP-DNA binding
+    4. CPR and RNAP both bounded to DNA and interact
     """
 
-    def __init__(
-        self, TF_start, TF_end, RNAP_start, RNAP_end, regularizer, *args, **kwargs
-    ):
+    def __init__(self,
+                 tf_start,
+                 tf_end,
+                 rnap_start,
+                 rnap_end,
+                 *args, **kwargs):
         """Construct layer instance."""
 
-        # set attributes
-        self.TF_start = TF_start
-        self.TF_end = TF_end
-        self.RNAP_start = RNAP_start
-        self.RNAP_end = RNAP_end
-        self.C = kwargs["C"]
-        self.regularizer = tf.keras.regularizers.L2(regularizer)
 
-        # form helpful variables
-        self.L_TF = TF_end - TF_start
-        self.L_RNAP = RNAP_end - RNAP_start
-
+        # Call superclass
         super().__init__(*args, **kwargs)
-
-    def build(self, input_shape):
-        """Build layer."""
-
-        # define bias/chemical potential weight for crp
-        self.mu_TF = self.add_weight(
-            name="mu_TF",
-            shape=(1,),
-            initializer=Constant(1.0),
-            trainable=True,
-            regularizer=self.regularizer,
-        )
-
-        # define bias/chemical potential weight for rnap
-        self.mu_RNAP = self.add_weight(
-            name="mu_RNAP",
-            shape=(1,),
-            initializer=Constant(1.0),
-            trainable=True,
-            regularizer=self.regularizer,
-        )
-
-        # Define theta_TF_lc parameters
-        theta_TF_lc_shape = (1, self.L_TF, self.C)
-
-        self.theta_TF_lc = self.add_weight(
-            name="theta_TF_lc",
-            shape=theta_TF_lc_shape,
-            trainable=True,
-            regularizer=self.regularizer,
-        )
-
-        # Define theta_rnap_lc parameters
-        theta_RNAP_lc_shape = (1, self.L_RNAP, self.C)
-
-        self.theta_RNAP_lc = self.add_weight(
-            name="theta_RNAP_lc",
-            shape=theta_RNAP_lc_shape,
-            trainable=True,
-            regularizer=self.regularizer,
-        )
-
-        self.interaction = self.add_weight(
-            name="interaction",
-            shape=(1,),
-            initializer=Constant(0),
-            trainable=True,
-            regularizer=tf.keras.regularizers.L2(0),
-        )
-
-        self.tsat = 1.0
         
-        # Call superclass build
-        super().build(input_shape)
+        # set attributes
+        self.tf_start = tf_start            # transcription factor starting position
+        self.tf_end = tf_end                 # transcription factor ending position
+        self.L_tf = tf_end - tf_start        # length of transcription factor
+        self.rnap_start = rnap_start         # RNAP starting position
+        self.rnap_end = rnap_end             # RNAP ending position
+        self.L_rnap = rnap_end - rnap_start  # length of RNAP
+        self.C = kwargs["C"]
 
-    def call(self, x_lc):
+        # define bias/chemical potential weight for TF/CRP energy
+        self.theta_tf_0 = self.add_weight(name='theta_tf_0',
+                                          shape=(1,),
+                                          initializer=Constant(1.),
+                                          trainable=True,
+                                          regularizer=self.regularizer)
+
+        # define bias/chemical potential weight for rnap energy
+        self.theta_rnap_0 = self.add_weight(name='theta_rnap_0',
+                                            shape=(1,),
+                                            initializer=Constant(1.),
+                                            trainable=True,
+                                            regularizer=self.regularizer)
+
+        # initialize the theta_tf
+        theta_tf_shape = (1, self.L_tf, self.C)
+        theta_tf_init = np.random.randn(*theta_tf_shape)/np.sqrt(self.L_tf)
+        
+        # define the weights of the layer corresponds to theta_tf
+        self.theta_tf = self.add_weight(name='theta_tf',
+                                        shape=theta_tf_shape,
+                                        initializer=Constant(theta_tf_init),
+                                        trainable=True,
+                                        regularizer=self.regularizer)
+
+        # define theta_rnap parameters
+        theta_rnap_shape = (1, self.L_rnap, self.C)
+        theta_rnap_init = np.random.randn(*theta_rnap_shape)/np.sqrt(self.L_rnap)
+        
+        # define the weights of the layer corresponds to theta_rnap
+        self.theta_rnap = self.add_weight(name='theta_rnap',
+                                          shape=theta_rnap_shape,
+                                          initializer=Constant(theta_rnap_init),
+                                          trainable=True,
+                                          regularizer=self.regularizer)
+
+        # define trainable real number G_I, representing interaction Gibbs energy
+        self.theta_dG_I = self.add_weight(name='theta_dG_I',
+                                   shape=(1,),
+                                   initializer=Constant(-4),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+
+
+    def call(self, x):
         """Process layer input and return output.
 
-        x_lc: (tensor)
-            Input tensor that represents one-hot encoded
-            sequence values.
+        x: (tensor)
+            Input tensor that represents one-hot encoded 
+            sequence values. 
         """
+        
+        # 1kT = 0.616 kcal/mol at body temperature
+        kT = 0.616
 
         # extract locations of binding sites from entire lac-promoter sequence.
-        x_TF_lc = x_lc[:, self.C * self.TF_start : self.C * self.TF_end]
-        x_RNAP_lc = x_lc[:, self.C * self.RNAP_start : self.C * self.RNAP_end]
+        # for transcription factor and rnap
+        x_tf = x[:, self.C * self.tf_start:self.C * self.tf_end]
+        x_rnap = x[:, self.C * self.rnap_start: self.C * self.rnap_end]
 
-        # reshape according to crp and rnap lengths.
-        x_TF_lc = tf.reshape(x_TF_lc, [-1, self.L_TF, self.C])
-        x_RNAP_lc = tf.reshape(x_RNAP_lc, [-1, self.L_RNAP, self.C])
+        # reshape according to tf and rnap lengths.
+        x_tf = tf.reshape(x_tf, [-1, self.L_tf, self.C])
+        x_rnap = tf.reshape(x_rnap, [-1, self.L_rnap, self.C])
 
-        # compute delta G for crp
-        phi_TF = self.mu_TF + tf.reshape(
-            K.sum(self.theta_TF_lc * x_TF_lc, axis=[1, 2]), shape=[-1, 1]
-        )
+        # compute delta G for crp binding
+        G_C = self.theta_tf_0 + \
+            tf.reshape(K.sum(self.theta_tf * x_tf, axis=[1, 2]),
+                       shape=[-1, 1])
 
-        # compute delta G for rnap
-        phi_RNAP = self.mu_RNAP + tf.reshape(
-            K.sum(self.theta_RNAP_lc * x_RNAP_lc, axis=[1, 2]), shape=[-1, 1]
-        )
+        # compute delta G for rnap binding
+        G_R = self.theta_rnap_0 + \
+            tf.reshape(K.sum(self.theta_rnap * x_rnap, axis=[1, 2]),
+                       shape=[-1, 1])
+        
+        G_I = self.theta_dG_I
 
-        # compute rate of transcription
-        t = (
-            (self.tsat)
-            * (K.exp(-phi_RNAP) + K.exp(-phi_TF - phi_RNAP - self.interaction))
-            / (
-                1
-                + K.exp(-phi_TF)
-                + K.exp(-phi_RNAP)
-                + K.exp(-phi_TF - phi_RNAP - self.interaction)
-            )
-        )
+        # compute phi
+        numerator_of_rate = K.exp(-G_R/kT) + K.exp(-(G_C+G_R+G_I)/kT)
+        denom_of_rate = 1.0 + K.exp(-G_C/kT) + K.exp(-G_R/kT) + K.exp(-(G_C+G_R+G_I)/kT)
+        phi = numerator_of_rate/denom_of_rate
 
-        # return rate of transcription
-        return t
+        return phi
 
 
 def main(args):
@@ -240,10 +232,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="sortseq Thermodynamic Model")
     parser.add_argument(
-        "-e", "--epochs", default=1000, type=int, help="Number of epochs"
+        "-e", "--epochs", default=2000, type=int, help="Number of epochs"
     )
     parser.add_argument(
-        "-lr", "--learning_rate", default=1e-3, type=float, help="Learning Rate"
+        "-lr", "--learning_rate", default=1e-4, type=float, help="Learning Rate"
     )
 
     parser.add_argument(
