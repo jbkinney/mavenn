@@ -59,7 +59,7 @@ prior knowledge of TensorFlow 2, the deep learning framework used by MAVE-NN
 as a backend.
 
 .. autoclass:: mavenn.Model
-    :members: set_data, fit, get_theta, get_nn,
-        x_to_phi, phi_to_yhat, simulate_dataset, I_variational,
+    :members: set_data, fit, save, get_theta, get_nn,
+        x_to_phi, phi_to_yhat, simulate_dataset, bootstrap, I_variational,
         I_predictive, yhat_to_yq, p_of_y_given_phi, p_of_y_given_yhat,
-        save, p_of_y_given_x, x_to_yhat
+        p_of_y_given_x, x_to_yhat

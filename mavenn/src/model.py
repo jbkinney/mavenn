@@ -2008,7 +2008,6 @@ class Model:
                   f'\t{filename_pickle}\n'
                   f'\t{filename_h5}')
 
-    #TODO: Document this function
     @handle_errors
     def bootstrap(self,
                   data_df,
@@ -2016,6 +2015,47 @@ class Model:
                   verbose=True,
                   initialize_from_self=False,
                   fit_kwargs={}):
+        """
+        Sample plausible models using parametric bootstrapping.
+
+        Given a copy ``data_df`` of the initial dataset used to train/test
+        the model, this function first simulates ``num_models`` datasets, each
+        of which has the same sequences and corresponding training, validation,
+        and test set designations as ``data_df``, but simulated measurement
+        values (either ``y`` column or ``ct_#`` column values) generated using
+        ``self``. One model having the same form as ``self`` is then fit to
+        each dataset, and the list of resulting models in returned to the user.
+
+        Parameters
+        ----------
+        data_df: (str)
+            The dataset used to fit the original model (i.e., ``self``).
+            Must have a column ``'x'`` listing sequences, as well as a
+            column ``'set'`` whose entries are ``'training'``, ``'validation'``,
+            or ``'test'``.
+
+        num_models: (int > 0)
+            Number of models to return.
+
+        verbose: (bool)
+            Whether to print feedback.
+
+        initialize_from_self: (bool)
+            Whether to initiate each bootstrapped model from the inferred
+            parameters of ``self``. WARNING: using this option can cause
+            systematic underestimation of parameter uncertainty.
+
+        fit_kwargs: (dict)
+            Dictionary of keyword arguments. Entries will override the
+            keyword arguments that were passed to ``self.fit()`` during
+            initial model training, and which are used by default for
+            training the simulation-inferred model here.
+
+        Returns
+        -------
+        models: (list)
+            List of ``mavenn.Model`` objects.
+        """
 
         check(isinstance(num_models, int),
               f'type(num_models)={type(num_models)}; must be `int`')
