@@ -101,9 +101,9 @@ def main(args):
     # simulate 20 datasets for pairwise model
     if model_type=='pairwise':
         num_models = 20
-        sim_models = model.sample_plausible_models(data_df=data_df,
-                                                   num_models=num_models,
-                                                   initialize_from_fit_model=True)
+        sim_models = model.bootstrap(data_df=data_df,
+                                     num_models=num_models,
+                                     initialize_from_self=True)
         # save simulated models
         for i in range(num_models):
             model_name = f"../models/mpsa_{model_type}_ge_model_{i}_{date_str}"

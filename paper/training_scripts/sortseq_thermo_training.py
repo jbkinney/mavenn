@@ -228,9 +228,9 @@ def main(args):
 
     # simulate new dataset with trained model
     num_models = args.num_models
-    sim_models = model.sample_plausible_models(data_df=data_df,
-                                               num_models=num_models,
-                                               initialize_from_fit_model=True)
+    sim_models = model.bootstrap(data_df=data_df,
+                                 num_models=num_models,
+                                 initialize_from_self=True)
     # save simulated models
     for i in range(num_models):
         model_name = (f"../models/sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_model_{i}_{date_str}")

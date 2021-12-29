@@ -2010,12 +2010,12 @@ class Model:
 
     #TODO: Document this function
     @handle_errors
-    def sample_plausible_models(self,
-                                data_df,
-                                num_models=10,
-                                verbose=True,
-                                initialize_from_fit_model=False,
-                                fit_kwargs={}):
+    def bootstrap(self,
+                  data_df,
+                  num_models=10,
+                  verbose=True,
+                  initialize_from_self=False,
+                  fit_kwargs={}):
 
         check(isinstance(num_models, int),
               f'type(num_models)={type(num_models)}; must be `int`')
@@ -2032,7 +2032,7 @@ class Model:
                 print(f'training model {model_num} ...')
 
             # Set initial weights of simulated model to weights of parent model
-            if initialize_from_fit_model:
+            if initialize_from_self:
                 self.arg_dict['initial_weights'] = self.get_nn().get_weights()
 
             # Define model with the same parameters as the original model
@@ -2072,12 +2072,12 @@ class Model:
                 self.fit_args['callbacks'] = callbacks
 
             # Set model parameters if desired
-            # if initialize_from_fit_model:
+            # if initialize_from_self:
             #     sim_model.set_params(self.get_params)
 
             # set linear initialization to false in-case inference is
             # requested to start from weights of parent model.
-            if initialize_from_fit_model:
+            if initialize_from_self:
                 sim_fit_kwargs['linear_initialization'] = False
 
             # Fit model
@@ -2265,9 +2265,9 @@ class Model:
 
     # # Function JBK is writing:
     # @handle_errors
-    # def sample_plausible_models(self,
+    # def bootstrap(self,
     #                             num_models=10,
-    #                             initialize_from_fit_model=False,
+    #                             initialize_from_self=False,
     #                             simulate_datasets=True,
     #                             fit_kwargs={},
     #                             verbose=True, ):
@@ -2289,7 +2289,7 @@ class Model:
     #         to using the original dataset to fit all sampled models.
     #         The `False` setting is provided for diagnostic purposes.
     #
-    #     initialize_from_fit_model: (bool)
+    #     initialize_from_self: (bool)
     #         Whether to initialize each simulation-inferred model using the
     #         inferred parameters of the parent model. This is provided to
     #         speed up the inference procedure and to help users avoid issues
