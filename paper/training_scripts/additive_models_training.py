@@ -137,7 +137,7 @@ def main(args):
             # Fit model to data
             print(f'\nTraining gb1 subsample with N={size}')
             sub_model.fit(learning_rate=5e-5,
-                          epochs=10,
+                          epochs=10000,
                           batch_size=50,
                           early_stopping=True,
                           early_stopping_patience=15,
