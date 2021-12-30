@@ -215,7 +215,7 @@ def main(args):
     model.fit(learning_rate=learning_rate, epochs=epochs, **params_dict["fit_params"])
 
     # Save trained model to file
-    model_name = (f"../models/sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_{date_str}")
+    model_name = (f"../models/sortseq_{model_type}_{date_str}")
     model.save(model_name)
 
     # simulate new dataset with trained model
@@ -225,7 +225,7 @@ def main(args):
                                  initialize_from_self=True)
     # save simulated models
     for i in range(num_models):
-        model_name = (f"../models/sortseq_{model_type}_lr_{learning_rate}_e_{epochs}_model_{i}_{date_str}")
+        model_name = (f"../models/sortseq_{model_type}_model_{i}_{date_str}")
         sim_models[i].save(model_name)
     
 

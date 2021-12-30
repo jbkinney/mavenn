@@ -170,7 +170,7 @@ def main(args):
               **params_dict["fit_params"])
 
     # Save model to file
-    model_name = f"../models/gb1_{model_type}_lr_{learning_rate}_e_{epochs}_ge_full_{date_str}"
+    model_name = f"../models/gb1_thermodynamic_model_{date_str}"
     model.save(model_name)
 
     # Retrieve G-P map parameter dict and view dict keys
