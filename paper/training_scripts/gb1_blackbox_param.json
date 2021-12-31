@@ -1,0 +1,25 @@
+{
+    "blackbox": {
+        "model_params": {
+            "gpmap_type": "blackbox",
+            "regression_type": "GE",
+            "ge_noise_model_type": "SkewedT",
+            "ge_heteroskedasticity_order": 2,
+            "ge_nonlinearity_monotonic": true,
+            "ge_nonlinearity_type": "nonlinear",
+            "eta_regularization": 0.1,
+            "theta_regularization": 0.1,
+            "gpmap_kwargs": {
+                "hidden_layer_sizes": "(100, 100, 100, 100, 100)"
+            }
+        },
+        "fit_params": {
+            "learning_rate": 3e-4,
+            "epochs": 2000,
+            "batch_size": 1000,
+            "early_stopping_patience": 25,
+            "early_stopping": true,
+            "linear_initialization": false
+        }
+    }
+}
