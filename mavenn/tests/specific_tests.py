@@ -155,20 +155,20 @@ def test_GlobalEpistasisModel():
     model.fit(epochs=1, verbose=False)
 
     # test model.simulate_method parameter N
-    test_parameter_values(func=model.simulate_dataset, var_name='N', fail_list=['0', -1, -0.1, 0],
-                          success_list=[10, 1000])
+    #test_parameter_values(func=model.simulate_dataset, var_name='N', fail_list=['0', -1, -0.1, 0],
+    #                      success_list=[10, 1000])
                           
     # test model.simulate_method parameter x
-    test_parameter_values(func=model.simulate_dataset, var_name='x', fail_list=['0', -1, -0.1, 0],
-                          success_list=[x[0:5]])                          
+    #test_parameter_values(func=model.simulate_dataset, var_name='x', fail_list=['0', -1, -0.1, 0],
+    #                      success_list=[x[0:5]])                          
 
     # test model.simulate_method parameter validation_frac
-    test_parameter_values(func=model.simulate_dataset, var_name='validation_frac', fail_list=['0', -1, -0.1, 0],
-                          success_list=[0.5], N=10)
+    #test_parameter_values(func=model.simulate_dataset, var_name='validation_frac', fail_list=['0', -1, -0.1, 0],
+    #                      success_list=[0.5], N=10)
 
     # test model.simulate_method parameter test_frac
-    test_parameter_values(func=model.simulate_dataset, var_name='test_frac', fail_list=['0', -1, -0.1, 0],
-                          success_list=[0.5], N=10)
+    #test_parameter_values(func=model.simulate_dataset, var_name='test_frac', fail_list=['0', -1, -0.1, 0],
+    #                      success_list=[0.5], N=10)
 
     # TODO: using gauge='user' breaks, need to test with p_lc, and x_wt
     # test model.get_theta
@@ -439,9 +439,9 @@ def test_for_nan_in_model_methods(model, seqs, y, regression_type):
                                                  phi=model.x_to_phi(seqs)).ravel())) == False,
           'p_of_y_given_phi produce a NAN')
 
-    I, dI = model.I_predictive(x=seqs, y=y)
-    check(np.isnan(I) == False, 'Predictive information computed to NAN')
-    check(np.isnan(dI) == False, 'Error predictive information computed to NAN')
+    #I, dI = model.I_predictive(x=seqs, y=y)
+    #check(np.isnan(I) == False, 'Predictive information computed to NAN')
+    #check(np.isnan(dI) == False, 'Error predictive information computed to NAN')
 
     if regression_type == 'MPA':
 
