@@ -19,3 +19,6 @@ qsub -N sortseq -o output_sortseq -e log_sortseq sortseq_thermo_elzar.sh
 
 # gb1 thermodynamic model with arg_1 = number of epochs and arg_2 = learning_rate
 qsub -N thermo_gb1 -o output_thermo_gb1 -e log_themro_gb1 gb1_thermo_elzar.sh 3000 2e-3
+
+# figs1 models
+qsub -N figs1 -o output_figs1 -e log_figs1 figs1_models_elzar.sh 2

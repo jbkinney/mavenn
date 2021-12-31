@@ -123,8 +123,7 @@ def main(args):
                          gpmap_type='additive', 
                          regression_type='GE',
                          ge_noise_model_type='Gaussian',
-                         ge_heteroskedasticity_order=2,
-                         verbose=False)
+                         ge_heteroskedasticity_order=2)
 
             # Set simulated training data
             sim_model.set_data(x=sim_df['x'],
@@ -139,7 +138,8 @@ def main(args):
                           batch_size=200,
                           early_stopping=True,
                           early_stopping_patience=30,
-                          linear_initialization=True)
+                          linear_initialization=True,
+                          verbose=False)
     
             training_time = time.time() - start_time
     
@@ -151,11 +151,9 @@ def main(args):
             model_Rsqs.append(np.corrcoef(time_models[model_index].x_to_yhat(x_test),yhat_test)[0][1]**2)
             time_model_name = f'../models/fig_s1_models/timing_models/gb1_N_{N}_model_{model_index}_{date_str}'
             time_models[model_index].save(time_model_name)
-        #
+        # save timining and R2 for each N samples
         np.savetxt(f'../models/fig_s1_models/timing_models/gb1_N_{N}_training_times_{date_str}.txt',training_times)
         np.savetxt(f'../models/fig_s1_models/timing_models/gb1_N_{N}_model_Rsqs_{date_str}.txt',model_Rsqs)
-
-
 
 
 if __name__ == "__main__":
