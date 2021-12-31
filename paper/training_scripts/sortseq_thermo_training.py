@@ -25,10 +25,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.initializers import Constant
 
-# Import MAVE-NN local
-import sys
-
-sys.path.insert(0, "../../")
+# Import MAVE-NN
 import mavenn
 
 # Import base class

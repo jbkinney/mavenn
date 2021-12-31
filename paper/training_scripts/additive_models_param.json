@@ -30,7 +30,7 @@
         },
         "fit_params": {
             "learning_rate": 0.0005,
-            "epochs": 500,
+            "epochs": 5000,
             "batch_size": 1024,
             "early_stopping_patience": 10,
             "early_stopping": true

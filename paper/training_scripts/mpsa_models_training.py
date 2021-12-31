@@ -17,10 +17,7 @@ import json
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 warnings.filterwarnings("ignore")
 
-# Import MAVE-NN local
-import sys
-
-sys.path.insert(0, "../../")
+# Import MAVE-NN
 import mavenn
 
 # Fix the seed, default seed is seed=1234
