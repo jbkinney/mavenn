@@ -1,14 +1,11 @@
 
 axes.linewidth:     0.5     # edge linewidth
-font.size:          8.0
-axes.labelsize:     8.0  # fontsize of the x any y labels
-axes.titlesize:     8.0
-xtick.labelsize:    8.0  # fontsize of the tick labels
-ytick.labelsize:    8.0  # fontsize of the tick labels
-legend.fontsize:      8.0
+font.size:          7.0
+axes.labelsize:     7.0  # fontsize of the x any y labels
+xtick.labelsize:    7.0  # fontsize of the tick labels
+ytick.labelsize:    7.0  # fontsize of the tick labels
+legend.fontsize:      7.0
 legend.borderpad:     0.2  # border whitespace
 legend.labelspacing:  0.2  # the vertical space between the legend entries
 legend.borderaxespad: 0.2  # the border between the axes and legend edge
 legend.framealpha:    1.0 
-lines.dash_capstyle:   round        # {butt, round, projecting}
-lines.solid_capstyle:   round        # {butt, round, projecting}
