@@ -6,14 +6,14 @@ from scipy.stats import pearsonr
 import glob
 
 
-def my_rsquared(x,y, bootstrap_samples=1000):
+def my_rsquared(x, y, bootstrap_samples=1000):
     """Returns R^2 and SE thereof based on bootstrap resampling"""
     r2 = pearsonr(x,y)[0]**2
     N = len(x)
     assert len(x)==len(y), f'len(x)={len(x)} and len(y)={len(y)} are not the same.'
     r2s = np.zeros(bootstrap_samples)
     for i in range(bootstrap_samples):
-        ix = np.random.choice(a=bootstrap_samples, size=bootstrap_samples, replace=True)
+        ix = np.random.choice(a=N, size=N, replace=True)
         r2s[i] = pearsonr(x[ix],y[ix])[0]**2
     dr2 = np.std(r2s)
     return r2, dr2
