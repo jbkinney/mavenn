@@ -13,6 +13,9 @@ from tensorflow.keras.layers import Layer, Dense
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
+from mavenn.src.utils import x_to_stats, validate_seqs
+from mavenn.src.reshape import _shape_for_output, \
+    _get_shape_and_return_1d_array
 
 class GPMapLayer(Layer):
     """
@@ -25,14 +28,20 @@ class GPMapLayer(Layer):
     @handle_errors
     def __init__(self,
                  L,
-                 C,
-                 theta_regularization):
+                 alphabet,
+                 theta_regularization=1e-3):
         """Construct layer instance."""
+
+        # TODO: need to perform parameter checks here.
+
         # Set sequence length
         self.L = L
 
+        # Set alphabet
+        self.alphabet = alphabet
+
         # Set alphabet length
-        self.C = C
+        self.C = len(self.alphabet)
 
         # Set regularization contribution
         self.theta_regularization = theta_regularization
@@ -131,6 +140,11 @@ class GPMapLayer(Layer):
         """Process layer input and return output."""
         assert False
 
+    @handle_errors
+    def x_to_phi(self):
+        """GP map to x_to_phi abstract method. """
+        assert False
+
 
 class AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive G-P map."""
@@ -152,10 +166,11 @@ class AdditiveGPMapLayer(GPMapLayer):
 
         # Define theta_lc parameters
         theta_lc_shape = (1, self.L, self.C)
-        theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
+        # 2202.02.04: this initializer creates problems, need to remove everywhere
+        #theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
         self.theta_lc = self.add_weight(name='theta_lc',
                                         shape=theta_lc_shape,
-                                        initializer=Constant(theta_lc_init),
+                                        #initializer=Constant(theta_lc_init),
                                         trainable=True,
                                         regularizer=self.regularizer)
 
@@ -167,6 +182,33 @@ class AdditiveGPMapLayer(GPMapLayer):
         phi = self.theta_0 + \
               tf.reshape(K.sum(self.theta_lc * x_lc, axis=[1, 2]),
                          shape=[-1, 1])
+
+        return phi
+
+    def x_to_phi(self, x):
+
+        '''
+        # TODO: I may need to refactor some of this functionality in the super class, if it's repeated.
+        # such as validate seqs
+        '''
+
+        # Shape x for processing
+        x, x_shape = _get_shape_and_return_1d_array(x)
+
+        # Check seqs
+        x = validate_seqs(x, alphabet=self.alphabet)
+        check(len(x[0]) == self.L,
+              f'len(x[0])={len(x[0])}; should be L={self.L}')
+
+        # Encode sequences as features
+        stats = x_to_stats(x=x, alphabet=self.alphabet)
+        x_ohe = stats.pop('x_ohe')
+
+        # Note: this is currently not diffeomorphic mode fixed.
+        phi = self.call(x_ohe.astype('float32'))
+
+        # Shape phi for output
+        phi = _shape_for_output(phi, x_shape)
 
         return phi
 
