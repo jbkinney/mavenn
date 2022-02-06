@@ -14,6 +14,10 @@ from mavenn.src.model2 import Model as Model2
 # will can be passed into Model2.
 from mavenn.src.layers import gpmap
 
+# Import measurement process layers, which will allow users to instantiate
+# them as MP objects that can then be passed to Model2.
+from mavenn.src.layers import measurement_process_layers
+
 # For running functional tests
 from mavenn.tests import run_tests
 

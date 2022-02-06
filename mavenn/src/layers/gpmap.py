@@ -32,7 +32,11 @@ class GPMapLayer(Layer):
                  theta_regularization=1e-3):
         """Construct layer instance."""
 
-        # TODO: need to perform parameter checks here.
+        # TODO: need to perform parameter checks here as in old model.py
+
+        # Set sequence length
+        check(L > 0,
+              f'len(x[0])={L}; must be > 0')
 
         # Set sequence length
         self.L = L
