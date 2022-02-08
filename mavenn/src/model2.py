@@ -100,13 +100,20 @@ class Model:
         # this needs to be in a for loop depending on mp list size
         measurement_process = self.mp_list[0]
 
-        # TODO: need to check if measurement process object has yhat attribute
-        yhat = measurement_process.yhat(phi)
+        # if measurement process object has yhat attribute
+        # note prediction in GE is yhat, but MPA it would be phi
+        if hasattr(measurement_process, 'yhat'):
 
-        yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
-            [yhat, labels_input])
+            yhat = measurement_process.yhat(phi)
 
-        output_tensor = measurement_process.mp_layer(yhat_y_concat)
+            prediction_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+                [yhat, labels_input])
+
+            output_tensor = measurement_process.mp_layer(prediction_y_concat)
+        else:
+
+            prediction_y_concat = Concatenate()([phi, labels_input])
+            output_tensor = measurement_process(prediction_y_concat)
 
         model = TF_Functional_Model(input_tensor, output_tensor)
 
