@@ -31,7 +31,7 @@ model.fit(...)
 # TODO: need to develop model2's define model more according to TODOS in define_model().
 # TODO: need to define helper function's for model in keynote (e.g. mp_ge.phi_to_yhat ... )
 # TODO: need to finish implementation of mp_list (using Ammardev branch)
-# TODO: need to finish updating various gpmap implementations (e.g., pairwise custom)
+# TODO: need to finish updating various gpmap implementations (e.g., pairwise, custom, and refactor x to x_ohe)
 
 # Tensorflow imports
 # note model import has to be imported using an alias to avoid
@@ -39,8 +39,10 @@ model.fit(...)
 from tensorflow.keras.models import Model as TF_Functional_Model
 from tensorflow.keras.layers import Input, Lambda, Concatenate
 
+from mavenn.src.layers.input_layer import InputLayer
 from mavenn.src.layers.measurement_process_layers \
-    import GaussianNoiseModelLayer, \
+    import GlobalEpsitasisMP, \
+           GaussianNoiseModelLayer, \
            EmpiricalGaussianNoiseModelLayer, \
            CauchyNoiseModelLayer, \
            SkewedTNoiseModelLayer, \
@@ -88,44 +90,26 @@ class Model:
         # Compute number of sequence nodes. Useful for model construction below.
         number_x_nodes = int(self.L*self.C)
 
-        # need to add one additional node for targets, which will be used
-        # calcalate likelihood (i.e., using x and y)
-        # Note that if additional input features are to be added (e.g., shape),
-        # the following code will have to be updated.
-        number_input_layer_nodes = number_x_nodes + 1
-
-        inputTensor = Input((number_input_layer_nodes,),
-                            name='Sequence_labels_input')
-
-        sequence_input = Lambda(lambda x: x[:, 0:number_x_nodes],
-                                output_shape=((number_x_nodes,)),
-                                name='Sequence_only')(inputTensor)
-        labels_input = Lambda(
-            lambda x: x[:, number_x_nodes:number_x_nodes + 1],
-            output_shape=((1,)),
-            trainable=False, name='Labels_input')(inputTensor)
+        # Get input layer tensor, the sequence input, and the labels input
+        input_tensor, sequence_input, labels_input = InputLayer(number_x_nodes).get_input_layer()
 
         # assign phi to gpmap input into constructor
         phi = self.gpmap(sequence_input)
 
         # TODO: will need to fix this in accordance with pseudocode above.
-        # e.g., may be using a map datastructure
-        yhat = self.mp_list[0](phi)
+        # this needs to be in a for loop depending on mp list size
+        measurement_process = self.mp_list[0]
+
+        # TODO: need to check if measurement process object has yhat attribute
+        yhat = measurement_process.yhat(phi)
 
         yhat_y_concat = Concatenate(name='yhat_and_y_to_ll')(
             [yhat, labels_input])
 
-        # TODO: need to figure out how to assign noise model based on mp_list.
-        # for GE, I will probably have to refactor the noise noise
-        # to be included in the in the Global epistasis layer.
-        # Using hardcoded Gaussian noise for now
-        noise_model_layer = GaussianNoiseModelLayer(info_for_layers_dict={},
-                                                    polynomial_order=2,
-                                                    eta_regularization=1e-5)
+        output_tensor = measurement_process.mp_layer(yhat_y_concat)
 
-        outputTensor = noise_model_layer(yhat_y_concat)
+        model = TF_Functional_Model(input_tensor, output_tensor)
 
-        model = TF_Functional_Model(inputTensor, outputTensor)
         self.model = model
 
         return model

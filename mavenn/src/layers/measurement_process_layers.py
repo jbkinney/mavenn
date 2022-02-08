@@ -17,7 +17,7 @@ from tensorflow.keras.constraints import non_neg
 from tensorflow.keras.initializers import Constant
 from tensorflow.math import tanh, sigmoid
 from tensorflow.nn import relu
-from tensorflow.keras.layers import Layer
+from tensorflow.keras.layers import Layer, Concatenate
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
@@ -112,6 +112,66 @@ def handle_arrays(func):
 
     # Return wrapped function
     return wrapped_func
+
+
+# TODO: need to finish implementation
+# class MeasurementProcess(Layer):
+#     """
+#     Represents a measurement process base class
+#     """
+#     def __init__(self,
+#                  regularization,
+#                  info_for_layers_dict):
+#
+#         self.regularization = regularization
+#         self.info_for_layers_dict = info_for_layers_dict
+#         pass
+
+class GlobalEpsitasisMP:
+
+    def __init__(self,
+                 K=50,
+                 eta=1e-5,
+                 monotonic=True,
+                 ge_heteroskedasticity_order=0,
+                 info_for_layers_dict={},
+                 ge_noise_model_type='Gaussian'):
+
+        # TODO: input checks
+        self.K = K
+        self.eta = eta
+        self.monotonic = monotonic
+        self.info_for_layers_dict = info_for_layers_dict
+        self.ge_heteroskedasticity_order = ge_heteroskedasticity_order
+
+        yhat = GlobalEpistasisLayer(K=self.K,
+                                    eta=self.eta,
+                                    monotonic=self.monotonic)
+
+        # Create noise model layer
+        if ge_noise_model_type == 'Gaussian':
+            noise_model_layer = GaussianNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta)
+
+        elif ge_noise_model_type == 'Cauchy':
+            noise_model_layer = CauchyNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta)
+
+        elif ge_noise_model_type == 'SkewedT':
+            noise_model_layer = SkewedTNoiseModelLayer(
+                info_for_layers_dict=self.info_for_layers_dict,
+                polynomial_order=self.ge_heteroskedasticity_order,
+                eta_regularization=self.eta)
+
+        self.yhat = yhat
+        self.mp_layer = noise_model_layer
+
+    def phi_to_yhat(self, phi):
+        return self.yhat.phi_to_yhat(phi)
 
 
 class MPAMeasurementProcessLayer(Layer):
@@ -888,3 +948,4 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         ystd = s * tstd
 
         return ystd
+
