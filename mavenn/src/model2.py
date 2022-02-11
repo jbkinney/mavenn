@@ -96,26 +96,38 @@ class Model:
         # assign phi to gpmap input into constructor
         phi = self.gpmap(sequence_input)
 
-        # TODO: will need to fix this in accordance with pseudocode above.
-        # this needs to be in a for loop depending on mp list size
-        measurement_process = self.mp_list[0]
+        # get list of measurement processes
+        measurement_processes_list = self.mp_list
 
-        # if measurement process object has yhat attribute
-        # note prediction in GE is yhat, but MPA it would be phi
-        if hasattr(measurement_process, 'yhat'):
+        # loop over measurement processes and create a list of output tensors
+        # that phi will be connected to. Currently output tensors get assigned
+        # to the list, they are invoked slightly separate based on whether they
+        # output a regression value (yhat) or counts (like discrete agnostic MPA)
+        # but this is subject to change
 
-            yhat = measurement_process.yhat(phi)
+        output_tensor_list = []
+        for current_mp in measurement_processes_list:
 
-            prediction_y_concat = Concatenate(name='yhat_and_y_to_ll')(
-                [yhat, labels_input])
+            # if measurement process object has yhat attribute
+            # note prediction in GE is yhat, but MPA it would be phi
+            if hasattr(current_mp, 'yhat'):
 
-            output_tensor = measurement_process.mp_layer(prediction_y_concat)
-        else:
+                yhat = current_mp.yhat(phi)
 
-            prediction_y_concat = Concatenate()([phi, labels_input])
-            output_tensor = measurement_process(prediction_y_concat)
+                # concatenate y_hat and y to pass into likelihood computation layer
+                prediction_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+                    [yhat, labels_input])
 
-        model = TF_Functional_Model(input_tensor, output_tensor)
+                output_tensor = current_mp.mp_layer(prediction_y_concat)
+                output_tensor_list.append(output_tensor)
+            else:
+
+                # concatenate phi and counts to pass into likelihood computation layer
+                prediction_y_concat = Concatenate()([phi, labels_input])
+                output_tensor = current_mp(prediction_y_concat)
+                output_tensor_list.append(output_tensor)
+
+        model = TF_Functional_Model(input_tensor, output_tensor_list)
 
         self.model = model
 

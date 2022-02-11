@@ -114,18 +114,18 @@ def handle_arrays(func):
     return wrapped_func
 
 
-# TODO: need to finish implementation
-# class MeasurementProcess(Layer):
-#     """
-#     Represents a measurement process base class
-#     """
-#     def __init__(self,
-#                  regularization,
-#                  info_for_layers_dict):
-#
-#         self.regularization = regularization
-#         self.info_for_layers_dict = info_for_layers_dict
-#         pass
+
+class MeasurementProcess(Layer):
+    """
+    Represents a measurement process base class.
+    """
+    def __init__(self,
+                 regularization,
+                 info_for_layers_dict):
+
+        self.regularization = regularization
+        self.info_for_layers_dict = info_for_layers_dict
+        pass
 
 class GlobalEpsitasisMP:
 
