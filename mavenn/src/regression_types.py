@@ -20,7 +20,7 @@ from mavenn.src.layers.measurement_process_layers \
         EmpiricalGaussianNoiseModelLayer, \
         CauchyNoiseModelLayer, \
         SkewedTNoiseModelLayer, \
-        MPAMeasurementProcessLayer
+        DiscreteAgnosticMP
 
 
 @handle_errors
@@ -518,7 +518,7 @@ class MeasurementProcessAgnosticModel:
         phi_ct = self.layer_concatenate_phi_ct([phi, labels_input])
 
         # Create measurement process layer
-        self.layer_measurement_process = MPAMeasurementProcessLayer(
+        self.layer_measurement_process = DiscreteAgnosticMP(
             info_for_layers_dict=self.info_for_layers_dict,
             Y=self.number_of_bins,
             K=mpa_hidden_nodes,

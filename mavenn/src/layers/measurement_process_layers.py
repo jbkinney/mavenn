@@ -114,20 +114,50 @@ def handle_arrays(func):
     return wrapped_func
 
 
-
 class MeasurementProcess(Layer):
     """
     Represents a measurement process base class.
     """
     def __init__(self,
-                 regularization,
+                 eta,
                  info_for_layers_dict):
 
-        self.regularization = regularization
+        self.eta = eta
         self.info_for_layers_dict = info_for_layers_dict
-        pass
 
-class GlobalEpsitasisMP:
+        # Call superclass constructor
+        super().__init__()
+
+    def get_config(self):
+        assert False
+
+    def get_params(self):
+        assert False
+
+    def set_params(self):
+        assert False
+
+    def p_of_y_given_phi(self,
+                         phi,
+                         y,
+                         paired=True):
+        assert False
+
+    def sample_y_given_phi(self,
+                         phi,
+                         y):
+        assert False
+
+    def negative_log_likelihood(self,
+                                phi,
+                                y):
+        assert False
+
+    def call(self):
+        assert False
+
+
+class GlobalEpsitasisMP(MeasurementProcess):
 
     def __init__(self,
                  K=50,
@@ -173,16 +203,25 @@ class GlobalEpsitasisMP:
     def phi_to_yhat(self, phi):
         return self.yhat.phi_to_yhat(phi)
 
+    def p_of_y_given_phi(self,
+                         phi,
+                         y,
+                         paired=True):
 
-class MPAMeasurementProcessLayer(Layer):
+        yhat = self.phi_to_yhat(phi)
+        return self.mp_layer.p_of_y_given_yhat(y, yhat)
+
+
+class DiscreteAgnosticMP(MeasurementProcess):
     """Represents an MPA measurement process."""
 
     def __init__(self,
-                 info_for_layers_dict,
                  Y,
                  K,
                  eta,
+                 info_for_layers_dict,
                  **kwargs):
+
         """Construct layer."""
         # Set attributes
         self.Y = Y
@@ -193,7 +232,8 @@ class MPAMeasurementProcessLayer(Layer):
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.eta)
 
-        super().__init__(**kwargs)
+        print('about to call super from discrete Agnostic')
+        super().__init__(eta, info_for_layers_dict, **kwargs)
 
     def get_config(self):
         """Get configuration dictionary."""
@@ -298,6 +338,7 @@ class MPAMeasurementProcessLayer(Layer):
             return psi_my
         else:
             return p_my
+
 
 class AffineLayer(Layer):
     """Represents an affine map from phi to yhat."""

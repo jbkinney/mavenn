@@ -46,7 +46,7 @@ from mavenn.src.layers.measurement_process_layers \
            EmpiricalGaussianNoiseModelLayer, \
            CauchyNoiseModelLayer, \
            SkewedTNoiseModelLayer, \
-           MPAMeasurementProcessLayer
+           DiscreteAgnosticMP
 
 class Model:
 
@@ -106,6 +106,8 @@ class Model:
         # but this is subject to change
 
         output_tensor_list = []
+        # index to keep track of names of different y_yhat_likelihood layers
+        idx_y_and_yhat_ll = 0
         for current_mp in measurement_processes_list:
 
             # if measurement process object has yhat attribute
@@ -115,9 +117,10 @@ class Model:
                 yhat = current_mp.yhat(phi)
 
                 # concatenate y_hat and y to pass into likelihood computation layer
-                prediction_y_concat = Concatenate(name='yhat_and_y_to_ll')(
+                prediction_y_concat = Concatenate(name=f'yhat_and_y_to_ll_{idx_y_and_yhat_ll}')(
                     [yhat, labels_input])
 
+                idx_y_and_yhat_ll += 1
                 output_tensor = current_mp.mp_layer(prediction_y_concat)
                 output_tensor_list.append(output_tensor)
             else:
