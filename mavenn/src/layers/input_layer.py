@@ -19,9 +19,11 @@ class InputLayer:
 
     @handle_errors
     def __init__(self,
-                 number_x_nodes):
+                 number_x_nodes,
+                 number_of_targets=1):
 
         self.number_x_nodes = number_x_nodes
+        self.number_of_targets = number_of_targets
 
     def get_input_layer(self):
 
@@ -29,7 +31,7 @@ class InputLayer:
         # calcalate likelihood (i.e., using x and y)
         # Note that if additional input features are to be added (e.g., shape),
         # the following code will have to be updated.
-        number_input_layer_nodes = self.number_x_nodes + 1
+        number_input_layer_nodes = self.number_x_nodes + self.number_of_targets
 
         inputTensor = Input((number_input_layer_nodes,),
                             name='Sequence_labels_input')
@@ -39,7 +41,7 @@ class InputLayer:
                                 name='Sequence_only')(inputTensor)
         labels_input = Lambda(
             lambda x: x[:, self.number_x_nodes:self.number_x_nodes + 1],
-            output_shape=((1,)),
+            output_shape=((self.number_of_targets,)),
             trainable=False, name='Labels_input')(inputTensor)
 
         return inputTensor, sequence_input, labels_input

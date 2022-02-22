@@ -127,8 +127,12 @@ class Model:
         # Compute number of sequence nodes. Useful for model construction below.
         number_x_nodes = int(self.L*self.C)
 
+        # get number of targets based on mp_list
+        number_of_targets = len(self.mp_list)
+
         # Get input layer tensor, the sequence input, and the labels input
-        input_tensor, sequence_input, labels_input = InputLayer(number_x_nodes).get_input_layer()
+        input_tensor, sequence_input, labels_input = InputLayer(number_x_nodes,
+                                                                number_of_targets).get_input_layer()
 
         # assign phi to gpmap input into constructor
         phi = self.gpmap(sequence_input)
@@ -345,7 +349,10 @@ class Model:
         # Normalize self.y -> self.y_norm
         self.y_stats = {}
         #if self.regression_type == 'GE':
-        if True:
+
+        # if single target GE regression
+        if self.y.shape[1] == 1:
+        #if True:
             y_unique = np.unique(self.y)
             check(len(y_unique),
                   f'Only {len(y_unique)} unique y-values provided;'
@@ -365,11 +372,14 @@ class Model:
         #     assert False, "This shouldn't happen"
 
         # Set normalized y and relevant parameters
-        self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
+            self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
 
+        # don't normalize multiple targets for now.
+        else:
+            self.y_norm = self.y
         # Reshape self.y_norm to facilitate input creation
         #if self.regression_type == 'GE':
-        if True:
+        if self.y.shape[1] == 1:
             self.y_norm = np.array(self.y_norm).reshape(-1, 1)
 
             # Subsample y_norm for entropy estimation if necessary
@@ -655,8 +665,12 @@ class Model:
                                            patience=early_stopping_patience))
 
         # Set parameters that affect models
-        self.y_mean = self.y_stats['y_mean']
-        self.y_std = self.y_stats['y_std']
+        if self.y.shape[1] == 1:
+            self.y_mean = self.y_stats['y_mean']
+            self.y_std = self.y_stats['y_std']
+        else:
+            self.y_mean = 0
+            self.y_std = 1
 
         # Set y targets for linear regression and sign assignment
         #if self.regression_type == 'GE':
