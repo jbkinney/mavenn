@@ -8,7 +8,7 @@ MAVE-NN [#Tareen2020]_ enables the rapid quantitative modeling of genotype-pheno
     MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
     Biorxiv (2020). `<https://doi.org/10.1101/2020.07.14.201475>`_
 
-MAVE-NN is written for Python 3 and is provided under an MIT open source license. The documentation provided here is meant help users quickly get MAVE-NN working for their own research needs. Please do not hesitate to contact us with any questions or suggestions for improvements. For technical assistance or to report bugs, please contact Ammar Tareen (`Email: tareen@cshl.edu <tareen@cshl.edu>`_, `Twitter: @AmmarTareen1 <https://twitter.com/AmmarTareen1>`_) . For more general correspondence, please contact Justin Kinney (`Email: jkinney@cshl.edu <jkinney@cshl.edu>`_, `Twitter: @jbkinney <https://twitter.com/jbkinney>`_).
+MAVE-NN is written for Python 3 and is provided under an MIT open source license. The documentation provided here is meant to help users quickly get MAVE-NN working for their own research needs. Please do not hesitate to contact us with any questions or suggestions for improvements. For technical assistance or to report bugs, please contact Ammar Tareen (`Email: tareen@cshl.edu <tareen@cshl.edu>`_, `Twitter: @AmmarTareen1 <https://twitter.com/AmmarTareen1>`_) . For more general correspondence, please contact Justin Kinney (`Email: jkinney@cshl.edu <jkinney@cshl.edu>`_, `Twitter: @jbkinney <https://twitter.com/jbkinney>`_).
 
 .. toctree::
     :maxdepth: 1
