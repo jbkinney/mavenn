@@ -39,11 +39,11 @@ class InputLayer:
         sequence_input = Lambda(lambda x: x[:, 0:self.number_x_nodes],
                                 output_shape=((self.number_x_nodes,)),
                                 name='Sequence_only')(inputTensor)
-        labels_input = Lambda(
-            lambda x: x[:, self.number_x_nodes:self.number_x_nodes + 1],
-            output_shape=((self.number_of_targets,)),
-            trainable=False, name='Labels_input')(inputTensor)
+        # labels_input = Lambda(
+        #     lambda x: x[:, self.number_x_nodes:self.number_x_nodes + self.number_of_targets],
+        #     output_shape=((self.number_of_targets,)),
+        #     trainable=False, name='Labels_input')(inputTensor)
 
-        return inputTensor, sequence_input, labels_input
+        return inputTensor, sequence_input
 
 

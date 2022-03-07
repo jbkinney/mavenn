@@ -131,8 +131,8 @@ class Model:
         number_of_targets = len(self.mp_list)
 
         # Get input layer tensor, the sequence input, and the labels input
-        input_tensor, sequence_input, labels_input = InputLayer(number_x_nodes,
-                                                                number_of_targets).get_input_layer()
+        input_tensor, sequence_input = InputLayer(number_x_nodes,
+                                                  number_of_targets).get_input_layer()
 
         # assign phi to gpmap input into constructor
         phi = self.gpmap(sequence_input)
@@ -145,6 +145,24 @@ class Model:
         # to the list, they are invoked slightly separate based on whether they
         # output a regression value (yhat) or counts (like discrete agnostic MPA)
         # but this is subject to change
+
+        # list that contains information about replicate layers.
+        replicates_input = []
+
+        # build up lambda layers, on step at a time, which will be
+        # fed to each of the measurement layers
+        for replicate_layer_index in range(number_of_targets):
+
+            #print(replicate_layer_index, replicate_layer_index + 1)
+
+            temp_replicate_layer = Lambda(lambda x:
+                                          x[:, number_x_nodes + replicate_layer_index:
+                                          number_x_nodes + replicate_layer_index + 1],
+                                          output_shape=((1,)), trainable=False,
+                                          name='Labels_input_' + str(replicate_layer_index))(input_tensor)
+
+            replicates_input.append(temp_replicate_layer)
+
 
         output_tensor_list = []
         # index to keep track of names of different y_yhat_likelihood layers
@@ -159,7 +177,7 @@ class Model:
 
                 # concatenate y_hat and y to pass into likelihood computation layer
                 prediction_y_concat = Concatenate(name=f'yhat_and_y_to_ll_{idx_y_and_yhat_ll}')(
-                    [yhat, labels_input])
+                    [yhat, replicates_input[idx_y_and_yhat_ll]])
 
                 idx_y_and_yhat_ll += 1
                 output_tensor = current_mp.mp_layer(prediction_y_concat)
@@ -167,7 +185,7 @@ class Model:
             else:
 
                 # concatenate phi and counts to pass into likelihood computation layer
-                prediction_y_concat = Concatenate()([phi, labels_input])
+                prediction_y_concat = Concatenate()([phi, replicates_input[idx_y_and_yhat_ll]])
                 output_tensor = current_mp(prediction_y_concat)
                 output_tensor_list.append(output_tensor)
 
@@ -361,6 +379,27 @@ class Model:
             self.y_mean = self.y.mean()
             self.y_stats['y_mean'] = self.y_mean
             self.y_stats['y_std'] = self.y_std
+
+            self.y_norm = (self.y - self.y_stats['y_mean']) / self.y_stats['y_std']
+
+        # this is to normalize multiple targets in GE regression
+        elif self.y.shape[1] > 1:
+            print('set data should print this from more than 1 output target!!!')
+            # cast replicates input as np array
+            self.y = np.array(self.y)
+            #print(f' set data mult_y_GE, self.y shape = {self.y.shape}')
+
+            # compute mean and standard deviation for all replicates
+            self.y_std = self.y.T.std(axis=1).reshape(-1, 1)
+            self.y_mean = self.y.T.mean(axis=1).reshape(-1, 1)
+            self.y_stats['y_mean'] = self.y_mean.T
+            self.y_stats['y_std'] = self.y_std.T
+
+            # perform normalization and take transpose to restore shape to (-1, # targets)
+            self.y_norm = ((self.y.T - self.y_mean) / self.y_std).T
+
+            # Reshape self.y_norm. TODO: may need to pass number of targets instead of self.mp_list for reshaping.
+            self.y_norm = np.array(self.y_norm).reshape(-1, len(self.mp_list))
         #
         # elif self.regression_type == 'MPA':
         #     self.y_std = 1
@@ -368,13 +407,6 @@ class Model:
         #     self.y_stats['y_mean'] = self.y_mean
         #     self.y_stats['y_std'] = self.y_std
         #
-        # else:
-        #     assert False, "This shouldn't happen"
-
-        # Set normalized y and relevant parameters
-            self.y_norm = (self.y - self.y_stats['y_mean'])/self.y_stats['y_std']
-
-        # don't normalize multiple targets for now.
         else:
             self.y_norm = self.y
         # Reshape self.y_norm to facilitate input creation
@@ -665,17 +697,21 @@ class Model:
                                            patience=early_stopping_patience))
 
         # Set parameters that affect models
+        self.y_mean = self.y_stats['y_mean']
+        self.y_std = self.y_stats['y_std']
+
+        # Note: this is only true for GE regression
+        y_targets = self.y_norm
+
+        # Set parameters that affect models
         if self.y.shape[1] == 1:
             self.y_mean = self.y_stats['y_mean']
             self.y_std = self.y_stats['y_std']
-        else:
-            self.y_mean = 0
-            self.y_std = 1
+        # else:
+        #     self.y_mean = 0
+        #     self.y_std = 1
 
         # Set y targets for linear regression and sign assignment
-        #if self.regression_type == 'GE':
-        if True:
-            y_targets = self.y_norm
 
         # # If MPA regression, use mean bin number
         # elif self.regression_type == 'MPA':
