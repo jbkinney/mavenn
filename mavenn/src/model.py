@@ -1091,8 +1091,12 @@ class Model:
                 - np.sum(theta_lc * p_lc, axis=1)[:, _] \
                 + np.sum(theta_lclc * p_lc[_, _, :, :],
                          axis=(2, 3)) \
+                + np.sum(theta_lclc * p_lc[:, :, _, _],
+                         axis=(0, 1)) \
                 - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
-                         axis=(1, 2, 3))[:, _]
+                         axis=(1, 2, 3))[:, _] \
+                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=(0, 1, 3))[:, _]
 
             # Fix 2nd order parameters
             fixed_theta_lclc = theta_lclc \
