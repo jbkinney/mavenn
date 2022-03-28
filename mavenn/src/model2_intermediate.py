@@ -127,10 +127,24 @@ class Model:
         # Compute number of sequence nodes. Useful for model construction below.
         number_x_nodes = int(self.L*self.C)
 
-        # get number of targets based on mp_list
-        number_of_targets = len(self.mp_list)
+        # get list of measurement processes
+        measurement_processes_list = self.mp_list
 
-        print(f'number_of_targets {number_of_targets} intr')
+        # determine number of target nodes for entire model
+        number_of_targets = 0
+        for output_layer_index in range(len(measurement_processes_list)):
+
+            # if current measurement process object has yhat attribute
+            # then output shape is 1, otherwise it is Y. We must require
+            # this number of bins (or Y) parameter for output layers
+            # that have multiple nodes.
+            current_mp = measurement_processes_list[output_layer_index]
+            if hasattr(current_mp, 'yhat'):
+                current_output_shape = 1
+            else:
+                current_output_shape = measurement_processes_list[output_layer_index].Y
+
+            number_of_targets += current_output_shape
 
         # Get input layer tensor, the sequence input, and the labels input
         input_tensor, sequence_input = InputLayer(number_x_nodes,
@@ -139,31 +153,48 @@ class Model:
         # assign phi to gpmap input into constructor
         phi = self.gpmap(sequence_input)
 
-        # get list of measurement processes
-        measurement_processes_list = self.mp_list
-
         # loop over measurement processes and create a list of output tensors
         # that phi will be connected to. Currently output tensors get assigned
-        # to the list, they are invoked slightly separate based on whether they
+        # to the list, they are invoked separately based on whether they
         # output a regression value (yhat) or counts (like discrete agnostic MPA)
         # but this is subject to change
 
-        # list that contains information about replicate layers.
-        replicates_input = []
+        # list that contains target labels which are initially passed in concantenated to input
+        # sequences.
+        labels_input = []
 
-        # build up lambda layers, on step at a time, which will be
+        # Here we build up lambda layers, on step at a time, which will be
         # fed to each of the measurement layers
-        for replicate_layer_index in range(number_of_targets):
+        # We need two variables to map the target labels to their corresponding measurement processes
+        start_pointer = number_x_nodes
+        end_pointer = None
 
-            #print(replicate_layer_index, replicate_layer_index + 1)
+        for output_layer_index in range(len(measurement_processes_list)):
 
-            temp_replicate_layer = Lambda(lambda x:
-                                          x[:, number_x_nodes + replicate_layer_index:
-                                          number_x_nodes + replicate_layer_index + 1],
+            #print(output_layer_index, output_layer_index + 1)
+
+            # if current measurement process object has yhat attribute
+            # then output shape is 1, otherwise it is Y. We must require
+            # this number of bins (or Y) parameter for output layers
+            # that have multiple nodes.
+            current_mp = measurement_processes_list[output_layer_index]
+            if hasattr(current_mp, 'yhat'):
+                current_output_shape = 1
+            else:
+                current_output_shape = measurement_processes_list[output_layer_index].Y
+
+            # assign end point, which is determined by the current the current mp's output shape
+            end_pointer = start_pointer+current_output_shape
+
+            current_output_layer = Lambda(lambda x:
+                                          x[:, start_pointer:end_pointer],
                                           output_shape=((1,)), trainable=False,
-                                          name='Labels_input_' + str(replicate_layer_index))(input_tensor)
+                                          name='Labels_input_' + str(output_layer_index))(input_tensor)
 
-            replicates_input.append(temp_replicate_layer)
+            # update start pointer to be current end pointer for next iteration
+            start_pointer = end_pointer
+
+            labels_input.append(current_output_layer)
 
 
         output_tensor_list = []
@@ -179,7 +210,7 @@ class Model:
 
                 # concatenate y_hat and y to pass into likelihood computation layer
                 prediction_y_concat = Concatenate(name=f'yhat_and_y_to_ll_{idx_y_and_yhat_ll}')(
-                    [yhat, replicates_input[idx_y_and_yhat_ll]])
+                    [yhat, labels_input[idx_y_and_yhat_ll]])
 
                 idx_y_and_yhat_ll += 1
                 output_tensor = current_mp.mp_layer(prediction_y_concat)
@@ -187,7 +218,7 @@ class Model:
             else:
 
                 # concatenate phi and counts to pass into likelihood computation layer
-                prediction_y_concat = Concatenate()([phi, replicates_input[idx_y_and_yhat_ll]])
+                prediction_y_concat = Concatenate()([phi, labels_input[idx_y_and_yhat_ll]])
                 output_tensor = current_mp(prediction_y_concat)
                 output_tensor_list.append(output_tensor)
 
@@ -197,10 +228,11 @@ class Model:
 
         return model
 
+
     @handle_errors
     def set_data(self,
                  x,
-                 y,
+                 y_list,
                  dy=None,
                  ct=None,
                  validation_frac=.2,
@@ -225,7 +257,7 @@ class Model:
             For MPA models, ``y`` must be either a 1D or 2D array
             of nonnegative ints. If 1D, ``y`` must be of length ``N``, and
             will be interpreted as listing bin numbers, i.e. ``0`` , ``1`` ,
-            ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be
+            ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be   gb
             interpreted as listing the observed counts for each of the ``N``
             sequences in each of the ``Y`` bins.
 
@@ -324,6 +356,114 @@ class Model:
         # Set N
         self.N = len(x)
 
+        # This dictionary will get populated with target label data
+        # in the loop a bit below
+        y_dict = {}
+
+        # length of y_list must be equal to length of measurement processes
+        check(len(self.mp_list) == len(y_list), 'Length of y_list must be equal to mp_list ')
+
+        # Use the following loop to building a dataframe containing all the labels data.
+        # This will be passed to fit later.
+        measurement_processes_list = self.mp_list
+        # need to variables to map the target labels to their corresponding measurement processes
+
+        number_x_nodes = int(self.L * self.C)
+        start_pointer = number_x_nodes
+        end_pointer = None
+
+        # List which will contain y_stats for each measurement process
+        self.y_stats_list = []
+
+        for output_layer_index in range(len(measurement_processes_list)):
+
+            current_y_stats = {}
+
+            # if current measurement process object has yhat attribute
+            # then mean normalize the output
+            current_mp = measurement_processes_list[output_layer_index]
+            if hasattr(current_mp, 'yhat'):
+
+                # get current y
+                current_y = y_list[output_layer_index]
+
+                y_unique = np.unique(current_y)
+                check(len(y_unique),
+                      f'Only {len(y_unique)} unique y-values provided;'
+                      f'At least 2 are requied')
+
+                current_y_stats['y_mean'] = current_y.mean()
+                current_y_stats['y_std'] = current_y.std()
+
+                current_y_norm = (current_y - current_y_stats['y_mean']) / current_y_stats['y_std']
+
+                current_y_norm_reshaped = np.array(current_y_norm).reshape(-1, 1)
+
+                # Subsample y_norm for entropy estimation if necessary
+                N_max = int(1E4)
+                if self.N > N_max:
+                    z = np.random.choice(a=current_y_norm_reshaped.squeeze(),
+                                         size=N_max,
+                                         replace=False)
+                else:
+                    z = current_y_norm_reshaped.squeeze()
+
+                # Add some noise to aid in entropy estimation
+                z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
+
+                # Compute entropy
+                H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
+                H_y = H_y_norm + np.log2(current_y_stats['y_std'] + TINY)
+
+                self.mp_list[output_layer_index].info_for_layers_dict['H_y'] = H_y
+                self.mp_list[output_layer_index].info_for_layers_dict['H_y_norm'] = H_y_norm
+                self.mp_list[output_layer_index].info_for_layers_dict['dH_y'] = dH_y
+
+                self.y_stats = {}
+
+                self.y_stats['y_mean'] = current_y.mean()
+                self.y_stats['y_std'] = current_y.std()
+
+                self.y_std = current_y.std()
+                self.y_mean = current_y.mean()
+            else:
+                # binned data here
+
+                current_y_stats['y_mean'] = 1
+                current_y_stats['y_std'] = 0
+
+                current_y_norm = y_list[output_layer_index]
+
+                # Check that none of the y-rows sum to zero
+                # Throw an error if there are.
+                num_zero_ct_rows = sum(current_y_norm.sum(axis=1) == 0)
+                check(num_zero_ct_rows == 0,
+                      f'Found {num_zero_ct_rows} sequences that have no counts.'
+                      f'There cannot be any such sequences.')
+
+                # Compute naive entropy estimate
+                # Should probably be OK in most cases
+                # Ideally we'd use the NSB estimator
+                c_y = self.y_norm.sum(axis=0).squeeze()
+                p_y = c_y / c_y.sum()
+                ix = p_y > 0
+                H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
+                H_y = H_y_norm + np.log2(self.y_std + TINY)
+                dH_y = 0  # Need NSB to estimate this well
+
+                self.mp_list[output_layer_index].info_for_layers_dict['H_y'] = H_y
+                self.mp_list[output_layer_index].info_for_layers_dict['H_y_norm'] = H_y_norm
+                self.mp_list[output_layer_index].info_for_layers_dict['dH_y'] = dH_y
+
+            # update y dictionary with current y
+            y_dict[output_layer_index] = current_y_norm
+
+            # update y stats list
+            self.y_stats_list.append(current_y_stats)
+
+        # make pandas dataframe which contains labels data for all measurement processes
+        self.y = pd.DataFrame(y_dict)
+
         # Set validation flags
         if validation_flags is None:
             self.validation_flags = (np.random.rand(self.N) < validation_frac)
@@ -336,7 +476,6 @@ class Model:
 
         # Set training and validation x
         self.x = x.copy()
-        self.y = y.copy()
 
         # Provide feedback
         if verbose:
@@ -357,100 +496,6 @@ class Model:
                 self.y = self.y[ix, :]
             if verbose:
                 print('Data shuffled.')
-
-        # Check that none of the y-rows sum to zero
-        # Throw an error if there are.
-        # if self.regression_type == 'MPA':
-        #     num_zero_ct_rows = sum(self.y.sum(axis=1) == 0)
-        #     check(num_zero_ct_rows == 0,
-        #           f'Found {num_zero_ct_rows} sequences that have no counts.'
-        #           f'There cannot be any such sequences.')
-
-        # Normalize self.y -> self.y_norm
-        self.y_stats = {}
-        #if self.regression_type == 'GE':
-
-        # if single target GE regression
-        if self.y.shape[1] == 1:
-        #if True:
-            y_unique = np.unique(self.y)
-            check(len(y_unique),
-                  f'Only {len(y_unique)} unique y-values provided;'
-                  f'At least 2 are requied')
-            self.y_std = self.y.std()
-            self.y_mean = self.y.mean()
-            self.y_stats['y_mean'] = self.y_mean
-            self.y_stats['y_std'] = self.y_std
-
-            self.y_norm = (self.y - self.y_stats['y_mean']) / self.y_stats['y_std']
-
-        # this is to normalize multiple targets in GE regression
-        elif self.y.shape[1] > 1:
-            print('set data should print this from more than 1 output target!!!')
-            # cast replicates input as np array
-            self.y = np.array(self.y)
-            #print(f' set data mult_y_GE, self.y shape = {self.y.shape}')
-
-            # compute mean and standard deviation for all replicates
-            self.y_std = self.y.T.std(axis=1).reshape(-1, 1)
-            self.y_mean = self.y.T.mean(axis=1).reshape(-1, 1)
-            self.y_stats['y_mean'] = self.y_mean.T
-            self.y_stats['y_std'] = self.y_std.T
-
-            # perform normalization and take transpose to restore shape to (-1, # targets)
-            self.y_norm = ((self.y.T - self.y_mean) / self.y_std).T
-
-            # Reshape self.y_norm. TODO: may need to pass number of targets instead of self.mp_list for reshaping.
-            self.y_norm = np.array(self.y_norm).reshape(-1, len(self.mp_list))
-        #
-        # elif self.regression_type == 'MPA':
-        #     self.y_std = 1
-        #     self.y_mean = 0
-        #     self.y_stats['y_mean'] = self.y_mean
-        #     self.y_stats['y_std'] = self.y_std
-        #
-        else:
-            self.y_norm = self.y
-        # Reshape self.y_norm to facilitate input creation
-        #if self.regression_type == 'GE':
-        if self.y.shape[1] == 1:
-            self.y_norm = np.array(self.y_norm).reshape(-1, 1)
-
-            # Subsample y_norm for entropy estimation if necessary
-            N_max = int(1E4)
-            if self.N > N_max:
-                z = np.random.choice(a=self.y_norm.squeeze(),
-                                     size=N_max,
-                                     replace=False)
-            else:
-                z = self.y_norm.squeeze()
-
-            # Add some noise to aid in entropy estimation
-            z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
-
-            # Compute entropy
-            H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
-            H_y = H_y_norm + np.log2(self.y_std + TINY)
-
-            self.mp_list[0].info_for_layers_dict['H_y'] = H_y
-            self.mp_list[0].info_for_layers_dict['H_y_norm'] = H_y_norm
-            self.mp_list[0].info_for_layers_dict['dH_y'] = dH_y
-
-        # elif self.regression_type == 'MPA':
-        #     self.y_norm = np.array(self.y_norm)
-        #
-        #     # Compute naive entropy estimate
-        #     # Should probably be OK in most cases
-        #     # Ideally we'd use the NSB estimator
-        #     c_y = self.y_norm.sum(axis=0).squeeze()
-        #     p_y = c_y / c_y.sum()
-        #     ix = p_y > 0
-        #     H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
-        #     H_y = H_y_norm + np.log2(self.y_std + TINY)
-        #     dH_y = 0  # Need NSB to estimate this well
-        #     self.info_for_layers_dict['H_y'] = H_y
-        #     self.info_for_layers_dict['H_y_norm'] = H_y_norm
-        #     self.info_for_layers_dict['dH_y'] = dH_y
 
         # Compute sequence statistics (only on training set)
         self.x_stats = x_to_stats(self.x, self.alphabet)
@@ -690,7 +735,7 @@ class Model:
             return K.sum(y_pred)
 
         self.model.compile(loss=likelihood_loss,
-                                 optimizer=optimizer)
+                           optimizer=optimizer)
 
         # Set early stopping callback if requested
         if early_stopping:
@@ -699,16 +744,16 @@ class Model:
                                            patience=early_stopping_patience))
 
         # Set parameters that affect models
-        self.y_mean = self.y_stats['y_mean']
-        self.y_std = self.y_stats['y_std']
+        # self.y_mean = self.y_stats['y_mean']
+        # self.y_std = self.y_stats['y_std']
 
         # Note: this is only true for GE regression
-        y_targets = self.y_norm
+        y_targets = self.y.values
 
         # Set parameters that affect models
-        if self.y.shape[1] == 1:
-            self.y_mean = self.y_stats['y_mean']
-            self.y_std = self.y_stats['y_std']
+        # if self.y.shape[1] == 1:
+        #     self.y_mean = self.y_stats['y_mean']
+        #     self.y_std = self.y_stats['y_std']
         # else:
         #     self.y_mean = 0
         #     self.y_std = 1
@@ -765,21 +810,25 @@ class Model:
         #if self.ge_noise_model_type != 'Empirical':
         if True:
             train_sequences = np.hstack([self.x_ohe,
-                                         self.y_norm])
+                                         self.y])
         # Concatenate seqs, ys, and dys if noise model is  empirical
         if False:
             train_sequences = np.hstack([self.x_ohe,
-                                         self.y_norm,
+                                         self.y,
                                          self.dy.reshape(-1, 1)])
 
         # Get training and validation sets
         ix_val = self.validation_flags
         x_train = train_sequences[~ix_val, :]
         x_val = train_sequences[ix_val, :]
+
+        y_train = self.y[~ix_val]
+        y_val = self.y[ix_val]
+
         #if self.regression_type == 'GE':
-        if True:
-            y_train = self.y_norm[~ix_val]
-            y_val = self.y_norm[ix_val]
+        # if True:
+        #     y_train = self.y_norm[~ix_val]
+        #     y_val = self.y_norm[ix_val]
 
             # if noise model is empirical, then input to the model
             # will be x, y, dy, which will get split into
@@ -808,13 +857,13 @@ class Model:
 
         # Train neural network using TensorFlow
         history = self.model.fit(x_train,
-                                       y_train,
-                                       validation_data=(x_val, y_val),
-                                       epochs=epochs,
-                                       verbose=verbose,
-                                       callbacks=callbacks,
-                                       batch_size=batch_size,
-                                       **fit_kwargs)
+                                 y_train,
+                                 validation_data=(x_val, y_val),
+                                 epochs=epochs,
+                                 verbose=verbose,
+                                 callbacks=callbacks,
+                                 batch_size=batch_size,
+                                 **fit_kwargs)
 
         # Get function representing the raw gp_map
         self._unfixed_gpmap = K.function(

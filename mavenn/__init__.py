@@ -9,6 +9,7 @@ TINY = np.sqrt(np.finfo(np.float32).tiny)
 # Primary model class
 from mavenn.src.model import Model
 from mavenn.src.model2 import Model as Model2
+from mavenn.src.model2_intermediate import Model as Model3
 
 # Import GP layers class. This will allow users to create GP-map objects
 # will can be passed into Model2.

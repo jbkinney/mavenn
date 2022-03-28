@@ -232,7 +232,6 @@ class DiscreteAgnosticMP(MeasurementProcess):
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.eta)
 
-        print('about to call super from discrete Agnostic')
         super().__init__(eta, info_for_layers_dict, **kwargs)
 
     def get_config(self):
