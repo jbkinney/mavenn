@@ -228,7 +228,7 @@ class Model:
                 output_tensor = current_mp.mp_layer(prediction_y_concat)
                 output_tensor_list.append(output_tensor)
             else:
-
+                print('hab here twice',current_mp)
                 # concatenate phi and counts to pass into likelihood computation layer
                 prediction_y_concat = Concatenate()([phi, labels_input[idx_y_and_yhat_ll]])
                 output_tensor = current_mp(prediction_y_concat)
@@ -368,9 +368,10 @@ class Model:
         # Set N
         self.N = len(x)
 
-        # This dictionary will get populated with target label data
-        # in the loop a bit below
-        y_dict = {}
+        # This list will get populated with target label data
+        # in the loop a bit below. All elements of list will
+        # get horizontally stacked afterwards.
+        y_list_internal = []
 
         # length of y_list must be equal to length of measurement processes
         check(len(self.mp_list) == len(y_list), 'Length of y_list must be equal to mp_list ')
@@ -440,7 +441,6 @@ class Model:
                 self.y_mean = current_y.mean()
             else:
                 # binned data here
-
                 current_y_stats['y_mean'] = 1
                 current_y_stats['y_std'] = 0
 
@@ -468,21 +468,14 @@ class Model:
                 self.mp_list[output_layer_index].info_for_layers_dict['dH_y'] = dH_y
 
             # update y dictionary with current y
-            y_dict[output_layer_index] = current_y_norm
+            y_list_internal.append(current_y_norm)
 
             # update y stats list
             self.y_stats_list.append(current_y_stats)
 
-        # TODO need to update the following for DiscreteAgnostic regression
-        # One solution could be making pandas dataframes for each measurement processes
-        # in the conditionals above and merged them down here.
-
-        # make pandas dataframe which contains labels data for all measurement processes
-        #print(y_dict.values)
-        self.y = pd.DataFrame(y_dict)
-
-        # for 1 head mpa regression
-        #self.y = pd.DataFrame(current_y_norm)
+        # horizontally stack all targets together. These will be further hstacked
+        # with x_ohe in fit later
+        self.y = np.hstack(y_list_internal)
 
         # Set validation flags
         if validation_flags is None:
@@ -768,7 +761,7 @@ class Model:
         # self.y_std = self.y_stats['y_std']
 
         # Note: this is only true for GE regression
-        y_targets = self.y.values
+        y_targets = self.y
 
         # Set parameters that affect models
         # if self.y.shape[1] == 1:
