@@ -456,11 +456,11 @@ class Model:
                 # Compute naive entropy estimate
                 # Should probably be OK in most cases
                 # Ideally we'd use the NSB estimator
-                c_y = self.y_norm.sum(axis=0).squeeze()
+                c_y = current_y_norm.sum(axis=0).squeeze()
                 p_y = c_y / c_y.sum()
                 ix = p_y > 0
                 H_y_norm = -np.sum(p_y[ix] * np.log2(p_y[ix] + TINY))
-                H_y = H_y_norm + np.log2(self.y_std + TINY)
+                H_y = H_y_norm + np.log2(current_y_stats['y_std']+ TINY)
                 dH_y = 0  # Need NSB to estimate this well
 
                 self.mp_list[output_layer_index].info_for_layers_dict['H_y'] = H_y
@@ -473,8 +473,16 @@ class Model:
             # update y stats list
             self.y_stats_list.append(current_y_stats)
 
+        # TODO need to update the following for DiscreteAgnostic regression
+        # One solution could be making pandas dataframes for each measurement processes
+        # in the conditionals above and merged them down here.
+
         # make pandas dataframe which contains labels data for all measurement processes
+        #print(y_dict.values)
         self.y = pd.DataFrame(y_dict)
+
+        # for 1 head mpa regression
+        #self.y = pd.DataFrame(current_y_norm)
 
         # Set validation flags
         if validation_flags is None:
