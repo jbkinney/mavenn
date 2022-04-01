@@ -228,7 +228,6 @@ class Model:
                 output_tensor = current_mp.mp_layer(prediction_y_concat)
                 output_tensor_list.append(output_tensor)
             else:
-                print('hab here twice',current_mp)
                 # concatenate phi and counts to pass into likelihood computation layer
                 prediction_y_concat = Concatenate()([phi, labels_input[idx_y_and_yhat_ll]])
                 output_tensor = current_mp(prediction_y_concat)
@@ -449,6 +448,7 @@ class Model:
                 # Check that none of the y-rows sum to zero
                 # Throw an error if there are.
                 num_zero_ct_rows = sum(current_y_norm.sum(axis=1) == 0)
+
                 check(num_zero_ct_rows == 0,
                       f'Found {num_zero_ct_rows} sequences that have no counts.'
                       f'There cannot be any such sequences.')
