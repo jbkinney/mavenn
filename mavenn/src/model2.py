@@ -449,9 +449,10 @@ class Model:
                 # Throw an error if there are.
                 num_zero_ct_rows = sum(current_y_norm.sum(axis=1) == 0)
 
-                check(num_zero_ct_rows == 0,
-                      f'Found {num_zero_ct_rows} sequences that have no counts.'
-                      f'There cannot be any such sequences.')
+                # TODO need to fix this for multi-headed discrete agnostic regression
+                # check(num_zero_ct_rows == 0,
+                #       f'Found {num_zero_ct_rows} sequences that have no counts.'
+                #       f'There cannot be any such sequences.')
 
                 # Compute naive entropy estimate
                 # Should probably be OK in most cases
@@ -835,8 +836,13 @@ class Model:
         x_train = train_sequences[~ix_val, :]
         x_val = train_sequences[ix_val, :]
 
-        y_train = self.y[~ix_val]
-        y_val = self.y[ix_val]
+        # Todo: the following two work for continuous targets. The ones below are for MPA regression.
+        # generalize for all types of regression.
+        #y_train = self.y[~ix_val]
+        #y_val = self.y[ix_val]
+
+        y_train = self.y[~ix_val, :]
+        y_val = self.y[ix_val, :]
 
         #if self.regression_type == 'GE':
         # if True:
