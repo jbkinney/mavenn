@@ -4,11 +4,12 @@ import numpy as np
 from collections.abc import Iterable
 import re
 import pdb
+from typing import Optional
 
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.initializers import Constant
+from tensorflow.keras.initializers import Constant, VarianceScaling, RandomNormal
 from tensorflow.keras.layers import Layer, Dense
 
 # MAVE-NN imports
@@ -16,6 +17,7 @@ from mavenn.src.error_handling import check, handle_errors
 from mavenn.src.utils import x_to_stats, validate_seqs
 from mavenn.src.reshape import _shape_for_output, \
     _get_shape_and_return_1d_array
+
 
 class GPMapLayer(Layer):
     """
@@ -174,7 +176,7 @@ class AdditiveGPMapLayer(GPMapLayer):
         #theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
         self.theta_lc = self.add_weight(name='theta_lc',
                                         shape=theta_lc_shape,
-                                        #initializer=Constant(theta_lc_init),
+                                        # initializer=Constant(theta_lc_init),
                                         trainable=True,
                                         regularizer=self.regularizer)
 
@@ -184,13 +186,12 @@ class AdditiveGPMapLayer(GPMapLayer):
         x_lc = tf.reshape(x_lc, [-1, self.L, self.C])
 
         phi = self.theta_0 + \
-              tf.reshape(K.sum(self.theta_lc * x_lc, axis=[1, 2]),
-                         shape=[-1, 1])
+            tf.reshape(K.sum(self.theta_lc * x_lc, axis=[1, 2]),
+                       shape=[-1, 1])
 
         return phi
 
     def x_to_phi(self, x):
-
         '''
         # TODO: I may need to refactor some of this functionality in the super class, if it's repeated.
         # such as validate seqs
@@ -236,7 +237,7 @@ class PairwiseGPMapLayer(GPMapLayer):
 
         # Define theta_lc parameters
         theta_lc_shape = (1, self.L, self.C)
-        theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
+        theta_lc_init = np.random.randn(*theta_lc_shape) / np.sqrt(self.L)
         self.theta_lc = self.add_weight(name='theta_lc',
                                         shape=theta_lc_shape,
                                         initializer=Constant(theta_lc_init),
@@ -265,11 +266,13 @@ class PairwiseGPMapLayer(GPMapLayer):
 
         # Define theta_lclc parameters
         theta_lclc_shape = (1, self.L, self.C, self.L, self.C)
-        theta_lclc_init = np.random.randn(*theta_lclc_shape)/np.sqrt(self.L**2)
+        theta_lclc_init = np.random.randn(
+            *theta_lclc_shape) / np.sqrt(self.L**2)
         theta_lclc_init *= self.mask_dict['theta_lclc']
         self.theta_lclc = self.add_weight(name='theta_lclc',
                                           shape=theta_lclc_shape,
-                                          initializer=Constant(theta_lclc_init),
+                                          initializer=Constant(
+                                              theta_lclc_init),
                                           trainable=True,
                                           regularizer=self.regularizer)
 
@@ -285,9 +288,9 @@ class PairwiseGPMapLayer(GPMapLayer):
         phi = phi + tf.reshape(K.sum(self.theta_lclc *
                                      self.mask_dict['theta_lclc'] *
                                      tf.reshape(x_lc,
-                                         [-1, self.L, self.C, 1, 1]) *
+                                                [-1, self.L, self.C, 1, 1]) *
                                      tf.reshape(x_lc,
-                                         [-1, 1, 1, self.L, self.C]),
+                                                [-1, 1, 1, self.L, self.C]),
                                      axis=[1, 2, 3, 4]),
                                shape=[-1, 1])
 
@@ -329,7 +332,7 @@ class MultilayerPerceptronGPMap(GPMapLayer):
         self.hidden_layer_sizes = hidden_layer_sizes
 
         # Check and set features
-        allowed_features = ['additive','neighbor','pairwise']
+        allowed_features = ['additive', 'neighbor', 'pairwise']
         check(features in allowed_features,
               f'features={repr(features)}; must be one of {allowed_features}.')
         self.features = features
@@ -348,26 +351,26 @@ class MultilayerPerceptronGPMap(GPMapLayer):
         L = self.L
         C = self.C
         if self.features == 'additive':
-            self.num_features = L*C
+            self.num_features = L * C
         elif self.features == 'neighbor':
-            self.num_features = L*C + (L-1)*(C**2)
+            self.num_features = L * C + (L - 1) * (C**2)
         elif self.features == 'pairwise':
-            self.num_features = L*C + L*(L-1)*(C**2)/2
+            self.num_features = L * C + L * (L - 1) * (C**2) / 2
         self.x_shape = (input_shape[0], int(self.num_features))
 
         # Create mask
         ls = np.arange(self.L).astype(int)
         ls1 = np.tile(ls.reshape([L, 1, 1, 1]),
-                                 [1, C, L, C])
+                      [1, C, L, C])
         ls2 = np.tile(ls.reshape([1, 1, L, 1]),
-                                 [L, C, 1, C])
+                      [L, C, 1, C])
         if self.features in ['neighbor', 'pairwise']:
             if self.features == 'pairwise':
                 mask_lclc = (ls2 - ls1 >= 1)
             else:
                 mask_lclc = (ls2 - ls1 == 1)
-            mask_vec = np.reshape(mask_lclc, L*C*L*C)
-            self.mask_ints = np.arange(L*C*L*C, dtype=int)[mask_vec]
+            mask_vec = np.reshape(mask_lclc, L * C * L * C)
+            self.mask_ints = np.arange(L * C * L * C, dtype=int)[mask_vec]
         elif self.features == 'additive':
             self.mask_ints = None
         else:
@@ -430,7 +433,7 @@ class MultilayerPerceptronGPMap(GPMapLayer):
             x___lc = tf.reshape(x_add, [-1, 1, 1, L, C])
             x_lc__ = tf.reshape(x_add, [-1, L, C, 1, 1])
             x_lclc = x___lc * x_lc__
-            x_pair = tf.reshape(x_lclc, [-1, L*C*L*C])
+            x_pair = tf.reshape(x_lclc, [-1, L * C * L * C])
 
             # Only use relevant columns
             x_2pt = tf.gather(x_pair, self.mask_ints, axis=1)
@@ -469,6 +472,121 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 
         #  Fill param_dict
         param_dict = {}
-        param_dict['theta_mlp'] = [layer.get_weights() for layer in self.layers]
+        param_dict['theta_mlp'] = [layer.get_weights()
+                                   for layer in self.layers]
 
         return param_dict
+
+
+class KOrderGPMap(GPMapLayer):
+    """Represents a arbitrary interaction G-P map."""
+
+    @handle_errors
+    def __init__(self,
+                 interaction_order: Optional[int] = 0,
+                 *args, **kwargs):
+        """Construct layer instance."""
+
+        # Call superclass constructor
+        super().__init__(*args, **kwargs)
+
+        """Build layer."""
+        # Set interaction order
+        self.interaction_order = interaction_order
+        # Check that interaction order is less than the sequence length
+        check(self.interaction_order < self.L,
+              f'self.interaction_order {self.interaction_order} must be'
+              f' less than sequence length {self.L}')
+
+        # Initialize the theta dictionary
+        self.theta_dict = {}
+
+        # Create the theta_0 name.
+        theta_0_name = f'theta_0_{interaction_order}'
+        # Define theta_0 weight
+        self.theta_dict[theta_0_name] = \
+            self.add_weight(name=theta_0_name,
+                            shape=(1,),
+                            initializer=Constant(0.),
+                            trainable=True,
+                            regularizer=self.regularizer)
+
+        # Create the theta_lc
+        theta_lc_shape = (1,)
+        seq_len_arange = np.arange(self.L).astype(int)
+        # Create masking dictionary
+        self.mask_dict = {}
+        # Loop over interaction order
+        for k in range(interaction_order):
+            theta_lc_name = f'theta_lc{k+1}'
+            # Add L, C to the shape of theta_lc for each interaction order
+            theta_lc_shape = theta_lc_shape + (self.L, self.C)
+            self.theta_dict[theta_lc_name] =  \
+                self.add_weight(name=theta_lc_name,
+                                shape=theta_lc_shape,
+                                initializer=RandomNormal(),
+                                trainable=True,
+                                regularizer=self.regularizer)
+            # Create list of indices
+            # which should be False or True based on level of interactions.
+            # The ls_dict is analogous to l, l', l'', ... in MAVE-NN paper
+            ls_dict = {}
+            # starting location of L,C characters in the shape lists
+            lc_loc = 1
+            for w in range(k + 1):
+                ls_part_shape = [1] * len(theta_lc_shape)
+                ls_tile_shape = list(theta_lc_shape)
+                ls_part_shape[lc_loc] = self.L
+                ls_tile_shape[lc_loc] = 1
+                ls = np.tile(seq_len_arange.reshape(
+                    ls_part_shape), ls_tile_shape)
+                ls_dict[f'ls_{w}'] = ls
+                lc_loc = lc_loc + 2
+            m_dict = {}
+            for w in range(k):
+                m_dict[f'm_{w}'] = ls_dict[f'ls_{w+1}'] > ls_dict[f'ls_{w}']
+
+            mask = True
+            for key in m_dict.keys():
+                mask = m_dict[key] * mask
+            # Create mask array
+            self.mask_dict[theta_lc_name] = mask
+        print(self.mask_dict.keys())
+
+    def call(self, x_lc):
+        """Process layer input and return output."""
+
+        # Get the interaction order
+        interaction_order = self.interaction_order
+
+        # 0-th order interaction
+        theta_0_name = f'theta_0_{interaction_order}'
+        phi = self.theta_dict[theta_0_name]
+
+        # Loop over interaction order
+        theta_lc_shape = (1,)
+
+        for k in range(interaction_order):
+            theta_lc_name = f'theta_lc{k+1}'
+            theta_lc_shape = theta_lc_shape + (self.L, self.C)
+            # Find the axis shape (order) which we should sum the array
+            axis_shape = np.arange(1, len(theta_lc_shape))
+            # Location of L, C char in x_lc reshape arguments
+            lc_loc = 1
+            # To find interactions we need to find x_lc*x_l'c'*...
+            # Here we call that multiplication x_mult
+            x_mult = 1
+            for w in range(k + 1):
+                # Find the shape of x_lc
+                x_shape_k_order = [1] * len(theta_lc_shape)
+                x_shape_k_order[0] = -1
+                x_shape_k_order[lc_loc] = self.L
+                x_shape_k_order[lc_loc + 1] = self.C
+                lc_loc = lc_loc + 2
+                x_mult = x_mult * tf.reshape(x_lc, x_shape_k_order)
+
+            phi = phi + \
+                tf.reshape(
+                    K.sum(self.theta_dict[theta_lc_name] * self.mask_dict[theta_lc_name] * x_mult, axis=axis_shape), [-1, 1])
+
+        return phi
