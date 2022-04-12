@@ -551,7 +551,6 @@ class KOrderGPMap(GPMapLayer):
                 mask = m_dict[key] * mask
             # Create mask array
             self.mask_dict[theta_lc_name] = mask
-        print(self.mask_dict.keys())
 
     def call(self, x_lc):
         """Process layer input and return output."""
