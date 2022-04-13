@@ -3,13 +3,12 @@
 import numpy as np
 from collections.abc import Iterable
 import re
-import pdb
 from typing import Optional
 
 # Tensorflow imports
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.initializers import Constant, VarianceScaling, RandomNormal
+from tensorflow.keras.initializers import Constant, RandomNormal
 from tensorflow.keras.layers import Layer, Dense
 
 # MAVE-NN imports
@@ -147,9 +146,28 @@ class GPMapLayer(Layer):
         assert False
 
     @handle_errors
-    def x_to_phi(self):
+    def x_to_phi(self, x):
         """GP map to x_to_phi abstract method. """
-        assert False
+        # TODO: x_to_phi should be only here not in individual classes
+        # Shape x for processing
+        x, x_shape = _get_shape_and_return_1d_array(x)
+
+        # Check seqs
+        x = validate_seqs(x, alphabet=self.alphabet)
+        check(len(x[0]) == self.L,
+              f'len(x[0])={len(x[0])}; should be L={self.L}')
+
+        # Encode sequences as features
+        stats = x_to_stats(x=x, alphabet=self.alphabet)
+        x_ohe = stats.pop('x_ohe')
+
+        # Note: this is currently not diffeomorphic mode fixed.
+        phi = self.call(x_ohe.astype('float32'))
+
+        # Shape phi for output
+        phi = _shape_for_output(phi, x_shape)
+
+        return phi
 
 
 class AdditiveGPMapLayer(GPMapLayer):
@@ -494,15 +512,15 @@ class KOrderGPMap(GPMapLayer):
         # Set interaction order
         self.interaction_order = interaction_order
         # Check that interaction order is less than the sequence length
-        check(self.interaction_order < self.L,
+        check(self.interaction_order <= self.L,
               f'self.interaction_order {self.interaction_order} must be'
-              f' less than sequence length {self.L}')
+              f' equal to or less than sequence length {self.L}')
 
         # Initialize the theta dictionary
         self.theta_dict = {}
 
         # Create the theta_0 name.
-        theta_0_name = f'theta_0_{interaction_order}'
+        theta_0_name = f'theta_0'
         # Define theta_0 weight
         self.theta_dict[theta_0_name] = \
             self.add_weight(name=theta_0_name,
@@ -512,18 +530,18 @@ class KOrderGPMap(GPMapLayer):
                             regularizer=self.regularizer)
 
         # Create the theta_lc
-        theta_lc_shape = (1,)
+        theta_shape = (1,)
         seq_len_arange = np.arange(self.L).astype(int)
         # Create masking dictionary
         self.mask_dict = {}
         # Loop over interaction order
         for k in range(interaction_order):
-            theta_lc_name = f'theta_lc{k+1}'
-            # Add L, C to the shape of theta_lc for each interaction order
-            theta_lc_shape = theta_lc_shape + (self.L, self.C)
-            self.theta_dict[theta_lc_name] =  \
-                self.add_weight(name=theta_lc_name,
-                                shape=theta_lc_shape,
+            theta_name = f'theta_{k+1}'
+            # Add L, C to the shape of theta_k for each interaction order k
+            theta_shape = theta_shape + (self.L, self.C)
+            self.theta_dict[theta_name] =  \
+                self.add_weight(name=theta_name,
+                                shape=theta_shape,
                                 initializer=RandomNormal(),
                                 trainable=True,
                                 regularizer=self.regularizer)
@@ -534,8 +552,8 @@ class KOrderGPMap(GPMapLayer):
             # starting location of L,C characters in the shape lists
             lc_loc = 1
             for w in range(k + 1):
-                ls_part_shape = [1] * len(theta_lc_shape)
-                ls_tile_shape = list(theta_lc_shape)
+                ls_part_shape = [1] * len(theta_shape)
+                ls_tile_shape = list(theta_shape)
                 ls_part_shape[lc_loc] = self.L
                 ls_tile_shape[lc_loc] = 1
                 ls = np.tile(seq_len_arange.reshape(
@@ -550,7 +568,7 @@ class KOrderGPMap(GPMapLayer):
             for key in m_dict.keys():
                 mask = m_dict[key] * mask
             # Create mask array
-            self.mask_dict[theta_lc_name] = mask
+            self.mask_dict[theta_name] = mask
 
     def call(self, x_lc):
         """Process layer input and return output."""
@@ -559,17 +577,17 @@ class KOrderGPMap(GPMapLayer):
         interaction_order = self.interaction_order
 
         # 0-th order interaction
-        theta_0_name = f'theta_0_{interaction_order}'
+        theta_0_name = f'theta_0'
         phi = self.theta_dict[theta_0_name]
 
         # Loop over interaction order
-        theta_lc_shape = (1,)
+        theta_shape = (1,)
 
         for k in range(interaction_order):
-            theta_lc_name = f'theta_lc{k+1}'
-            theta_lc_shape = theta_lc_shape + (self.L, self.C)
+            theta_name = f'theta_{k+1}'
+            theta_shape = theta_shape + (self.L, self.C)
             # Find the axis shape (order) which we should sum the array
-            axis_shape = np.arange(1, len(theta_lc_shape))
+            axis_shape = np.arange(1, len(theta_shape))
             # Location of L, C char in x_lc reshape arguments
             lc_loc = 1
             # To find interactions we need to find x_lc*x_l'c'*...
@@ -577,15 +595,15 @@ class KOrderGPMap(GPMapLayer):
             x_mult = 1
             for w in range(k + 1):
                 # Find the shape of x_lc
-                x_shape_k_order = [1] * len(theta_lc_shape)
+                x_shape_k_order = [1] * len(theta_shape)
                 x_shape_k_order[0] = -1
                 x_shape_k_order[lc_loc] = self.L
                 x_shape_k_order[lc_loc + 1] = self.C
-                lc_loc = lc_loc + 2
                 x_mult = x_mult * tf.reshape(x_lc, x_shape_k_order)
+                lc_loc = lc_loc + 2
 
             phi = phi + \
                 tf.reshape(
-                    K.sum(self.theta_dict[theta_lc_name] * self.mask_dict[theta_lc_name] * x_mult, axis=axis_shape), [-1, 1])
+                    K.sum(self.theta_dict[theta_name] * self.mask_dict[theta_name] * x_mult, axis=axis_shape), [-1, 1])
 
         return phi
