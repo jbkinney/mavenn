@@ -504,10 +504,10 @@ class Model:
             np.random.shuffle(ix)
             self.x = self.x[ix]
             self.validation_flags = self.validation_flags[ix]
-            if self.regression_type == 'GE':
-                self.y = self.y[ix]
-            else:
-                self.y = self.y[ix, :]
+            #if self.regression_type == 'GE':
+            #    self.y = self.y[ix]
+            #else:
+            self.y = self.y[ix, :]
             if verbose:
                 print('Data shuffled.')
 
