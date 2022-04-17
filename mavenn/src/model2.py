@@ -28,7 +28,6 @@ model.set_data(x = x,
 model.fit(...)
 """
 
-# TODO: need to develop model2's define model more according to TODOS in define_model().
 # TODO: need to define helper function's for model in keynote (e.g. mp_ge.phi_to_yhat ... )
 # TODO: need to finish implementation of mp_list (using Ammardev branch)
 # TODO: need to finish updating various gpmap implementations (e.g., pairwise, custom, and refactor x to x_ohe)
@@ -407,7 +406,8 @@ class Model:
                 current_y_stats['y_mean'] = current_y.mean()
                 current_y_stats['y_std'] = current_y.std()
 
-                current_y_norm = (current_y - current_y_stats['y_mean']) / current_y_stats['y_std']
+                #current_y_norm = (current_y - current_y_stats['y_mean']) / current_y_stats['y_std']
+                current_y_norm = current_y
 
                 current_y_norm_reshaped = np.array(current_y_norm).reshape(-1, 1)
 
