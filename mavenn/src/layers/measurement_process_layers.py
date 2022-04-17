@@ -9,6 +9,7 @@ from functools import wraps
 # Scipy imports
 from scipy.special import betaincinv, erfinv
 from scipy.stats import expon
+from scipy.stats import norm
 
 # Tensorflow imports
 import tensorflow as tf
@@ -212,8 +213,174 @@ class GlobalEpsitasisMP(MeasurementProcess):
         return self.mp_layer.p_of_y_given_yhat(y, yhat)
 
 
+class SortSeqMP(MeasurementProcess):
+    """
+    Represents a Sortseq based measurement process.
+    The result is that phi(x) is interpreted as the mean
+    log_10 fluorescence of a clonal population of cells harboring
+    sequence x.
+
+    Y: (int)
+        Number of sorting bins, i.e, y = 0, ..., Y-1.
+
+    N_y: (array-like)
+        Number of reads in every bin.
+        Note that this should be inferred from the training data
+        i.e. for cts data: ct_0, ct_1, ... ct_(Y-1), N_y -> sum(axis=0) (sum rows)
+
+    mu_pos: (float)
+        Mean of log_10 fluorescence for positive control
+        (i.e., highly fluorescent) sample.
+
+    sigma_pos: (float)
+        Standard deviation of log_10 fluorescence for positive control
+        (i.e., highly fluorescent) sample.
+
+    mu_neg: (float)
+        Mean of log_10 fluorescence for negative control
+        (i.e., non-fluorescent) sample.
+
+    sigma_neg: (float)
+        Standard deviation of log_10 fluorescence for negative control
+        (i.e., non-fluorescent) sample.
+
+    f_y_upper_bounds: (array-like)
+        Upper bounds on log_10 fluorescence for each sorting bin.
+        I.e., {f_y^ub}_[y=0,Y-1]
+
+    f_y_lower_bounds: (array-like)
+        Lower bounds on log_10 fluorescence for each sorting bin.
+        I.e., {f_y^lb}_[y=0,Y-1]
+
+
+    eta: (float)
+        L2 regularization.
+    """
+
+    def __init__(self,
+                 N_y,
+                 Y,
+                 mu_pos,
+                 sigma_pos,
+                 mu_neg,
+                 sigma_neg,
+                 f_y_upper_bounds,
+                 f_y_lower_bounds,
+                 eta,
+                 info_for_layers_dict,
+                 **kwargs
+                 ):
+
+        """Construct layer."""
+        # Set attributes
+        self.Y = Y
+        self.N_y = N_y
+        self.mu_pos = mu_pos
+        self.sigma_pos = sigma_pos
+        self.mu_neg = mu_neg
+        self.sigma_neg = sigma_neg
+        self.f_y_upper_bounds = f_y_upper_bounds
+        self.f_y_lower_bounds = f_y_lower_bounds
+
+        # attributes of base MeasurementProcess class
+        self.eta = eta
+        self.info_for_layers_dict = info_for_layers_dict
+
+        # total number of reads
+        self.N = np.sum(self.N_y)
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        super().__init__(eta, info_for_layers_dict, **kwargs)
+
+    def get_config(self):
+        """Get configuration dictionary."""
+        base_config = super().get_config()
+        return {**base_config,
+                "info_for_layers_dict": self.info_for_layers_dict,
+                "number_bins": self.number_bins}    # TODO: check if self.number_bins is defined/works
+
+    # Note that this layer doesn't have trainable weights so we only
+    # should need to use the 'call' method
+    # def build(self, input_shape):
+    #     """Build layer."""
+    #     pass
+
+    def call(self, inputs):
+        """
+        Transform layer inputs to outputs.
+
+        Parameters
+        ----------
+        inputs: (tf.Tensor)
+            A (B,Y+1) tensor containing counts, where B is batch
+            size and Y is the number of bins.
+            inputs[:,1] is phi
+            inputs[:,1:Y+1] is c_my
+
+        Returns
+        -------
+        negative_log_likelihood: (np.array)
+            A (B,) tensor containing negative log likelihood contributions
+        """
+
+        # Extract and shape inputs
+        phi = inputs[:, 0]
+        ct_my = inputs[:, 1:]
+
+        # Compute p(y|phi)
+        p_my = self.p_of_all_y_given_phi(phi)
+
+        # Compute negative log likelihood
+        negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
+        ct_m = K.sum(ct_my, axis=1)
+
+        # Add I_var metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = np.log2(e) * \
+                        K.sum(negative_log_likelihood) / K.sum(ct_m)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
+
+        return negative_log_likelihood
+
+    @handle_arrays
+    def p_of_all_y_given_phi(self, phi, return_var='p'):
+        """Compute p(y|phi) for all values of y."""
+
+        # Reshape phi.
+        phi = tf.reshape(phi, [-1, 1, 1])
+
+        # Perform computations for Sort-seq measurement process
+        mu_of_phi = phi
+
+        # transform phi between 0 and 1
+        lambda_of_phi = (mu_of_phi - self.mu_neg)/(self.mu_pos-self.mu_neg)
+
+        # This quantity linearly scales between sigma_neg and sigma_pos.
+        sigma_of_phi = self.sigma_neg*Exp(lambda_of_phi*Log(self.sigma_pos/self.sigma_neg))
+
+        # upper and lower bounds transformed into z-values.
+        z_y_upper_bound = (self.f_y_upper_bounds - mu_of_phi)/sigma_of_phi
+        z_y_lower_bound = (self.f_y_lower_bounds - mu_of_phi) / sigma_of_phi
+        
+        # prob mass of normal distribution p(y|phi) between z_y_ub and z_y_lb
+        u_y_of_phi = norm.cdf(z_y_upper_bound) - norm.cdf(z_y_lower_bound)
+
+        # relative probability of sequence in dataset being found in bin y
+        w_my = (self.N_y/self.N)*u_y_of_phi
+
+        # normalized probability
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        return p_my
+
+
 class DiscreteAgnosticMP(MeasurementProcess):
-    """Represents an MPA measurement process."""
+    """Represents an Discrete agnostic measurement process.
+        (known as MPA in mave-nn 1)
+    """
 
     def __init__(self,
                  Y,
@@ -518,11 +685,18 @@ class NoiseModelLayer(Layer):
         # if noise model is not empirical, do everything as before
         # i.e., do not supply the additional argument of dy to compute nll
         if self.is_noise_model_empirical == False:
+
             # this is yhat
             yhat = inputs[:, 0:1]
 
             # these are the labels
             ytrue = inputs[:, 1:]
+
+            # TODO replace NANs with something else (y.mean) and don't let these contribute to ll
+            # replace the tensors where nans in ytrue occur with zeros, so that likelihood for
+            # that yhat, ypred pair is also zero.
+            # yhat = tf.where(tf.is_nan(ytrue), tf.zeros_like(yhat), yhat)
+            # ytrue = tf.where(tf.is_nan(ytrue), tf.zeros_like(ytrue), ytrue)
 
             # Compute negative log likelihood
             nlls = self.compute_nlls(yhat=yhat,
