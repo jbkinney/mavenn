@@ -889,7 +889,8 @@ class Model:
         # training sequences.
         # Hot-fix related to TF 2.4, 2020.12.18
         #unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
-        unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
+        # Commented due to memory overflow for higher order GP maps.
+        # unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
 
         # Set stats
         #if self.normalize_phi:
