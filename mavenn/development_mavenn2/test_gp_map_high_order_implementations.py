@@ -30,9 +30,9 @@ alphabet = ['A', 'C', 'G', 'U']
 
 # Default fitting kwargs
 default_fit_kwargs = {
-    'learning_rate': 5e-4,
+    'learning_rate': 1e-3,
     'epochs': 500,
-    'batch_size': 200,
+    'batch_size': 50,
     'early_stopping': True,
     'early_stopping_patience': 30,
     'linear_initialization': False,
@@ -45,8 +45,10 @@ gpmap_cases = ['AdditiveGPMapLayer',
                'PairwiseGPMapLayer',
                'K2',
                'K3']
+
 line_colors = ['k', 'r', 'g', 'b', 'darkorange', 'purple']
-fig, ax = plt.subplots(1, 1)
+fig, axs = plt.subplots(1, len(gpmap_cases) + 1,
+                        figsize=(3 * (len(gpmap_cases) + 1), 3))
 
 # Loop over gp-map implementations
 for c, g in enumerate(gpmap_cases):
@@ -71,17 +73,38 @@ for c, g in enumerate(gpmap_cases):
             L=L, alphabet=alphabet, interaction_order=3)
 
     # Initialize measurement process
-    mp_GE = mavenn.measurement_process_layers.GlobalEpsitasisMP(K=20)
+    mp_GE = mavenn.measurement_process_layers.GlobalEpsitasisMP(
+        K=50, ge_noise_model_type='SkewedT', ge_heteroskedasticity_order=2)
     # Define Model
     model = mavenn.Model2(gpmap=gpmap, mp_list=[mp_GE])
     # Set training data
-    model.set_data(x=data_df['x'],
-                   y_list=[data_df['y'].values.reshape(-1, 1)],
-                   validation_flags=(data_df['set'] == 'validation'),
+    model.set_data(x=trainval_df['x'],
+                   y_list=[trainval_df['y'].values.reshape(-1, 1)],
+                   validation_flags=trainval_df['validation'],
                    shuffle=False)
 
     model.fit(**default_fit_kwargs)
+    # TODO: model.save is broken
+    # Get test data y values
+    y_test = test_df['y']
+    # Compute phi on test data
+    phi_test = model.gpmap.x_to_phi(test_df['x'])
 
+    # Set phi lims and create a grid in phi space
+    phi_lim = [min(phi_test) - .5, max(phi_test) + .5]
+    phi_grid = np.linspace(phi_lim[0], phi_lim[1], 1000).astype('float32')
+
+    yhat_grid = mp_GE.phi_to_yhat(phi_grid)
+
+    ax = axs[c + 1]
+    # Plot GE nonlinearity
+    ax.scatter(phi_test, y_test, c='C10', s=5,
+               alpha=0.1, zorder=-10, rasterized=True)
+    ax.plot(phi_grid, yhat_grid, linewidth=3,
+            color=line_colors[c], label=f'G-P model {g}')
+
+    # Style plot
+    ax = axs[0]
     # Plot I_var_train, the variational information on training data as a function of epoch
     ax.plot(model.history['I_var'], color=line_colors[c],
             label=f'train Ivar {g}')
@@ -89,11 +112,21 @@ for c, g in enumerate(gpmap_cases):
     ax.plot(model.history['val_I_var'], '--',
             color=line_colors[c], label=f'val I_var {g}')
 
-ax.legend(frameon=True, fontsize=8, loc=4)
-ax.set_xlabel('epochs')
-ax.set_ylabel('bits')
-plt.title('MPSA GE modeling')
+fs = 8
+for c in range(len(gpmap_cases)):
+    ax = axs[c + 1]
+    ax.set_xlabel('latent phenotype ($\phi$)', fontsize=fs)
+    ax.set_ylim([-1.5, 4.5])
+    ax.set_ylabel('measurement ($y$)', fontsize=fs)
+    ax.legend(frameon=True, loc='lower right', fontsize=fs)
+# Style plots
+ax = axs[0]
+# ax.legend(frameon=True, fontsize=fs, loc='lower right')
+ax.set_xlabel('epochs', fontsize=fs)
+ax.set_ylabel('bits', fontsize=fs)
 
+
+plt.title('MPSA GE modeling')
 plt.tight_layout()
 plt.savefig('gp_implementations.pdf')
 plt.show()
