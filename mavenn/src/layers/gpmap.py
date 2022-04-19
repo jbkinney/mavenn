@@ -146,9 +146,29 @@ class GPMapLayer(Layer):
         assert False
 
     @handle_errors
-    def x_to_phi(self, x):
-        """GP map to x_to_phi abstract method. """
-        # TODO: x_to_phi should be only here not in individual classes
+    def x_to_phi(self, x, batch_size: Optional[int] = 64):
+        """GP map to x_to_phi abstract method.
+
+        Parameters
+        ----------
+        x: (str)
+            Sequences.
+        batch_size: Optional (int)
+            Default values is 64.
+
+        Returns
+        ----------
+        phi: (numpy array dtype=float32)
+            Latent phenotype values.
+
+        Note
+        ----------
+        This function caused the memory overflow:
+        If the size of the x is large and higher order GP maps are used
+        the matrix multiplication needs huge memory.
+        Solution: Used the batched version of self.call
+        """
+
         # Shape x for processing
         x, x_shape = _get_shape_and_return_1d_array(x)
 
@@ -159,10 +179,14 @@ class GPMapLayer(Layer):
 
         # Encode sequences as features
         stats = x_to_stats(x=x, alphabet=self.alphabet)
-        x_ohe = stats.pop('x_ohe')
-
+        # Convert the x_ohe to tensorflow dataset with batch
+        x_ohe = tf.data.Dataset.from_tensor_slices(
+            tf.convert_to_tensor(stats.pop('x_ohe'), dtype=tf.float32)).batch(batch_size)
         # Note: this is currently not diffeomorphic mode fixed.
-        phi = self.call(x_ohe.astype('float32'))
+        # Apply x_to_phi calls on batches
+        phi = x_ohe.map(lambda z: self.call(z))
+        # Unbatch and gather all the phi values in numpy array
+        phi = np.array(list(phi.unbatch().as_numpy_iterator()))
 
         # Shape phi for output
         phi = _shape_for_output(phi, x_shape)
@@ -173,7 +197,7 @@ class GPMapLayer(Layer):
 class AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive G-P map."""
 
-    @handle_errors
+    @ handle_errors
     def __init__(self, *args, **kwargs):
         """Construct layer instance."""
 
@@ -191,7 +215,7 @@ class AdditiveGPMapLayer(GPMapLayer):
         # Define theta_lc parameters
         theta_lc_shape = (1, self.L, self.C)
         # 2202.02.04: this initializer creates problems, need to remove everywhere
-        #theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
+        # theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
         self.theta_lc = self.add_weight(name='theta_lc',
                                         shape=theta_lc_shape,
                                         # initializer=Constant(theta_lc_init),
@@ -209,37 +233,11 @@ class AdditiveGPMapLayer(GPMapLayer):
 
         return phi
 
-    def x_to_phi(self, x):
-        '''
-        # TODO: I may need to refactor some of this functionality in the super class, if it's repeated.
-        # such as validate seqs
-        '''
-
-        # Shape x for processing
-        x, x_shape = _get_shape_and_return_1d_array(x)
-
-        # Check seqs
-        x = validate_seqs(x, alphabet=self.alphabet)
-        check(len(x[0]) == self.L,
-              f'len(x[0])={len(x[0])}; should be L={self.L}')
-
-        # Encode sequences as features
-        stats = x_to_stats(x=x, alphabet=self.alphabet)
-        x_ohe = stats.pop('x_ohe')
-
-        # Note: this is currently not diffeomorphic mode fixed.
-        phi = self.call(x_ohe.astype('float32'))
-
-        # Shape phi for output
-        phi = _shape_for_output(phi, x_shape)
-
-        return phi
-
 
 class PairwiseGPMapLayer(GPMapLayer):
     """Represents a pairwise G-P map."""
 
-    @handle_errors
+    @ handle_errors
     def __init__(self, mask_type, *args, **kwargs):
         """Construct layer instance."""
 
@@ -314,7 +312,7 @@ class PairwiseGPMapLayer(GPMapLayer):
 
         return phi
 
-    @handle_errors
+    @ handle_errors
     def get_config(self):
         """Return configuration dictionary."""
 
@@ -329,7 +327,7 @@ class PairwiseGPMapLayer(GPMapLayer):
 class MultilayerPerceptronGPMap(GPMapLayer):
     """Represents an MLP G-P map."""
 
-    @handle_errors
+    @ handle_errors
     def __init__(self,
                  *args,
                  hidden_layer_sizes=(10, 10, 10),
@@ -362,7 +360,7 @@ class MultilayerPerceptronGPMap(GPMapLayer):
         self.hidden_layer_activation = hidden_layer_activation
         super().__init__(*args, **kwargs)
 
-    @handle_errors
+    @ handle_errors
     def build(self, input_shape):
 
         # Determine input shape
@@ -466,14 +464,14 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 
         return phi
 
-    @handle_errors
+    @ handle_errors
     def set_params(self, theta_0=None, theta_lc=None):
         """
         Does nothing for MultilayerPerceptronGPMap
         """
         print('Warning: MultilayerPerceptronGPMap.set_params() does nothing.')
 
-    @handle_errors
+    @ handle_errors
     def get_params(self):
         """
         Get values of layer parameters.
@@ -499,7 +497,7 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 class KOrderGPMap(GPMapLayer):
     """Represents a arbitrary interaction G-P map."""
 
-    @handle_errors
+    @ handle_errors
     def __init__(self,
                  interaction_order: Optional[int] = 0,
                  *args, **kwargs):
@@ -522,12 +520,12 @@ class KOrderGPMap(GPMapLayer):
         # Create the theta_0 name.
         theta_0_name = f'theta_0'
         # Define theta_0 weight
-        self.theta_dict[theta_0_name] = \
-            self.add_weight(name=theta_0_name,
-                            shape=(1,),
-                            initializer=Constant(0.),
-                            trainable=True,
-                            regularizer=self.regularizer)
+        self.theta_dict[theta_0_name] = self.add_weight(name=theta_0_name,
+                                                        shape=(1,),
+                                                        initializer=Constant(
+                                                            0.),
+                                                        trainable=True,
+                                                        regularizer=self.regularizer)
 
         # Create the theta_lc
         theta_shape = (1,)
@@ -539,12 +537,11 @@ class KOrderGPMap(GPMapLayer):
             theta_name = f'theta_{k+1}'
             # Add L, C to the shape of theta_k for each interaction order k
             theta_shape = theta_shape + (self.L, self.C)
-            self.theta_dict[theta_name] =  \
-                self.add_weight(name=theta_name,
-                                shape=theta_shape,
-                                initializer=RandomNormal(),
-                                trainable=True,
-                                regularizer=self.regularizer)
+            self.theta_dict[theta_name] = self.add_weight(name=theta_name,
+                                                          shape=theta_shape,
+                                                          initializer=RandomNormal(),
+                                                          trainable=True,
+                                                          regularizer=self.regularizer)
             # Create list of indices
             # which should be False or True based on level of interactions.
             # The ls_dict is analogous to l, l', l'', ... in MAVE-NN paper
