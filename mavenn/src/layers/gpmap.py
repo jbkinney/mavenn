@@ -179,12 +179,15 @@ class GPMapLayer(Layer):
 
         # Encode sequences as features
         stats = x_to_stats(x=x, alphabet=self.alphabet)
+
         # Convert the x_ohe to tensorflow dataset with batch
         x_ohe = tf.data.Dataset.from_tensor_slices(
             tf.convert_to_tensor(stats.pop('x_ohe'), dtype=tf.float32)).batch(batch_size)
+
         # Note: this is currently not diffeomorphic mode fixed.
         # Apply x_to_phi calls on batches
         phi = x_ohe.map(lambda z: self.call(z))
+
         # Unbatch and gather all the phi values in numpy array
         phi = np.array(list(phi.unbatch().as_numpy_iterator()))
 
