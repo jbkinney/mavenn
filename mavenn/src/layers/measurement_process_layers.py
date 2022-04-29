@@ -358,21 +358,29 @@ class SortSeqMP(MeasurementProcess):
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg)/(self.mu_pos-self.mu_neg)
 
-        # This quantity linearly scales between sigma_neg and sigma_pos.
-        sigma_of_phi = self.sigma_neg*Exp(lambda_of_phi*Log(self.sigma_pos/self.sigma_neg))
+        Log_sigma_pos_over_sigma_neg = tf.reshape(Log(self.sigma_pos/self.sigma_neg), [-1, 1, 1])
+        Log_sigma_pos_over_sigma_neg = tf.cast(Log_sigma_pos_over_sigma_neg, dtype=tf.float32)
+
+        sigma_of_phi = self.sigma_neg*Exp(lambda_of_phi*Log_sigma_pos_over_sigma_neg)
 
         # upper and lower bounds transformed into z-values.
         z_y_upper_bound = (self.f_y_upper_bounds - mu_of_phi)/sigma_of_phi
         z_y_lower_bound = (self.f_y_lower_bounds - mu_of_phi) / sigma_of_phi
         
         # prob mass of normal distribution p(y|phi) between z_y_ub and z_y_lb
-        u_y_of_phi = norm.cdf(z_y_upper_bound) - norm.cdf(z_y_lower_bound)
+        u_y_of_phi = tf.math.erf(np.sqrt(2)*z_y_upper_bound) - tf.math.erf(np.sqrt(2)*z_y_lower_bound)
 
         # relative probability of sequence in dataset being found in bin y
-        w_my = (self.N_y/self.N)*u_y_of_phi
+
+        N_y = tf.reshape(self.N_y, [-1, 1, self.Y])
+        N_y = tf.cast(N_y, dtype=tf.float32)
+
+        w_my = (N_y/self.N)*u_y_of_phi
 
         # normalized probability
-        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+        # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
+        # i.e., sum over Y
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=2), [-1, 1])
 
         return p_my
 
