@@ -23,6 +23,18 @@ from tensorflow.keras.layers import Layer, Concatenate
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
 
+from mavenn.src.reshape import _shape_for_output, \
+    _get_shape_and_return_1d_array, \
+    _broadcast_arrays
+
+from mavenn.src.validate import validate_seqs, \
+    validate_1d_array, \
+    validate_alphabet
+from mavenn.src.utils import mat_data_to_vec_data, \
+    vec_data_to_mat_data, \
+    x_to_stats, \
+    p_lc_to_x, _x_to_mat
+
 pi = np.pi
 e = np.exp(1)
 
@@ -345,6 +357,77 @@ class SortSeqMP(MeasurementProcess):
 
         return negative_log_likelihood
 
+    def p_of_y_given_phi(self, y, phi, paired=False):
+        """
+        Compute probabilities p( ``y`` | ``phi`` ).
+        Parameters
+        ----------
+        y: (np.ndarray)
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
+        phi: (np.ndarray)
+            Latent phenotype values, provided as an array of floats.
+        paired: (bool)
+            Whether values in ``y`` and ``phi`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``phi``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``phi``.
+        Returns
+        -------
+        p: (np.ndarray)
+            Probability of ``y`` given ``phi``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``phi.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + phi.shape``.
+        """
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == phi_shape,
+                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            y, phi = _broadcast_arrays(y, phi)
+
+            # Set output shape
+            p_shape = y_shape + phi_shape
+
+        # Ravel arrays
+        y = y.ravel()
+        phi = phi.ravel()
+
+        # Cast y as integers
+        y = y.astype(int)
+
+        # Make sure all y values are valid
+        check(np.all(y >= 0),
+              f"Negative values for y are invalid for MAP regression")
+
+        check(np.all(y < self.Y),
+              f"Some y values exceed the number of bins {self.Y}")
+
+        # Get values for all bins
+        p_of_all_y_given_phi = self.p_of_all_y_given_phi(phi, use_arrays=True)
+
+        # Extract y-specific elements
+        _ = np.newaxis
+        all_y = np.arange(self.Y).astype(int)
+        y_ix = (y[:, _] == all_y[_, :])
+        p = p_of_all_y_given_phi[y_ix]
+
+        p = _shape_for_output(p, p_shape)
+        return p
+
     @handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
@@ -485,6 +568,100 @@ class DiscreteAgnosticMP(MeasurementProcess):
         self.add_metric(I_y_phi, name="I_var", aggregation="mean")
 
         return negative_log_likelihood
+
+    def p_of_y_given_phi(self, y, phi, paired=False):
+        """
+        Compute probabilities p( ``y`` | ``phi`` ).
+        Parameters
+        ----------
+        y: (np.ndarray)
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
+        phi: (np.ndarray)
+            Latent phenotype values, provided as an array of floats.
+        paired: (bool)
+            Whether values in ``y`` and ``phi`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``phi``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``phi``.
+        Returns
+        -------
+        p: (np.ndarray)
+            Probability of ``y`` given ``phi``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``phi.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + phi.shape``.
+        """
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == phi_shape,
+                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            y, phi = _broadcast_arrays(y, phi)
+
+            # Set output shape
+            p_shape = y_shape + phi_shape
+
+        # Ravel arrays
+        y = y.ravel()
+        phi = phi.ravel()
+
+        # # If GE, compute yhat, then p
+        # if self.regression_type == 'GE':
+        #
+        #     # Compute y_hat
+        #     yhat = self.phi_to_yhat(phi)
+        #
+        #     # Comptue p_y_given_phi using yhat
+        #     p = self.p_of_y_given_yhat(y, yhat, paired=True)
+
+        # Otherwise, just compute p
+        #elif self.regression_type == 'MPA':
+
+        # Cast y as integers
+        y = y.astype(int)
+
+        # Make sure all y values are valid
+        check(np.all(y >= 0),
+              f"Negative values for y are invalid for MAP regression")
+
+        check(np.all(y < self.Y),
+              f"Some y values exceed the number of bins {self.Y}")
+
+        # Get values for all bins
+        #p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
+        # p_of_all_y_given_phi = \
+        #     self.layer_measurement_process.p_of_all_y_given_phi(
+        #         phi,
+        #         use_arrays=True)
+
+        p_of_all_y_given_phi = self.p_of_all_y_given_phi(phi, use_arrays=True)
+
+        # Extract y-specific elements
+        _ = np.newaxis
+        all_y = np.arange(self.Y).astype(int)
+        y_ix = (y[:, _] == all_y[_, :])
+        p = p_of_all_y_given_phi[y_ix]
+
+        # else:
+        #     assert False, 'This should not happen.'
+
+        # Shape for output
+        p = _shape_for_output(p, p_shape)
+        return p
+
 
     @handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
