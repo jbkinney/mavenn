@@ -423,6 +423,8 @@ class SortSeqMP(MeasurementProcess):
         _ = np.newaxis
         all_y = np.arange(self.Y).astype(int)
         y_ix = (y[:, _] == all_y[_, :])
+
+
         p = p_of_all_y_given_phi[y_ix]
 
         p = _shape_for_output(p, p_shape)
@@ -459,11 +461,12 @@ class SortSeqMP(MeasurementProcess):
         N_y = tf.cast(N_y, dtype=tf.float32)
 
         w_my = (N_y/self.N)*u_y_of_phi
+        w_my = tf.reshape(w_my, [-1, self.Y])
 
         # normalized probability
         # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
         # i.e., sum over Y
-        p_my = w_my / tf.reshape(K.sum(w_my, axis=2), [-1, 1])
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
 
         return p_my
 
@@ -653,6 +656,7 @@ class DiscreteAgnosticMP(MeasurementProcess):
         _ = np.newaxis
         all_y = np.arange(self.Y).astype(int)
         y_ix = (y[:, _] == all_y[_, :])
+
         p = p_of_all_y_given_phi[y_ix]
 
         # else:
@@ -679,6 +683,7 @@ class DiscreteAgnosticMP(MeasurementProcess):
         psi_my = a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk), axis=2)
         psi_my = tf.reshape(psi_my, [-1, self.Y])
         w_my = Exp(psi_my)
+        #print(f'w_my shape {w_my.shape}')
 
         # Compute and return distribution
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
