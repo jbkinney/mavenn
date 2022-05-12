@@ -225,6 +225,207 @@ class GlobalEpsitasisMP(MeasurementProcess):
         return self.mp_layer.p_of_y_given_yhat(y, yhat)
 
 
+class ExponentialEnrichmentMP(MeasurementProcess):
+    """
+    For experiments in which sequences undergo exponential enrichment,
+    e.g., selective growth, affinity enrichment, etc.
+    Data provided as table of counts for bins y = 0,1,..., Y − 1, Y ≥ 2.
+    Bin y contains sequences having undergone selection for a time duration ty. Typically,
+    y = 0 will correspond to the input library, with t0 = 0 indicating no selection.
+    Trainable parameters: b_y and (optionally) t_y.
+
+    Y: (int)
+        Total number of bins. Y>=2.
+
+    t_y (array-like)
+        User sets ty values. If ty = None is provided, include this value as a trainable parameter.
+        However, at least two enrichment times must be specified (e.g. t0 = 0, t1 = 1).
+    # TODO: need to implement logic if t_y is not None then don't initialize weights in build() and just use user set value
+    """
+
+    def __init__(self,
+                 Y,
+                 eta,
+                 info_for_layers_dict,
+                 t_y=None,
+                 **kwargs
+                 ):
+
+        self.Y = Y
+
+        # attributes of base MeasurementProcess class
+        self.eta = eta
+        self.info_for_layers_dict = info_for_layers_dict
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        super().__init__(eta, info_for_layers_dict, **kwargs)
+
+    def get_config(self):
+        """Get configuration dictionary."""
+        base_config = super().get_config()
+        return {**base_config,
+                "info_for_layers_dict": self.info_for_layers_dict,
+                "number_bins": self.Y}
+
+    def build(self, input_shape):
+        """Build layer."""
+
+        # Need to randomly initialize b_k
+        self.b_y = self.add_weight(name='b_y',
+                                    dtype=tf.float32,
+                                    shape=(self.Y,),
+                                    #initializer=Constant(b_k0),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+
+        self.t_y = self.add_weight(name='t_y',
+                                    dtype=tf.float32,
+                                    shape=(self.Y,),
+                                    #initializer=Constant(1.),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+
+        super().build(input_shape)
+
+    def call(self, inputs):
+        """
+        Transform layer inputs to outputs.
+
+        Parameters
+        ----------
+        inputs: (tf.Tensor)
+            A (B,Y+1) tensor containing counts, where B is batch
+            size and Y is the number of bins.
+            inputs[:,1] is phi
+            inputs[:,1:Y+1] is c_my
+
+        Returns
+        -------
+        negative_log_likelihood: (np.array)
+            A (B,) tensor containing negative log likelihood contributions
+        """
+
+        # Extract and shape inputs
+        phi = inputs[:, 0]
+        ct_my = inputs[:, 1:]
+
+        # Compute p(y|phi)
+        p_my = self.p_of_all_y_given_phi(phi)
+
+        # Compute negative log likelihood
+        negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
+        ct_m = K.sum(ct_my, axis=1)
+
+        # Add I_var metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = np.log2(e) * \
+                        K.sum(negative_log_likelihood) / K.sum(ct_m)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
+
+        return negative_log_likelihood
+
+    @handle_arrays
+    def p_of_all_y_given_phi(self, phi, return_var='p'):
+        """Compute p(y|phi) for all values of y."""
+        # Shape phi
+        phi = tf.reshape(phi, [-1, 1, 1])
+
+        # Reshape parameters
+        b_y  = tf.reshape(self.b_y, [-1, self.Y])
+        t_y = tf.reshape(self.t_y, [-1, self.Y])
+
+        # Compute weights
+
+        psi_y = t_y*phi + b_y
+        psi_y = tf.reshape(psi_y, [-1, self.Y])
+        w_my = Exp(psi_y)
+
+        # Compute and return distribution
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        if return_var=='w':
+            return w_my
+        elif return_var=='psi':
+            return psi_y
+        else:
+            return p_my
+
+    def p_of_y_given_phi(self, y, phi, paired=False):
+        """
+        Compute probabilities p( ``y`` | ``phi`` ).
+        Parameters
+        ----------
+        y: (np.ndarray)
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
+        phi: (np.ndarray)
+            Latent phenotype values, provided as an array of floats.
+        paired: (bool)
+            Whether values in ``y`` and ``phi`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``phi``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``phi``.
+        Returns
+        -------
+        p: (np.ndarray)
+            Probability of ``y`` given ``phi``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``phi.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + phi.shape``.
+        """
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == phi_shape,
+                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            y, phi = _broadcast_arrays(y, phi)
+
+            # Set output shape
+            p_shape = y_shape + phi_shape
+
+        # Ravel arrays
+        y = y.ravel()
+        phi = phi.ravel()
+
+        # Cast y as integers
+        y = y.astype(int)
+
+        # Make sure all y values are valid
+        check(np.all(y >= 0),
+              f"Negative values for y are invalid for MAP regression")
+
+        check(np.all(y < self.Y),
+              f"Some y values exceed the number of bins {self.Y}")
+
+        # Get values for all bins
+        p_of_all_y_given_phi = self.p_of_all_y_given_phi(phi, use_arrays=True)
+
+        # Extract y-specific elements
+        _ = np.newaxis
+        all_y = np.arange(self.Y).astype(int)
+        y_ix = (y[:, _] == all_y[_, :])
+
+        p = p_of_all_y_given_phi[y_ix]
+
+        p = _shape_for_output(p, p_shape)
+        return p
+
+
 class SortSeqMP(MeasurementProcess):
     """
     Represents a Sortseq based measurement process.
