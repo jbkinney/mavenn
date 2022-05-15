@@ -683,6 +683,267 @@ class SortSeqMP(MeasurementProcess):
         return p_my
 
 
+class TiteSeqMP(MeasurementProcess):
+    """
+    Represents a parametric measurement process for analyzing
+    Titeseq data.
+
+    c: (float)
+        The labeling concentration.
+
+    Y: (int)
+        Number of sorting bins, i.e, y = 0, ..., Y-1.
+
+    N_y: (array-like)
+        Number of reads in every bin.
+        Note that this should be inferred from the training data
+        i.e. for cts data: ct_0, ct_1, ... ct_(Y-1), N_y -> sum(axis=0) (sum rows)
+
+    mu_pos: (float)
+        Mean of log_10 fluorescence for positive control
+        (i.e., highly fluorescent) sample.
+
+    sigma_pos: (float)
+        Standard deviation of log_10 fluorescence for positive control
+        (i.e., highly fluorescent) sample.
+
+    mu_neg: (float)
+        Mean of log_10 fluorescence for negative control
+        (i.e., non-fluorescent) sample.
+
+    sigma_neg: (float)
+        Standard deviation of log_10 fluorescence for negative control
+        (i.e., non-fluorescent) sample.
+
+    f_y_upper_bounds: (array-like)
+        Upper bounds on log_10 fluorescence for each sorting bin.
+        I.e., {f_y^ub}_[y=0,Y-1]
+
+    f_y_lower_bounds: (array-like)
+        Lower bounds on log_10 fluorescence for each sorting bin.
+        I.e., {f_y^lb}_[y=0,Y-1]
+
+    eta: (float)
+        L2 regularization.
+    """
+
+    def __init__(self,
+                 c,
+                 N_y,
+                 Y,
+                 mu_pos,
+                 sigma_pos,
+                 mu_neg,
+                 sigma_neg,
+                 f_y_upper_bounds,
+                 f_y_lower_bounds,
+                 eta,
+                 info_for_layers_dict,
+                 **kwargs
+                 ):
+        """Construct layer."""
+        # Set attributes
+        self.c = c
+        self.Y = Y
+        self.N_y = N_y
+        self.mu_pos = mu_pos
+        self.sigma_pos = sigma_pos
+        self.mu_neg = mu_neg
+        self.sigma_neg = sigma_neg
+        self.f_y_upper_bounds = f_y_upper_bounds
+        self.f_y_lower_bounds = f_y_lower_bounds
+
+        # attributes of base MeasurementProcess class
+        self.eta = eta
+        self.info_for_layers_dict = info_for_layers_dict
+
+        # total number of reads
+        self.N = np.sum(self.N_y)
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        super().__init__(eta, info_for_layers_dict, **kwargs)
+
+    def get_config(self):
+        """Get configuration dictionary."""
+        base_config = super().get_config()
+        return {**base_config,
+                "info_for_layers_dict": self.info_for_layers_dict,
+                "number_bins": self.number_bins}    # TODO: check if self.number_bins is defined/works
+
+    # Note that this layer doesn't have trainable weights so we only
+    # should need to use the 'call' method
+    # def build(self, input_shape):
+    #     """Build layer."""
+    #     pass
+
+    def call(self, inputs):
+        """
+        Transform layer inputs to outputs.
+
+        Parameters
+        ----------
+        inputs: (tf.Tensor)
+            A (B,Y+1) tensor containing counts, where B is batch
+            size and Y is the number of bins.
+            inputs[:,1] is phi
+            inputs[:,1:Y+1] is c_my
+
+        Returns
+        -------
+        negative_log_likelihood: (np.array)
+            A (B,) tensor containing negative log likelihood contributions
+        """
+
+        # Extract and shape inputs
+        phi = inputs[:, 0:1]
+        ct_my = inputs[:, 2:]
+
+        # code from one-dimensional phi
+        # phi = inputs[:, 0]
+        # ct_my = inputs[:, 1:]
+
+        # Compute p(y|phi)
+        p_my = self.p_of_all_y_given_phi(phi)
+
+        # Compute negative log likelihood
+        negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
+        ct_m = K.sum(ct_my, axis=1)
+
+        # Add I_var metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = np.log2(e) * \
+            K.sum(negative_log_likelihood) / K.sum(ct_m)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
+
+        return negative_log_likelihood
+
+    def p_of_y_given_phi(self, y, phi, paired=False):
+        """
+        Compute probabilities p( ``y`` | ``phi`` ).
+        Parameters
+        ----------
+        y: (np.ndarray)
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
+        phi: (np.ndarray)
+            Latent phenotype values, provided as an array of floats.
+        paired: (bool)
+            Whether values in ``y`` and ``phi`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``phi``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``phi``.
+        Returns
+        -------
+        p: (np.ndarray)
+            Probability of ``y`` given ``phi``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``phi.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + phi.shape``.
+        """
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == phi_shape,
+                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            y, phi = _broadcast_arrays(y, phi)
+
+            # Set output shape
+            p_shape = y_shape + phi_shape
+
+        # Ravel arrays
+        y = y.ravel()
+        phi = phi.ravel()
+
+        # Cast y as integers
+        y = y.astype(int)
+
+        # Make sure all y values are valid
+        check(np.all(y >= 0),
+              f"Negative values for y are invalid for MAP regression")
+
+        check(np.all(y < self.Y),
+              f"Some y values exceed the number of bins {self.Y}")
+
+        # Get values for all bins
+        p_of_all_y_given_phi = self.p_of_all_y_given_phi(phi, use_arrays=True)
+
+        # Extract y-specific elements
+        _ = np.newaxis
+        all_y = np.arange(self.Y).astype(int)
+        y_ix = (y[:, _] == all_y[_, :])
+
+        p = p_of_all_y_given_phi[y_ix]
+
+        p = _shape_for_output(p, p_shape)
+        return p
+
+    @handle_arrays
+    def p_of_all_y_given_phi(self, phi, return_var='p'):
+        """Compute p(y|phi) for all values of y."""
+
+        # Reshape phi. The following phi represents two latent phenotypes;
+        # phi[0] represents log10 affinity in inverse units of the labeling
+        # concentration, phi[1] represents log10 expression.
+        #phi = tf.reshape(phi, [-1, 1, 2])
+        phi_0 = phi[:, 0]
+
+        phi_1 = phi[:, 1]
+
+        K_a_of_phi = Exp(phi_0)
+        A_of_phi = Exp(phi_1)
+
+        mu_of_phi = A_of_phi*((self.c*K_a_of_phi)/(1+self.c*K_a_of_phi))+self.mu_neg
+
+        # transform phi between 0 and 1
+        lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
+
+        Log_sigma_pos_over_sigma_neg = tf.reshape(
+            Log(self.sigma_pos / self.sigma_neg), [-1, 1, 1])
+        Log_sigma_pos_over_sigma_neg = tf.cast(
+            Log_sigma_pos_over_sigma_neg, dtype=tf.float32)
+
+        sigma_of_phi = self.sigma_neg * \
+            Exp(lambda_of_phi * Log_sigma_pos_over_sigma_neg)
+
+        # upper and lower bounds transformed into z-values.
+        z_y_upper_bound = (self.f_y_upper_bounds - mu_of_phi) / sigma_of_phi
+        z_y_lower_bound = (self.f_y_lower_bounds - mu_of_phi) / sigma_of_phi
+
+        # prob mass of normal distribution p(y|phi) between z_y_ub and z_y_lb
+        u_y_of_phi = tf.math.erf(
+            np.sqrt(2) * z_y_upper_bound) - tf.math.erf(np.sqrt(2) * z_y_lower_bound)
+
+        # relative probability of sequence in dataset being found in bin y
+
+        N_y = tf.reshape(self.N_y, [-1, 1, self.Y])
+        N_y = tf.cast(N_y, dtype=tf.float32)
+
+        w_my = (N_y / self.N) * u_y_of_phi
+        w_my = tf.reshape(w_my, [-1, self.Y])
+
+        # normalized probability
+        # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
+        # i.e., sum over Y
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        return p_my
+
+
 class DiscreteAgnosticMP(MeasurementProcess):
     """Represents an Discrete agnostic measurement process.
         (known as MPA in mave-nn 1)
