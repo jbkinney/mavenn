@@ -651,13 +651,15 @@ class SortSeqMP(MeasurementProcess):
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
 
-        Log_sigma_pos_over_sigma_neg = tf.reshape(
-            Log(self.sigma_pos / self.sigma_neg), [-1, 1, 1])
-        Log_sigma_pos_over_sigma_neg = tf.cast(
-            Log_sigma_pos_over_sigma_neg, dtype=tf.float32)
+        # Log_sigma_pos_over_sigma_neg = tf.reshape(
+        #     Log(self.sigma_pos / self.sigma_neg), [-1, 1, 1])
+        # Log_sigma_pos_over_sigma_neg = tf.cast(
+        #     Log_sigma_pos_over_sigma_neg, dtype=tf.float32)
+        #
+        # sigma_of_phi = self.sigma_neg * \
+        #     Exp(lambda_of_phi * Log_sigma_pos_over_sigma_neg)
 
-        sigma_of_phi = self.sigma_neg * \
-            Exp(lambda_of_phi * Log_sigma_pos_over_sigma_neg)
+        sigma_of_phi = (1-lambda_of_phi)*self.sigma_neg + lambda_of_phi*self.sigma_pos
 
         # upper and lower bounds transformed into z-values.
         z_y_upper_bound = (self.f_y_upper_bounds - mu_of_phi) / sigma_of_phi
@@ -797,8 +799,10 @@ class TiteSeqMP(MeasurementProcess):
         """
 
         # Extract and shape inputs
+        # ' phi shape in call (None, 2)')
         phi = inputs[:, 0: 2]
         ct_my = inputs[:, 2:]
+
 
         # code from one-dimensional phi
         # phi = inputs[:, 0]
@@ -900,11 +904,16 @@ class TiteSeqMP(MeasurementProcess):
         # Reshape phi. The following phi represents two latent phenotypes;
         # phi[0] represents log10 affinity in inverse units of the labeling
         # concentration, phi[1] represents log10 expression.
-        #phi = tf.reshape(phi, [-1, 1, 2])
+
+        # print(f' SHAPE OF PHI  = {phi.shape}')
+        # phi = tf.reshape(phi, [-1, 1, 2])
         print(f' SHAPE OF PHI  = {phi.shape}')
         phi_0 = phi[:, 0]
 
         phi_1 = phi[:, 1]
+        print(f' SHAPE OF phi_0  = {phi_0.shape}')
+        phi_0 = tf.reshape(phi_0, [-1, 1, 1])
+        phi_1 = tf.reshape(phi_1, [-1, 1, 1])
 
         K_a_of_phi = Exp(phi_0)
         A_of_phi = Exp(phi_1)
@@ -926,11 +935,9 @@ class TiteSeqMP(MeasurementProcess):
         sigma_of_phi = self.sigma_neg * \
             Exp(lambda_of_phi * Log_sigma_pos_over_sigma_neg)
 
-        print('wrap')
         # upper and lower bounds transformed into z-values.
         z_y_upper_bound = (self.f_y_upper_bounds - mu_of_phi) / sigma_of_phi
         z_y_lower_bound = (self.f_y_lower_bounds - mu_of_phi) / sigma_of_phi
-        print('wrapwarp')
 
         # prob mass of normal distribution p(y|phi) between z_y_ub and z_y_lb
         u_y_of_phi = tf.math.erf(
@@ -938,16 +945,25 @@ class TiteSeqMP(MeasurementProcess):
 
         # relative probability of sequence in dataset being found in bin y
 
+        print(f' SHAPE OF u_y_of_phi  = {u_y_of_phi.shape}')
+
         N_y = tf.reshape(self.N_y, [-1, 1, self.Y])
         N_y = tf.cast(N_y, dtype=tf.float32)
 
         w_my = (N_y / self.N) * u_y_of_phi
+
+        print(f' SHAPE OF w_my  = {w_my.shape}')
+
         w_my = tf.reshape(w_my, [-1, self.Y])
+
+        print(f' SHAPE OF w_my  = {w_my.shape}')
 
         # normalized probability
         # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
         # i.e., sum over Y
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        print(f' SHAPE OF p_my  = {p_my.shape}')
 
         return p_my
 
