@@ -497,6 +497,105 @@ class MultilayerPerceptronGPMap(GPMapLayer):
         return param_dict
 
 
+class Multi_AdditiveGPMapLayer(GPMapLayer):
+    """Represents an additive with two latent phenotypes G-P map."""
+
+    @handle_errors
+    def __init__(self, number_latent_nodes, *args, **kwargs):
+        """Construct layer instance."""
+
+        self.number_latent_nodes = number_latent_nodes
+        super().__init__(*args, **kwargs)
+
+    @handle_errors
+    def build(self, input_shape):
+        """Build layer."""
+        # Define theta_0
+        self.theta_0 = self.add_weight(name='theta_0',
+                                       shape=(1, self.number_latent_nodes),
+                                       initializer=Constant(0.),
+                                       trainable=True,
+                                       regularizer=self.regularizer)
+
+        # Define theta_lc parameters
+        theta_lc_shape = (1, self.number_latent_nodes, self.L, self.C)
+        #theta_lc_init = np.random.randn(*theta_lc_shape)/np.sqrt(self.L)
+        self.theta_lc = self.add_weight(name='theta_lc',
+                                        shape=theta_lc_shape,
+                                        #initializer=Constant(theta_lc_init),
+                                        trainable=True,
+                                        regularizer=self.regularizer)
+        # Call superclass build
+        super().build(input_shape)
+
+    def call(self, x_lc):
+
+        """Process layer input and return output."""
+        # Shape input
+        x_lc = tf.reshape(x_lc, [-1, 1, self.L, self.C])
+
+        phi = self.theta_0 + \
+              tf.reshape(K.sum(self.theta_lc * x_lc, axis=[2, 3]),
+                         shape=[-1, self.number_latent_nodes])
+
+        return phi
+
+
+    @handle_errors
+    def set_params(self, theta_0=None, theta_lc=None):
+        """
+        Set values of layer parameters.
+        Parameters
+        ----------
+        theta_0: (float)
+        theta_lc: (np.ndarray)
+            Shape (L,C)
+        Returns
+        -------
+        None
+        """
+        # Check theta_0
+        if theta_0 is not None:
+            check(isinstance(theta_0, float),
+                  f'type(theta_0)={theta_0}; must be float')
+
+        # Check theta_lc
+        if theta_lc is not None:
+            check(isinstance(theta_lc, np.ndarray),
+                  f'type(theta_lc)={theta_lc}; must be np.ndarray')
+            check(theta_lc.size == self.L * self.C,
+                   f'theta_lc.size={repr(theta_lc.size)}; '
+                   f'must be ({self.L * self.C}).')
+            theta_lc = theta_lc.reshape([self.number_latent_nodes, self.L, self.C])
+
+        # Set weight values
+        self.set_weights([np.array([theta_0]), theta_lc])
+
+    @handle_errors
+    def get_params(self):
+        """
+        Get values of layer parameters.
+        Parameters
+        ----------
+        None.
+        Returns
+        -------
+        param_dict: (dict)
+            Dictionary containing model parameters. Model parameters are
+            returned as matrices, NOT as individual named parameters, and are
+            NOT gauge-fixed.
+        """
+        # Get list of weights
+        param_list = self.get_weights()
+
+        #  Fill param_dict
+        param_dict = {}
+        param_dict['theta_0'] = param_list[0]
+        param_dict['theta_lc'] = param_list[1].reshape([self.L, self.C])
+
+        return param_dict
+
+
 class KOrderGPMap(GPMapLayer):
     """Represents a arbitrary interaction G-P map."""
 
