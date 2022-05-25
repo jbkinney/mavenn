@@ -1000,6 +1000,8 @@ class DiscreteAgnosticMP(MeasurementProcess):
 
     def build(self, input_shape):
         """Build layer."""
+
+        print(f'inputs in build shape = {input_shape}')
         self.a_y = self.add_weight(name='a_y',
                                    dtype=tf.float32,
                                    shape=(self.Y,),

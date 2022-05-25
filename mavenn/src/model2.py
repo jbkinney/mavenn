@@ -142,7 +142,6 @@ class Model:
                 current_output_shape = 1
             else:
                 current_output_shape = measurement_processes_list[output_layer_index].Y
-
             number_of_targets += current_output_shape
 
         # Get input layer tensor, the sequence input, and the labels input
@@ -231,6 +230,7 @@ class Model:
                 prediction_y_concat = Concatenate()([phi, labels_input[idx_y_and_yhat_ll]])
                 output_tensor = current_mp(prediction_y_concat)
                 output_tensor_list.append(output_tensor)
+                idx_y_and_yhat_ll += 1
 
         model = TF_Functional_Model(input_tensor, output_tensor_list)
 
