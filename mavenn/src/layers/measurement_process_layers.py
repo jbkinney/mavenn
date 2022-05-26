@@ -803,7 +803,6 @@ class TiteSeqMP(MeasurementProcess):
         phi = inputs[:, 0: 2]
         ct_my = inputs[:, 2:]
 
-
         # code from one-dimensional phi
         # phi = inputs[:, 0]
         # ct_my = inputs[:, 1:]
@@ -952,18 +951,18 @@ class TiteSeqMP(MeasurementProcess):
 
         w_my = (N_y / self.N) * u_y_of_phi
 
-        #print(f' SHAPE OF w_my  = {w_my.shape}')
+        print(f' SHAPE OF w_my  = {w_my.shape}')
 
         w_my = tf.reshape(w_my, [-1, self.Y])
 
-        #print(f' SHAPE OF w_my  = {w_my.shape}')
+        print(f' SHAPE OF w_my  = {w_my.shape}')
 
         # normalized probability
         # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
         # i.e., sum over Y
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
 
-        #print(f' SHAPE OF p_my  = {p_my.shape}')
+        print(f' SHAPE OF p_my  = {p_my.shape}')
 
         return p_my
 
@@ -1017,16 +1016,16 @@ class DiscreteAgnosticMP(MeasurementProcess):
                                     trainable=True,
                                     regularizer=self.regularizer)
 
-        self.c_yk = self.add_weight(name='c_yk',
+        self.c_k = self.add_weight(name='c_k',
                                     dtype=tf.float32,
-                                    shape=(self.Y, self.K),
+                                    shape=(self.K,),
                                     initializer=Constant(1.),
                                     trainable=True,
                                     regularizer=self.regularizer)
 
-        self.d_yk = self.add_weight(name='d_yk',
+        self.d_k = self.add_weight(name='d_k',
                                     dtype=tf.float32,
-                                    shape=(self.Y, self.K),
+                                    shape=(self.K,),
                                     initializer=Constant(0.),
                                     trainable=True,
                                     regularizer=self.regularizer)
@@ -1118,19 +1117,6 @@ class DiscreteAgnosticMP(MeasurementProcess):
         y = y.ravel()
         phi = phi.ravel()
 
-        # # If GE, compute yhat, then p
-        # if self.regression_type == 'GE':
-        #
-        #     # Compute y_hat
-        #     yhat = self.phi_to_yhat(phi)
-        #
-        #     # Comptue p_y_given_phi using yhat
-        #     p = self.p_of_y_given_yhat(y, yhat, paired=True)
-
-        # Otherwise, just compute p
-        # elif self.regression_type == 'MPA':
-
-        # Cast y as integers
         y = y.astype(int)
 
         # Make sure all y values are valid
@@ -1140,13 +1126,6 @@ class DiscreteAgnosticMP(MeasurementProcess):
         check(np.all(y < self.Y),
               f"Some y values exceed the number of bins {self.Y}")
 
-        # Get values for all bins
-        #p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
-        # p_of_all_y_given_phi = \
-        #     self.layer_measurement_process.p_of_all_y_given_phi(
-        #         phi,
-        #         use_arrays=True)
-
         p_of_all_y_given_phi = self.p_of_all_y_given_phi(phi, use_arrays=True)
 
         # Extract y-specific elements
@@ -1155,9 +1134,6 @@ class DiscreteAgnosticMP(MeasurementProcess):
         y_ix = (y[:, _] == all_y[_, :])
 
         p = p_of_all_y_given_phi[y_ix]
-
-        # else:
-        #     assert False, 'This should not happen.'
 
         # Shape for output
         p = _shape_for_output(p, p_shape)
@@ -1172,11 +1148,11 @@ class DiscreteAgnosticMP(MeasurementProcess):
         # Reshape parameters
         a_y = tf.reshape(self.a_y, [-1, self.Y])
         b_yk = tf.reshape(self.b_yk, [-1, self.Y, self.K])
-        c_yk = tf.reshape(self.c_yk, [-1, self.Y, self.K])
-        d_yk = tf.reshape(self.d_yk, [-1, self.Y, self.K])
+        c_k = tf.reshape(self.c_k, [-1, self.K])
+        d_k = tf.reshape(self.d_k, [-1, self.K])
 
         # Compute weights
-        psi_my = a_y + K.sum(b_yk * tanh(c_yk * phi + d_yk), axis=2)
+        psi_my = a_y + K.sum(b_yk * tanh(c_k * phi + d_k), axis=2)
         psi_my = tf.reshape(psi_my, [-1, self.Y])
         w_my = Exp(psi_my)
         #print(f'w_my shape {w_my.shape}')
@@ -1190,6 +1166,210 @@ class DiscreteAgnosticMP(MeasurementProcess):
             return psi_my
         else:
             return p_my
+
+
+class DiscreteMonotonicMP(MeasurementProcess):
+    """
+    Monotonic version of DiscreteAgnosticMP
+    """
+
+    def __init__(self,
+                 Y,
+                 K,
+                 eta,
+                 info_for_layers_dict,
+                 **kwargs):
+        """Construct layer."""
+        # Set attributes
+        self.Y = Y
+        self.K = K
+        self.eta = eta
+        self.info_for_layers_dict = info_for_layers_dict
+
+        # Set regularizer
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        super().__init__(eta, info_for_layers_dict, **kwargs)
+
+    def get_config(self):
+        """Get configuration dictionary."""
+        base_config = super().get_config()
+        return {**base_config,
+                "info_for_layers_dict": self.info_for_layers_dict,
+                "number_bins": self.number_bins}
+
+    def build(self, input_shape):
+        """Build layer."""
+
+        self.a_y = self.add_weight(name='a_y',
+                                   dtype=tf.float32,
+                                   shape=(self.Y,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+
+        # Need to randomly initialize b_k
+        b_yk0 = expon(scale=1 / self.K).rvs([self.Y, self.K])
+        self.b_yk = self.add_weight(name='b_yk',
+                                    dtype=tf.float32,
+                                    shape=(self.Y, self.K),
+                                    initializer=Constant(b_yk0),
+                                    trainable=True,
+                                    constraint=tf.keras.constraints.non_neg(),
+                                    regularizer=self.regularizer)
+
+        self.c_k = self.add_weight(name='c_k',
+                                    dtype=tf.float32,
+                                    shape=(self.K,),
+                                    initializer=Constant(1.),
+                                    constraint=tf.keras.constraints.non_neg(),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+
+        self.d_k = self.add_weight(name='d_k',
+                                    dtype=tf.float32,
+                                    shape=(self.K,),
+                                    initializer=Constant(0.),
+                                    trainable=True,
+                                    regularizer=self.regularizer)
+        super().build(input_shape)
+
+    def call(self, inputs):
+        """
+        Transform layer inputs to outputs.
+
+        Parameters
+        ----------
+        inputs: (tf.Tensor)
+            A (B,Y+1) tensor containing counts, where B is batch
+            size and Y is the number of bins.
+            inputs[:,1] is phi
+            inputs[:,1:Y+1] is c_my
+
+        Returns
+        -------
+        negative_log_likelihood: (np.array)
+            A (B,) tensor containing negative log likelihood contributions
+        """
+        # Extract and shape inputs
+        phi = inputs[:, 0]
+        ct_my = inputs[:, 1:]
+
+        # Compute p(y|phi)
+        p_my = self.p_of_all_y_given_phi(phi)
+
+        # Compute negative log likelihood
+        negative_log_likelihood = -K.sum(ct_my * Log(p_my), axis=1)
+        ct_m = K.sum(ct_my, axis=1)
+
+        # Add I_var metric
+        H_y = self.info_for_layers_dict['H_y_norm']
+        H_y_given_phi = np.log2(e) * \
+            K.sum(negative_log_likelihood) / K.sum(ct_m)
+        I_y_phi = H_y - H_y_given_phi
+        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
+
+        return negative_log_likelihood
+
+    def p_of_y_given_phi(self, y, phi, paired=False):
+        """
+        Compute probabilities p( ``y`` | ``phi`` ).
+        Parameters
+        ----------
+        y: (np.ndarray)
+            Measurement values. For GE models, must be an array of floats.
+            For MPA models, must be an array of ints representing bin numbers.
+        phi: (np.ndarray)
+            Latent phenotype values, provided as an array of floats.
+        paired: (bool)
+            Whether values in ``y`` and ``phi`` should be treated as paired.
+            If ``True``, the probability of each value in ``y`` value will be
+            computed using the single paired value in ``phi``. If ``False``,
+            the probability of each value in ``y`` will be computed against
+            all values of in ``phi``.
+        Returns
+        -------
+        p: (np.ndarray)
+            Probability of ``y`` given ``phi``. If ``paired=True``,
+            ``p.shape`` will be equal to both ``y.shape`` and ``phi.shape``.
+            If ``paired=False``, ``p.shape`` will be given by
+            ``y.shape + phi.shape``.
+        """
+        # Prepare inputs
+        y, y_shape = _get_shape_and_return_1d_array(y)
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # If inputs are paired, use as is
+        if paired:
+            # Check that dimensions match
+            check(y_shape == phi_shape,
+                  f"y shape={y_shape} does not match phi shape={phi_shape}")
+
+            # Use y_shape as output shape
+            p_shape = y_shape
+
+        # Otherwise, broadcast inputs
+        else:
+            # Broadcast y and phi
+            y, phi = _broadcast_arrays(y, phi)
+
+            # Set output shape
+            p_shape = y_shape + phi_shape
+
+        # Ravel arrays
+        y = y.ravel()
+        phi = phi.ravel()
+
+        y = y.astype(int)
+
+        # Make sure all y values are valid
+        check(np.all(y >= 0),
+              f"Negative values for y are invalid for MAP regression")
+
+        check(np.all(y < self.Y),
+              f"Some y values exceed the number of bins {self.Y}")
+
+        p_of_all_y_given_phi = self.p_of_all_y_given_phi(phi, use_arrays=True)
+
+        # Extract y-specific elements
+        _ = np.newaxis
+        all_y = np.arange(self.Y).astype(int)
+        y_ix = (y[:, _] == all_y[_, :])
+
+        p = p_of_all_y_given_phi[y_ix]
+
+        # Shape for output
+        p = _shape_for_output(p, p_shape)
+        return p
+
+    @handle_arrays
+    def p_of_all_y_given_phi(self, phi, return_var='p'):
+        """Compute p(y|phi) for all values of y."""
+        # Shape phi
+        phi = tf.reshape(phi, [-1, 1, 1])
+
+        # Reshape parameters
+        a_y = tf.reshape(self.a_y, [-1, self.Y])
+        b_yk = tf.reshape(self.b_yk, [-1, self.Y, self.K])
+        c_k = tf.reshape(self.c_k, [-1, self.K])
+        d_k = tf.reshape(self.d_k, [-1, self.K])
+
+        # Compute weights
+        psi_my = a_y + K.sum(b_yk * tanh(c_k * phi + d_k), axis=2)
+        psi_my = tf.reshape(psi_my, [-1, self.Y])
+        w_my = Exp(psi_my)
+        #print(f'w_my shape {w_my.shape}')
+
+        # Compute and return distribution
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        if return_var == 'w':
+            return w_my
+        elif return_var == 'psi':
+            return psi_my
+        else:
+            return p_my
+
 
 
 class AffineLayer(Layer):
