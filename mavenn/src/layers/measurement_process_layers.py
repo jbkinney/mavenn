@@ -1186,7 +1186,7 @@ class DiscreteMonotonicMP(MeasurementProcess):
         self.eta = eta
         self.info_for_layers_dict = info_for_layers_dict
 
-        #self.u_y = tf.Variable(initial_value=tf.constant(0., shape=(1, self.Y)), dtype=tf.float32)
+        self.u_y = tf.Variable(initial_value=tf.constant(0., shape=(1, self.Y)), dtype=tf.float32)
 
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.eta)
@@ -1345,6 +1345,7 @@ class DiscreteMonotonicMP(MeasurementProcess):
         p = _shape_for_output(p, p_shape)
         return p
 
+    #@tf.function
     @handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
@@ -1361,30 +1362,15 @@ class DiscreteMonotonicMP(MeasurementProcess):
 
         # Compute weights
         psi_my = a_y + K.sum(b_yk * tanh(c_k * phi + d_k), axis=2)
-        psi_my = tf.reshape(psi_my, [-1, self.Y])
-        # TODO: need to sum psi_my for all bins less than the current bin
+        u_y = tf.reshape(psi_my, [-1, self.Y, 1])
 
-        #u_y = tf.Variable(initial_value=psi_my, shape=psi_my.shape)
-        #u_y = tf.identity(psi_my)
-        #self.u_y = tf.reshape(self.u_y, [-1,self.Y])
+        # need to sum psi_my for all bins less than the current bin
+        lower_m = np.tri(self.Y, k=0)
+        lower_m_tf = tf.convert_to_tensor(lower_m, dtype=tf.float32)
 
-        mask = np.full((self.Y), False, dtype=bool)
-        #u_y = np.zeros(shape=(1, self.Y))
-        u_y = []
-        #print(dir(self.u_y))
-        for y_prime in range(self.Y):
-
-            mask[0:y_prime] = True
-            masked_tensor = tf.boolean_mask(psi_my, mask, axis=1)
-
-            masked_tensor = tf.reshape(masked_tensor, [-1, self.Y])
-            #u_y[y_prime] = K.sum(masked_tensor)
-            u_y.append(K.sum(masked_tensor))
-
-        u_y = tf.convert_to_tensor(u_y, dtype=tf.float32)
-        w_my = Exp(u_y)
+        w_my = Exp(tf.matmul(lower_m_tf, u_y))
         w_my = tf.reshape(w_my, [-1, self.Y])
-        print(f'w_my shape {w_my.shape}')
+        #print(f'w_my shape {w_my.shape}')
 
         # Compute and return distribution
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
