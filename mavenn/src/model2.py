@@ -238,7 +238,6 @@ class Model:
 
         return model
 
-
     @handle_errors
     def set_data(self,
                  x,

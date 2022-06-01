@@ -1186,8 +1186,6 @@ class DiscreteMonotonicMP(MeasurementProcess):
         self.eta = eta
         self.info_for_layers_dict = info_for_layers_dict
 
-        self.u_y = tf.Variable(initial_value=tf.constant(0., shape=(1, self.Y)), dtype=tf.float32)
-
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.eta)
 
@@ -1358,8 +1356,6 @@ class DiscreteMonotonicMP(MeasurementProcess):
         c_k = tf.reshape(self.c_k, [-1, self.K])
         d_k = tf.reshape(self.d_k, [-1, self.K])
 
-        #u_y = tf.reshape(self.u_y, [-1, self.Y])
-
         # Compute weights
         psi_my = a_y + K.sum(b_yk * tanh(c_k * phi + d_k), axis=2)
         u_y = tf.reshape(psi_my, [-1, self.Y, 1])
@@ -1370,7 +1366,6 @@ class DiscreteMonotonicMP(MeasurementProcess):
 
         w_my = Exp(tf.matmul(lower_m_tf, u_y))
         w_my = tf.reshape(w_my, [-1, self.Y])
-        #print(f'w_my shape {w_my.shape}')
 
         # Compute and return distribution
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])

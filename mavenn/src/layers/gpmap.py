@@ -4,6 +4,8 @@ import numpy as np
 from collections.abc import Iterable
 import re
 from typing import Optional
+import pandas as pd
+import numbers
 
 # Tensorflow imports
 import tensorflow as tf
@@ -13,7 +15,7 @@ from tensorflow.keras.layers import Layer, Dense
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
-from mavenn.src.utils import x_to_stats, validate_seqs
+from mavenn.src.utils import x_to_stats, validate_seqs, _x_to_mat
 from mavenn.src.reshape import _shape_for_output, \
     _get_shape_and_return_1d_array
 
@@ -195,6 +197,236 @@ class GPMapLayer(Layer):
         phi = _shape_for_output(phi, x_shape)
 
         return phi
+
+    @handle_errors
+    def get_theta(self,
+                  model,
+                  gauge="empirical",
+                  p_lc=None,
+                  x_wt=None,
+                  unobserved_value=np.nan):
+        """
+        Return parameters of the G-P map.
+
+        This function returns a ``dict`` containing the parameters of the
+        model's G-P map. Keys are of type ``str``, values are of type
+        ``np.ndarray`` . Relevant (key, value) pairs are:
+        ``'theta_0'`` , constant term;
+        ``'theta_lc'`` , additive effects in the form of a 2D array with shape
+        ``(L,C)``;
+        ``'theta_lclc'`` , pairwise effects in the form of a 4D array of shape
+        ``(L,C,L,C)``;
+        ``'theta_bb'`` , all parameters for ``gpmap_type='blackbox'`` models.
+
+        Importantly this function gauge-fixes model parameters before
+        returning them, i.e., it pins down non-identifiable degrees of freedom.
+        Gauge fixing is performed using a hierarchical gauge, which maximizes the
+        fraction of variance in ``phi`` explained by the lowest-order terms.
+        Computing such variances requires assuming probability distribution
+        over sequence space, however, and using different distributions will
+        result in different ways of fixing the gauge.
+
+        This function assumes that the distribution used to define the gauge
+        factorizes across sequence positions, and can thus be represented by an
+        ``L`` x ``C`` probability matrix ``p_lc`` that lists the probability of
+        each character ``c`` at each position ``l``.
+
+        An important special case is the wild-type gauge, in which ``p_lc``
+        is the one-hot encoding of a "wild-type" specific sequence ``x_wt``.
+        In this case, the constant parameter ``theta_0`` is the value of
+        ``phi`` for ``x_wt``, additive parameters ``theta_lc`` represent the
+        effect of single-point mutations away from ``x_wt``, and so on.
+
+        Parameters
+        ----------
+        gauge: (str)
+            String specification of which gauge to use. Allowed values are:
+            ``'uniform'`` , hierarchical gauge using a uniform sequence
+            distribution over the characters at each position observed in the
+            training set (unobserved characters are assigned probability 0).
+            ``'empirical'`` , hierarchical gauge using an empirical
+            distribution computed from the training data;
+            ``'consensus'`` , wild-type gauge using the training data
+            consensus sequence;
+            ``'user'`` , gauge using either ``p_lc`` or ``x_wt`` supplied
+            by the user;
+            ``'none'`` , no gauge fixing.
+
+        p_lc: (None, array)
+            Custom probability matrix to use for hierarchical gauge fixing.
+            Must be a ``np.ndarray`` of shape ``(L,C)`` . If using this, also
+            set ``gauge='user'``.
+
+        x_wt: (str, None)
+            Custom wild-type sequence to use for wild-type gauge fixing. Must
+            be a ``str`` of length ``L``. If using this, also set
+            ``gauge='user'``.
+
+        unobserved_value: (float, None)
+            Value to use for parameters when no corresponding
+            sequences were present in the training data. If ``None``,
+            these parameters will be left alone. Using ``np.nan`` can help
+            when visualizing models using ``mavenn.heatmap()`` or
+            ``mavenn.heatmap_pariwise()``.
+
+        Returns
+        -------
+        theta: (dict)
+            Model parameters provided as a ``dict`` of numpy arrays.
+
+        """
+        # Useful alias
+        _ = np.newaxis
+
+        # Get parameters from layer
+        x_stats = model.x_stats
+        L = x_stats['L']
+        C = x_stats['C']
+        alphabet = x_stats['alphabet']
+
+        # Get parameters from layer. squeeze but do NOT pop
+        theta_dict = self.get_params(pop=False)
+
+        # Check gauge
+        choices = ("none", "uniform", "empirical", "consensus", "user")
+        check(gauge in choices,
+              f"Invalid choice for gauge={repr(gauge)}; "
+              f"must be one of {choices}")
+
+        # Check that p_lc is valid
+        if p_lc is not None:
+            check(isinstance(p_lc, np.ndarray),
+                  f'type(p_lc)={type(p_lc)}; must be str.')
+            check(p_lc.shape == (L, C),
+                  f'p_lc.shape={p_lc.shape}; must be (L,C)={(L,C)}.')
+            check(np.all(p_lc >= 0) & np.all(p_lc <= 1),
+                  f'Not all p_lc values are within [0,1].')
+            p_lc = p_lc / p_lc.sum(axis=1)[:, _]
+
+        # Check that x_wt is valid
+        if x_wt is not None:
+            check(isinstance(x_wt, str),
+                  f'type(x_wt)={type(x_wt)}; must be str.')
+            check(len(x_wt) == L,
+                  f'len(x_wt)={len(x_wt)}; must match L={L}.')
+            check(set(x_wt) <= set(alphabet),
+                  f'x_wt contains characters {set(x_wt) - set(alphabet)}'
+                  f'that are not in alphabet.')
+
+        # Check unobserved_value
+        check((unobserved_value is None)
+              or isinstance(unobserved_value, numbers.Number),
+              f"Invalid type(unobserved_value)={type(unobserved_value)}")
+
+        # Extract parameter arrays. Get masks and replace masked values with 0
+        theta_0 = theta_dict.get('theta_0',
+                                 np.full(shape=(1,),
+                                         fill_value=np.nan)).squeeze().copy()
+        theta_lc = theta_dict.get('theta_lc',
+                                  np.full(shape=(L, C),
+                                          fill_value=np.nan)).copy()
+        theta_lclc = theta_dict.get('theta_lclc',
+                                    np.full(shape=(L, C, L, C),
+                                            fill_value=np.nan)).copy()
+        theta_mlp = theta_dict.get('theta_mlp')
+
+        # Record nan masks and then set nan values to zero.
+        nan_mask_lclc = np.isnan(theta_lclc)
+        theta_lclc[nan_mask_lclc] = 0
+
+        # Create unobserved_lc
+        unobserved_lc = (x_stats['probability_df'].values == 0)
+
+        # Set p_lc
+        if gauge == "none":
+            pass
+
+        elif gauge == "uniform":
+
+            # Get binary matrix of observed characters
+            observed_characters_lc = \
+                (x_stats['probability_df'].values > 0).astype(float)
+
+            # Normalize binary matrix by position
+            p_lc = observed_characters_lc / \
+                observed_characters_lc.sum(axis=1)[:,np.newaxis]
+
+        elif gauge == "empirical":
+            p_lc = x_stats['probability_df'].values
+
+        elif gauge == "consensus":
+            p_lc = _x_to_mat(x_stats['consensus_seq'], alphabet)
+
+        elif gauge == "user" and x_wt is not None:
+            p_lc = _x_to_mat(x_wt, alphabet)
+
+        elif gauge == "user" and p_lc is not None:
+            pass
+
+        else:
+            assert False, 'This should not happen'
+
+        # Fix gauge if requested
+        if gauge != "none":
+
+            # Fix 0th order parameter
+            fixed_theta_0 = theta_0 \
+                + np.sum(p_lc * theta_lc) \
+                + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :])
+
+            # Fix 1st order parameters
+            fixed_theta_lc = theta_lc \
+                - np.sum(theta_lc * p_lc, axis=1)[:, _] \
+                + np.sum(theta_lclc * p_lc[_, _, :, :],
+                         axis=(2, 3)) \
+                - np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=(1, 2, 3))[:, _]
+
+            # Fix 2nd order parameters
+            fixed_theta_lclc = theta_lclc \
+                - np.sum(theta_lclc * p_lc[:, :, _, _],
+                         axis=1)[:, _, :, :] \
+                - np.sum(theta_lclc * p_lc[_, _, :, :],
+                         axis=3)[:, :, :, _] \
+                + np.sum(theta_lclc * p_lc[:, :, _, _] * p_lc[_, _, :, :],
+                         axis=(1, 3))[:, _, :, _]
+
+        # Otherwise, just copy over parameters
+        else:
+            fixed_theta_0 = theta_0
+            fixed_theta_lc = theta_lc
+            fixed_theta_lclc = theta_lclc
+
+        # Set unobserved values if requested
+        if unobserved_value is not None:
+            # Set unobserved additive parameters
+            fixed_theta_lc[unobserved_lc] = unobserved_value
+
+            # Set unobserved pairwise parameters
+            ix = unobserved_lc[:, :, _, _] | unobserved_lc[_, _, :, :]
+            fixed_theta_lclc[ix] = unobserved_value
+
+        # Set masked values back to nan
+        fixed_theta_lclc[nan_mask_lclc] = np.nan
+
+        # Create dataframe for logomaker
+        logomaker_df = pd.DataFrame(index=range(L),
+                                    columns=alphabet,
+                                    data=fixed_theta_lc)
+
+        # Set and return output
+        theta_dict = {
+            'L': L,
+            'C': C,
+            'alphabet': alphabet,
+            'theta_0': fixed_theta_0,
+            'theta_lc': fixed_theta_lc,
+            'theta_lclc': fixed_theta_lclc,
+            'theta_mlp': theta_mlp,
+            'logomaker_df': logomaker_df
+        }
+
+        return theta_dict
 
 
 class AdditiveGPMapLayer(GPMapLayer):
