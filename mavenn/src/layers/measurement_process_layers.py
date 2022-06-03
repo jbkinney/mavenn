@@ -681,7 +681,7 @@ class SortSeqMP(MeasurementProcess):
         # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
         # i.e., sum over Y
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
-
+        print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
@@ -913,11 +913,14 @@ class TiteSeqMP(MeasurementProcess):
         K_a_of_phi = Exp(phi_0)
         A_of_phi = Exp(phi_1)
 
-        # print(f' SHAPE OF phi_0  = {phi_0.shape}')
-        mu_of_phi = A_of_phi * ((self.c * K_a_of_phi) /
-                                (1 + self.c * K_a_of_phi)) + self.mu_neg
-        # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
+        B = Exp(self.mu_neg)
+        B = tf.cast(B, dtype=tf.float32)
 
+        # print(f' SHAPE OF phi_0  = {phi_0.shape}')
+        mu_of_phi = Log(A_of_phi * ((self.c * K_a_of_phi) /
+                                (1 + self.c * K_a_of_phi)) + B)
+        # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
+        #print('after mu of phi')
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
 
@@ -942,14 +945,20 @@ class TiteSeqMP(MeasurementProcess):
         # relative probability of sequence in dataset being found in bin y
         N_y = tf.reshape(self.N_y, [-1, self.Y])
         N_y = tf.cast(N_y, dtype=tf.float32)
-        # w_my = (N_y / self.N) * u_y_of_phi
+        w_my = (N_y / self.N) * u_y_of_phi
         # w_my = tf.reshape(w_my, [-1, self.Y])
         # Shape of w_my  = (None,  self.Y)
-        w_my = tf.einsum('ij, kj->kj', (N_y / self.N), u_y_of_phi)
+        #print(f'w_my shape = {w_my.shape}')
+        #w_my = tf.einsum('ij, kj->kj', (N_y / self.N), u_y_of_phi)
 
         # normalized probability
         # sum over Y
-        p_my = w_my / tf.math.reduce_sum(w_my)
+        #p_my = w_my / tf.math.reduce_sum(w_my)
+        p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+        #u_y_of_phi
+
+        print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
