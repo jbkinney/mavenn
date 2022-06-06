@@ -50,7 +50,6 @@ MIN_LOG_ARG = np.float32(np.exp(-MAX_EXP_ARG))
 
 # Create safe functions
 
-
 def Log(x):
     x = tf.clip_by_value(x, MIN_LOG_ARG, np.inf)
     return K.log(x)
@@ -681,7 +680,7 @@ class SortSeqMP(MeasurementProcess):
         # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
         # i.e., sum over Y
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
-        print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
+        #print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
@@ -917,8 +916,7 @@ class TiteSeqMP(MeasurementProcess):
         B = tf.cast(B, dtype=tf.float32)
 
         # print(f' SHAPE OF phi_0  = {phi_0.shape}')
-        mu_of_phi = Log(A_of_phi * ((self.c * K_a_of_phi) /
-                                (1 + self.c * K_a_of_phi)) + B)
+        mu_of_phi = Log(A_of_phi * ((self.c * K_a_of_phi) / (1 + self.c * K_a_of_phi)) + B)
         # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
         #print('after mu of phi')
         # transform phi between 0 and 1
@@ -958,7 +956,7 @@ class TiteSeqMP(MeasurementProcess):
 
         #u_y_of_phi
 
-        print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
+        #print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
