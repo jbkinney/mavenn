@@ -773,11 +773,24 @@ class TiteSeqMP(MeasurementProcess):
                 "info_for_layers_dict": self.info_for_layers_dict,
                 "number_bins": self.number_bins}    # TODO: check if self.number_bins is defined/works
 
-    # Note that this layer doesn't have trainable weights so we only
-    # should need to use the 'call' method
-    # def build(self, input_shape):
-    #     """Build layer."""
-    #     pass
+    def build(self, input_shape):
+        """Build layer."""
+
+        self.a = self.add_weight(name='a',
+                                   dtype=tf.float32,
+                                   shape=(1,),
+                                   initializer=RandomNormal(),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+        # Trainable t is for future
+        # self.t_y = self.add_weight(name='t_y',
+        #    dtype=tf.float32,
+        #    shape=(self.Y,),
+        #    initializer=tf.convert_to_tensor(t_y) * Constant(1.0),
+        #    trainable=True,
+        #    regularizer=self.regularizer)
+
+        super().build(input_shape)
 
     def call(self, inputs):
         """
@@ -797,14 +810,9 @@ class TiteSeqMP(MeasurementProcess):
             A (B,) tensor containing negative log likelihood contributions
         """
 
-        # Extract and shape inputs
-        # ' phi shape in call (None, 2)')
-        phi = inputs[:, 0: 2]
-        ct_my = inputs[:, 2:]
-
         # code from one-dimensional phi
-        # phi = inputs[:, 0]
-        # ct_my = inputs[:, 1:]
+        phi = inputs[:, 0]
+        ct_my = inputs[:, 1:]
 
         # Compute p(y|phi)
         p_my = self.p_of_all_y_given_phi(phi)
@@ -846,9 +854,15 @@ class TiteSeqMP(MeasurementProcess):
             ``y.shape + phi.shape``.
         """
         # Prepare inputs
+
+        # Prepare inputs
         y, y_shape = _get_shape_and_return_1d_array(y)
-        # phi, phi_shape = _get_shape_and_return_1d_array(phi)
-        phi_shape = phi.shape
+        phi, phi_shape = _get_shape_and_return_1d_array(phi)
+
+        # y, y_shape = _get_shape_and_return_1d_array(y)
+        # # phi, phi_shape = _get_shape_and_return_1d_array(phi)
+        # phi_shape = phi.shape
+
         # If inputs are paired, use as is
         if paired:
             # Check that dimensions match
@@ -895,27 +909,15 @@ class TiteSeqMP(MeasurementProcess):
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
 
-        # Reshape phi. The following phi represents two latent phenotypes;
-        # phi[0] represents log10 affinity in inverse units of the labeling
-        # concentration, phi[1] represents log10 expression.
+        # phi is the latent phenotype representing binding
+        phi = tf.reshape(phi, [-1, 1])
 
-        # print(f' SHAPE OF PHI  = {phi.shape}')
-        # phi = tf.reshape(phi, [-1, 1, 2])
-        # print(f' SHAPE OF PHI  = {phi.shape}')
-        phi_0 = phi[:, 0]
-
-        phi_1 = phi[:, 1]
-        # print(f' SHAPE OF phi_0  = {phi_0.shape}')
-        phi_0 = tf.reshape(phi_0, [-1, 1])
-        phi_1 = tf.reshape(phi_1, [-1, 1])
-
-        K_a_of_phi = Exp(phi_0)
-        A_of_phi = Exp(phi_1)
+        K_a_of_phi = Exp(phi)
+        A_of_phi = Exp(self.a)
 
         B = Exp(self.mu_neg)
         B = tf.cast(B, dtype=tf.float32)
 
-        # print(f' SHAPE OF phi_0  = {phi_0.shape}')
         mu_of_phi = Log(A_of_phi * ((self.c * K_a_of_phi) / (1 + self.c * K_a_of_phi)) + B)
         # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
         #print('after mu of phi')
