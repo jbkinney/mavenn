@@ -45,7 +45,8 @@ e = np.exp(1)
 Sqrt = K.sqrt
 Square = K.square
 
-MAX_EXP_ARG = np.float32(20.0)
+#MAX_EXP_ARG = np.float32(20.0)
+MAX_EXP_ARG = np.float32(50.0)
 MIN_LOG_ARG = np.float32(np.exp(-MAX_EXP_ARG))
 
 # Create safe functions
@@ -729,7 +730,7 @@ class TiteSeqMP(MeasurementProcess):
     """
 
     def __init__(self,
-                 c,
+                 #c,
                  N_y,
                  Y,
                  mu_pos,
@@ -744,7 +745,7 @@ class TiteSeqMP(MeasurementProcess):
                  ):
         """Construct layer."""
         # Set attributes
-        self.c = c
+        #self.c = c
         self.Y = Y
         self.N_y = N_y
         self.mu_pos = mu_pos
@@ -775,6 +776,15 @@ class TiteSeqMP(MeasurementProcess):
 
     def build(self, input_shape):
         """Build layer."""
+
+        self.c = self.add_weight(name='c',
+                                   dtype=tf.float32,
+                                   shape=(1,),
+                                   #initializer=Constant(0.5),
+                                   initializer=RandomNormal(),
+                                   trainable=True,
+                                   #constraint=tf.keras.constraints.non_neg(),
+                                   regularizer=self.regularizer)
 
         self.a = self.add_weight(name='a',
                                    dtype=tf.float32,
@@ -918,7 +928,7 @@ class TiteSeqMP(MeasurementProcess):
         B = Exp(self.mu_neg)
         B = tf.cast(B, dtype=tf.float32)
 
-        mu_of_phi = Log(A_of_phi * ((self.c * K_a_of_phi) / (1 + self.c * K_a_of_phi)) + B)
+        mu_of_phi = Log(A_of_phi * ((Exp(self.c) * K_a_of_phi) / (1 + Exp(self.c) * K_a_of_phi)) + B)
         # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
         #print('after mu of phi')
         # transform phi between 0 and 1
