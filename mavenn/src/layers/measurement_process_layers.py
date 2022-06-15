@@ -45,11 +45,12 @@ e = np.exp(1)
 Sqrt = K.sqrt
 Square = K.square
 
-#MAX_EXP_ARG = np.float32(20.0)
+# MAX_EXP_ARG = np.float32(20.0)
 MAX_EXP_ARG = np.float32(50.0)
 MIN_LOG_ARG = np.float32(np.exp(-MAX_EXP_ARG))
 
 # Create safe functions
+
 
 def Log(x):
     x = tf.clip_by_value(x, MIN_LOG_ARG, np.inf)
@@ -243,7 +244,11 @@ class ExponentialEnrichmentMP(MeasurementProcess):
     t_y (array-like)
         User sets t_y = [t_0, t_1,...,t_{Y-1}] values. If t_y[i] = None, that ith value should be trainable parameter.
         However, at least two enrichment times must be specified (e.g. t_0 = 0, t_1 = 1).
-    # TODO: need to implement logic if t_y is not None then don't initialize weights in build() and just use user set value
+
+    # TODO: What is eta?
+
+    # TODO: need to implement logic if t_y is not None 
+    # RESOLVED: The t_y values which are not None are fixed otherwise trainable (MK).
     """
 
     def __init__(self,
@@ -255,7 +260,7 @@ class ExponentialEnrichmentMP(MeasurementProcess):
                  ):
 
         self.Y = Y
-        self.t_y = t_y
+        self.t_y_input = t_y
 
         # TODO: User should provide the t_y vector of length Y. Check this and raise error.
         # TODO: Check Y>=2 otherwise raise error.
@@ -285,13 +290,24 @@ class ExponentialEnrichmentMP(MeasurementProcess):
                                    initializer=RandomNormal(),
                                    trainable=True,
                                    regularizer=self.regularizer)
-        # Trainable t is for future
-        # self.t_y = self.add_weight(name='t_y',
-        #    dtype=tf.float32,
-        #    shape=(self.Y,),
-        #    initializer=tf.convert_to_tensor(t_y) * Constant(1.0),
-        #    trainable=True,
-        #    regularizer=self.regularizer)
+        # Set the t_y weights
+        t_y = []
+        for i, t in enumerate(self.t_y_input):
+            if t is None:
+                # When t_y_i from user is not fixed and it is trainable
+                t_y.append(self.add_weight(name=f't_y_{i}', dtype=tf.float32,
+                                           shape=(1,),
+                                           initializer=Constant(1.0),
+                                           trainable=True,
+                                           constraint=non_neg(),
+                                           regularizer=self.regularizer))
+            else:
+                # When the t_y from user is fixed
+                # and not-trainable use the initializer to be Constant(t_y)
+                t_y.append(self.add_weight(name=f't_y_{i}', dtype=tf.float32,
+                                           shape=(1,), trainable=False,
+                                           initializer=Constant(t)))
+        self.t_y = t_y
 
         super().build(input_shape)
 
@@ -333,7 +349,7 @@ class ExponentialEnrichmentMP(MeasurementProcess):
 
         return negative_log_likelihood
 
-    @handle_arrays
+    @ handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
 
@@ -342,8 +358,7 @@ class ExponentialEnrichmentMP(MeasurementProcess):
 
         # Reshape parameters
         b_my = tf.reshape(self.b_y, [-1, self.Y])
-        t_my = tf.reshape(tf.constant(self.t_y, dtype=tf.float32),
-                          [-1, self.Y])
+        t_my = tf.reshape(self.t_y, [-1, self.Y])
 
         # Compute weights
         psi_my = t_my * phi_m + b_my
@@ -638,7 +653,7 @@ class SortSeqMP(MeasurementProcess):
         p = _shape_for_output(p, p_shape)
         return p
 
-    @handle_arrays
+    @ handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
 
@@ -659,7 +674,8 @@ class SortSeqMP(MeasurementProcess):
         # sigma_of_phi = self.sigma_neg * \
         #     Exp(lambda_of_phi * Log_sigma_pos_over_sigma_neg)
 
-        sigma_of_phi = (1-lambda_of_phi)*self.sigma_neg + lambda_of_phi*self.sigma_pos
+        sigma_of_phi = (1 - lambda_of_phi) * self.sigma_neg + \
+            lambda_of_phi * self.sigma_pos
 
         # upper and lower bounds transformed into z-values.
         z_y_upper_bound = (self.f_y_upper_bounds - mu_of_phi) / sigma_of_phi
@@ -681,7 +697,7 @@ class SortSeqMP(MeasurementProcess):
         # shape of w_my is [None,1,Y], that's why the sum in the line below has to go on dimension 2
         # i.e., sum over Y
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
-        #print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
+        # print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
@@ -730,7 +746,7 @@ class TiteSeqMP(MeasurementProcess):
     """
 
     def __init__(self,
-                 #c,
+                 # c,
                  N_y,
                  Y,
                  mu_pos,
@@ -745,7 +761,7 @@ class TiteSeqMP(MeasurementProcess):
                  ):
         """Construct layer."""
         # Set attributes
-        #self.c = c
+        # self.c = c
         self.Y = Y
         self.N_y = N_y
         self.mu_pos = mu_pos
@@ -778,20 +794,20 @@ class TiteSeqMP(MeasurementProcess):
         """Build layer."""
 
         self.c = self.add_weight(name='c',
-                                   dtype=tf.float32,
-                                   shape=(1,),
-                                   #initializer=Constant(0.5),
-                                   initializer=RandomNormal(),
-                                   trainable=True,
-                                   #constraint=tf.keras.constraints.non_neg(),
-                                   regularizer=self.regularizer)
+                                 dtype=tf.float32,
+                                 shape=(1,),
+                                 # initializer=Constant(0.5),
+                                 initializer=RandomNormal(),
+                                 trainable=True,
+                                 # constraint=tf.keras.constraints.non_neg(),
+                                 regularizer=self.regularizer)
 
         self.a = self.add_weight(name='a',
-                                   dtype=tf.float32,
-                                   shape=(1,),
-                                   initializer=RandomNormal(),
-                                   trainable=True,
-                                   regularizer=self.regularizer)
+                                 dtype=tf.float32,
+                                 shape=(1,),
+                                 initializer=RandomNormal(),
+                                 trainable=True,
+                                 regularizer=self.regularizer)
         # Trainable t is for future
         # self.t_y = self.add_weight(name='t_y',
         #    dtype=tf.float32,
@@ -928,9 +944,10 @@ class TiteSeqMP(MeasurementProcess):
         B = Exp(self.mu_neg)
         B = tf.cast(B, dtype=tf.float32)
 
-        mu_of_phi = Log(A_of_phi * ((Exp(self.c) * K_a_of_phi) / (1 + Exp(self.c) * K_a_of_phi)) + B)
+        mu_of_phi = Log(A_of_phi * ((Exp(self.c) * K_a_of_phi) /
+                                    (1 + Exp(self.c) * K_a_of_phi)) + B)
         # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
-        #print('after mu of phi')
+        # print('after mu of phi')
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
 
@@ -958,17 +975,17 @@ class TiteSeqMP(MeasurementProcess):
         w_my = (N_y / self.N) * u_y_of_phi
         # w_my = tf.reshape(w_my, [-1, self.Y])
         # Shape of w_my  = (None,  self.Y)
-        #print(f'w_my shape = {w_my.shape}')
-        #w_my = tf.einsum('ij, kj->kj', (N_y / self.N), u_y_of_phi)
+        # print(f'w_my shape = {w_my.shape}')
+        # w_my = tf.einsum('ij, kj->kj', (N_y / self.N), u_y_of_phi)
 
         # normalized probability
         # sum over Y
-        #p_my = w_my / tf.math.reduce_sum(w_my)
+        # p_my = w_my / tf.math.reduce_sum(w_my)
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
 
-        #u_y_of_phi
+        # u_y_of_phi
 
-        #print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
+        # print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
@@ -1022,18 +1039,18 @@ class DiscreteAgnosticMP(MeasurementProcess):
                                     regularizer=self.regularizer)
 
         self.c_k = self.add_weight(name='c_k',
-                                    dtype=tf.float32,
-                                    shape=(self.K,),
-                                    initializer=Constant(1.),
-                                    trainable=True,
-                                    regularizer=self.regularizer)
+                                   dtype=tf.float32,
+                                   shape=(self.K,),
+                                   initializer=Constant(1.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
 
         self.d_k = self.add_weight(name='d_k',
-                                    dtype=tf.float32,
-                                    shape=(self.K,),
-                                    initializer=Constant(0.),
-                                    trainable=True,
-                                    regularizer=self.regularizer)
+                                   dtype=tf.float32,
+                                   shape=(self.K,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
         super().build(input_shape)
 
     def call(self, inputs):
@@ -1144,7 +1161,7 @@ class DiscreteAgnosticMP(MeasurementProcess):
         p = _shape_for_output(p, p_shape)
         return p
 
-    @handle_arrays
+    @ handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
         # Shape phi
@@ -1160,7 +1177,7 @@ class DiscreteAgnosticMP(MeasurementProcess):
         psi_my = a_y + K.sum(b_yk * tanh(c_k * phi + d_k), axis=2)
         psi_my = tf.reshape(psi_my, [-1, self.Y])
         w_my = Exp(psi_my)
-        #print(f'w_my shape {w_my.shape}')
+        # print(f'w_my shape {w_my.shape}')
 
         # Compute and return distribution
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
@@ -1224,19 +1241,19 @@ class DiscreteMonotonicMP(MeasurementProcess):
                                     regularizer=self.regularizer)
 
         self.c_k = self.add_weight(name='c_k',
-                                    dtype=tf.float32,
-                                    shape=(self.K,),
-                                    initializer=Constant(1.),
-                                    constraint=tf.keras.constraints.non_neg(),
-                                    trainable=True,
-                                    regularizer=self.regularizer)
+                                   dtype=tf.float32,
+                                   shape=(self.K,),
+                                   initializer=Constant(1.),
+                                   constraint=tf.keras.constraints.non_neg(),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
 
         self.d_k = self.add_weight(name='d_k',
-                                    dtype=tf.float32,
-                                    shape=(self.K,),
-                                    initializer=Constant(0.),
-                                    trainable=True,
-                                    regularizer=self.regularizer)
+                                   dtype=tf.float32,
+                                   shape=(self.K,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
 
         super().build(input_shape)
 
@@ -1348,8 +1365,8 @@ class DiscreteMonotonicMP(MeasurementProcess):
         p = _shape_for_output(p, p_shape)
         return p
 
-    #@tf.function
-    @handle_arrays
+    # @tf.function
+    @ handle_arrays
     def p_of_all_y_given_phi(self, phi, return_var='p'):
         """Compute p(y|phi) for all values of y."""
         # Shape phi
@@ -1386,7 +1403,7 @@ class DiscreteMonotonicMP(MeasurementProcess):
 class AffineLayer(Layer):
     """Represents an affine map from phi to yhat."""
 
-    @handle_errors
+    @ handle_errors
     def __init__(self,
                  eta,
                  monotonic,
@@ -1427,7 +1444,7 @@ class AffineLayer(Layer):
         return self.phi_to_yhat(phi)
 
     # yhat as function of phi
-    @handle_arrays
+    @ handle_arrays
     def phi_to_yhat(self, phi):
         """Compute yhat from phi."""
         yhat = self.a + self.b * phi
@@ -1437,7 +1454,7 @@ class AffineLayer(Layer):
 class GlobalEpistasisLayer(Layer):
     """Represents a global epistasis layer."""
 
-    @handle_errors
+    @ handle_errors
     def __init__(self,
                  K,
                  eta,
@@ -1498,7 +1515,7 @@ class GlobalEpistasisLayer(Layer):
         return self.phi_to_yhat(phi)
 
     # yhat as function of phi
-    @handle_arrays
+    @ handle_arrays
     def phi_to_yhat(self, phi):
         """Compute yhat from phi."""
         b_k = tf.reshape(self.b_k, [1, -1])
@@ -1604,7 +1621,7 @@ class NoiseModelLayer(Layer):
 
         return nlls
 
-    @handle_arrays
+    @ handle_arrays
     def p_of_y_given_yhat(self,
                           y,
                           yhat):
@@ -1618,7 +1635,7 @@ class NoiseModelLayer(Layer):
 
         return p_y_given_yhat
 
-    @handle_arrays
+    @ handle_arrays
     def sample_y_given_yhat(self, yhat):
         """Sample y values from p(y|yhat)."""
         # Draw random quantiles
@@ -1671,7 +1688,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         base_config = super().get_config()
         return {**base_config, "a": self.a}
 
-    @handle_arrays
+    @ handle_arrays
     def compute_params(self, yhat):
         """Compute layer parameters governing p(y|yhat)."""
         # Have to treat 0'th order term separately because of NaN bug.
@@ -1683,7 +1700,7 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
 
         return logsigma
 
-    @handle_arrays
+    @ handle_arrays
     def compute_nlls(self, yhat, ytrue, use_arrays=False):
         """Compute negative log likelihood contributions for each datum."""
         # Compute logsigma and sigma
@@ -1691,26 +1708,25 @@ class GaussianNoiseModelLayer(NoiseModelLayer):
         sigma = Exp(logsigma)
 
         # Compute nlls
-        nlls = \
-            0.5 * K.square((ytrue - yhat) / sigma) \
+        nlls = 0.5 * K.square((ytrue - yhat) / sigma) \
             + logsigma \
             + 0.5 * np.log(2 * pi)
 
         return nlls
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_yq(self, yhat, q):
         """Compute quantiles for p(y|yhat)."""
         sigma = Exp(self.compute_params(yhat))
         yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
         return yq
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ymean(self, yhat):
         """Compute mean of p(y|yhat)."""
         return yhat
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ystd(self, yhat):
         """Compute standard deviation of p(y|yhat)."""
         sigma = Exp(self.compute_params(yhat))
@@ -1738,7 +1754,7 @@ class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
         base_config = super().get_config()
         return {**base_config, "a": self.a}
 
-    @handle_arrays
+    @ handle_arrays
     def compute_params(self, yhat):
         """Compute layer parameters governing p(y|yhat)."""
 
@@ -1751,7 +1767,7 @@ class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
 
         return logsigma
 
-    @handle_arrays
+    @ handle_arrays
     def compute_nlls(self, yhat, ytrue, dy, use_arrays=False):
         """
         Compute negative log likelihood contributions for each datum.
@@ -1763,8 +1779,7 @@ class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
         logsigma = Log(dy)
 
         # Compute nlls
-        nlls = \
-            0.5 * K.square((ytrue - yhat) / dy) \
+        nlls = 0.5 * K.square((ytrue - yhat) / dy) \
             + logsigma \
             + 0.5 * np.log(2 * pi)
 
@@ -1783,7 +1798,7 @@ class EmpiricalGaussianNoiseModelLayer(NoiseModelLayer):
     #     yq = yhat + sigma * np.sqrt(2) * erfinv(2 * q.numpy() - 1)
     #     return yq
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ymean(self, yhat):
         """Compute mean of p(y|yhat)."""
         return yhat
@@ -1816,7 +1831,7 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
         return {**base_config, "a": self.a}
 
     # Overloading functions
-    @handle_arrays
+    @ handle_arrays
     def compute_params(self, yhat):
         """Compute layer parameters governing p(y|yhat)."""
         # Have to treat 0'th order term separately because of NaN bug.
@@ -1828,33 +1843,32 @@ class CauchyNoiseModelLayer(NoiseModelLayer):
 
         return loggamma
 
-    @handle_arrays
+    @ handle_arrays
     def compute_nlls(self, yhat, ytrue):
         """Compute negative log likelihood contributions for each datum."""
         # Compute loggamma
         loggamma = self.compute_params(yhat)
 
         # Compute nlls
-        nlls = \
-            Log(Exp(2 * loggamma) + K.square(ytrue - yhat)) \
+        nlls = Log(Exp(2 * loggamma) + K.square(ytrue - yhat)) \
             - loggamma \
             + np.log(pi)
 
         return nlls
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_yq(self, yhat, q):
         """Compute quantiles of p(y|yhat)."""
         gamma = Exp(self.compute_params(yhat))
         yq = yhat + gamma * tf.math.tan(np.pi * (q - 0.5))
         return yq
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ymean(self, yhat):
         """Compute mean of p(y|yhat)."""
         return yhat
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ystd(self, yhat):
         """Compute standard devaition of p(y|yhat)."""
         sigma = Exp(self.compute_params(yhat))
@@ -1896,7 +1910,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
                 "w_b": self.w_b, "w_s": self.w_s}
 
     # Compute the mode as a function of a and b
-    @handle_arrays
+    @ handle_arrays
     def t_mode(self, a, b):
         """Compute mode of p(t|a,b)."""
         t_mode = (a - b) * K.sqrt(a + b) \
@@ -1904,7 +1918,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         return t_mode
 
     # Compute mean
-    @handle_arrays
+    @ handle_arrays
     def t_mean(self, a, b):
         """Compute mean of p(t|a,b)."""
         return 0.5 * (a - b) * np.sqrt(a + b) * np.exp(
@@ -1914,7 +1928,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
             - LogGamma(b)
         )
 
-    @handle_arrays
+    @ handle_arrays
     def t_std(self, a, b):
         """Compute standard devaition of p(t|a,b)."""
         t_expected = self.t_mean(a, b)
@@ -1922,7 +1936,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
             ((a - b) ** 2 + (a - 1) + (b - 1)) / ((a - 1) * (b - 1))
         return K.sqrt(tsq_expected - t_expected ** 2)
 
-    @handle_arrays
+    @ handle_arrays
     def t_quantile(self, q, a, b):
         """Compute quantiles of p(t|a,b)."""
         x_q = tf.constant(betaincinv(a.numpy(), b.numpy(), q.numpy()),
@@ -1931,7 +1945,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         return t_q
 
     # Overloading functions
-    @handle_arrays
+    @ handle_arrays
     def compute_params(self, yhat):
         """Compute layer parameters governing p(y|yhat)."""
         # Have to treat 0'th order term separately because of NaN bug.
@@ -1956,7 +1970,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
         return a, b, s
 
-    @handle_arrays
+    @ handle_arrays
     def compute_nlls(self, yhat, ytrue):
         """Compute negative log likelihood contributions for each datum."""
         # Compute distribution parameters at yhat values
@@ -1994,7 +2008,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
         return nlls
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_yq(self, yhat, q):
         """Compute quantiles for p(y|yhat)."""
         # Compute distribution parameters at yhat values
@@ -2010,7 +2024,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
         yq = (t_q - t_mode) * s + yhat
         return yq
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ymean(self, yhat):
         """Compute mean of p(y|yhat)."""
         # Compute distribution parameters at yhat values
@@ -2025,7 +2039,7 @@ class SkewedTNoiseModelLayer(NoiseModelLayer):
 
         return ymean
 
-    @handle_arrays
+    @ handle_arrays
     def yhat_to_ystd(self, yhat):
         """Compute standard deviation of p(y|yhat)."""
         # Compute distribution parameters at yhat values
