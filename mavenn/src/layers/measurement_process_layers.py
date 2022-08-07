@@ -791,33 +791,33 @@ class TiteSeqMP(MeasurementProcess):
                 "info_for_layers_dict": self.info_for_layers_dict,
                 "number_bins": self.number_bins}    # TODO: check if self.number_bins is defined/works
 
-    # def build(self, input_shape):
-    #     """Build layer."""
-    #
-    #     self.c = self.add_weight(name='c',
-    #                              dtype=tf.float32,
-    #                              shape=(1,),
-    #                              # initializer=Constant(0.5),
-    #                              initializer=RandomNormal(),
-    #                              trainable=True,
-    #                              # constraint=tf.keras.constraints.non_neg(),
-    #                              regularizer=self.regularizer)
-    #
-    #     self.a = self.add_weight(name='a',
-    #                              dtype=tf.float32,
-    #                              shape=(1,),
-    #                              initializer=RandomNormal(),
-    #                              trainable=True,
-    #                              regularizer=self.regularizer)
-    #     # Trainable t is for future
-    #     # self.t_y = self.add_weight(name='t_y',
-    #     #    dtype=tf.float32,
-    #     #    shape=(self.Y,),
-    #     #    initializer=tf.convert_to_tensor(t_y) * Constant(1.0),
-    #     #    trainable=True,
-    #     #    regularizer=self.regularizer)
-    #
-    #     super().build(input_shape)
+    def build(self, input_shape):
+        """Build layer."""
+
+        # self.c = self.add_weight(name='c',
+        #                          dtype=tf.float32,
+        #                          shape=(1,),
+        #                          # initializer=Constant(0.5),
+        #                          initializer=RandomNormal(),
+        #                          trainable=True,
+        #                          # constraint=tf.keras.constraints.non_neg(),
+        #                          regularizer=self.regularizer)
+
+        self.a = self.add_weight(name='a',
+                                 dtype=tf.float32,
+                                 shape=(1,),
+                                 initializer=RandomNormal(),
+                                 trainable=True,
+                                 regularizer=self.regularizer)
+        # Trainable t is for future
+        # self.t_y = self.add_weight(name='t_y',
+        #    dtype=tf.float32,
+        #    shape=(self.Y,),
+        #    initializer=tf.convert_to_tensor(t_y) * Constant(1.0),
+        #    trainable=True,
+        #    regularizer=self.regularizer)
+
+        super().build(input_shape)
 
     def call(self, inputs):
         """
@@ -838,13 +838,13 @@ class TiteSeqMP(MeasurementProcess):
         """
 
         # # code from one-dimensional phi
-        # phi = inputs[:, 0]
-        # ct_my = inputs[:, 1:]
+        phi = inputs[:, 0]
+        ct_my = inputs[:, 1:]
 
         # Extract and shape inputs
         # ' phi shape in call (None, 2)')
-        phi = inputs[:, 0: 2]
-        ct_my = inputs[:, 2:]
+        # phi = inputs[:, 0: 2]
+        # ct_my = inputs[:, 2:]
 
         # Compute p(y|phi)
         p_my = self.p_of_all_y_given_phi(phi)
@@ -942,22 +942,22 @@ class TiteSeqMP(MeasurementProcess):
         """Compute p(y|phi) for all values of y."""
 
         # phi is the latent phenotype representing binding
-        #phi = tf.reshape(phi, [-1, 1])
+        phi = tf.reshape(phi, [-1, 1])
 
-        phi_0 = phi[:, 0]
-        phi_1 = phi[:, 1]
+        # phi_0 = phi[:, 0]
+        # phi_1 = phi[:, 1]
+        #
+        # phi_0 = tf.reshape(phi_0, [-1, 1])
+        # phi_1 = tf.reshape(phi_1, [-1, 1])
+        #
+        # phi_0 = tf.cast(phi_0, dtype=tf.float32)
+        # phi_1 = tf.cast(phi_1, dtype=tf.float32)
 
-        phi_0 = tf.reshape(phi_0, [-1, 1])
-        phi_1 = tf.reshape(phi_1, [-1, 1])
-
-        phi_0 = tf.cast(phi_0, dtype=tf.float32)
-        phi_1 = tf.cast(phi_1, dtype=tf.float32)
-
-        # K_a_of_phi = Exp(phi)
-        # A_of_phi = Exp(self.a)
+        K_a_of_phi = Exp(phi)
+        A_of_phi = Exp(self.a)
         #print(f' SHAPE OF phi_0  = {phi_0.shape}')
-        K_a_of_phi = Exp(phi_0)
-        A_of_phi = Exp(phi_1)
+        # K_a_of_phi = Exp(phi_0)
+        # A_of_phi = Exp(phi_1)
 
         #self.mu_neg = tf.cast(self.mu_neg, dtype=tf.float32)
         B = Exp(self.mu_neg)
