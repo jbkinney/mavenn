@@ -57,6 +57,18 @@ def Log(x):
     return K.log(x)
 
 
+def Log10(x):
+    x = tf.clip_by_value(x, MIN_LOG_ARG, np.inf)
+    #return K.log(x)/K.log(tf.constant(10.0, dtype=tf.float32))
+    return K.log(x) / K.log(10.0)
+
+
+def Exp10(x):
+    x = tf.clip_by_value(x, -MAX_EXP_ARG, MAX_EXP_ARG)
+    x = tf.cast(x, dtype=tf.float32)
+    return tf.math.pow(10.0, x)
+
+
 def LogGamma(x):
     x = tf.clip_by_value(x, MIN_LOG_ARG, np.inf)
     return tf.math.lgamma(x)
@@ -794,28 +806,12 @@ class TiteSeqMP(MeasurementProcess):
     def build(self, input_shape):
         """Build layer."""
 
-        # self.c = self.add_weight(name='c',
-        #                          dtype=tf.float32,
-        #                          shape=(1,),
-        #                          # initializer=Constant(0.5),
-        #                          initializer=RandomNormal(),
-        #                          trainable=True,
-        #                          # constraint=tf.keras.constraints.non_neg(),
-        #                          regularizer=self.regularizer)
-
         self.a = self.add_weight(name='a',
                                  dtype=tf.float32,
                                  shape=(1,),
                                  initializer=RandomNormal(),
                                  trainable=True,
                                  regularizer=self.regularizer)
-        # Trainable t is for future
-        # self.t_y = self.add_weight(name='t_y',
-        #    dtype=tf.float32,
-        #    shape=(self.Y,),
-        #    initializer=tf.convert_to_tensor(t_y) * Constant(1.0),
-        #    trainable=True,
-        #    regularizer=self.regularizer)
 
         super().build(input_shape)
 
@@ -953,30 +949,21 @@ class TiteSeqMP(MeasurementProcess):
         # phi_0 = tf.cast(phi_0, dtype=tf.float32)
         # phi_1 = tf.cast(phi_1, dtype=tf.float32)
 
-        K_a_of_phi = Exp(phi)
-        A_of_phi = Exp(self.a)
+        K_a_of_phi = Exp10(phi)
+        A_of_phi = Exp10(self.a)
         #print(f' SHAPE OF phi_0  = {phi_0.shape}')
         # K_a_of_phi = Exp(phi_0)
         # A_of_phi = Exp(phi_1)
 
         #self.mu_neg = tf.cast(self.mu_neg, dtype=tf.float32)
-        B = Exp(self.mu_neg)
+        B = Exp10(self.mu_neg)
         B = tf.cast(B, dtype=tf.float32)
 
-        mu_of_phi = Log(A_of_phi * ((Exp(self.c) * K_a_of_phi) /
-                                    (1 + Exp(self.c) * K_a_of_phi)) + B)
-        # print(f' SHAPE OF mu_of_phi  = {mu_of_phi.shape}')
-        # print('after mu of phi')
+        mu_of_phi = Log10(A_of_phi * ((Exp10(self.c) * K_a_of_phi) /
+                                    (1 + Exp10(self.c) * K_a_of_phi)) + B)
+
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
-
-        # Log_sigma_pos_over_sigma_neg = tf.reshape(
-        #     Log(self.sigma_pos / self.sigma_neg), [-1, 1, 1])
-        # Log_sigma_pos_over_sigma_neg = tf.cast(
-        #     Log_sigma_pos_over_sigma_neg, dtype=tf.float32)
-
-        # sigma_of_phi = self.sigma_neg * \
-        #     Exp(lambda_of_phi * Log_sigma_pos_over_sigma_neg)
 
         sigma_of_phi = (1 - lambda_of_phi) * self.sigma_neg + \
             lambda_of_phi * self.sigma_pos
@@ -992,19 +979,12 @@ class TiteSeqMP(MeasurementProcess):
         N_y = tf.reshape(self.N_y, [-1, self.Y])
         N_y = tf.cast(N_y, dtype=tf.float32)
         w_my = (N_y / self.N) * u_y_of_phi
-        # w_my = tf.reshape(w_my, [-1, self.Y])
-        # Shape of w_my  = (None,  self.Y)
-        # print(f'w_my shape = {w_my.shape}')
-        # w_my = tf.einsum('ij, kj->kj', (N_y / self.N), u_y_of_phi)
 
         # normalized probability
         # sum over Y
         # p_my = w_my / tf.math.reduce_sum(w_my)
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
 
-        # u_y_of_phi
-
-        #print(f'w_my shape = {w_my.shape}, u_y_of_phi shape = {u_y_of_phi.shape}, p_my = {p_my.shape}, N_y shape = {N_y.shape}')
         return p_my
 
 
