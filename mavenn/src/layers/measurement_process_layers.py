@@ -959,8 +959,11 @@ class TiteSeqMP(MeasurementProcess):
         B = Exp10(self.mu_neg)
         B = tf.cast(B, dtype=tf.float32)
 
-        mu_of_phi = Log10(A_of_phi * ((Exp10(self.c) * K_a_of_phi) /
-                                    (1 + Exp10(self.c) * K_a_of_phi)) + B)
+        # mu_of_phi = Log10(A_of_phi * ((Exp10(self.c) * K_a_of_phi) /
+        #                             (1 + Exp10(self.c) * K_a_of_phi)) + B)
+
+        mu_of_phi = Log10(A_of_phi * ((self.c * K_a_of_phi) /
+                                    (1 + self.c * K_a_of_phi)) + B)
 
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
