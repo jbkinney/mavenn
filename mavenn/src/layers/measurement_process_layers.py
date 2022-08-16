@@ -760,6 +760,7 @@ class TiteSeqMP(MeasurementProcess):
 
     def __init__(self,
                  c,
+                 a,
                  N_y,
                  Y,
                  mu_pos,
@@ -775,6 +776,7 @@ class TiteSeqMP(MeasurementProcess):
         """Construct layer."""
         # Set attributes
         self.c = c
+        self.a = a,
         self.Y = Y
         self.N_y = N_y
         self.mu_pos = mu_pos
@@ -803,17 +805,17 @@ class TiteSeqMP(MeasurementProcess):
                 "info_for_layers_dict": self.info_for_layers_dict,
                 "number_bins": self.number_bins}    # TODO: check if self.number_bins is defined/works
 
-    def build(self, input_shape):
-        """Build layer."""
-
-        self.a = self.add_weight(name='a',
-                                 dtype=tf.float32,
-                                 shape=(1,),
-                                 initializer=RandomNormal(),
-                                 trainable=True,
-                                 regularizer=self.regularizer)
-
-        super().build(input_shape)
+    # def build(self, input_shape):
+    #     """Build layer."""
+    #
+    #     self.a = self.add_weight(name='a',
+    #                              dtype=tf.float32,
+    #                              shape=(1,),
+    #                              initializer=RandomNormal(),
+    #                              trainable=True,
+    #                              regularizer=self.regularizer)
+    #
+    #     super().build(input_shape)
 
     def call(self, inputs):
         """
