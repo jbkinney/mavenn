@@ -844,7 +844,15 @@ class Model:
         # training sequences.
         # Hot-fix related to TF 2.4, 2020.12.18
         #unfixed_phi = self._unfixed_gpmap(self.x_ohe)[0].ravel()
-        unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
+        # Hot-fix to lower memory consumption, 2022.09.06
+        rand_pool = 1000
+        if train_sequences.shape[0] > rand_pool:
+            rand_sel = np.random.choice(range(train_sequences.shape[0]), size=rand_pool, replace=False)
+        else:
+            rand_sel = np.random.choice(range(train_sequences.shape[0]), size=rand_pool, replace=True)
+
+        #unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
+        unfixed_phi = self._unfixed_gpmap(train_sequences[rand_sel,:])[0].ravel()
 
         # Set stats
         if self.normalize_phi:
@@ -852,7 +860,8 @@ class Model:
             self.unfixed_phi_std = np.std(unfixed_phi)
 
             # Flip sign if correlation of phi with y_targets is negative
-            r, p_val = spearmanr(unfixed_phi, y_targets)
+            #r, p_val = spearmanr(unfixed_phi, y_targets)
+            r, p_val = spearmanr(unfixed_phi, y_targets[rand_sel,:])
             if r < 0:
                 self.unfixed_phi_std *= -1.
 
