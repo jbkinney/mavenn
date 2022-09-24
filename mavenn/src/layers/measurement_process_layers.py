@@ -811,7 +811,7 @@ class TiteSeqMP(MeasurementProcess):
     #     self.a = self.add_weight(name='a',
     #                              dtype=tf.float32,
     #                              shape=(1,),
-    #                              initializer=RandomNormal(),
+    #                              initializer=Constant(4.0),
     #                              trainable=True,
     #                              regularizer=self.regularizer)
     #
