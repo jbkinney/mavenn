@@ -1242,7 +1242,8 @@ class MultiLatentDiscreteAgnosticMP(MeasurementProcess):
         #b_yk0 = expon(scale=1 / self.K).rvs([self.Y, self.K])
         self.b_yk = self.add_weight(name='b_yk',
                                     dtype=tf.float32,
-                                    shape=(self.number_latent_nodes,self.Y, self.K),
+                                    shape=(self.Y, self.K),
+                                    #shape=(self.number_latent_nodes, self.Y, self.K),
                                     #initializer=Constant(b_yk0),
                                     trainable=True,
                                     regularizer=self.regularizer)
@@ -1381,7 +1382,8 @@ class MultiLatentDiscreteAgnosticMP(MeasurementProcess):
 
         # Reshape parameters
         a_y = tf.reshape(self.a_y, [-1, self.Y])
-        b_yk = tf.reshape(self.b_yk, [-1, self.number_latent_nodes,self.Y, self.K])
+        #b_yk = tf.reshape(self.b_yk, [-1, self.number_latent_nodes,self.Y, self.K])
+        b_yk = tf.reshape(self.b_yk, [-1, self.Y, self.K])
         c_kl = tf.reshape(self.c_kl, [-1, self.number_latent_nodes, self.K])
         d_k = tf.reshape(self.d_k, [-1, self.K])
 
@@ -1389,17 +1391,17 @@ class MultiLatentDiscreteAgnosticMP(MeasurementProcess):
         # Axis 2 represents sum over, k
         # axis 1 represents sum over latent phi nodes.
         
-        print('Multilatent MPA shapes:')
-        print(f'tanh(K.sum(c_kl * phi, axis=1) = {(b_yk*tanh(c_kl * phi + d_k)).shape}')
+        # print('Multilatent MPA shapes:')
+        # print(f'tanh(K.sum(c_kl * phi, axis=1) = {(b_yk*tanh(c_kl * phi + d_k)).shape}')
         
         #psi_my = a_y + K.sum(b_yk * tanh(K.sum(c_kl * phi, axis=1) + d_k), axis=2)
         psi_my = a_y + K.sum(b_yk * tanh(c_kl * phi + d_k), axis=2)
-        print(f'psi_my = {psi_my.shape}')
+#        print(f'psi_my = {psi_my.shape}')
         # shape has to be none by Y
         psi_my = tf.reshape(psi_my, [-1, self.Y])
 
-        print(f'phi = {phi.shape}')
-        print(f'psi_my = {psi_my.shape}')
+        # print(f'phi = {phi.shape}')
+        # print(f'psi_my = {psi_my.shape}')
 
         w_my = Exp(psi_my)
         # print(f'w_my shape {w_my.shape}')
@@ -1407,7 +1409,7 @@ class MultiLatentDiscreteAgnosticMP(MeasurementProcess):
         # Compute and return distribution
         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
 
-        print(f'p_my = {p_my.shape}')
+        #print(f'p_my = {p_my.shape}')
 
         if return_var == 'w':
             return w_my
