@@ -187,11 +187,12 @@ class MeasurementProcess(Layer):
         assert False
 
 
-class GlobalEpsitasisMP(MeasurementProcess):
+class GlobalEpsistasisMP(MeasurementProcess):
 
     def __init__(self,
                  K=50,
                  eta=1e-5,
+                 number_latent_nodes=1,
                  monotonic=True,
                  ge_heteroskedasticity_order=0,
                  info_for_layers_dict={},
@@ -202,11 +203,22 @@ class GlobalEpsitasisMP(MeasurementProcess):
         self.eta = eta
         self.monotonic = monotonic
         self.info_for_layers_dict = info_for_layers_dict
+        self.number_latent_nodes = number_latent_nodes
         self.ge_heteroskedasticity_order = ge_heteroskedasticity_order
 
-        yhat = GlobalEpistasisLayer(K=self.K,
-                                    eta=self.eta,
-                                    monotonic=self.monotonic)
+        if number_latent_nodes == 1:
+            yhat = GlobalEpistasisLayer(K=self.K,
+                                        eta=self.eta,
+                                        monotonic=self.monotonic)
+
+        elif number_latent_nodes > 1:
+            yhat = MultiLatentGlobalEpistasisLayer(K=self.K,
+                                                   eta=self.eta,
+                                                   number_latent_nodes=self.number_latent_nodes,
+                                                   monotonic=self.monotonic)
+        else:
+            print(f'number_latent_nodes = {self.number_latent_nodes} cannot be negative or float')
+            print('Need to implement number_latent_nodes check in multi GE MP.')
 
         # Create noise model layer
         if ge_noise_model_type == 'Gaussian':
@@ -1390,8 +1402,7 @@ class MultiLatentDiscreteAgnosticMP(MeasurementProcess):
         # Compute weights
         # Axis 2 represents sum over, k
         # axis 1 represents sum over latent phi nodes.
-        
-        # print('Multilatent MPA shapes:')
+
         # print(f'tanh(K.sum(c_kl * phi, axis=1) = {(b_yk*tanh(c_kl * phi + d_k)).shape}')
         
         #psi_my = a_y + K.sum(b_yk * tanh(K.sum(c_kl * phi, axis=1) + d_k), axis=2)
@@ -1684,6 +1695,90 @@ class AffineLayer(Layer):
         return yhat
 
 
+class MultiLatentGlobalEpistasisLayer(Layer):
+    """Represents a global epistasis layer."""
+
+    @ handle_errors
+    def __init__(self,
+                 K,
+                 eta,
+                 number_latent_nodes,
+                 monotonic,
+                 **kwargs):
+        """Construct layer."""
+        # Whether to make monotonic function
+        self.monotonic = monotonic
+
+        # Create function that returns a kernel constraint
+        # based on self.monotonic
+        self.constraint = lambda: non_neg() if self.monotonic else None
+
+        # Set number of hidden nodes
+        self.K = K
+
+        # represents total number of latent nodes.
+        self.number_latent_nodes = number_latent_nodes
+
+        # Set regularizer
+        self.eta = eta
+        self.regularizer = tf.keras.regularizers.L2(self.eta)
+
+        # Call superclass constructor
+        super().__init__(**kwargs)
+
+    def build(self, input_shape):
+        """Build layer."""
+        self.a_0 = self.add_weight(name='a_0',
+                                   shape=(1,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+
+        # Need to randomly initialize b_k
+        #b_k_dist = expon(scale=1 / self.K)
+        self.b_k = self.add_weight(name='b_k',
+                                   shape=(self.K,),
+                                   #initializer=Constant(b_k_dist.rvs(self.K)),
+                                   trainable=True,
+                                   constraint=self.constraint(),
+                                   regularizer=self.regularizer)
+
+        self.c_kl = self.add_weight(name='c_k',
+                                   shape=(self.K, self.number_latent_nodes),
+                                   #initializer=Constant(1.),
+                                   trainable=True,
+                                   constraint=self.constraint(),
+                                   regularizer=self.regularizer)
+
+        self.d_k = self.add_weight(name='d_k',
+                                   shape=(self.K,),
+                                   initializer=Constant(0.),
+                                   trainable=True,
+                                   regularizer=self.regularizer)
+        super().build(input_shape)
+
+    # Just an alias for phi_to_yhat, for tensors only
+    def call(self, phi):
+        """Transform layer inputs to outputs."""
+        return self.phi_to_yhat(phi)
+
+    # yhat as function of phi
+    @ handle_arrays
+    def phi_to_yhat(self, phi):
+        """Compute yhat from phi."""
+
+        a_0 = tf.reshape(self.a_0, [-1, 1])
+        b_k = tf.reshape(self.b_k, [-1, self.K])
+
+        c_kl = tf.reshape(self.c_kl, [-1, self.number_latent_nodes, self.K])
+        #c_k = tf.reshape(self.c_k, [1, -1])
+        d_k = tf.reshape(self.d_k, [-1, self.K])
+        phi = tf.reshape(phi, [-1, self.number_latent_nodes])
+        yhat = a_0 + tf.reshape(
+            K.sum(b_k * tanh(c_kl * phi + d_k), axis=1), shape=[-1, 1])
+        return yhat
+
+
 class GlobalEpistasisLayer(Layer):
     """Represents a global epistasis layer."""
 
@@ -1758,7 +1853,6 @@ class GlobalEpistasisLayer(Layer):
         yhat = self.a_0 + tf.reshape(
             K.sum(b_k * tanh(c_k * phi + d_k), axis=1), shape=[-1, 1])
         return yhat
-
 
 class NoiseModelLayer(Layer):
     """Generic class representing the noise model of a GE model."""

@@ -55,7 +55,7 @@ from mavenn import TINY
 from mavenn.src.utils import check, handle_errors
 from mavenn.src.layers.input_layer import InputLayer
 from mavenn.src.layers.measurement_process_layers \
-    import GlobalEpsitasisMP, \
+    import GlobalEpsistasisMP, \
            GaussianNoiseModelLayer, \
            EmpiricalGaussianNoiseModelLayer, \
            CauchyNoiseModelLayer, \
