@@ -1763,19 +1763,17 @@ class MultiLatentGlobalEpistasisLayer(Layer):
         return self.phi_to_yhat(phi)
 
     # yhat as function of phi
-    @ handle_arrays
+
+    @handle_arrays
     def phi_to_yhat(self, phi):
         """Compute yhat from phi."""
 
-        a_0 = tf.reshape(self.a_0, [-1, 1])
+        phi = tf.reshape(phi, [-1, 1, self.number_latent_nodes])
         b_k = tf.reshape(self.b_k, [-1, self.K])
-
-        c_kl = tf.reshape(self.c_kl, [-1, self.number_latent_nodes, self.K])
-        #c_k = tf.reshape(self.c_k, [1, -1])
+        c_kl = tf.reshape(self.c_kl, [-1, self.K, self.number_latent_nodes])
         d_k = tf.reshape(self.d_k, [-1, self.K])
-        phi = tf.reshape(phi, [-1, self.number_latent_nodes])
-        yhat = a_0 + tf.reshape(
-            K.sum(b_k * tanh(c_kl * phi + d_k), axis=1), shape=[-1, 1])
+        yhat = self.a_0 + tf.reshape(K.sum(b_k * tanh(K.sum(c_kl * phi, axis=2) + d_k), axis=1), shape=[-1, 1])
+
         return yhat
 
 
