@@ -772,6 +772,55 @@ class Multi_AdditiveGPMapLayer(GPMapLayer):
 
         return phi
 
+    def x_to_phi(self, x, batch_size: Optional[int] = 64):
+        """GP map to x_to_phi implementation for multi-additive GPmap.
+
+        Parameters
+        ----------
+        x: (str)
+            Sequences.
+        batch_size: Optional (int)
+            Default values is 64.
+
+        Returns
+        ----------
+        phi: (numpy array dtype=float32)
+            Latent phenotype values.
+
+        Note
+        ----------
+        This function caused the memory overflow:
+        If the size of the x is large and higher order GP maps are used
+        the matrix multiplication needs huge memory.
+        Solution: Used the batched version of self.call
+        """
+
+        # Shape x for processing
+        x, x_shape = _get_shape_and_return_1d_array(x)
+        # Check seqs
+        x = validate_seqs(x, alphabet=self.alphabet)
+        check(len(x[0]) == self.L,
+              f'len(x[0])={len(x[0])}; should be L={self.L}')
+
+        # Encode sequences as features
+        stats = x_to_stats(x=x, alphabet=self.alphabet)
+
+        # Convert the x_ohe to tensorflow dataset with batch
+        x_ohe = tf.data.Dataset.from_tensor_slices(
+            tf.convert_to_tensor(stats.pop('x_ohe'), dtype=tf.float32)).batch(batch_size)
+
+        # Note: this is currently not diffeomorphic mode fixed.
+        # Apply x_to_phi calls on batches
+        phi = x_ohe.map(lambda z: self.call(z))
+
+        # Unbatch and gather all the phi values in numpy array
+        phi = np.array(list(phi.unbatch().as_numpy_iterator()))
+
+        # Shape phi for output
+        # TODO: this validates shapes only for 1d phi. Need to validate according to number_latent_nodes
+        #phi = _shape_for_output(phi, x_shape)
+
+        return phi
 
     @handle_errors
     def set_params(self, theta_0=None, theta_lc=None):
