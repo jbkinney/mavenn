@@ -73,7 +73,7 @@ class GPMapLayer(Layer):
             self_param = self.__dict__[k]
 
             # Type and shape v as needed
-            v = np.array(v).astype(np.float).reshape(self_param.shape)
+            v = np.array(v).astype(np.float32).reshape(self_param.shape)
 
             # Mask meaningless values with zeros
             no_mask = np.full(v.shape, True, dtype=bool)

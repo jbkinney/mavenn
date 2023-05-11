@@ -861,7 +861,16 @@ class Model:
 
             # Flip sign if correlation of phi with y_targets is negative
             #r, p_val = spearmanr(unfixed_phi, y_targets)
-            r, p_val = spearmanr(unfixed_phi, y_targets[rand_sel,:])
+            import pdb
+
+            try:
+                if y_targets.ndim==1:
+                    r, p_val = spearmanr(unfixed_phi, y_targets[rand_sel])
+                elif y_targets.ndim==2:
+                    r, p_val = spearmanr(unfixed_phi, y_targets[rand_sel,:])
+            except:
+                pdb.set_trace()
+
             if r < 0:
                 self.unfixed_phi_std *= -1.
 
