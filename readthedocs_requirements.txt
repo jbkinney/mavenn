@@ -4,7 +4,8 @@ numpydoc
 matplotlib>=3.2.0
 sphinx_rtd_theme
 tensorflow
-sklearn
+#sklearn
+scikit-learn
 logomaker
 seaborn
 suftware
