@@ -25,3 +25,15 @@ which you use MAVE-NN: ::
 
     #Load mavenn
     import mavenn
+
+
+Installation update for version 1.0.2
+=====================================
+
+Please note that the latest version of MAVE-NN conflicts with a NumPy's version (1.24.3)
+due to a conflicting dependency with TensorFlow. As a result, some users may have to run
+a pip upgrade command after installation on their command line interface as follows: ::
+
+    $ pip install mavenn
+    $ pip install mavenn --upgrade
+
