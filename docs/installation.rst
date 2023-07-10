@@ -7,6 +7,13 @@ using the ``pip`` package manager by executing the following at the
 commandline: ::
 
     $ pip install mavenn
+    $ pip install mavenn --upgrade
+
+Please note that the latest version of MAVE-NN conflicts with NumPy's version (1.24.3)
+due to a conflicting dependency with TensorFlow. This is the reason, 
+some users may have to run a pip upgrade command (shown above) 
+after installation on their command line.
+
 
 Alternatively, you can clone MAVE-NN from
 `GitHub <https://github.com/jbkinney/mavenn>`_ by doing
@@ -26,14 +33,4 @@ which you use MAVE-NN: ::
     #Load mavenn
     import mavenn
 
-
-Installation update for version 1.0.2
-=====================================
-
-Please note that the latest version of MAVE-NN conflicts with NumPy's version (1.24.3)
-due to a conflicting dependency with TensorFlow. As a result, some users may have to run
-a pip upgrade command after installation on their command line interface as follows: ::
-
-    $ pip install mavenn
-    $ pip install mavenn --upgrade
 
