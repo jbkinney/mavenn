@@ -101,10 +101,16 @@ class Model:
     @handle_errors
     def __init__(self,
                  gpmap,
-                 mp_list):
+                 mp_list,
+                 additional_input_nodes=0):
 
         # set attributes required for defining a model
         self.gpmap = gpmap
+
+        # Variable that contains number of additional nodes to add to input, if any.
+        # e.g., for inputting categorical information like experiment id, or condition under
+        # which sequence was assayed.
+        self.additional_input_nodes = additional_input_nodes
 
         self.L = self.gpmap.L
         self.C = self.gpmap.C
@@ -125,6 +131,9 @@ class Model:
 
         # Compute number of sequence nodes. Useful for model construction below.
         number_x_nodes = int(self.L*self.C)
+
+        # Add additional/categorical nodes
+        number_x_nodes += self.additional_input_nodes
 
         # get list of measurement processes
         measurement_processes_list = self.mp_list
@@ -164,6 +173,7 @@ class Model:
         # Here we build up lambda layers, on step at a time, which will be
         # fed to each of the measurement layers
         # We need two variables to map the target labels to their corresponding measurement processes
+
         start_pointer_define_model = number_x_nodes
         #end_pointer_define_model = None
 
@@ -242,6 +252,7 @@ class Model:
     def set_data(self,
                  x,
                  y_list,
+                 additional_x=None,
                  dy=None,
                  ct=None,
                  validation_frac=.2,
@@ -269,6 +280,10 @@ class Model:
             ..., ``Y-1``. If 2D, ``y`` must be of shape ``(N,Y)``, and will be   gb
             interpreted as listing the observed counts for each of the ``N``
             sequences in each of the ``Y`` bins.
+
+        additional_x: (np.ndarray)
+            Array of categorical variables append to each sequences to indicate
+            a conidtion or experiment in which the sequence was assayed.
 
         dy : (np.ndarray)
             User supplied error bars associated with continuous measurements
@@ -364,7 +379,6 @@ class Model:
 
         # Set N
         self.N = len(x)
-
         # This list will get populated with target label data
         # in the loop a bit below. All elements of list will
         # get horizontally stacked afterwards.
@@ -489,7 +503,7 @@ class Model:
 
         # Set training and validation x
         self.x = x.copy()
-
+        print(f'In set data, x.shape = {self.x.shape}')
         # Provide feedback
         if verbose:
             print(f'N = {self.N:,} observations set as training data.')
@@ -523,6 +537,10 @@ class Model:
         # Instantiate this key as false, update if more than
         # single mutants founds (see lines below).
         self.x_stats['only_single_mutants'] = False
+
+        # if categorical variables provided, append to one-hot encoding of sequences
+        if additional_x is not None:
+            self.x_ohe = np.hstack([self.x_ohe, additional_x])
 
         # Check if only single mutants found in training data.
         only_single_mutants_found = only_single_mutants(training_sequences=self.x,

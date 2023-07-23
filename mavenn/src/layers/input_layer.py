@@ -31,6 +31,7 @@ class InputLayer:
         # calcalate likelihood (i.e., using x and y)
         # Note that if additional input features are to be added (e.g., shape),
         # the following code will have to be updated.
+        # also added additional input nodes to indicate categorical variables
         number_input_layer_nodes = self.number_x_nodes + self.number_of_targets
 
         inputTensor = Input((number_input_layer_nodes,),
@@ -39,6 +40,7 @@ class InputLayer:
         sequence_input = Lambda(lambda x: x[:, 0:self.number_x_nodes],
                                 output_shape=((self.number_x_nodes,)),
                                 name='Sequence_only')(inputTensor)
+
         # labels_input = Lambda(
         #     lambda x: x[:, self.number_x_nodes:self.number_x_nodes + self.number_of_targets],
         #     output_shape=((self.number_of_targets,)),

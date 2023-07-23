@@ -148,13 +148,20 @@ class GPMapLayer(Layer):
         assert False
 
     @handle_errors
-    def x_to_phi(self, x, batch_size: Optional[int] = 64):
+    def x_to_phi(self,
+                 x,
+                 additional_x=None,
+                 batch_size: Optional[int] = 64):
         """GP map to x_to_phi abstract method.
 
         Parameters
         ----------
         x: (str)
             Sequences.
+
+        additional_x: (np.ndarray)
+            Array of categorical variables indicating experimental condition.
+
         batch_size: Optional (int)
             Default values is 64.
 
@@ -182,12 +189,18 @@ class GPMapLayer(Layer):
         # Encode sequences as features
         stats = x_to_stats(x=x, alphabet=self.alphabet)
 
+        if additional_x is not None:
+            x_ohe_stats = np.hstack([stats.pop('x_ohe'), additional_x])
+        else:
+            x_ohe_stats = stats.pop('x_ohe')
+
         # Convert the x_ohe to tensorflow dataset with batch
         x_ohe = tf.data.Dataset.from_tensor_slices(
-            tf.convert_to_tensor(stats.pop('x_ohe'), dtype=tf.float32)).batch(batch_size)
+            tf.convert_to_tensor(x_ohe_stats, dtype=tf.float32)).batch(batch_size)
 
         # Note: this is currently not diffeomorphic mode fixed.
         # Apply x_to_phi calls on batches
+
         phi = x_ohe.map(lambda z: self.call(z))
 
         # Unbatch and gather all the phi values in numpy array
@@ -779,6 +792,7 @@ class Multi_AdditiveGPMapLayer(GPMapLayer):
         ----------
         x: (str)
             Sequences.
+
         batch_size: Optional (int)
             Default values is 64.
 

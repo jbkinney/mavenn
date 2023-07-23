@@ -288,7 +288,7 @@ class ExponentialEnrichmentMP(MeasurementProcess):
         self.t_y_input = t_y
 
         # TODO: User should provide the t_y vector of length Y. Check this and raise error.
-        # TODO: Check Y>=2 otherwise raise error.
+        # TODO: Check Y>=2 otherwise raise error.Ti
 
         # attributes of base MeasurementProcess class
         self.eta = eta
@@ -820,10 +820,11 @@ class TiteSeqMP(MeasurementProcess):
     # def build(self, input_shape):
     #     """Build layer."""
     #
-    #     self.a = self.add_weight(name='a',
+    #     # this weight is the constant in front of Hill-function mu(phi)
+    #     self.D = self.add_weight(name='D',
     #                              dtype=tf.float32,
     #                              shape=(1,),
-    #                              initializer=Constant(4.0),
+    #                              initializer=Constant(1.0),
     #                              trainable=True,
     #                              regularizer=self.regularizer)
     #
@@ -976,8 +977,9 @@ class TiteSeqMP(MeasurementProcess):
         # mu_of_phi = Log10(A_of_phi * ((Exp10(self.c) * K_a_of_phi) /
         #                             (1 + Exp10(self.c) * K_a_of_phi)) + B)
 
+        #mu_of_phi = self.D*Log10(A_of_phi * ((self.c * K_a_of_phi) /
         mu_of_phi = Log10(A_of_phi * ((self.c * K_a_of_phi) /
-                                    (1 + self.c * K_a_of_phi)) + B)
+                                (1 + self.c * K_a_of_phi)) + B)
 
         # transform phi between 0 and 1
         lambda_of_phi = (mu_of_phi - self.mu_neg) / (self.mu_pos - self.mu_neg)
