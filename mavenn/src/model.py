@@ -531,6 +531,7 @@ class Model:
             verbose=True,
             early_stopping=True,
             early_stopping_patience=20,
+            restore_best_weights=True,
             batch_size=50,
             linear_initialization=True,
             freeze_theta=False,
@@ -567,6 +568,15 @@ class Model:
         early_stopping_patience: (int)
             Number of epochs to wait, after a minimum value of validation loss is
             observed, before terminating the model training process.
+            
+        restore_best_weights: (bool)
+            Whether to restore model weights from
+            the epoch with the best value of the monitored quantity.
+            If False, the model weights obtained at the last step of
+            training are used. An epoch will be restored regardless
+            of the performance relative to the `baseline`. If no epoch
+            improves on `baseline`, training will run for `patience`
+            epochs and restore weights from the best epoch in that set.
 
         batch_size: (None, int)
             Batch size to use for stochastic gradient descent and related
@@ -660,6 +670,10 @@ class Model:
         check(early_stopping_patience > 0,
               f'early_stopping_patience={early_stopping_patience};'
               f'must be > 0.')
+        
+        # Check restore_best_weights
+        check(isinstance(restore_best_weights, bool),
+              f'type(restore_best_weights)={type(restore_best_weights)}; must be bool.')
 
         # Check/set batch size
         check(isinstance(batch_size, (int, None)),
