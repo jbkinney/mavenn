@@ -15,7 +15,10 @@ import time
 # Insert path to local mavenn beginning of path
 import os
 import sys
-abs_path_to_mavenn = os.path.abspath('../../../')
+# Get absolute path of current file
+path_to_mavenn = os.path.abspath(__file__) + '/../../../../'
+abs_path_to_mavenn = os.path.abspath(path_to_mavenn)
+print(abs_path_to_mavenn)
 sys.path.insert(0, abs_path_to_mavenn)
 
 # Load mavenn
@@ -91,11 +94,11 @@ fig, axs = plt.subplots(1, 3, figsize=[12, 4])
 ax = axs[0]
 ax.scatter(phi_test, y_test, color='C0', s=5, alpha=.2, label='test data')
 ax.plot(phi_grid, yhat_grid, linewidth=2, color='C1',
-        label='$\hat{y} = g(\phi)$')
+        label=r'$\hat{y} = g(\phi)$')
 ax.plot(phi_grid, yqs_grid[:, 0], linestyle='--', color='C1', label='68% CI')
 ax.plot(phi_grid, yqs_grid[:, 1], linestyle='--', color='C1')
 ax.set_xlim(phi_lim)
-ax.set_xlabel('latent phenotype ($\phi$)')
+ax.set_xlabel(r'latent phenotype ($\phi$)')
 ax.set_ylabel('measurement ($y$)')
 ax.set_title('measurement process')
 ax.legend()
@@ -105,8 +108,8 @@ ax = axs[1]
 ys = np.vstack([y_test])
 ax.scatter(yhat_test, y_test, color='C0', s=5, alpha=.2, label='test data')
 lims = ax.get_xlim()
-ax.plot(lims, lims, linestyle=':', color='k', label='$y=\hat{y}$')
-ax.set_xlabel('model prediction ($\hat{y}$)')
+ax.plot(lims, lims, linestyle=':', color='k', label=r'$y=\hat{y}$')
+ax.set_xlabel(r'model prediction ($\hat{y}$)')
 ax.set_ylabel('measurement ($y$)')
 ax.set_title(f'performance ($R^2$={Rsq:.3})')
 ax.legend()

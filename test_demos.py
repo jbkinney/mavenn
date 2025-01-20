@@ -11,6 +11,10 @@ sys.path.insert(0, path_to_mavenn_local)
 import mavenn
 print(mavenn.__path__)
 
+# First run training demo
+mavenn.run_demo("mpsa_ge_training")
+exit()
+
 # Get list of valid names
 demo_names = mavenn.run_demo(print_names=False)
 
