@@ -129,6 +129,7 @@ class MPAMeasurementProcessLayer(Layer):
         self.K = K
         self.eta = eta
         self.info_for_layers_dict = info_for_layers_dict
+        self.I_var = None
 
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.eta)
@@ -207,8 +208,10 @@ class MPAMeasurementProcessLayer(Layer):
         H_y = self.info_for_layers_dict['H_y_norm']
         H_y_given_phi = np.log2(e) * \
                         K.sum(negative_log_likelihood) / K.sum(ct_m)
-        I_y_phi = H_y - H_y_given_phi
-        self.add_metric(I_y_phi, name="I_var", aggregation="mean")
+        I_var = H_y - H_y_given_phi
+
+        # Track I_var as a property of the layer; will add metric during compilation
+        self.I_var = I_var
 
         return negative_log_likelihood
 
@@ -382,6 +385,7 @@ class NoiseModelLayer(Layer):
         self.info_for_layers_dict = info_for_layers_dict
         self.regularizer = tf.keras.regularizers.L2(self.eta)
         self.is_noise_model_empirical = is_noise_model_empirical
+        self.I_var = None
         super().__init__(**kwargs)
 
     def get_config(self):
@@ -449,7 +453,10 @@ class NoiseModelLayer(Layer):
         H_y = self.info_for_layers_dict.get('H_y_norm', np.nan)
         H_y_given_phi = K.mean(np.log2(e) * nlls)
         I_var = H_y - H_y_given_phi
-        self.add_metric(I_var, name="I_var", aggregation="mean")
+        #self.add_metric(I_var, name="I_var", aggregation="mean")
+
+        # Track I_var as a property of the layer; will add metric during compilation
+        self.I_var = I_var
 
         return nlls
 

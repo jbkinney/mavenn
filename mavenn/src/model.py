@@ -20,6 +20,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 # tqdm progressbar
 # from tqdm.keras import TqdmCallback
 
+# Import metrics
+from mavenn.src.metrics import IVarMetric
+
 # sklearn import
 import sklearn.preprocessing
 
@@ -723,8 +726,13 @@ class Model:
         def likelihood_loss(y_true, y_pred):
             return K.sum(y_pred)
 
+        # Record model in IVarMetric (Not good code)
+        metric = IVarMetric(model=self.model.model)
+    
+        # Compile model
         self.model.model.compile(loss=likelihood_loss,
-                                 optimizer=optimizer)
+                                 optimizer=optimizer,
+                                 metrics=[metric])
 
         # Set early stopping callback if requested
         if early_stopping:
@@ -835,10 +843,20 @@ class Model:
                                        batch_size=batch_size,
                                        **fit_kwargs)
 
-        # Get function representing the raw gp_map
-        self._unfixed_gpmap = K.function(
-            [self.model.model.layers[1].input],
-            [self.model.model.layers[2].output])
+
+
+        # # Get function representing the raw gp_map
+        # self._unfixed_gpmap = K.function(
+        #     [self.model.model.layers[1].input],
+        #     [self.model.model.layers[2].output])
+        
+        # Replace the K.function() call with this:
+        @tf.function
+        def _unfixed_gpmap(inputs):
+            """Compute unfixed GP map outputs from inputs."""
+            x = self.model.model.layers[1](inputs)
+            return self.model.model.layers[2](x)
+        self._unfixed_gpmap = _unfixed_gpmap
 
         # compute unfixed phi using the function unfixed_gpmap with
         # training sequences.
@@ -852,7 +870,7 @@ class Model:
             rand_sel = np.random.choice(range(train_sequences.shape[0]), size=rand_pool, replace=True)
 
         #unfixed_phi = self._unfixed_gpmap(train_sequences)[0].ravel()
-        unfixed_phi = self._unfixed_gpmap(train_sequences[rand_sel,:])[0].ravel()
+        unfixed_phi = self._unfixed_gpmap(train_sequences[rand_sel,:]) #[0].ravel()
 
         # Set stats
         if self.normalize_phi:

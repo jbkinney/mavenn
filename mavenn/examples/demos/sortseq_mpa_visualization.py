@@ -65,10 +65,10 @@ im = ax.imshow(measurement_process,
                interpolation='nearest')
 ax.set_yticks(y_all)
 ax.set_ylabel('bin number (y)')
-ax.set_xlabel('latent phenotype ($\phi$)')
+ax.set_xlabel(r'latent phenotype ($\phi$)')
 ax.set_title('measurement process')
 cb = plt.colorbar(im)
-cb.set_label('probability  $p(y|\phi)$', rotation=-90, va="bottom")
+cb.set_label(r'probability  $p(y|\phi)$', rotation=-90, va="bottom")
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
