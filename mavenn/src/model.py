@@ -23,6 +23,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 # Import metrics
 # from mavenn.src.metrics import IVarMetric
 
+# Import callbacks
+from mavenn.src.callbacks import IVariationalCallback
+
 # sklearn import
 import sklearn.preprocessing
 
@@ -187,6 +190,7 @@ class Model:
         self.custom_gpmap = custom_gpmap
         self.initial_weights = initial_weights
         self.normalize_phi = normalize_phi
+        self.phi_normalized = False
 
         # Variables needed for saving
         self.unfixed_phi_mean = np.nan
@@ -537,7 +541,7 @@ class Model:
             batch_size=50,
             linear_initialization=True,
             freeze_theta=False,
-            callbacks=[],
+            callbacks=None, 
             try_tqdm=True,
             optimizer='Adam',
             optimizer_kwargs={},
@@ -587,7 +591,7 @@ class Model:
             and ``freeze_theta=True`` will set theta to be initialized at the
             linear regression solution and then become frozen during training.
 
-        callbacks: (list)
+        callbacks: (list, None)
             Optional list of ``tf.keras.callbacks.Callback`` objects to use
             during training.
 
@@ -686,10 +690,14 @@ class Model:
         self.freeze_theta = freeze_theta
 
         # Check callbacks
-        check(isinstance(callbacks, list),
-              f'type(callbacks)={type(callbacks)}; must be list.')
+        if callbacks is None:
+            callbacks = []
+        else:
+            check(isinstance(callbacks, (list)),
+                  f'type(callbacks)={type(callbacks)}; must be list or None.')
 
         # Add tdm if possible
+        # TODO: Just require tqdm to be installed.
         if try_tqdm:
             try:
                 from tqdm.keras import TqdmCallback
@@ -737,6 +745,10 @@ class Model:
         # self.model.model.compile(loss=likelihood_loss,
         #                          optimizer=optimizer,
         #                          metrics=[I_var_metric])
+
+        # Define callbacks to compute variational information
+        callbacks.append(IVariationalCallback(model=self, validation=False))
+        callbacks.append(IVariationalCallback(model=self, validation=True))
 
         # Set early stopping callback if requested
         if early_stopping:
@@ -837,6 +849,9 @@ class Model:
         #     callbacks.append(TqdmCallback(verbose=0))
         #     verbose = False
 
+        # Mark phi as not normalized; need to compute I_var during training
+        self.phi_normalized = False
+
         # Train neural network using TensorFlow
         history = self.model.model.fit(x_train,
                                        y_train,
@@ -846,8 +861,6 @@ class Model:
                                        callbacks=callbacks,
                                        batch_size=batch_size,
                                        **fit_kwargs)
-
-
 
         # # Get function representing the raw gp_map
         # self._unfixed_gpmap = K.function(
@@ -899,6 +912,9 @@ class Model:
         else:
             self.unfixed_phi_mean = 0.0
             self.unfixed_phi_std = 1.0
+        
+        # Register that phi has been normalized
+        self.phi_normalized = True
 
         # update history attribute
         self.history = history.history
@@ -931,7 +947,10 @@ class Model:
         phi, phi_shape = _get_shape_and_return_1d_array(phi)
 
         # make phi unfixed
-        unfixed_phi = self.unfixed_phi_mean + self.unfixed_phi_std * phi
+        if self.phi_normalized:
+            unfixed_phi = self.unfixed_phi_mean + self.unfixed_phi_std * phi
+        else:
+            unfixed_phi = phi
 
         # Multiply by diffeomorphic mode factors
         check(self.regression_type == 'GE',
@@ -1237,10 +1256,13 @@ class Model:
         # Compute latent phenotype values
         # Note that these are NOT diffeomorphic-mode fixed
         # unfixed_phi = gpmap_function([x_ohe])
-        unfixed_phi = self.layer_gpmap.call(x_ohe.astype('float32'))
+        unfixed_phi = self.layer_gpmap.call(x_ohe.astype('float32')).numpy()
 
         # Fix diffeomorphic models
-        phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
+        if self.phi_normalized:
+            phi = (unfixed_phi - self.unfixed_phi_mean) / self.unfixed_phi_std
+        else:
+            phi = unfixed_phi
 
         # Shape phi for output
         phi = _shape_for_output(phi, x_shape)
@@ -1854,7 +1876,10 @@ class Model:
                   f"Some y values exceed the number of bins {self.Y}")
 
             # Unfix phi
-            phi_unfixed = self.unfixed_phi_mean + phi * self.unfixed_phi_std
+            if self.phi_normalized:
+                phi_unfixed = self.unfixed_phi_mean + phi * self.unfixed_phi_std
+            else:
+                phi_unfixed = phi
 
             # Get values for all bins
             #p_of_all_y_given_phi = self.model.p_of_all_y_given_phi(phi_unfixed)
@@ -2030,6 +2055,7 @@ class Model:
             'fit_args': self.fit_args,
             'unfixed_phi_mean': self.unfixed_phi_mean,
             'unfixed_phi_std': self.unfixed_phi_std,
+            'phi_normalized': self.phi_normalized,
             'y_std': self.y_std,
             'y_mean': self.y_mean,
             'x_stats': self.x_stats,
