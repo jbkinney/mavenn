@@ -130,7 +130,7 @@ class MPAMeasurementProcessLayer(Layer):
         self.eta = eta
         self.info_for_layers_dict = info_for_layers_dict
         self.I_var = None
-
+        
         # Set regularizer
         self.regularizer = tf.keras.regularizers.L2(self.eta)
 
@@ -174,6 +174,14 @@ class MPAMeasurementProcessLayer(Layer):
                                     initializer=Constant(0.),
                                     trainable=True,
                                     regularizer=self.regularizer)
+        
+        self.I_var = self.add_weight(
+            name='I_var',
+            shape=(),
+            initializer='zeros',
+            trainable=False,
+            dtype=tf.float32
+        )       
         super().build(input_shape)
 
     def call(self, inputs):
@@ -208,10 +216,7 @@ class MPAMeasurementProcessLayer(Layer):
         H_y = self.info_for_layers_dict['H_y_norm']
         H_y_given_phi = np.log2(e) * \
                         K.sum(negative_log_likelihood) / K.sum(ct_m)
-        I_var = H_y - H_y_given_phi
-
-        # Track I_var as a property of the layer; will add metric during compilation
-        self.I_var = I_var
+        self.I_var.assign(H_y - H_y_given_phi)
 
         return negative_log_likelihood
 
@@ -379,6 +384,8 @@ class NoiseModelLayer(Layer):
                  is_noise_model_empirical=False,
                  **kwargs):
         """Construct class instance."""
+        super().__init__(**kwargs)
+        
         # order of polynomial which defines log_sigma's dependence on y_hat
         self.K = polynomial_order
         self.eta = eta_regularization
@@ -386,7 +393,6 @@ class NoiseModelLayer(Layer):
         self.regularizer = tf.keras.regularizers.L2(self.eta)
         self.is_noise_model_empirical = is_noise_model_empirical
         self.I_var = None
-        super().__init__(**kwargs)
 
     def get_config(self):
         """Return configuration dictionary."""
@@ -398,6 +404,13 @@ class NoiseModelLayer(Layer):
 
     def build(self, input_shape):
         """Build layer."""
+        self.I_var = self.add_weight(
+            name='I_var',
+            shape=(),
+            initializer='zeros',
+            trainable=False,
+            dtype=tf.float32
+        )       
         super().build(input_shape)
 
     def call(self, inputs):
@@ -452,11 +465,8 @@ class NoiseModelLayer(Layer):
         # Compute I_var metric from nlls
         H_y = self.info_for_layers_dict.get('H_y_norm', np.nan)
         H_y_given_phi = K.mean(np.log2(e) * nlls)
-        I_var = H_y - H_y_given_phi
-        #self.add_metric(I_var, name="I_var", aggregation="mean")
+        self.I_var.assign(H_y - H_y_given_phi)
 
-        # Track I_var as a property of the layer; will add metric during compilation
-        self.I_var = I_var
 
         return nlls
 

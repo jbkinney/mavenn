@@ -5,6 +5,7 @@ run_demo: mpsa_ge_training
 Trains a neighbor G-P map, using GE regression on data from
 Wong et al., 2018. Takes ~30 seconds to run.
 """
+# 25.01.21 Script fixed.
 
 # Standard imports
 import numpy as np
@@ -99,8 +100,8 @@ ax.plot(phi_grid, yqs_grid[:, 0], linestyle='--', color='C1', label='68% CI')
 ax.plot(phi_grid, yqs_grid[:, 1], linestyle='--', color='C1')
 ax.set_xlim(phi_lim)
 ax.set_xlabel(r'latent phenotype ($\phi$)')
-ax.set_ylabel('measurement ($y$)')
-ax.set_title('measurement process')
+ax.set_ylabel(r'measurement ($y$)')
+ax.set_title(r'measurement process')
 ax.legend()
 
 # Center panel: illustrate model performance (y vs. yhat)
@@ -110,7 +111,7 @@ ax.scatter(yhat_test, y_test, color='C0', s=5, alpha=.2, label='test data')
 lims = ax.get_xlim()
 ax.plot(lims, lims, linestyle=':', color='k', label=r'$y=\hat{y}$')
 ax.set_xlabel(r'model prediction ($\hat{y}$)')
-ax.set_ylabel('measurement ($y$)')
+ax.set_ylabel(r'measurement ($y$)')
 ax.set_title(f'performance ($R^2$={Rsq:.3})')
 ax.legend()
 
@@ -125,12 +126,12 @@ I_pred, dI_pred = model.I_predictive(x=x_test, y=y_test)
 print(f'I_pred_test: {I_pred:.3f} +- {dI_pred:.3f} bits')
 
 # Get training history
-I_var_hist = model.history['I_var']
-val_I_var_hist = model.history['val_I_var']
+#I_var_hist = model.history['I_var']
+#val_I_var_hist = model.history['val_I_var']
 
 # Plot training history as well as information values
-ax.plot(I_var_hist, label='I_var_train')
-ax.plot(val_I_var_hist, label='I_var_val')
+#ax.plot(I_var_hist, label='I_var_train')
+#ax.plot(val_I_var_hist, label='I_var_val')
 ax.axhline(I_var, color='C2', linestyle=':', label='I_var_test')
 ax.axhline(I_pred, color='C3', linestyle=':', label='I_pred_test')
 ax.legend()

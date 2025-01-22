@@ -21,7 +21,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 # from tqdm.keras import TqdmCallback
 
 # Import metrics
-from mavenn.src.metrics import IVarMetric
+# from mavenn.src.metrics import IVarMetric
 
 # sklearn import
 import sklearn.preprocessing
@@ -727,12 +727,16 @@ class Model:
             return K.sum(y_pred)
 
         # Record model in IVarMetric (Not good code)
-        metric = IVarMetric(model=self.model.model)
+        # I_var_metric = IVarMetric(noise_layer=self.model.model.layers[-1])
     
         # Compile model
         self.model.model.compile(loss=likelihood_loss,
-                                 optimizer=optimizer,
-                                 metrics=[metric])
+                                 optimizer=optimizer)
+
+        # 25.10.21 Stop assigning I_var as a metric.
+        # self.model.model.compile(loss=likelihood_loss,
+        #                          optimizer=optimizer,
+        #                          metrics=[I_var_metric])
 
         # Set early stopping callback if requested
         if early_stopping:
@@ -2040,7 +2044,7 @@ class Model:
             pickle.dump(config_dict, f)
 
         # save weights
-        filename_h5 = filename + '.h5'
+        filename_h5 = filename + '.weights.h5'
         self.get_nn().save_weights(filename_h5)
 
         if verbose:

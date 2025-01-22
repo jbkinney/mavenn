@@ -64,7 +64,7 @@ def load(filename, verbose=True):
         loaded_model.fit_args = config_dict.get('fit_args')
 
         # Load and set weights
-        filename_h5 = filename + '.h5'
+        filename_h5 = filename + '.weights.h5'
         loaded_model.get_nn().load_weights(filename_h5)
 
         # Provide feedback

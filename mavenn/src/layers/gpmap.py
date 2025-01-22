@@ -11,6 +11,9 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.initializers import Constant
 from tensorflow.keras.layers import Layer, Dense
 
+# This is the kind of variable to test for
+from keras.src.backend import Variable
+
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
 
@@ -92,7 +95,9 @@ class GPMapLayer(Layer):
         # Get theta_dict
         theta_dict = {k: v for (k, v) in self.__dict__.items()
                       if self.theta_pattern.match(k)
-                      and isinstance(v, tf.Variable)}
+                      and isinstance(v, Variable)}  
+        # 25.01.21 Changed from tf.Variable to Variable
+        # to fix breaking problem with get_params
 
         # Modify dict values as requested
         for k, v in theta_dict.items():

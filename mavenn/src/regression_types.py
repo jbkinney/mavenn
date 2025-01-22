@@ -6,6 +6,7 @@ import numbers
 
 # Tensorflow imports
 from tensorflow.keras.models import Model
+#from mavenn.src.customKerasModel import CustomKerasModel as Model
 from tensorflow.keras.layers import Input, Lambda, Concatenate
 
 # MAVE-NN imports

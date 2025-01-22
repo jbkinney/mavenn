@@ -62,7 +62,7 @@ def run_demo(name=None, print_code=False, print_names=True):
     demos_dict = {}
     for file_name in demo_file_names:
         base_name = file_name.split('/')[-1]
-        pattern = '^(.*)\.py$'
+        pattern = r'^(.*)\.py$'
         key = re.match(pattern, base_name).group(1)
         demos_dict[key] = file_name
     demo_names = list(demos_dict.keys())
@@ -124,11 +124,11 @@ def load_example_model(name=None):
         A pre-trained Model object.
     """
     models_dir = mavenn.__path__[0] +'/examples/models'
-    model_file_names = glob.glob(f'{models_dir}/*.h5')
+    model_file_names = glob.glob(f'{models_dir}/*.weights.h5')
     models_dict = {}
     for file_name in model_file_names:
         base_name = file_name.split('/')[-1]
-        pattern = '^(.*)\.h5$'
+        pattern = r'^(.*)\.weights\.h5$'
         key = re.match(pattern, base_name).group(1)
         models_dict[key] = file_name
     model_names = list(models_dict.keys())
@@ -179,7 +179,7 @@ def load_example_dataset(name=None):
     dataset_dict = {}
     for file_name in dataset_file_names:
         base_name = file_name.split('/')[-1]
-        pattern = '^(.*)_data\.csv\.gz$'
+        pattern = r'^(.*)_data\.csv\.gz$'
         key = re.match(pattern, base_name).group(1)
         dataset_dict[key] = file_name
     dataset_names = list(dataset_dict.keys())
