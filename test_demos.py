@@ -1,19 +1,15 @@
 #!/usr/bin/env python
+# Tested 25.01.22 by JBK
 
 # Insert mavenn at beginning of path
-import sys
 import os
-import glob
-path_to_mavenn_local = '.'
-sys.path.insert(0, path_to_mavenn_local)
+import sys
+abs_path_to_mavenn = os.path.dirname(os.path.abspath(__file__)) + './'
+sys.path.insert(0, abs_path_to_mavenn)
 
 #Load mavenn and check path
 import mavenn
 print(mavenn.__path__)
-
-# First run training demo
-mavenn.run_demo("mpsa_ge_training")
-exit()
 
 # Get list of valid names
 demo_names = mavenn.run_demo(print_names=False)
@@ -36,10 +32,4 @@ for name in user_names:
         print(f'Running demo {repr(name)}')
         mavenn.run_demo(name)
 
-# Clean up figure files
-print('=' * 80)
-print('Removing pic files...')
-for pic_file in glob.glob('./*.png'):
-    print(f'Removing {pic_file}...')
-    os.remove(pic_file)
 print(f'Done running {sys.argv[0]}')

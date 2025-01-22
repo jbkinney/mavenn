@@ -23,7 +23,11 @@ def entropy(x, k=3, base=2):
     x should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
     if x is a one-dimensional scalar and we have four samples
     """
-    assert k <= len(x) - 1, "Set k smaller than num. samples - 1"
+    try:
+        assert k <= len(x) - 1, "Set k smaller than num. samples - 1"
+    except AssertionError:
+        print('Debugging...')
+        raise AssertionError
     x = np.asarray(x)
     n_elements, n_features = x.shape
     x = add_noise(x)

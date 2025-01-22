@@ -25,7 +25,7 @@ print(f'Using mavenn at: {mavenn.__path__[0]}')
 import logomaker
 
 # Load model
-model = mavenn.load_example_model('sortseq_full-wt_mpa_additive')
+model = mavenn.load_example_model('sortseq_mpa_additive')
 
 # Get G-P map parameters
 theta_dict = model.get_theta(gauge='uniform')
@@ -73,5 +73,5 @@ cb.set_label(r'probability  $p(y|\phi)$', rotation=-90, va="bottom")
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
-fig.savefig('sortseq_mpa_visualization.png')
+#fig.savefig('sortseq_mpa_visualization.png')
 plt.show()

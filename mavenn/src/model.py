@@ -1524,8 +1524,13 @@ class Model:
             z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
 
             # Compute entropy
-            H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
-            H_y = H_y_norm + np.log2(self.y_std + TINY)
+            # Note: requires len(z) > 14 in order to use knn=7 to compute uncertainty via subsampling
+            try:
+                H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
+                H_y = H_y_norm + np.log2(self.y_std + TINY)
+            except AssertionError:
+                print('Debugging...')
+                raise AssertionError
 
             # Compute phi
             phi = self.x_to_phi(x)

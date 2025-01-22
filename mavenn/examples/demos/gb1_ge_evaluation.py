@@ -91,5 +91,5 @@ ax.legend()
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
-fig.savefig('gb1_ge_evaluation.png')
+#fig.savefig('gb1_ge_evaluation.png')
 plt.show()
