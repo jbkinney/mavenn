@@ -7,8 +7,9 @@ import sys
 abs_path_to_mavenn = os.path.dirname(os.path.abspath(__file__)) + './'
 sys.path.insert(0, abs_path_to_mavenn)
 
-#Load mavenn
+#Load mavenn and verify path is local
 import mavenn
+print('Using mavenn located at', mavenn.__path__[0])
 
 def main():
     # Check path to mavenn
