@@ -1,4 +1,4 @@
-include mavenn/**/*.h5
-include mavenn/**/*.pickle
-include mavenn/**/*.csv.gz
-include mavenn/**/*.ipynb
+include mavenn/examples/models/*.h5
+include mavenn/examples/models/*.pickle
+include mavenn/examples/datasets/*.csv.gz
+include mavenn/examples/demos/*.py
