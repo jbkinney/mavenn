@@ -1,0 +1,4 @@
+include mavenn/**/*.h5
+include mavenn/**/*.pickle
+include mavenn/**/*.csv.gz
+include mavenn/**/*.ipynb
