@@ -341,7 +341,6 @@ class MultilayerPerceptronGPMap(GPMapLayer):
             self.layers.append(
                 Dense(units=size,
                       activation=self.hidden_layer_activation,
-                      input_shape=self.x_shape,
                       kernel_regularizer=self.regularizer,
                       bias_regularizer=self.regularizer)
             )
@@ -367,7 +366,6 @@ class MultilayerPerceptronGPMap(GPMapLayer):
             self.layers.append(
                 Dense(units=1,
                       activation='linear',
-                      input_shape=self.x_shape,
                       kernel_regularizer=self.regularizer,
                       bias_regularizer=self.regularizer)
             )
@@ -376,6 +374,11 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 
         # Build superclass
         super().build(input_shape)
+
+        # Build all layers with the correct input shape
+        x = tf.keras.Input(shape=self.x_shape[1:])
+        for layer in self.layers:
+            x = layer(x)
 
     def call(self, x_add):
         """Process layer input and return output."""
