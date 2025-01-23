@@ -13,4 +13,3 @@ MAVE-NN comes with a variety of pre-trained models that users can load and apply
     tutorials/3_splicing_mpra_multiple_gpmaps.ipynb
     tutorials/4_protein_dms_biohysical_gpmap.ipynb
     tutorials/5_promoter_biophysical_gpmaps.ipynb
-    tutorials/6_empirical_models.ipynb
