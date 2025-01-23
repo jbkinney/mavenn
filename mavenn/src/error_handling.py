@@ -61,7 +61,7 @@ def handle_errors(func):
     'should_fail' to any wrapped function.
 
     If should_fail is None (or is not set by user), the function executes
-    normally, and can be called as
+    normally, and can be called as::
 
         result = func(*args, **kwargs)
 
@@ -69,7 +69,7 @@ def handle_errors(func):
 
     However, if the user specifies should_fail=True or should_fail=False, then
     Python will not halt even in the presence of an error. Moreover, the
-    function will return a tuple, e.g.,
+    function will return a tuple, e.g.::
 
         result, mistake = func(*args, should_fail=True, **kwargs)
 

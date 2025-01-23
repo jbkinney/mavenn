@@ -1,7 +1,7 @@
 """MAVE-NN software package."""
 
 # Import version
-__version__ = '1.0.3'
+__version__ = '1.1.0'
 
 # The functions imported here are the ONLY "maven.xxx()" functions that
 # users are expected to interact with
