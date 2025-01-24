@@ -70,8 +70,8 @@ def heatmap(values=None,
         provided.
         
     df: (pd.DataFrame)
-        DataFrame of shape ``(L,C)`` that contains values (df.values) and alphabet 
-        (df.columns) to use. If specified,``values`` and ``alphabet`` cannot be
+        DataFrame of shape ``(L,C)`` that contains the values (df.values) and alphabet 
+        (df.columns) to use. If specified, ``values`` and ``alphabet`` cannot be
         provided.
 
     seq: (str, None)

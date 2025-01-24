@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='mavenn',
-      version='1.1.0',
+      version='1.1.1',
       description='MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect',
       long_description=readme(),
       long_description_content_type='text/markdown',
