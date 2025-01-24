@@ -81,6 +81,11 @@ class Model:
         The number if discrete ``y`` bins to use when defining an MPA model.
         Must be ``>= 2``. Has no effect on MPA models.
 
+    ge_nonlinearity_type: (str)
+        Specifies the form of the GE nonlinearity. Options:
+        "linear": An affine transformation from phi to yhat.
+        "nonlinear": Allow and arbitrary nonlinear map from phi to yhat.
+
     ge_nonlinearity_monotonic: (boolean)
         Whether to enforce a monotonicity constraint on the GE nonlinearity.
         Has no effect on MPA models.
