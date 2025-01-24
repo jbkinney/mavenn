@@ -238,18 +238,18 @@ class GlobalEpistasisModel:
         if self.gpmap_type == 'additive':
             self.x_to_phi_layer = AdditiveGPMapLayer(
                 L=self.L,
-                C=self.C,
+                alphabet=self.alphabet,
                 theta_regularization=self.theta_regularization)
         elif self.gpmap_type in ['pairwise', 'neighbor']:
             self.x_to_phi_layer = PairwiseGPMapLayer(
                 L=self.L,
-                C=self.C,
+                alphabet=self.alphabet,
                 theta_regularization=self.theta_regularization,
                 mask_type=self.gpmap_type)
         elif self.gpmap_type == 'blackbox':
             self.x_to_phi_layer = MultilayerPerceptronGPMap(
                 L=self.L,
-                C=self.C,
+                alphabet=self.alphabet,
                 theta_regularization=self.theta_regularization,
                 **self.gpmap_kwargs)
         elif self.gpmap_type == 'custom':
@@ -493,18 +493,18 @@ class MeasurementProcessAgnosticModel:
         if self.gpmap_type == 'additive':
             self.x_to_phi_layer = AdditiveGPMapLayer(
                 L=self.L,
-                C=self.C,
+                alphabet=self.alphabet,
                 theta_regularization=self.theta_regularization)
         elif self.gpmap_type in ['pairwise', 'neighbor']:
             self.x_to_phi_layer = PairwiseGPMapLayer(
                 L=self.L,
-                C=self.C,
+                alphabet=self.alphabet,
                 theta_regularization=self.theta_regularization,
                 mask_type=self.gpmap_type)
         elif self.gpmap_type == 'blackbox':
             self.x_to_phi_layer = MultilayerPerceptronGPMap(
                 L=self.L,
-                C=self.C,
+                alphabet=self.alphabet,
                 theta_regularization=self.theta_regularization,
                 **self.gpmap_kwargs)
         elif self.gpmap_type == 'custom':

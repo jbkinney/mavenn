@@ -3,7 +3,6 @@
 import numpy as np
 from collections.abc import Iterable
 import re
-import pdb
 
 # Tensorflow imports
 import tensorflow as tf
@@ -16,6 +15,7 @@ from keras.src.backend import Variable
 
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
+from mavenn.src.validate import validate_alphabet
 
 class GPMapLayer(Layer):
     """
@@ -28,14 +28,14 @@ class GPMapLayer(Layer):
     @handle_errors
     def __init__(self,
                  L,
-                 C,
+                 alphabet,
                  theta_regularization):
         """Construct layer instance."""
         # Set sequence length
         self.L = L
-
+        self.alphabet = validate_alphabet(alphabet)
         # Set alphabet length
-        self.C = C
+        self.C = len(alphabet)
 
         # Set regularization contribution
         self.theta_regularization = theta_regularization
