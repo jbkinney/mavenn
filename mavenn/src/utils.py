@@ -53,6 +53,17 @@ def load(filename, verbose=True):
         # Add in diffeomorphic mode fixing and standardization params
         loaded_model.unfixed_phi_mean = config_dict.get('unfixed_phi_mean', 0)
         loaded_model.unfixed_phi_std = config_dict.get('unfixed_phi_std', 1)
+        
+        # 25.01.22 For backward compatibility, set phi_normalized based on 
+        # whether is in dict and/or values of unfixed_phi_mean and unfixed_phi_std
+        if not 'phi_normalized' in config_dict:
+            if np.isnan(loaded_model.unfixed_phi_std) or np.isnan(loaded_model.unfixed_phi_mean):
+                loaded_model.phi_normalized = False
+            else:
+                loaded_model.phi_normalized = True
+        else:
+            loaded_model.phi_normalized = config_dict['phi_normalized']
+
         loaded_model.y_mean = config_dict.get('y_mean', 0)
         loaded_model.y_std = config_dict.get('y_std', 1)
         loaded_model.x_stats = config_dict.get('x_stats', {})
@@ -64,7 +75,7 @@ def load(filename, verbose=True):
         loaded_model.fit_args = config_dict.get('fit_args')
 
         # Load and set weights
-        filename_h5 = filename + '.h5'
+        filename_h5 = filename + '.weights.h5'
         loaded_model.get_nn().load_weights(filename_h5)
 
         # Provide feedback

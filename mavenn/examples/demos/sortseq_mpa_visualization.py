@@ -5,6 +5,7 @@ run_demo: sortseq_mpa_visualization
 Illustrates an additive G-P map trained using MPA regression
 on the rnap-wt dataset of Kinney et al., 2010. Runs fast.
 '''
+# 25.01.21 Script fixed.
 
 # Standard imports
 import numpy as np
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 # Insert path to local mavenn beginning of path
 import os
 import sys
-abs_path_to_mavenn = os.path.abspath('../../../')
+abs_path_to_mavenn = os.path.dirname(os.path.abspath(__file__)) + '/../../../'
 sys.path.insert(0, abs_path_to_mavenn)
 
 # Load mavenn
@@ -24,7 +25,7 @@ print(f'Using mavenn at: {mavenn.__path__[0]}')
 import logomaker
 
 # Load model
-model = mavenn.load_example_model('sortseq_full-wt_mpa_additive')
+model = mavenn.load_example_model('sortseq_mpa_additive')
 
 # Get G-P map parameters
 theta_dict = model.get_theta(gauge='uniform')
@@ -64,13 +65,13 @@ im = ax.imshow(measurement_process,
                aspect="auto",
                interpolation='nearest')
 ax.set_yticks(y_all)
-ax.set_ylabel('bin number (y)')
-ax.set_xlabel('latent phenotype ($\phi$)')
-ax.set_title('measurement process')
+ax.set_ylabel(r'bin number ($y$)')
+ax.set_xlabel(r'latent phenotype ($\phi$)')
+ax.set_title(r'measurement process')
 cb = plt.colorbar(im)
-cb.set_label('probability  $p(y|\phi)$', rotation=-90, va="bottom")
+cb.set_label(r'probability  $p(y|\phi)$', rotation=-90, va="bottom")
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
-fig.savefig('sortseq_mpa_visualization.png')
+#fig.savefig('sortseq_mpa_visualization.png')
 plt.show()

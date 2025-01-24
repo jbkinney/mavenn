@@ -6,6 +6,7 @@ import numbers
 
 # Tensorflow imports
 from tensorflow.keras.models import Model
+#from mavenn.src.customKerasModel import CustomKerasModel as Model
 from tensorflow.keras.layers import Input, Lambda, Concatenate
 
 # MAVE-NN imports
@@ -118,7 +119,7 @@ class GlobalEpistasisModel:
 
         # check that ge_nonlinearity_monotonic is a boolean.
         check(isinstance(self.ge_nonlinearity_monotonic,
-                         (bool, np.bool, np.bool_)),
+                         (bool, np.bool_)),
               'ge_nonlinearity_monotonic must be a boolean')
 
         # check that ge_heteroskedasticity_order is an number

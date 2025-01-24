@@ -11,6 +11,9 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.initializers import Constant
 from tensorflow.keras.layers import Layer, Dense
 
+# This is the kind of variable to test for
+from keras.src.backend import Variable
+
 # MAVE-NN imports
 from mavenn.src.error_handling import check, handle_errors
 
@@ -73,7 +76,7 @@ class GPMapLayer(Layer):
             self_param = self.__dict__[k]
 
             # Type and shape v as needed
-            v = np.array(v).astype(np.float).reshape(self_param.shape)
+            v = np.array(v).astype(np.float32).reshape(self_param.shape)
 
             # Mask meaningless values with zeros
             no_mask = np.full(v.shape, True, dtype=bool)
@@ -92,7 +95,9 @@ class GPMapLayer(Layer):
         # Get theta_dict
         theta_dict = {k: v for (k, v) in self.__dict__.items()
                       if self.theta_pattern.match(k)
-                      and isinstance(v, tf.Variable)}
+                      and isinstance(v, Variable)}  
+        # 25.01.21 Changed from tf.Variable to Variable
+        # to fix breaking problem with get_params
 
         # Modify dict values as requested
         for k, v in theta_dict.items():
@@ -336,7 +341,6 @@ class MultilayerPerceptronGPMap(GPMapLayer):
             self.layers.append(
                 Dense(units=size,
                       activation=self.hidden_layer_activation,
-                      input_shape=self.x_shape,
                       kernel_regularizer=self.regularizer,
                       bias_regularizer=self.regularizer)
             )
@@ -362,7 +366,6 @@ class MultilayerPerceptronGPMap(GPMapLayer):
             self.layers.append(
                 Dense(units=1,
                       activation='linear',
-                      input_shape=self.x_shape,
                       kernel_regularizer=self.regularizer,
                       bias_regularizer=self.regularizer)
             )
@@ -371,6 +374,11 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 
         # Build superclass
         super().build(input_shape)
+
+        # Build all layers with the correct input shape
+        x = tf.keras.Input(shape=self.x_shape[1:])
+        for layer in self.layers:
+            x = layer(x)
 
     def call(self, x_add):
         """Process layer input and return output."""

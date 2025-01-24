@@ -1,13 +1,22 @@
 #!/usr/bin/env python
+# 2025.01.22 Works - JBK
 
 # Insert mavenn at beginning of path
+import os
 import sys
-path_to_mavenn_local = '.'
-sys.path.insert(0, path_to_mavenn_local)
+abs_path_to_mavenn = os.path.dirname(os.path.abspath(__file__)) + './'
+sys.path.insert(0, abs_path_to_mavenn)
 
-#Load mavenn and check path
+#Load mavenn and verify path is local
 import mavenn
-print(mavenn.__path__)
+print('Using mavenn located at', mavenn.__path__[0])
 
-# Run tests
-mavenn.run_tests()
+def main():
+    # Check path to mavenn
+    print(mavenn.__path__)
+
+    # Run tests
+    mavenn.run_tests()
+
+if __name__ == '__main__':
+    main()

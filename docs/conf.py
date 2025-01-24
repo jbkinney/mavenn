@@ -15,27 +15,22 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
+import mavenn
 
-import sys
-#sys.path.append('../mavenn')
 # -- Project information -----------------------------------------------------
-
-#import logomaker
-
 project = 'mavenn'
 copyright = '2021, Ammar Tareen, Mahdi Kooshkbaghi, Justin B. Kinney'
 author = 'Ammar Tareen, Mahdi Kooshkbaghi, Justin B. Kinney'
 
-# The short X.Y version
-version = '1.0'
-# The full version, including alpha/beta/rc tags
-release = '1.0'
+# Version info
+version = mavenn.__version__  # The short X.Y version
+release = mavenn.__version__  # The full version, including alpha/beta/rc tags
 
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '1.7.3' #no, this doesnt solve the **kwargs problem
+needs_sphinx = '1.7.3' 
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -49,12 +44,39 @@ extensions = ['sphinx.ext.autodoc',
 # Do NOT automatically execute notebooks when building.
 nbsphinx_execute = 'never'
 
-# Genereate autosummary
+##########################
+## These are to get stub pages for all documented items
+# Add these settings
 autosummary_generate = True
-# numpydoc_show_class_members = False  # Gets rid of warnings, but also of table
-
-# Add any paths that contain templates here, relative to this directory.
+autosummary_imported_members = True
+# Generate stub pages for all documented items
+autosummary_generate_overwrite = True
+# Explicitly set where to look for templates
 templates_path = ['_templates']
+# Set where to generate the stub files
+autosummary_output_dir = 'reference/generated'
+
+# Make sure numpydoc doesn't interfere
+numpydoc_show_class_members = False
+
+# Update the template mapping
+autosummary_template_mapping = {
+    'class': 'autosummary/class.rst',
+    'module': 'autosummary/module.rst',
+    'function': 'autosummary/function.rst',
+    'method': 'autosummary/method.rst',
+}
+
+# Create stub pages for all documented members
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+##########################
+
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -70,7 +92,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -95,7 +117,6 @@ html_theme_options = {
     'canonical_url': 'https://mavenn.readthedocs.io',
     #'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
     'logo_only': True,
-    'display_version': True,
     'prev_next_buttons_location': 'none', #'bottom',
     'style_external_links': False,
     #'vcs_pageview_mode': '',

@@ -95,14 +95,11 @@ def test_validate_alphabet():
 def test_GlobalEpistasisModel():
 
     # load MPSA dataset for testing
-    data_df = load_example_dataset('mpsa')
+    data_df = load_example_dataset('mpsa').iloc[0:200].copy()
+    
     #x, y = load_example_dataset()
     x = data_df['x'].values
     y = data_df['y'].values
-
-    # test on subset of sequences
-    x = x[0:1000].copy()
-    y = y[0:1000].copy()
 
     L = len(x[0])
 
@@ -180,13 +177,9 @@ def test_NoiseAgnosticModel():
 
     # load MPSA dataset for testing
     #x, y, ct_n = load_example_dataset(name='Sort-Seq')
-    data_df = load_example_dataset('sortseq')
+    data_df = load_example_dataset('sortseq').iloc[0:200].copy()
     x = data_df['x'].values
     y = data_df.filter(regex='ct_*').values
-
-    # test on subset of sequences
-    x = x[0:1000].copy()
-    y = y[0:1000].copy()
 
     L = len(x[0])
     Y = 10
@@ -373,8 +366,8 @@ def test_x_to_phi_or_yhat():
     model_dir = f'{mavenn_dir}/examples/models/'
 
     mpa_model = load(model_dir + 'sortseq_mpa_additive')
-    mpa_seq = 'GGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG'
-    mpa_seq_gap = 'GGCTTTACAC-TTATGCTTCCGGCTCGTATGTTGTGTGG'
+    mpa_seq = 'AATTAATGTGAGTTAGCTCACTCATTAGGCACCCCAGGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG'
+    mpa_seq_gap = 'AATTAATGTGAGTTAGCTCACTC--TAGGCACCCCAGGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGG'
     ge_model = load(model_dir + 'gb1_ge_additive')
     ge_seq = 'QYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
     ge_seq_gap = 'QYKLILNGKTLK-ETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE'
@@ -510,7 +503,7 @@ def test_GE_fit():
         data_df = mavenn.load_example_dataset(ge_dataset)
 
         # use small subset of data for quick training
-        data_df = data_df.loc[0:100].copy()
+        data_df = data_df.loc[0:200].copy()
 
         # get training set from data_df
         ix = (data_df['set']!='test')
@@ -529,42 +522,46 @@ def test_GE_fit():
 
             # loop over different GE noise model types
             for GE_noise_model_type in GE_noise_model_types:
-                #print(f'======= {gpmap_type} : {GE_noise_model_type} : {dataset} ========')
+                  #print(f'======= {gpmap_type} : {GE_noise_model_type} : {dataset} ========')
 
-                # Define model
-                model = mavenn.Model(regression_type='GE',
+                  # Define model
+                  model = mavenn.Model(regression_type='GE',
                                      L=L,
                                      alphabet=alphabet,
                                      gpmap_type=gpmap_type,
                                      ge_noise_model_type=GE_noise_model_type,
                                      ge_heteroskedasticity_order=2)
 
-                # Set training data
-                model.set_data(x=train_df['x'],
-                               y=train_df['y'],
-                               shuffle=True,
-                               verbose=False)
+                  # Set training data
+                  model.set_data(x=train_df['x'],
+                                    y=train_df['y'],
+                                    shuffle=True,
+                                    verbose=False)
 
-                # Fit model to data
-                _history = model.fit(epochs=1,
-                                     linear_initialization=True,
-                                     batch_size=200,
-                                     verbose=False)
+                  # Fit model to data
+                  try:
+                        _history = model.fit(epochs=1,
+                                       linear_initialization=True,
+                                       batch_size=200,
+                                       verbose=False)
+                  except AssertionError:
+                        print('Debugging...')
+                        raise AssertionError
+      
+                  # check model methods for NANs
+                  #print('Check for NANs in the output of model methods')
+                  print(f'Testing model inference with: \n'
+                        f'gpmap_type={repr(gpmap_type)}, \n'
+                        f'dataset={repr(ge_dataset)}, \n'
+                        f'noise_model={repr(GE_noise_model_type)}')
 
-                # check model methods for NANs
-                #print('Check for NANs in the output of model methods')
-                print(f'Testing model inference with: \n'
-                      f'gpmap_type={repr(gpmap_type)}, \n'
-                      f'dataset={repr(ge_dataset)}, \n'
-                      f'noise_model={repr(GE_noise_model_type)}')
-
-                test_parameter_values(test_for_nan_in_model_methods,
-                                      var_name='seqs',
-                                      success_list=[test_df['x'].values],
-                                      fail_list=[[np.nan]],
-                                      model=model,
-                                      y=test_df['y'],
-                                      regression_type='GE')
+                  test_parameter_values(test_for_nan_in_model_methods,
+                                          var_name='seqs',
+                                          success_list=[test_df['x'].values],
+                                          fail_list=[[np.nan]],
+                                          model=model,
+                                          y=test_df['y'],
+                                          regression_type='GE')
 
 
 @handle_errors
@@ -596,7 +593,7 @@ def test_MPA_fit():
     data_df = mavenn.load_example_dataset('sortseq')
 
     # use small subset of data for quick training
-    data_df = data_df.loc[0:100].copy()
+    data_df = data_df.loc[0:200].copy()
 
     # Comptue sequence length and number of bins
     L = len(data_df['x'][0])

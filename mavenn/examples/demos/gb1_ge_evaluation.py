@@ -6,6 +6,7 @@ Illustrates an additive G-P map, trained on the GB1 data of
 Olson et al., 2014, fit using GE regression with a
 heteroskedastic Gaussian noise model. Runs fast.
 """
+# 25.01.21 Script fixed.
 
 # Standard imports
 import numpy as np
@@ -15,7 +16,7 @@ import matplotlib.pyplot as plt
 # Insert path to local mavenn beginning of path
 import os
 import sys
-abs_path_to_mavenn = os.path.abspath('../../../')
+abs_path_to_mavenn = os.path.dirname(os.path.abspath(__file__)) + '/../../../'
 sys.path.insert(0, abs_path_to_mavenn)
 
 # Load mavenn
@@ -68,27 +69,27 @@ ax, cb = mavenn.heatmap(theta_dict['theta_lc'],
                         ccenter=0,
                         ax=ax,
                         cmap_size='2%')
-ax.set_xlabel('position ($l$)')
-ax.set_ylabel('amino acid ($c$)')
-ax.set_title('mutation effects')
-cb.set_label('effect ($\Delta\phi$)', rotation=-90, va="bottom")
+ax.set_xlabel(r'position ($l$)')
+ax.set_ylabel(r'amino acid ($c$)')
+ax.set_title(r'mutation effects')
+cb.set_label(r'effect ($\Delta\phi$)', rotation=-90, va="bottom")
 cb.outline.set_visible(False)
 
 # Right panel: illustrate measurement process with GE curve
 ax = fig.add_subplot(gs[3:])
 ax.scatter(phi, y, color='C0', s=5, alpha=.2, label='test data')
 ax.plot(phi_grid, yhat_grid, linewidth=2, color='C1',
-        label='$\hat{y} = g(\phi)$')
+        label=r'$\hat{y} = g(\phi)$')
 ax.plot(phi_grid, yqs_grid[:, 0], linestyle='--', color='C1',
         label='80% CI')
 ax.plot(phi_grid, yqs_grid[:, 1], linestyle='--', color='C1')
 ax.set_xlim(phi_lim)
-ax.set_xlabel('latent phenotype ($\phi$)')
-ax.set_ylabel('measurement ($y$)')
-ax.set_title('measurement process')
+ax.set_xlabel(r'latent phenotype ($\phi$)')
+ax.set_ylabel(r'measurement ($y$)')
+ax.set_title(r'measurement process')
 ax.legend()
 
 # Fix up plot
 fig.tight_layout(w_pad=3)
-fig.savefig('gb1_ge_evaluation.png')
+#fig.savefig('gb1_ge_evaluation.png')
 plt.show()
