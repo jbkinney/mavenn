@@ -82,7 +82,7 @@ def validate_alphabet(alphabet):
         [set, list, np.ndarray, pd.Series],
     containing only unique characters.
     """
-    valid_types = (str, list, set, np.ndarray, pd.Series)
+    valid_types = (str, list, set, np.ndarray, pd.Series, pd.Index)
     check(isinstance(alphabet, valid_types),
           f'type(alphabet)={type(alphabet)} is invalid. '
           f'Must be one of {valid_types}.')

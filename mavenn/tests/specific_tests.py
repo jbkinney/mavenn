@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import glob
 import pdb
-
+import inspect
 # MAVE-NN imports
 import mavenn
 from mavenn.src.examples import load_example_dataset, load_example_model
@@ -763,3 +763,32 @@ def test_MPA_fit():
 #                           success_list=successful_model_names_list,
 #                           fail_list=incorrect_model_names_list)
 #
+
+def test_heatmap():
+    """
+    Test the mavenn.heatmap function with different parameter values.
+    """
+    df = pd.DataFrame(columns=['x', 'y', 'z', 'q'], data=np.random.rand(10, 4))
+    values = df.values
+    alphabet = df.columns
+    function_name = inspect.currentframe().f_code.co_name
+
+    # Test df
+    print(f'{function_name}: test 1')
+    test_parameter_values(mavenn.heatmap, var_name='df', success_list=[df], fail_list=[None, 1, 'hi'], values=None, alphabet=None)
+    print(f'{function_name}: test 2')
+    test_parameter_values(mavenn.heatmap, var_name='df', success_list=[None], fail_list=[df, 1, 'hi'], values=values, alphabet=alphabet)
+    print(f'{function_name}: test 3')
+    test_parameter_values(mavenn.heatmap, var_name='df', success_list=[], fail_list=[None, df, 1, 'hi'], values=values, alphabet=None)
+    print(f'{function_name}: test 4')
+    test_parameter_values(mavenn.heatmap, var_name='df', success_list=[], fail_list=[None, df, 1, 'hi'], values=None, alphabet=alphabet)
+    
+    # Test values
+    print(f'{function_name}: test 5')
+    test_parameter_values(mavenn.heatmap, var_name='values', success_list=[values, df.values], fail_list=[None, 1, 'hi', values[:,:-1]], df=None, alphabet=alphabet)
+
+    # Test alphabet
+    print(f'{function_name}: test 6')
+    test_parameter_values(mavenn.heatmap, var_name='alphabet', success_list=[df.columns, list(df.columns), 'dna'], fail_list=[None, 1, 'hi'], df=None, values=values)
+    
+    

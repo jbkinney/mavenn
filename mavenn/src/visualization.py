@@ -39,8 +39,9 @@ def _get_45deg_mesh(mat):
 
 
 @handle_errors
-def heatmap(values,
-            alphabet,
+def heatmap(values=None,
+            alphabet=None,
+            df=None,
             seq=None,
             seq_kwargs=None,
             ax=None,
@@ -59,12 +60,19 @@ def heatmap(values,
 
     Parameters
     ----------
-    values: (np.ndarray)
-        Array of shape ``(L,C)`` that contains values to plot.
+    values: (np.ndarray, None)
+        Array of shape ``(L,C)`` that contains values to plot. Cannot be
+        provided if ``df`` is provided.
 
-    alphabet: (str, np.ndarray)
+    alphabet: (str, np.ndarray, None)
         Alphabet name ``'dna'``, ``'rna'``, or ``'protein'``, or 1D array
-        containing characters in the alphabet.
+        containing characters in the alphabet. Cannot be provided if ``df`` is
+        provided.
+        
+    df: (pd.DataFrame)
+        DataFrame of shape ``(L,C)`` that contains values (df.values) and alphabet 
+        (df.columns) to use. If specified,``values`` and ``alphabet`` cannot be
+        provided.
 
     seq: (str, None)
         The sequence to show, if any, using dots plotted on top of the heatmap.
@@ -125,8 +133,26 @@ def heatmap(values,
     cb: (matplotlib.colorbar.Colorbar, None)
         Colorbar object linked to ``ax``, or ``None`` if no colorbar was drawn.
     """
-    alphabet = validate_alphabet(alphabet)
+    
+    if df is not None:
+        check(isinstance(df, pd.DataFrame), 'df must be a pandas DataFrame')
+        check(values is None, 'values must be None if df is provided')
+        check(alphabet is None, 'alphabet must be None if df is provided')
+        values = df.values
+        alphabet = validate_alphabet(df.columns)
+    else:
+        check(values is not None, 'values must be provided if df is not provided')
+        try:
+            values = np.array(values)
+        except TypeError:
+            check(False, f'values={values} cannot be interpreted as a numpy array')
+        check(values.ndim == 2, f'values={values} must be a 2D numpy array')
+        check(alphabet is not None, 'alphabet must be provided if df is not provided')
+        alphabet = validate_alphabet(alphabet)
+    
+    # Get seq length and alphabet size
     L, C = values.shape
+    check(len(alphabet) == C, f'len(alphabet)={len(alphabet)} does not match C={C}')
 
     # Set extent
     xlim = [-.5, L - .5]
