@@ -1,7 +1,0 @@
-include mavenn/examples/models/*.h5
-include mavenn/examples/models/*.pickle
-include mavenn/examples/datasets/*.csv.gz
-include mavenn/examples/demos/*.py
-include mavenn/examples/tutorials/*.ipynb
-include mavenn/examples/tutorials/*.h5
-include mavenn/examples/tutorials/*.pickle
