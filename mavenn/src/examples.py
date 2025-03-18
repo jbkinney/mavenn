@@ -57,11 +57,12 @@ def run_demo(name=None, print_code=False, print_names=True):
         List of demo names, returned if user passes ``names=None``.
         Otherwise None.
     """
-    demos_dir = mavenn.__path__[0] +'/examples/demos'
-    demo_file_names = glob.glob(f'{demos_dir}/*.py')
+    demos_dir = os.path.join(mavenn.__path__[0], 'examples', 'demos', '')
+    demo_file_names = glob.glob(os.path.join(demos_dir, '*.py'))
+
     demos_dict = {}
     for file_name in demo_file_names:
-        base_name = file_name.split('/')[-1]
+        base_name = os.path.basename(file_name)
         pattern = r'^(.*)\.py$'
         key = re.match(pattern, base_name).group(1)
         demos_dict[key] = file_name
@@ -123,11 +124,11 @@ def load_example_model(name=None):
     model: (mavenn.Model)
         A pre-trained Model object.
     """
-    models_dir = mavenn.__path__[0] +'/examples/models'
+    models_dir = os.path.join(mavenn.__path__[0], 'examples', 'models', '')
     model_file_names = glob.glob(f'{models_dir}/*.weights.h5')
     models_dict = {}
     for file_name in model_file_names:
-        base_name = file_name.split('/')[-1]
+        base_name = os.path.basename(file_name)
         pattern = r'^(.*)\.weights\.h5$'
         key = re.match(pattern, base_name).group(1)
         models_dict[key] = file_name
@@ -142,7 +143,7 @@ def load_example_model(name=None):
 
     # If input is valid, load model
     elif name in model_names:
-        model = load(models_dir + '/' + name)
+        model = load(os.path.join(models_dir, name))
 
     # Otherwise
     else:
@@ -173,12 +174,12 @@ def load_example_dataset(name=None):
     #dataset_names.sort()
 
     # Set dataset_dir
-    dataset_dir = mavenn.__path__[0] + '/examples/datasets/'
+    dataset_dir = os.path.join(mavenn.__path__[0], 'examples', 'datasets', '')
 
-    dataset_file_names = glob.glob(f'{dataset_dir}*_data.csv.gz')
+    dataset_file_names = glob.glob(os.path.join(dataset_dir, '*_data.csv.gz'))
     dataset_dict = {}
     for file_name in dataset_file_names:
-        base_name = file_name.split('/')[-1]
+        base_name = os.path.basename(file_name)
         pattern = r'^(.*)_data\.csv\.gz$'
         key = re.match(pattern, base_name).group(1)
         dataset_dict[key] = file_name
