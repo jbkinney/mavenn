@@ -34,7 +34,6 @@ jobs:
 
     - name: Run tests
       run: |
-        pip install mavenn
         python -c "import mavenn; mavenn.run_tests()"
 
   build:
