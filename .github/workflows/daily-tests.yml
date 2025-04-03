@@ -29,7 +29,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest hatch
+          pip install pytest hatch pytest-cov
 
       - name: Test build
         run: |
@@ -40,7 +40,8 @@ jobs:
       - name: Run tests
         run: |
           pip install mavenn
-          python -c "import mavenn; mavenn.run_tests()"
+          python -c "import mavenn"
+          pytest -v --cov-report term-missing --cov=mavenn
 
   notify:
     name: Send email notification

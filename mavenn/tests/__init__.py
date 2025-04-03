@@ -1,28 +1,26 @@
-from mavenn.tests.specific_tests import \
-    test_GlobalEpistasisModel, \
-    test_NoiseAgnosticModel, \
-    test_validate_alphabet, \
-    test_load, \
-    test_x_to_phi_or_yhat, \
-    test_GE_fit, \
-    test_MPA_fit, \
-    test_heatmap
+import pytest
+import os
+import subprocess
 
 def run_tests():
     """
     Run all MAVE-NN functional tests.
+    
+    Returns
+    -------
+    bool
+        True if all tests pass, False otherwise
     """
-    test_heatmap()
-    test_load()
-    test_validate_alphabet()
-    test_x_to_phi_or_yhat()
-    test_MPA_fit()
-    test_GE_fit()
-    test_GlobalEpistasisModel()
-    test_NoiseAgnosticModel()
     
+    # Run pytest and capture the result
+    result = pytest.main(['-vv', 'test_specific_tests.py'])
     
+    print('test')
     
-    
-    
+    if result == 0:
+        print("\nAll tests passed successfully!")
+    else:
+        print("\nSome tests failed. See above for details.")
+
+    return result == 0
 

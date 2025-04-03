@@ -1,12 +1,11 @@
+
 # Standard imports
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pdb
-
-# Initialize global counts
-global_success_counter = 0
-global_fail_counter = 0
+import pytest
+import types
 
 # Common success and fail lists
 bool_fail_list = [0, -1, 'True', 'x', 1]
@@ -18,51 +17,39 @@ from mavenn.src.validate import validate_alphabet, validate_seqs
 
 
 # helper method for functional test_for_mistake
+@pytest.mark.skip()
 def test_for_mistake(func, *args, **kw):
     """
-    Run a function with the specified parameters and register whether
-    success or failure was a mistake
+    Run a function with the specified parameters and asserts False if there
+    is an unexpected success or failure.
 
-    parameters
+    Parameters
     ----------
-
     func: (function or class constructor)
         An executable function to which *args and **kwargs are passed.
 
-    return
-    ------
-
-    None.
+    Returns
+    -------
+    None
     """
-
-    global global_fail_counter
-    global global_success_counter
-
-    # print test number
-    test_num = global_fail_counter + global_success_counter
-    print('Test # %d: ' % test_num, end='')
-
     # Run function
     obj = func(*args, **kw)
-    # Increment appropriate counter
+
     if obj.mistake:
-        global_fail_counter += 1
-    else:
-        global_success_counter += 1
+        assert False
 
-
+@pytest.mark.skip()
 def test_parameter_values(func,
                           var_name=None,
-                          fail_list=[],
-                          success_list=[],
+                          val = None,
+                          should_fail=None,
                           **kwargs):
     """
-    Tests predictable success & failure of different values for a
-    specified parameter when passed to a specified function
+    Tests if a function call with specific parameter
+    value succeeds or fails as expected
 
-    parameters
+    Parameters
     ----------
-
     func: (function)
         Executable to test. Can be function or class constructor.
 
@@ -70,45 +57,32 @@ def test_parameter_values(func,
         Name of variable to test. If not specified, function is
         tested for success in the absence of any passed parameters.
 
-    fail_list: (list)
-        List of values for specified variable that should fail
+    val:
+        Value of specified var_name to be tested.
 
-    success_list: (list)
-        List of values for specified variable that should succeed
+    should_fail: (bool)
+        True if function is expected to fail, False otherwise.
 
     **kwargs:
         Other keyword variables to pass onto func.
 
-    return
-    ------
+    Returns
+    -------
 
     None.
 
     """
 
-    # If variable name is specified, test each value in fail_list
-    # and success_list
+    # User feed
+    print("Testing %s() parameter %s ..." % (func.__name__, var_name))
+
+    # If variable name is specified, test the value
     if var_name is not None:
-
-        # User feedback
-        print("Testing %s() parameter %s ..." % (func.__name__, var_name))
-
-        # Test parameter values that should fail
-        for x in fail_list:
-            kwargs[var_name] = x
-            test_for_mistake(func=func, should_fail=True, **kwargs)
-
-        # Test parameter values that should succeed
-        for x in success_list:
-            kwargs[var_name] = x
-            test_for_mistake(func=func, should_fail=False, **kwargs)
-
-        print("Tests passed: %d. Tests failed: %d.\n" %
-              (global_success_counter, global_fail_counter))
+        kwargs[var_name] = val
+        test_for_mistake(func=func, should_fail=should_fail, **kwargs)
 
     # Otherwise, make sure function without parameters succeeds
     else:
-
         # User feedback
         print("Testing %s() without parameters." % func.__name__)
 
@@ -423,3 +397,23 @@ def pairwise_model_features(seqs, alphabet, restrict_seqs_to_alphabet=True):
     x = np.hstack([x_0, x_lc, x_lclc])
     names = features_0 + features_lc + features_lclc
     return x, names
+
+def generate_id(param):
+    """
+    Create a custom ID based on the parameter. This function is used
+    when tests are parametrized using @pytest.mark.parametrize.
+
+    :param param: Parameter from @pytest.mark.parametrize
+    :return: A string ID of the parameter
+    """
+    if isinstance(param, pd.DataFrame):
+        # Look up the DataFrame by its ID in the mapping
+        return 'df'
+    if isinstance(param, (types.FunctionType, types.MethodType, types.BuiltinFunctionType)):
+        return param.__name__.split('.')[-1]
+    if isinstance(param, dict): # for input_kwargs
+        # Generate id for each value in the dictionary
+        dict_repr = {key: generate_id(value) for key, value in param.items()}
+        return f"{dict_repr}"[:25]
+    else:
+        return f"{param}"[:25]
