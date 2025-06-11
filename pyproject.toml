@@ -27,6 +27,7 @@ dependencies = [
     "scipy",              # tested with version 1.15.1
     "seaborn",            # tested with version 0.13.2
     "logomaker",          # tested with version 0.8.2
+    "pytest"
 ]
 keywords=["genotype-phenotype maps", "multiplex assays", "variant effect", "deep mutational scanning", "massively parallel reporter assays"]
 
