@@ -8,7 +8,7 @@ import pdb
 import inspect
 # MAVE-NN imports
 import mavenn
-from mavenn.src.examples import load_example_dataset, load_example_model
+from mavenn.src.examples import load_example_dataset, load_example_model, run_demo
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.utils import load
 from mavenn.src.error_handling import check, handle_errors
@@ -609,6 +609,21 @@ def get_MPA_fit_tests():
 
     return tests
 
+@handle_errors
+def get_run_demo_tests():
+    """
+    Method that returns a list of tests for the run_demo method of the examples module
+
+    :return: list of tuples, each containing a test parameter, a value to test, a boolean indicating whether the test should fail, and a dictionary of keyword arguments:
+        (param, val, should_fail, kwargs)
+    """
+    return [
+        (run_demo, 'name', None, False, {'print_code': False, 'print_names': True}),
+        (run_demo, 'name', 'gb1_ge_evaluation', False, {'print_code': True, 'print_names': True}),
+        (run_demo, 'name', 'sortseq_mpa_visualization', False, {'print_code': False, 'print_names': True}),
+        (run_demo, 'name', 'mpsa_ge_training', False, {'print_code': False, 'print_names': True}),
+        (run_demo, 'name', 'bad_name', True, {'print_code': False, 'print_names': False}),
+    ]
 # @handle_errors
 # def _test_phi_calculation(model_file):
 #     # Load model (assumes .h5 extension)

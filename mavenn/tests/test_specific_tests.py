@@ -7,7 +7,7 @@ import inspect
 import pytest
 # MAVE-NN imports
 import mavenn
-from mavenn.src.examples import load_example_dataset, load_example_model
+from mavenn.src.examples import load_example_dataset, load_example_model, run_demo
 from mavenn.src.validate import validate_alphabet
 from mavenn.src.utils import load
 from mavenn.src.error_handling import check, handle_errors
@@ -20,7 +20,8 @@ from mavenn.tests.define_tests import (
     get_x_to_phi_or_yhat_tests,
     get_GE_fit_tests,
     get_MPA_fit_tests,
-    get_heatmap_tests
+    get_heatmap_tests,
+    get_run_demo_tests
 )
 
 
@@ -102,4 +103,8 @@ def test_MPA_fit(func, var_name, val, should_fail, input_kwargs):
 
 @pytest.mark.parametrize("func,var_name,val,should_fail,input_kwargs", get_heatmap_tests(), ids=generate_id)
 def test_heatmap(func, var_name, val, should_fail, input_kwargs):
+    test_parameter_values(func, var_name, val, should_fail, **input_kwargs)
+
+@pytest.mark.parametrize("func,var_name,val,should_fail,input_kwargs", get_run_demo_tests(), ids=generate_id)
+def test_run_demo(func, var_name, val, should_fail, input_kwargs):
     test_parameter_values(func, var_name, val, should_fail, **input_kwargs)
