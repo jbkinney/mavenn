@@ -74,4 +74,4 @@ cb.set_label(r'probability  $p(y|\phi)$', rotation=-90, va="bottom")
 # Fix up plot
 fig.tight_layout(w_pad=3)
 #fig.savefig('sortseq_mpa_visualization.png')
-plt.show()
+plt.show(block=False)

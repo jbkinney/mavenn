@@ -143,4 +143,4 @@ ax.set_ylim([0, I_pred*1.2])
 # Tighten bounds on figure
 fig.tight_layout(w_pad=3)
 #fig.savefig('mpsa_ge_training.png')
-plt.show()
+plt.show(block=False)
