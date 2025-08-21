@@ -1,6 +1,6 @@
 MAVE-NN: learning genotype-phenotype maps from multiplex assays of variant effect
 ========================================================================
-Compatible with Python 3.10-3.12
+Compatible with Python 3.10.9+
 
 [![PyPI version](https://badge.fury.io/py/mavenn.svg)](https://badge.fury.io/py/mavenn)
 [![Downloads](https://static.pepy.tech/personalized-badge/mavenn?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/mavenn)
