@@ -163,6 +163,15 @@ class AdditiveGPMapLayer(GPMapLayer):
                                         initializer=Constant(theta_lc_init),
                                         trainable=True,
                                         regularizer=self.regularizer)
+        # Mark layer as built since weights are created in __init__
+        self.built = True
+
+    @handle_errors
+    def build(self, input_shape):
+        """Override build to prevent parent from being called since weights are in __init__."""
+        # Weights are already created in __init__, just mark as built
+        # Don't call super().build() to avoid Keras signature checking issues
+        self.built = True
 
     def call(self, x_lc):
         """Process layer input and return output."""
@@ -231,6 +240,15 @@ class PairwiseGPMapLayer(GPMapLayer):
                                           initializer=Constant(theta_lclc_init),
                                           trainable=True,
                                           regularizer=self.regularizer)
+        # Mark layer as built since weights are created in __init__
+        self.built = True
+
+    @handle_errors
+    def build(self, input_shape):
+        """Override build to prevent parent from being called since weights are in __init__."""
+        # Weights are already created in __init__, just mark as built
+        # Don't call super().build() to avoid Keras signature checking issues
+        self.built = True
 
     def call(self, x_lc):
         """Process layer input and return output."""
