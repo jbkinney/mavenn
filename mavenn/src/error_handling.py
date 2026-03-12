@@ -1,4 +1,5 @@
 """error_handling.py: Utilities for handling expected errors."""
+import inspect
 from functools import wraps
 
 
@@ -149,6 +150,14 @@ def handle_errors(func):
             # of container class object
             else:
                 return DebugResult(result, mistake)
+
+    # Preserve the original signature so that introspection (e.g. by Keras
+    # when instantiating Layer subclasses) sees the real parameters instead
+    # of (*args, **kwargs), avoiding IndexError in argspec.args[0].
+    try:
+        wrapped_func.__signature__ = inspect.signature(func)
+    except (ValueError, TypeError):
+        pass  # Some callables (e.g. built-in) have no signature
 
     # Return the wrapped function to the user
     return wrapped_func
