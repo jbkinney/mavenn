@@ -29,7 +29,9 @@ class GPMapLayer(Layer):
     def __init__(self,
                  L,
                  alphabet,
-                 theta_regularization):
+                 theta_regularization,
+                 name=None,
+                 **kwargs):
         """Construct layer instance."""
         # Set sequence length
         self.L = L
@@ -50,7 +52,7 @@ class GPMapLayer(Layer):
         self.theta_pattern = re.compile('^theta.*')
 
         # Call superclass constructor
-        super().__init__()
+        super().__init__(name=name, **kwargs)
 
     @handle_errors
     def get_config(self):
@@ -141,11 +143,11 @@ class AdditiveGPMapLayer(GPMapLayer):
     """Represents an additive G-P map."""
 
     @handle_errors
-    def __init__(self, *args, **kwargs):
+    def __init__(self, L, alphabet, theta_regularization, name=None, **kwargs):
         """Construct layer instance."""
 
         # Call superclass constructor
-        super().__init__(*args, **kwargs)
+        super().__init__(L=L, alphabet=alphabet, theta_regularization=theta_regularization, name=name, **kwargs)
 
         """Build layer."""
         # Define theta_0
@@ -189,11 +191,11 @@ class PairwiseGPMapLayer(GPMapLayer):
     """Represents a pairwise G-P map."""
 
     @handle_errors
-    def __init__(self, mask_type, *args, **kwargs):
+    def __init__(self, mask_type, L, alphabet, theta_regularization, name=None, **kwargs):
         """Construct layer instance."""
 
         # Call superclass constructor
-        super().__init__(*args, **kwargs)
+        super().__init__(L=L, alphabet=alphabet, theta_regularization=theta_regularization, name=name, **kwargs)
 
         # Define theta_0
         self.theta_0 = self.add_weight(name='theta_0',
@@ -287,10 +289,13 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 
     @handle_errors
     def __init__(self,
-                 *args,
+                 L,
+                 alphabet,
+                 theta_regularization,
                  hidden_layer_sizes=(10, 10, 10),
                  hidden_layer_activation='relu',
                  features='additive',
+                 name=None,
                  **kwargs):
 
         # Check and set hidden layer sizes
@@ -316,7 +321,7 @@ class MultilayerPerceptronGPMap(GPMapLayer):
 
         # Set activation
         self.hidden_layer_activation = hidden_layer_activation
-        super().__init__(*args, **kwargs)
+        super().__init__(L=L, alphabet=alphabet, theta_regularization=theta_regularization, name=name, **kwargs)
 
     @handle_errors
     def build(self, input_shape):
