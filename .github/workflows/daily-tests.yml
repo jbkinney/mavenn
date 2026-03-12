@@ -38,6 +38,8 @@ jobs:
           ls -l dist/
 
       - name: Run tests
+        env:
+          MPLBACKEND: Agg
         run: |
           pip install mavenn
           python -c "import mavenn"
