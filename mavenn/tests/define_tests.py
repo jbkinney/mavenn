@@ -462,6 +462,11 @@ def get_GE_fit_tests():
     import tensorflow as tf
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
+    # Seed RNG so the random validation split in set_data is deterministic.
+    # Without this, a small training slice can occasionally yield <15 validation
+    # samples, which trips the assertion in IVariationalCallback.
+    np.random.seed(0)
+
     tests = []
 
     GE_datasets = ['mpsa', 'gb1']
